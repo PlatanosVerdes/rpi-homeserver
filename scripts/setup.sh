@@ -81,8 +81,25 @@ case $option in
         
         # Start services
         echo -e "${BLUE}🐳 Step 5/6: Starting Docker services...${NC}"
-        docker compose up -d
+        
+        # Check if we can access docker socket
+        if ! docker ps &>/dev/null; then
+            echo -e "${YELLOW}⚠️  Docker permissions not active in this session${NC}"
+            echo -e "${YELLOW}   Using 'sg docker' to run with docker group...${NC}"
+            sg docker -c "docker compose up -d"
+        else
+            docker compose up -d
+        fi
         echo -e "${GREEN}✅ Services started${NC}"
+        
+        # Wait for Pi-hole to be ready and set password
+        echo -e "${BLUE}🔐 Configuring Pi-hole password...${NC}"
+        echo "Waiting for Pi-hole to start..."
+        sleep 10
+        if docker ps | grep -q pihole; then
+            docker exec pihole pihole setpassword "${PIHOLE_PASSWORD}" > /dev/null 2>&1 || true
+            echo -e "${GREEN}✅ Pi-hole password configured${NC}"
+        fi
         
         # Setup DNS
         echo -e "${BLUE}🌐 Step 6/6: Configuring DNS...${NC}"
@@ -95,8 +112,6 @@ case $option in
         echo "  1. Configure your router to use this Pi as DNS: $(hostname -I | awk '{print $1}')"
         echo "  2. Access Grafana: http://grafana.${DOMAIN}:3000"
         echo "  3. Setup Grafana dashboards: ./scripts/setup.sh (option 4)"
-        echo ""
-        echo -e "${YELLOW}⚠️  You need to log out and back in for Docker permissions to apply${NC}"
         ;;
         
     2)

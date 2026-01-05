@@ -24,8 +24,11 @@ fi
 # Install mdadm if not present
 if ! command -v mdadm &> /dev/null; then
     echo -e "${BLUE}📦 Installing mdadm...${NC}"
-    apt-get update
+    apt-get update -qq
     apt-get install -y mdadm
+    echo -e "${GREEN}✅ mdadm installed${NC}"
+else
+    echo -e "${GREEN}✅ mdadm is already installed${NC}"
 fi
 
 # Show available disks

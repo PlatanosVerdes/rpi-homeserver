@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
 
   # -------------------------
@@ -26,7 +24,15 @@ services:
   pihole:
     image: pihole/pihole:latest
     container_name: pihole
-    network_mode: "host"
+    ports:
+      # NOTE: Using high ports (10053/8053) for laptop testing to avoid conflicts with systemd-resolved
+      # For Raspberry Pi deployment, change to standard ports:
+      # - "53:53/tcp"   # DNS TCP
+      # - "53:53/udp"   # DNS UDP
+      # - "80:80/tcp"   # Web interface
+      - "10053:53/tcp"   # DNS TCP (laptop testing)
+      - "10053:53/udp"   # DNS UDP (laptop testing)
+      - "8053:80/tcp"    # Web interface (laptop testing)
     environment:
       TZ: ${TZ}
       WEBPASSWORD: ${PIHOLE_PASSWORD}
@@ -198,6 +204,7 @@ services:
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
+    user: "472:472"  # Grafana user ID
     ports:
       - "3000:3000"
     environment:
