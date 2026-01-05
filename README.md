@@ -327,10 +327,66 @@ After installation, configure each service:
 ### Tailscale
 
 1. Check logs: `docker logs tailscale`
-2. Your server will appear as **banana** at https://login.tailscale.com/admin/machines
-3. Access remotely: `http://banana:port`
-4. Your Raspberry will appear at https://login.tailscale.com/admin/machines
-5. Access all services securely from anywhere
+2. Your Raspberry will appear at https://login.tailscale.com/admin/machines
+3. Access all services securely from anywhere
+
+#### Configure Pi-hole for Tailscale Network (Ad-blocking for all Tailscale users)
+
+To enable ad-blocking for ALL devices connected to your Tailscale network:
+
+**Step 1: Configure Pi-hole to listen on Tailscale interface**
+
+1. Access Pi-hole admin: `http://pihole.banana.lan/admin` (or `http://your-ip/admin`)
+2. Go to **Settings** → **DNS**
+3. In the upper right corner, toggle from **Basic** to **Expert**
+4. Scroll to **Interface settings**
+5. Check the box: **Permit all origins**
+
+   ⚠️ **Security Note**: Only enable this if your Raspberry Pi is behind a firewall and you use a strong Pi-hole password.
+
+**Step 2: Get your Raspberry Pi's Tailscale IP**
+
+```bash
+# SSH into your Raspberry Pi and run:
+tailscale ip -4
+```
+
+This will show an IP like `100.64.x.x` or `100.x.x.x` - this is your **Tailscale IP** (NOT your router IP like 192.168.x.x or your public IP).
+
+**Step 3: Configure Tailscale to use Pi-hole as DNS (Manual - via Tailscale Admin Panel)**
+
+1. Go to https://login.tailscale.com/admin/dns
+2. Under **Nameservers** section, click **Add nameserver**
+3. Select **Custom**
+4. Enter your Raspberry Pi's **Tailscale IP** from Step 2 (e.g., `100.64.x.x`)
+5. Click **Save**
+6. Enable the **Override local DNS** toggle
+
+**Step 4: Disable key expiry for Raspberry Pi**
+
+To keep your Raspberry Pi always connected without re-authentication:
+
+1. Go to https://login.tailscale.com/admin/machines
+2. Find your Raspberry Pi in the list
+3. Click the **⋯** (three dots) menu next to it
+4. Select **Disable key expiry**
+
+⚠️ **Security Note**: Only do this for trusted devices. Revoke the key immediately if the device is lost or compromised.
+
+**✅ Done! Now everyone who connects to your Tailscale network automatically gets:**
+
+- 🛡️ Ad-blocking via Pi-hole
+- 🎬 Access to Plex, Nextcloud, and all your services
+- 🌍 Works from anywhere in the world
+
+**Understanding IP Types:**
+
+- **Router IP** (192.168.x.x): Local network only, assigned by your home router
+- **Public IP**: Your ISP-assigned internet address (visible to websites)
+- **Tailscale IP** (100.x.x.x): Virtual private network IP, only visible within your Tailscale network
+- **Static IP** (configured in `.env`): Reservation in your router so RPi always gets the same local IP
+
+**Note**: The nameserver configuration is done through Tailscale's web admin panel and cannot be automated from this project. It's a one-time manual setup per Tailscale account.
 
 ### Download Stack (Radarr/Sonarr)
 
