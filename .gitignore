@@ -4,6 +4,15 @@
 # Configuration directories (contains sensitive data)
 config/
 
+# EXCEPT: Public/safe configuration files (no credentials)
+!config/homer/
+!config/homer/config.yml
+!config/prometheus/
+!config/prometheus/prometheus.yml
+
+# Configuration templates/examples (for documentation)
+config-examples/
+
 # Data directories (your actual files and media)
 /mnt/data/
 
