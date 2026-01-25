@@ -120,6 +120,13 @@ services:
     restart: unless-stopped
     environment: 
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+  
+  pol-academy-offers-bot:
+    build: https://github.com/PlatanosVerdes/PolFerrerAcademyOffers.git#add_bot_logic #main
+    container_name: pol-academy-offers-bot
+    restart: unless-stopped
+    environment: 
+      BOT_TOKEN: ${BOT_POL_ACADEMY_OFFERS_TOKEN}
       
 
 
