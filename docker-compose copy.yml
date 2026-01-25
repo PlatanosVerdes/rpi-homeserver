@@ -1,0 +1,344 @@
+services:
+
+  # -------------------------
+  # HOMEPAGE
+  # -------------------------
+
+  homer:
+    image: b4bz/homer:latest
+    container_name: homer
+    ports:
+      - "8000:8080"
+    volumes:
+      - ./config/homer:/home/app/public/assets
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    restart: unless-stopped
+
+  # -------------------------
+  # NETWORK & SECURITY
+  # -------------------------
+
+  tailscale:
+    image: tailscale/tailscale:latest
+    container_name: tailscale
+    hostname: ${HOSTNAME:-banana}
+    network_mode: "host"
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    volumes:
+      - ./config/tailscale:/var/lib/tailscale
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      - TS_AUTHKEY=${TAILSCALE_AUTHKEY}
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_USERSPACE=false
+    restart: unless-stopped
+
+  pihole:
+    image: pihole/pihole:latest
+    container_name: pihole
+    # USAR HOST NETWORK: Esto soluciona los puertos y permite ver las IPs reales de los clientes
+    network_mode: "bridge" 
+    environment:
+      TZ: ${TZ}
+      WEBPASSWORD: ${PIHOLE_PASSWORD}
+      DNSMASQ_LISTENING: all
+      # Opcional: Si usas DHCP de Pihole, necesitas esto
+      # DHCP_ACTIVE: "true" 
+    volumes:
+      - ./config/pihole/etc-pihole:/etc/pihole
+      - ./config/pihole/etc-dnsmasq:/etc/dnsmasq.d
+    cap_add:
+      - NET_ADMIN # Necesario para bloquear anuncios a nivel de red y gestión DHCP
+    # NOTA: Al usar network_mode: "host", la sección 'ports' se ignora o se elimina, 
+    # ya que el contenedor usa directamente los puertos 53 y 80 de la Raspberry.
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+      - "8053:80/tcp"
+    healthcheck:
+      test: ["CMD", "dig", "+short", "@127.0.0.1", "google.com"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  # -------------------------
+  # MEDIA SERVER
+  # -------------------------
+
+  plex:
+    image: lscr.io/linuxserver/plex:latest
+    container_name: plex
+    network_mode: "host"
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - PLEX_CLAIM=${PLEX_CLAIM}
+    volumes:
+      - ./config/plex:/config
+      - ${DATA_PATH}/media:/media
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:32400/web/index.html"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+    restart: unless-stopped
+
+  # -------------------------
+  # DOWNLOAD STACK
+  # -------------------------
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    ports:
+      - "8080:8080"
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ./config/qbittorrent:/config
+      - ${DATA_PATH}/downloads:/downloads
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    ports:
+      - "9696:9696"
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ./config/prowlarr:/config
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9696/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    ports:
+      - "7878:7878"
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ./config/radarr:/config
+      - ${DATA_PATH}/media/movies:/movies
+      - ${DATA_PATH}/downloads:/downloads
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7878/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    ports:
+      - "8989:8989"
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ./config/sonarr:/config
+      - ${DATA_PATH}/media/series:/series
+      - ${DATA_PATH}/downloads:/downloads
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8989/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # -------------------------
+  # PRIVATE CLOUD
+  # -------------------------
+
+  nextcloud:
+    image: lscr.io/linuxserver/nextcloud:latest
+    container_name: nextcloud
+    ports:
+      - "444:443"
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ./config/nextcloud:/config
+      - ${DATA_PATH}/nextcloud:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-k", "https://localhost:443/status.php"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    restart: unless-stopped
+
+  # -------------------------
+  # MONITORING STACK
+  # -------------------------
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./config/prometheus:/etc/prometheus
+      - ./config/prometheus/data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    user: "472:472"  # Grafana user ID
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
+    volumes:
+      - ./config/grafana:/var/lib/grafana
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    ports:
+      - "9100:9100"
+    command:
+      - '--path.rootfs=/host'
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    volumes:
+      - /:/host:ro,rslave
+    restart: unless-stopped
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    ports:
+      - "8081:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /dev/disk:/dev/disk:ro
+    privileged: true
+    devices:
+      - /dev/kmsg
+    restart: unless-stopped
+
+  pihole-exporter:
+    image: ekofr/pihole-exporter:latest
+    container_name: pihole-exporter
+    ports:
+      - "9617:9617"
+    environment:
+      - PIHOLE_HOSTNAME=${PIHOLE_HOSTNAME:-127.0.0.1}
+      - PIHOLE_PORT=${PIHOLE_PORT:-80}
+      - PIHOLE_PASSWORD=${PIHOLE_PASSWORD}
+    restart: unless-stopped
+
+  exportarr-radarr:
+    image: ghcr.io/onedr0p/exportarr:latest
+    container_name: exportarr-radarr
+    ports:
+      - "9707:9707"
+    environment:
+      - PORT=9707
+      - URL=http://radarr:7878
+      - APIKEY=${RADARR_API_KEY}
+    command: ["radarr"]
+    restart: unless-stopped
+
+  exportarr-sonarr:
+    image: ghcr.io/onedr0p/exportarr:latest
+    container_name: exportarr-sonarr
+    ports:
+      - "9708:9708"
+    environment:
+      - PORT=9708
+      - URL=http://sonarr:8989
+      - APIKEY=${SONARR_API_KEY}
+    command: ["sonarr"]
+    restart: unless-stopped
+
+  exportarr-prowlarr:
+    image: ghcr.io/onedr0p/exportarr:latest
+    container_name: exportarr-prowlarr
+    ports:
+      - "9709:9709"
+    environment:
+      - PORT=9709
+      - URL=http://prowlarr:9696
+      - APIKEY=${PROWLARR_API_KEY}
+    command: ["prowlarr"]
+    restart: unless-stopped
+
+  tautulli:
+    image: lscr.io/linuxserver/tautulli:latest
+    container_name: tautulli
+    ports:
+      - "8181:8181"
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ./config/tautulli:/config
+    restart: unless-stopped
+
+  # smartctl-exporter:
+  #   image: prometheuscommunity/smartctl-exporter:latest
+  #   container_name: smartctl-exporter
+  #   # NOTE: This image doesn't have ARM64 support for Raspberry Pi
+  #   # Consider using an ARM64-compatible SMART monitoring alternative
+  #   ports:
+  #     - "9633:9633"
+  #   privileged: true
+  #   volumes:
+  #     - /dev:/dev:ro
+  #   restart: unless-stopped
+
+

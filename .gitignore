@@ -1,17 +1,9 @@
 # Environment variables (CRITICAL - contains passwords and API keys)
 .env
+.env_copy
 
 # Configuration directories (contains sensitive data)
-config/
-
-# EXCEPT: Public/safe configuration files (no credentials)
-!config/homer/
-!config/homer/config.yml
-!config/prometheus/
-!config/prometheus/prometheus.yml
-
-# Configuration templates/examples (for documentation)
-config-examples/
+config/*
 
 # Data directories (your actual files and media)
 /mnt/data/
@@ -49,6 +41,7 @@ __pycache__/
 *.so
 .Python
 venv/
+.venv
 ENV/
 
 # Node
