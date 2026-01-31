@@ -6,7 +6,7 @@ services:
     restart: unless-stopped
     dns:
       - 8.8.8.8
-      - 1.1.1.1
+      - 127.0.0.1
     ports:
       - "3001:3000"
     environment:
@@ -14,6 +14,28 @@ services:
     volumes:
       - ${CONFIG_ROOT}/homepage:/app/config
       - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - media-network
+
+  pihole:
+    container_name: pihole
+    image: pihole/pihole:latest
+    restart: unless-stopped
+    dns:
+      - 127.0.0.1
+      - 8.8.8.8
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+      - "80:80/tcp" # Panel de control (puedes cambiarlo a 8081:80 si el 80 está ocupado)
+    environment:
+      TZ: ${TZ}
+      FTLCONF_webserver_api_password: ${PIHOLE_PASSWORD}
+      WEBPASSWORD: ${PIHOLE_PASSWORD}
+      FTLCONF_LOCAL_IPV4: ${STATIC_IP}
+    volumes:
+      - ${CONFIG_ROOT}/pihole:/etc/pihole
+      - ${CONFIG_ROOT}/dnsmasq.d:/etc/dnsmasq.d
     networks:
       - media-network
 
@@ -44,7 +66,7 @@ services:
       - WEBUI_PORT=${QBIT_WEBUI_PORT}
     dns:
       - 8.8.8.8
-      - 1.1.1.1
+      - 127.0.0.1
     volumes:
       - ${CONFIG_ROOT}/qbittorrent:/config
       - ${DATA_ROOT}:/data
@@ -62,7 +84,7 @@ services:
     restart: unless-stopped
     dns:
       - 8.8.8.8
-      - 1.1.1.1
+      - 127.0.0.1
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
@@ -80,7 +102,7 @@ services:
     restart: unless-stopped
     dns:
       - 8.8.8.8
-      - 1.1.1.1
+      - 127.0.0.1
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
@@ -115,7 +137,7 @@ services:
     restart: unless-stopped
     dns:
       - 8.8.8.8
-      - 1.1.1.1
+      - 127.0.0.1
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
@@ -126,19 +148,13 @@ services:
       - "5055:5055"
     networks:
       - media-network
-      
-  # --- BOTS ---
-  test-bot:
-    build: ./bots/pocoyo
-    container_name: test-bot
-    restart: unless-stopped
-    environment: 
-      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
   
+  # BOTS 
   pol-academy-offers-bot:
     build: https://github.com/PlatanosVerdes/PolFerrerAcademyOffers.git#main
     container_name: pol-academy-offers-bot
     restart: unless-stopped
+    network_mode: host
     environment: 
       BOT_TOKEN: ${BOT_POL_ACADEMY_OFFERS_TOKEN}
       
