@@ -1,0 +1,25 @@
+# https://gethomepage.dev/configs/settings/
+
+title: "RaspiHome"
+favicon: https://img.icons8.com/?size=100&id=12229&format=png&color=000000
+base: http://100.125.71.20:3001
+
+#background:
+#  image: https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=2070&auto=format&fit=crop
+#  opacity: 0.5
+
+layout:
+  Media:
+    style: grid
+    columns: 3
+  Downloads:
+    style: grid
+    columns: 3
+  Management:
+    style: grid
+    columns: 3
+
+appearance:
+  fontFamily: "Inter"
+  fontWeight: 500
+  useEqualHeightCards: true # From the new docs you provided
