@@ -1,0 +1,31 @@
+# HomePage
+raspi.pi {
+    reverse_proxy 100.125.71.20:3001
+    tls internal
+}
+
+home.net {
+    reverse_proxy http://192.168.1.180:3001
+}
+
+
+# Apps
+radarr.local {
+    reverse_proxy radarr:7878
+}
+
+sonarr.local {
+    reverse_proxy sonarr:8989
+}
+
+torrent.local {
+    reverse_proxy qbittorrent:8080
+}
+
+prowlarr.local {
+    reverse_proxy prowlarr:9696
+}
+
+overseerr.local {
+    reverse_proxy overseerr:5055
+}

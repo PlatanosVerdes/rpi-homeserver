@@ -1,0 +1,293 @@
+services:
+  # --- HOMEPAGE ---
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    ports:
+      - "3001:3000"
+    environment:
+      - HOMEPAGE_ALLOWED_HOSTS=192.168.1.180,192.168.1.180:3001,100.125.71.20,100.125.71.20:3001,raspi,raspi.pi,raspi.pi:3001
+      - HOMEPAGE_VAR_PLEX_TOKEN=${PLEX_API_TOKEN}
+      - HOMEPAGE_VAR_PIHOLE_TOKEN=${PIHOLE_PASSWORD}
+      - HOMEPAGE_VAR_QBIT_PASSWORD=${QBIT_PASSWORD}
+      - HOMEPAGE_VAR_OVERSEERR_TOKEN=${OVERSEERR_API_KEY}
+      - HOMEPAGE_VAR_PROWLARR_TOKEN=${PROWLARR_API_KEY}
+      - HOMEPAGE_VAR_RADARR_TOKEN=${RADARR_API_KEY}
+      - HOMEPAGE_VAR_SONARR_TOKEN=${SONARR_API_KEY}
+      - HOMEPAGE_VAR_SPEEDTEST_TOKEN=${SPEEDTEST_API_KEY}
+    volumes:
+      - ${CONFIG_ROOT}/homepage:/app/config
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${DATA_ROOT}:${DATA_ROOT}:ro
+    networks:
+      - media-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # --- Caddy ---
+  caddy:
+    image: caddy:latest
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ${CONFIG_ROOT}/caddy/Caddyfile:/etc/caddy/Caddyfile 
+      - ${APP_CONFIG_PATH}/caddy_data:/data                 
+      - ${APP_CONFIG_PATH}/caddy_config:/config             
+    networks:
+      - media-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+  
+  # --- SPEEDTEST ---
+  speedtest-tracker:
+    image: lscr.io/linuxserver/speedtest-tracker:latest
+    container_name: speedtest-tracker
+    restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - DB_CONNECTION=sqlite
+      - APP_KEY=${SPEEDTEST_KEY}
+      - SPEEDTEST_SCHEDULE="0 * * * *" #"*/15 * * * *"
+      - PRUNE_RESULTS_OLDER_THAN=30 # 30 days
+    volumes:
+      - ${APP_CONFIG_PATH}/speedtest-tracker:/config
+      - ${DATA_DB_ROOT}/speedtest.sqlite:/config/database.sqlite
+    ports:
+      - "8443:80"
+    networks:
+      - media-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+  # Temp credentials
+  # Email: admin@example.com
+  # Pass: password 
+      
+  # --- PiHole -AdBlock ---
+  pihole:
+    container_name: pihole
+    image: pihole/pihole:latest
+    restart: unless-stopped
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+      - "8081:80/tcp"
+    environment:
+      TZ: ${TZ}
+      FTLCONF_webserver_api_password: ${PIHOLE_PASSWORD}
+      WEBPASSWORD: ${PIHOLE_PASSWORD}
+    volumes:
+      - ${APP_CONFIG_PATH}/pihole:/etc/pihole
+      - ${APP_CONFIG_PATH}/dnsmasq.d:/etc/dnsmasq.d
+    networks:
+      - media-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # --- PLEX (Media Player) ---
+  plex:
+    image: lscr.io/linuxserver/plex:latest
+    container_name: plex
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - VERSION=docker
+      - TZ=${TZ}
+      - PLEX_CLAIM=${PLEX_CLAIM}
+    volumes:
+      - ${APP_CONFIG_PATH}/plex:/config
+      - ${DATA_ROOT}:/data
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # --- QBITTORRENT (Downloader) ---
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - WEBUI_PORT=${QBIT_WEBUI_PORT}
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    volumes:
+      - ${APP_CONFIG_PATH}/qbittorrent:/config
+      - ${DATA_ROOT}:/data
+    ports:
+      - "${QBIT_WEBUI_PORT}:${QBIT_WEBUI_PORT}"
+      - "6881:6881"
+      - "6881:6881/udp"
+    networks:
+      - media-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - TZ=${TZ}
+    ports:
+      - "8191:8191"
+    networks:
+      - media-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # --- PROWLARR (Indexer Manager) ---
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+    volumes:
+      - ${APP_CONFIG_PATH}/prowlarr:/config
+    ports:
+      - "9696:9696"
+    networks:
+      - media-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # --- RADARR (Movies) ---
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+    volumes:
+      - ${APP_CONFIG_PATH}/radarr:/config
+      - ${DATA_ROOT}:/data
+    ports:
+      - "7878:7878"
+    networks:
+      - media-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # --- SONARR (TV Series) ---
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+    volumes:
+      - ${APP_CONFIG_PATH}/sonarr:/config
+      - ${DATA_ROOT}:/data
+    ports:
+      - "8989:8989"
+    networks:
+      - media-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+  
+  # --- OVERSEERR (Request Management) ---
+  overseerr:
+    image: lscr.io/linuxserver/overseerr:latest
+    container_name: overseerr
+    restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${APP_CONFIG_PATH}/overseerr:/config
+    ports:
+      - "5055:5055"
+    networks:
+      - media-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+  
+  # --- SERVICES ---
+  # BOTS 
+  pol-academy-offers-bot:
+    build: https://github.com/PlatanosVerdes/PolFerrerAcademyOffers.git#main
+    container_name: pol-academy-offers-bot
+    restart: unless-stopped
+    dns:
+      - 8.8.8.8
+    network_mode: host
+    environment: 
+      BOT_TOKEN: ${BOT_POL_ACADEMY_OFFERS_TOKEN}
+      
+
+
+networks:
+  media-network:
+    name: media-network
+    driver: bridge

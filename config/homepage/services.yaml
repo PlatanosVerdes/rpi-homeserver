@@ -1,0 +1,96 @@
+- Media:
+    - Plex:
+        icon: plex.png
+        href: http://100.125.71.20:32400/web
+        server: my-docker
+        container: plex
+        widget:
+          type: plex
+          url: http://100.125.71.20:32400
+          key: "{{HOMEPAGE_VAR_PLEX_TOKEN}}" #https://www.plexopedia.com/plex-media-server/general/plex-token/
+    - Overseerr:
+        icon: overseerr.png
+        href: http://100.125.71.20:5055
+        server: my-docker
+        container: overseerr
+        widget:
+          type: overseerr
+          url: http://overseerr:5055
+          key: "{{HOMEPAGE_VAR_OVERSEERR_TOKEN}}"
+
+- Indexers:
+    - Prowlarr:
+        icon: prowlarr.png
+        href: http://100.125.71.20:9696
+        server: my-docker
+        container: prowlarr
+        widget:
+          type: prowlarr
+          url: http://prowlarr:9696
+          key: "{{HOMEPAGE_VAR_PROWLARR_TOKEN}}"
+
+    - Radarr:
+        icon: radarr.png
+        href: http://100.125.71.20:7878
+        server: my-docker
+        container: radarr
+        widget:
+          type: radarr
+          url: http://radarr:7878
+          key: "{{HOMEPAGE_VAR_RADARR_TOKEN}}"
+
+    - Sonarr:
+        icon: sonarr.png
+        href: http://100.125.71.20:8989
+        server: my-docker
+        container: sonarr
+        widget:
+          type: sonarr
+          url: http://sonarr:8989
+          key: "{{HOMEPAGE_VAR_SONARR_TOKEN}}"
+    
+    - FlareSolverr:
+        icon: flaresolverr.png
+        href: http://100.125.71.20:8191
+        server: my-docker
+        container: flaresolverr
+
+- Downloads:
+    - qBittorrent:
+        icon: qbittorrent.png
+        href: http://100.125.71.20:8080
+        server: my-docker
+        container: qbittorrent
+        widget:
+          type: qbittorrent
+          url: http://100.125.71.20:8080
+          username: admin
+          password: "{{HOMEPAGE_VAR_QBIT_PASSWORD}}"
+
+- Management:
+    - Network:
+        icon: https://img.icons8.com/?size=100&id=12995&format=png&color=000000
+        href: http://100.125.71.20:8443
+        widget:
+            type: speedtest
+            url: http://speedtest-tracker:80
+            key: "{{HOMEPAGE_VAR_SPEEDTEST_TOKEN}}"
+            bitratePrecision: 1
+
+    - Pi-hole:
+        icon: pi-hole.png
+        href: http://100.125.71.20:8081/admin
+        server: my-docker
+        container: pihole
+        widget:
+          type: pihole
+          url: http://100.125.71.20:8081
+          version: 6
+          key: "{{HOMEPAGE_VAR_PIHOLE_TOKEN}}"
+
+- Automation:
+    - Offers Bot:
+        icon: telegram.png
+        description: Pol Academy Offers Hunter
+        server: my-docker
+        container: pol-academy-offers-bot

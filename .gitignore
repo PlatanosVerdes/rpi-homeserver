@@ -1,0 +1,57 @@
+# Environment variables (CRITICAL - contains passwords and API keys)
+.env
+.env_copy
+
+# Configuration directories (contains sensitive data)
+appdata/*
+config/homepage/*
+!config/homepage/*.yaml
+
+
+# Docker volumes and runtime data
+*.log
+*.pid
+*.sock
+
+# Temporary files
+*.tmp
+*.swp
+*~
+.DS_Store
+
+# Backup files
+*.backup
+*.bak
+*.old
+
+# IDE and editor files
+.vscode/
+.idea/
+*.sublime-*
+.cursor/
+
+# OS files
+Thumbs.db
+.Trash-*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv
+ENV/
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Secrets and keys (extra safety)
+*.key
+*.pem
+*.crt
+secrets/
+credentials/
