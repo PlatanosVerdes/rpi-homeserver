@@ -17,6 +17,16 @@
           type: overseerr
           url: http://overseerr:5055
           key: "{{HOMEPAGE_VAR_OVERSEERR_TOKEN}}"
+    - Jellyfin:
+        icon: jellyfin.png
+        href: http://100.125.71.20:8096
+        server: my-docker
+        container: jellyfin
+        widget:
+          type: jellyfin
+          url: http://jellyfin:8096
+          key: "{{HOMEPAGE_VAR_JELLYFIN_TOKEN}}"
+          enableNowPlaying: true
 
 - Indexers:
     - Prowlarr:
