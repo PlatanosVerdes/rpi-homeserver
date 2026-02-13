@@ -28,6 +28,28 @@
           key: "{{HOMEPAGE_VAR_JELLYFIN_TOKEN}}"
           enableNowPlaying: true
 
+- Monitoring:
+    - Grafana:
+        icon: grafana.png
+        href: http://100.125.71.20:3000
+        server: my-docker
+        container: grafana
+
+    - Prometheus:
+        icon: prometheus.png
+        href: http://100.125.71.20:9090
+        server: my-docker
+        container: prometheus
+        widget:
+            type: prometheus
+            url: http://prometheus:9090
+
+    - Pushgateway:
+        icon: https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/png/prometheus.png
+        href: http://100.125.71.20:9091
+        server: my-docker
+        container: pushgateway
+
 - Indexers:
     - Prowlarr:
         icon: prowlarr.png

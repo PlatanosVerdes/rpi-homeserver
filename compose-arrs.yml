@@ -1,0 +1,98 @@
+# --- Arr's Family ---
+services:
+  # --- QBITTORRENT (Downloader) ---
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - WEBUI_PORT=${QBIT_WEBUI_PORT}
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    volumes:
+      - ${APP_CONFIG_PATH}/qbittorrent:/config
+      - ${DATA_ROOT}:/data
+    ports:
+      - "${QBIT_WEBUI_PORT}:${QBIT_WEBUI_PORT}"
+      - "6881:6881"
+      - "6881:6881/udp"
+    networks:
+      - media-network
+
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - TZ=${TZ}
+    ports:
+      - "8191:8191"
+    networks:
+      - media-network
+
+  # --- PROWLARR (Indexer Manager) ---
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+    volumes:
+      - ${APP_CONFIG_PATH}/prowlarr:/config
+    ports:
+      - "9696:9696"
+    networks:
+      - media-network
+
+  # --- RADARR (Movies) ---
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+    volumes:
+      - ${APP_CONFIG_PATH}/radarr:/config
+      - ${DATA_ROOT}:/data
+    ports:
+      - "7878:7878"
+    networks:
+      - media-network
+
+  # --- SONARR (TV Series) ---
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+    volumes:
+      - ${APP_CONFIG_PATH}/sonarr:/config
+      - ${DATA_ROOT}:/data
+    ports:
+      - "8989:8989"
+    networks:
+      - media-network
+
+networks:
+  media-network:
+    external: true
