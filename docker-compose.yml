@@ -19,6 +19,7 @@ services:
       - HOMEPAGE_VAR_RADARR_TOKEN=${RADARR_API_KEY}
       - HOMEPAGE_VAR_SONARR_TOKEN=${SONARR_API_KEY}
       - HOMEPAGE_VAR_SPEEDTEST_TOKEN=${SPEEDTEST_API_KEY}
+      - HOMEPAGE_VAR_JELLYFIN_TOKEN=${JELLYFIN_API_KEY}
     volumes:
       - ${CONFIG_ROOT}/homepage:/app/config
       - /var/run/docker.sock:/var/run/docker.sock
@@ -130,6 +131,75 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+  
+  # --- JELLYFIN (Free Media Player) ---
+  jellyfin:
+    image: lscr.io/linuxserver/jellyfin:latest
+    container_name: jellyfin
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${APP_CONFIG_PATH}/jellyfin:/config
+      - ${DATA_ROOT}:/data
+    ports:
+      - "8096:8096"
+    devices:
+      - /dev/dri:/dev/dri
+    networks:
+      - media-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # --- Acestream ---
+  aceserve:
+    image: jopsis/aceserve:latest
+    container_name: aceserve
+    ports:
+      - "6878:6878"
+      - "8621:8621"
+      - "62062:62062"
+    restart: unless-stopped
+    dns:
+      - 1.1.1.1
+      - 1.0.0.1
+    networks:
+      - media-network
+
+  acestream-updater:
+    image: alpine:latest
+    container_name: acestream-updater
+    restart: unless-stopped
+    dns:
+      - 1.1.1.1
+      - 1.0.0.1
+    networks:
+      - media-network
+    volumes:
+      - ${APP_CONFIG_PATH}/jellyfin/acestream:/data 
+    environment:
+      - TZ=${TZ}
+    command: >
+      /bin/sh -c "
+      apk add --no-cache curl sed bash;
+      while true; do
+        echo 'Updating Acestream channel list...';
+        curl -s 'https://ipfs.io/ipns/k51qzi5uqu5di462t7j4vu4akwfhvtjhy88qbupktvoacqfqe9uforjvhyi4wr/hashes_acestream.m3u' | sed 's|acestream://|http://aceserve:6878/ace/getstream?id=|g' > /data/channels_ace.m3u;
+        echo 'Updated list. Waiting 12 hours...';
+        sleep 43200;
+      done
+      "
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 
   # --- QBITTORRENT (Downloader) ---
   qbittorrent:
