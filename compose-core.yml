@@ -1,0 +1,97 @@
+  # --- CORE Services ---
+services:
+  # --- HOMEPAGE ---
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    ports:
+      - "3001:3000"
+    environment:
+      - HOMEPAGE_ALLOWED_HOSTS=192.168.1.180,192.168.1.180:3001,100.125.71.20,100.125.71.20:3001,raspi,raspi.pi,raspi.pi:3001
+      - HOMEPAGE_VAR_PLEX_TOKEN=${PLEX_API_TOKEN}
+      - HOMEPAGE_VAR_PIHOLE_TOKEN=${PIHOLE_PASSWORD}
+      - HOMEPAGE_VAR_QBIT_PASSWORD=${QBIT_PASSWORD}
+      - HOMEPAGE_VAR_OVERSEERR_TOKEN=${OVERSEERR_API_KEY}
+      - HOMEPAGE_VAR_PROWLARR_TOKEN=${PROWLARR_API_KEY}
+      - HOMEPAGE_VAR_RADARR_TOKEN=${RADARR_API_KEY}
+      - HOMEPAGE_VAR_SONARR_TOKEN=${SONARR_API_KEY}
+      - HOMEPAGE_VAR_SPEEDTEST_TOKEN=${SPEEDTEST_API_KEY}
+      - HOMEPAGE_VAR_JELLYFIN_TOKEN=${JELLYFIN_API_KEY}
+    volumes:
+      - ${CONFIG_ROOT}/homepage:/app/config
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${DATA_ROOT}:${DATA_ROOT}:ro
+    networks:
+      - media-network
+
+  # --- Caddy ---
+  caddy:
+    image: caddy:latest
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ${CONFIG_ROOT}/caddy/Caddyfile:/etc/caddy/Caddyfile 
+      - ${APP_CONFIG_PATH}/caddy_data:/data                 
+      - ${APP_CONFIG_PATH}/caddy_config:/config             
+    networks:
+      - media-network
+
+  # --- SPEEDTEST ---
+  speedtest-tracker:
+    image: lscr.io/linuxserver/speedtest-tracker:latest
+    container_name: speedtest-tracker
+    restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - DB_CONNECTION=sqlite
+      - APP_KEY=${SPEEDTEST_KEY}
+      - SPEEDTEST_SCHEDULE="0 * * * *" #"*/15 * * * *"
+      - PRUNE_RESULTS_OLDER_THAN=30 # 30 days
+    volumes:
+      - ${APP_CONFIG_PATH}/speedtest-tracker:/config
+      - ${DATA_DB_ROOT}/speedtest.sqlite:/config/database.sqlite
+    ports:
+      - "8443:80"
+    networks:
+      - media-network
+  # Temp credentials
+  # Email: admin@example.com
+  # Pass: password 
+      
+  # --- PiHole -AdBlock ---
+  pihole:
+    container_name: pihole
+    image: pihole/pihole:latest
+    restart: unless-stopped
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+      - "8081:80/tcp"
+    environment:
+      TZ: ${TZ}
+      FTLCONF_webserver_api_password: ${PIHOLE_PASSWORD}
+      WEBPASSWORD: ${PIHOLE_PASSWORD}
+    volumes:
+      - ${APP_CONFIG_PATH}/pihole:/etc/pihole
+      - ${APP_CONFIG_PATH}/dnsmasq.d:/etc/dnsmasq.d
+    networks:
+      - media-network
+
+networks:
+  media-network:
+    external: true

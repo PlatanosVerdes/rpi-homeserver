@@ -1,0 +1,104 @@
+  # --- Media servicess ---
+services:
+  # --- PLEX (Media Player) ---
+  plex:
+    image: lscr.io/linuxserver/plex:latest
+    container_name: plex
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - VERSION=docker
+      - TZ=${TZ}
+      - PLEX_CLAIM=${PLEX_CLAIM}
+    volumes:
+      - ${APP_CONFIG_PATH}/plex:/config
+      - ${DATA_ROOT}:/data
+  
+  # --- JELLYFIN (Free Media Player) ---
+  jellyfin:
+    image: lscr.io/linuxserver/jellyfin:latest
+    container_name: jellyfin
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${APP_CONFIG_PATH}/jellyfin:/config
+      - ${DATA_ROOT}:/data
+    ports:
+      - "8096:8096"
+    devices:
+      - /dev/dri:/dev/dri
+    networks:
+      - media-network
+
+  # --- OVERSEERR (Request Management) ---
+  overseerr:
+    image: lscr.io/linuxserver/overseerr:latest
+    container_name: overseerr
+    restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${APP_CONFIG_PATH}/overseerr:/config
+    ports:
+      - "5055:5055"
+    networks:
+      - media-network
+
+  # --- Acestream ---
+  aceserve:
+    image: jopsis/aceserve:latest
+    container_name: aceserve
+    ports:
+      - "6878:6878"
+      - "8621:8621"
+      - "62062:62062"
+    restart: unless-stopped
+    dns:
+      - 1.1.1.1
+      - 1.0.0.1
+    networks:
+      - media-network
+  
+  # --- Cron to get IPFS ---
+  acestream-updater:
+    image: alpine:latest
+    container_name: acestream-updater
+    restart: unless-stopped
+    dns:
+      - 1.1.1.1
+      - 1.0.0.1
+    networks:
+      - media-network
+    volumes:
+      - ${APP_CONFIG_PATH}/jellyfin/acestream:/data
+      #- ${SCRIPTS_PATH}/acestream-updater/script.sh:/app/script.sh:ro
+      - ${SCRIPTS_PATH}/acestream-updater:/app
+    environment:
+      - TZ=${TZ}
+      - OUTPUT_FILE=/data/channels_ace.m3u
+      - SOURCE_URL=https://ipfs.io/ipns/k51qzi5uqu5di462t7j4vu4akwfhvtjhy88qbupktvoacqfqe9uforjvhyi4wr/hashes_acestream.m3u
+      - ACESERVE_URL=http://aceserve:6878/ace/getstream?id=
+      - PUSHGATEWAY_URL=http://pushgateway:9091
+    command: >
+      /bin/sh -c "
+      apk add --no-cache curl sed bash coreutils;
+      while true; do
+        bash /app/script.sh || echo 'Failed execution, retrying in the next cycle.';
+        echo 'Next attempt in 4 hours...';
+        sleep 14400;
+      done
+      "
+
+networks:
+  media-network:
+    external: true

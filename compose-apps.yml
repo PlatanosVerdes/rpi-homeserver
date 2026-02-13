@@ -1,0 +1,17 @@
+# --- CUSTOM SERVICES & BOTS ---
+services:
+  # Telegram Bot for Academy Offers
+  pol-academy-offers-bot:
+    build: https://github.com/PlatanosVerdes/PolFerrerAcademyOffers.git#main
+    container_name: pol-academy-offers-bot
+    restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    network_mode: host
+    environment: 
+      BOT_TOKEN: ${BOT_POL_ACADEMY_OFFERS_TOKEN}
+
+networks:
+  media-network:
+    external: true
