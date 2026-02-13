@@ -7,6 +7,17 @@ base: http://100.125.71.20:3001
 #background:
 #  image: https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=2070&auto=format&fit=crop
 #  opacity: 0.5
+quicklaunch:
+  searchDescriptions: true    
+  hideInternetSearch: false   
+  showSearchSuggestions: true
+  hideVisitURL: false         
+  provider: google            
+
+statusStyle: dot              
+showStats: true               
+hideVersion: true            
+disableUpdateCheck: false
 
 layout:
   Media:
