@@ -35,6 +35,9 @@ services:
     container_name: grafana
     restart: unless-stopped
     user: "root"
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     ports:
       - "3000:3000"
     environment:

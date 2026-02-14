@@ -1,5 +1,5 @@
 # Environment variables (CRITICAL - contains passwords and API keys)
-.env
+*.env
 .env_copy
 
 # Configuration directories (contains sensitive data)
