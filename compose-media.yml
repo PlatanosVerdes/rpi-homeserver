@@ -15,7 +15,7 @@ services:
     volumes:
       - ${APP_CONFIG_PATH}/plex:/config
       - ${DATA_ROOT}:/data
-  
+
   # --- JELLYFIN (Free Media Player) ---
   jellyfin:
     image: lscr.io/linuxserver/jellyfin:latest
@@ -68,7 +68,7 @@ services:
       - 1.0.0.1
     networks:
       - media-network
-  
+
   # --- Cron to get IPFS ---
   acestream-updater:
     image: alpine:latest
@@ -86,18 +86,18 @@ services:
     environment:
       - TZ=${TZ}
       - OUTPUT_FILE=/data/channels_ace.m3u
-      - SOURCE_URL=https://ipfs.io/ipns/k51qzi5uqu5di462t7j4vu4akwfhvtjhy88qbupktvoacqfqe9uforjvhyi4wr/hashes_acestream.m3u
+      - SOURCE_URL=https://ipfs.io/ipns/k51qzi5uqu5di462t7j4vu4akwfhvtjhy88qbupktvoacqfqe9uforjvhyi4wr/hashes_acestream.m3u #https://ipfs.io/ipns/elcano.top
       - ACESERVE_URL=http://aceserve:6878/ace/getstream?id=
       - PUSHGATEWAY_URL=http://pushgateway:9091
     command: >
-      /bin/sh -c "
-      apk add --no-cache curl sed bash coreutils;
-      while true; do
-        bash /app/script.sh || echo 'Failed execution, retrying in the next cycle.';
-        echo 'Next attempt in 4 hours...';
-        sleep 14400;
-      done
-      "
+      /bin/bash -c "
+        apk add --no-cache curl sed bash coreutils;
+        while true; do
+          bash /app/script.sh || echo 'Failed execution...';
+          SECS=$(( (RANDOM % 241) + 60 )); # 1-5 min
+          echo \"Waiting $SECS seconds...\";
+          sleep $ESPERA;
+        done"
 
 networks:
   media-network:
