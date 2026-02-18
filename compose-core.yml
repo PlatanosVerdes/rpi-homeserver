@@ -11,7 +11,7 @@ services:
     ports:
       - "3001:3000"
     environment:
-      - HOMEPAGE_ALLOWED_HOSTS=192.168.1.180,192.168.1.180:3001,100.125.71.20,100.125.71.20:3001,raspi,raspi.pi,raspi.pi:3001
+      - HOMEPAGE_ALLOWED_HOSTS=192.168.1.180,192.168.1.180:3001,100.125.71.20,100.125.71.20:3001,raspi:3001,ras.pi:3001,raspi
       - HOMEPAGE_VAR_PLEX_TOKEN=${PLEX_API_TOKEN}
       - HOMEPAGE_VAR_PIHOLE_TOKEN=${PIHOLE_PASSWORD}
       - HOMEPAGE_VAR_QBIT_PASSWORD=${QBIT_PASSWORD}
@@ -25,21 +25,6 @@ services:
       - ${CONFIG_ROOT}/homepage:/app/config
       - /var/run/docker.sock:/var/run/docker.sock
       - ${DATA_ROOT}:${DATA_ROOT}:ro
-    networks:
-      - media-network
-
-  # --- Caddy ---
-  caddy:
-    image: caddy:latest
-    container_name: caddy
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ${CONFIG_ROOT}/caddy/Caddyfile:/etc/caddy/Caddyfile 
-      - ${APP_CONFIG_PATH}/caddy_data:/data                 
-      - ${APP_CONFIG_PATH}/caddy_config:/config             
     networks:
       - media-network
 
