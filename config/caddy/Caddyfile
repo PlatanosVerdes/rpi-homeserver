@@ -1,31 +1,58 @@
-# HomePage
-raspi.pi {
-    reverse_proxy 100.125.71.20:3001
-    tls internal
+{
+    auto_https off
 }
 
-home.net {
-    reverse_proxy http://192.168.1.180:3001
+# Tailscale Shortcuts
+(tailscale) {
+    reverse_proxy 100.125.71.20:{args[0]}
 }
 
-
-# Apps
-radarr.local {
-    reverse_proxy radarr:7878
+# --- MEDIA ---
+http://raspi {
+    import tailscale 3001
+}
+http://plex {
+    import tailscale 32400
+}
+http://overseerr {
+    import tailscale 5055
+}
+http://jellyfin {
+    import tailscale 8096
 }
 
-sonarr.local {
-    reverse_proxy sonarr:8989
+# --- MONITORING ---
+http://grafana {
+    import tailscale 3000
+}
+http://prometheus {
+    import tailscale 9090
+}
+http://push {
+    import tailscale 9091
 }
 
-torrent.local {
-    reverse_proxy qbittorrent:8080
+# --- INDEXERS & DOWNLOADS ---
+http://prowlarr {
+    import tailscale 9696
+}
+http://radarr {
+    import tailscale 7878
+}
+http://sonarr {
+    import tailscale 8989
+}
+http://flare {
+    import tailscale 8191
+}
+http://torrent {
+    import tailscale 8080
 }
 
-prowlarr.local {
-    reverse_proxy prowlarr:9696
+# --- MANAGEMENT ---
+http://speedtest {
+    import tailscale 8443
 }
-
-overseerr.local {
-    reverse_proxy overseerr:5055
+http://pihole {
+    import tailscale 8081
 }
