@@ -1,16 +1,16 @@
 - Media:
     - Plex:
         icon: plex.png
-        href: http://100.125.71.20:32400/web
+        href: http://{{HOMEPAGE_VAR_TAILSCALE_IP}}:32400/web
         server: my-docker
         container: plex
         widget:
           type: plex
-          url: http://100.125.71.20:32400
+          url: http://{{HOMEPAGE_VAR_TAILSCALE_IP}}:32400
           key: "{{HOMEPAGE_VAR_PLEX_TOKEN}}" #https://www.plexopedia.com/plex-media-server/general/plex-token/
     - Overseerr:
         icon: overseerr.png
-        href: http://100.125.71.20:5055
+        href: http://{{HOMEPAGE_VAR_TAILSCALE_IP}}:5055
         server: my-docker
         container: overseerr
         widget:
@@ -19,7 +19,7 @@
           key: "{{HOMEPAGE_VAR_OVERSEERR_TOKEN}}"
     - Jellyfin:
         icon: jellyfin.png
-        href: http://100.125.71.20:8096
+        href: http://{{HOMEPAGE_VAR_TAILSCALE_IP}}:8096
         server: my-docker
         container: jellyfin
         widget:
@@ -31,13 +31,13 @@
 - Monitoring:
     - Grafana:
         icon: grafana.png
-        href: http://100.125.71.20:3000
+        href: http://{{HOMEPAGE_VAR_TAILSCALE_IP}}:3000
         server: my-docker
         container: grafana
 
     - Prometheus:
         icon: prometheus.png
-        href: http://100.125.71.20:9090
+        href: http://{{HOMEPAGE_VAR_TAILSCALE_IP}}:9090
         server: my-docker
         container: prometheus
         widget:
@@ -46,14 +46,14 @@
 
     - Pushgateway:
         icon: https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/png/prometheus.png
-        href: http://100.125.71.20:9091
+        href: http://{{HOMEPAGE_VAR_TAILSCALE_IP}}:9091
         server: my-docker
         container: pushgateway
 
 - Indexers:
     - Prowlarr:
         icon: prowlarr.png
-        href: http://100.125.71.20:9696
+        href: http://{{HOMEPAGE_VAR_TAILSCALE_IP}}:9696
         server: my-docker
         container: prowlarr
         widget:
@@ -63,7 +63,7 @@
 
     - Radarr:
         icon: radarr.png
-        href: http://100.125.71.20:7878
+        href: http://{{HOMEPAGE_VAR_TAILSCALE_IP}}:7878
         server: my-docker
         container: radarr
         widget:
@@ -73,7 +73,7 @@
 
     - Sonarr:
         icon: sonarr.png
-        href: http://100.125.71.20:8989
+        href: http://{{HOMEPAGE_VAR_TAILSCALE_IP}}:8989
         server: my-docker
         container: sonarr
         widget:
@@ -83,26 +83,26 @@
     
     - FlareSolverr:
         icon: flaresolverr.png
-        href: http://100.125.71.20:8191
+        href: http://{{HOMEPAGE_VAR_TAILSCALE_IP}}:8191
         server: my-docker
         container: flaresolverr
 
 - Downloads:
     - qBittorrent:
         icon: qbittorrent.png
-        href: http://100.125.71.20:8080
+        href: http://{{HOMEPAGE_VAR_TAILSCALE_IP}}:8080
         server: my-docker
         container: qbittorrent
         widget:
           type: qbittorrent
-          url: http://100.125.71.20:8080
+          url: http://{{HOMEPAGE_VAR_TAILSCALE_IP}}:8080
           username: admin
           password: "{{HOMEPAGE_VAR_QBIT_PASSWORD}}"
 
 - Management:
     - Network:
         icon: https://img.icons8.com/?size=100&id=12995&format=png&color=000000
-        href: http://100.125.71.20:8443
+        href: http://{{HOMEPAGE_VAR_TAILSCALE_IP}}:8443
         widget:
             type: speedtest
             url: http://speedtest-tracker:80
@@ -111,12 +111,12 @@
 
     - Pi-hole:
         icon: pi-hole.png
-        href: http://100.125.71.20:8081/admin
+        href: http://{{HOMEPAGE_VAR_TAILSCALE_IP}}:8081/admin
         server: my-docker
         container: pihole
         widget:
           type: pihole
-          url: http://100.125.71.20:8081
+          url: http://{{HOMEPAGE_VAR_TAILSCALE_IP}}:8081
           version: 6
           key: "{{HOMEPAGE_VAR_PIHOLE_TOKEN}}"
 

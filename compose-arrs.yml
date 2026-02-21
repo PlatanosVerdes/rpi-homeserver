@@ -9,6 +9,7 @@ services:
       - PUID=${PUID}
       - PGID=${PGID}
       - WEBUI_PORT=${QBIT_WEBUI_PORT}
+      - TZ=${TZ}
     dns:
       - 8.8.8.8
       - 1.1.1.1
@@ -48,6 +49,7 @@ services:
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
+      - TZ=${TZ}
     volumes:
       - ${APP_CONFIG_PATH}/prowlarr:/config
     ports:
@@ -63,9 +65,13 @@ services:
     dns:
       - 8.8.8.8
       - 1.1.1.1
+    extra_hosts: #LaLiga fucking things                 
+      - "api.radarr.video:172.67.180.78"      
+      - "radarr.servarr.com:172.67.180.78"
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
+      - TZ=${TZ}
     volumes:
       - ${APP_CONFIG_PATH}/radarr:/config
       - ${DATA_ROOT}:/data
@@ -85,6 +91,7 @@ services:
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
+      - TZ=${TZ}
     volumes:
       - ${APP_CONFIG_PATH}/sonarr:/config
       - ${DATA_ROOT}:/data
