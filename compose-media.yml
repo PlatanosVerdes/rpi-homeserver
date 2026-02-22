@@ -53,6 +53,7 @@ services:
       - "5055:5055"
     networks:
       - media-network
+      
 
   # --- Acestream ---
   aceserve:
@@ -87,6 +88,7 @@ services:
       - TZ=${TZ}
       - OUTPUT_FILE=/data/channels_ace.m3u
       - SOURCE_URL=https://ipfs.io/ipns/k51qzi5uqu5di462t7j4vu4akwfhvtjhy88qbupktvoacqfqe9uforjvhyi4wr/hashes_acestream.m3u #https://ipfs.io/ipns/elcano.top
+      # - SOURCE_URL=https://dweb.link/ipns/k51qzi5uqu5di462t7j4vu4akwfhvtjhy88qbupktvoacqfqe9uforjvhyi4wr/hashes_acestream.m3u
       - ACESERVE_URL=http://aceserve:6878/ace/getstream?id=
       - PUSHGATEWAY_URL=http://pushgateway:9091
     command: >
