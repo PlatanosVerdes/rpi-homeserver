@@ -100,6 +100,13 @@ sudo sysctl -p /etc/sysctl.d/99-tailscale.conf
 ```
 
 3. **Start Tailscale**
+If you also want to expose your local LAN to the Tailscale network, use:
+```bash
+sudo tailscale up --advertise-exit-node --advertise-routes=IP-RANGE --accept-lan=true --accept-dns=false
+```
+   - `--advertise-routes=192.168.0.0/24`: Makes the local LAN accessible to other Tailscale devices.
+   - `--accept-lan=true`: Allows the server to keep accessing devices on the local LAN while connected through Tailscale.
+     
 Run the following command to advertise the Exit Node without overriding local DNS settings:
 ```bash
 sudo tailscale up --advertise-exit-node --accept-dns=false
