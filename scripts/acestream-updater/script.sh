@@ -2,24 +2,22 @@
 
 set -euo pipefail
 
-# --- Variables de Entorno ---
 : "${OUTPUT_FILE:?Error: OUTPUT_FILE not set}"
-: "${SOURCE_URL:?Error: SOURCE_URL not set}"
+: "${SOURCE_URLS:?Error: SOURCE_URLS not set}"
 : "${ACESERVE_URL:?Error: ACESERVE_URL not set}"
 : "${PUSHGATEWAY_URL:?Error: PUSHGATEWAY_URL not set}"
+: "${JELLYFIN_URL:?Error: JELLYFIN_URL not set}"
+: "${JELLYFIN_API_KEY:?Error: JELLYFIN_API_KEY not set}"
 
-# El archivo se guardará en /app/ (que es scripts/acestream-updater/ en tu Raspi)
 METRICS_FILE="/app/metrics.env"
-TEMP_RAW="/tmp/raw.m3u"
+TEMP_COMBINED="/tmp/combined.m3u"
 TEMP_NEW="/tmp/new.m3u"
 
-# Inicializar variables para evitar el error "unbound variable"
 SUCCESS_CHANGES=0
 SUCCESS_NO_CHANGES=0
 ERRORS=0
 TOTAL_RUNS=0
 
-# Cargar estado si existe
 if [[ -f "$METRICS_FILE" ]]; then
     source "$METRICS_FILE" || true
 fi
@@ -57,15 +55,55 @@ EOF
 
 echo "Starting execution #$TOTAL_RUNS"
 
-# Proceso de descarga
-if ! curl -fsSL --connect-timeout 15 --max-time 60 "${SOURCE_URL}" -o "${TEMP_RAW}"; then
-    echo "Error: Download failed." >&2
-    ERRORS=$((ERRORS + 1))
-    save_metrics_state && push_metrics
-    exit 1
+# Download all sources and combine, skipping the #EXTM3U header from each
+IFS=',' read -ra URLS <<< "$SOURCE_URLS"
+DOWNLOAD_ERRORS=0
+TEMP_RAW="/tmp/raw_$$.m3u"
+
+: > "$TEMP_COMBINED"  # empty file
+for URL in "${URLS[@]}"; do
+    URL="${URL// /}"  # trim spaces
+    [[ -z "$URL" ]] && continue
+    echo "Downloading: $URL"
+    if curl -fsSL --connect-timeout 15 --max-time 60 "$URL" -o "$TEMP_RAW" 2>/dev/null; then
+        grep -v "^#EXTM3U" "$TEMP_RAW" >> "$TEMP_COMBINED" || true
+        echo "  OK"
+    else
+        echo "  Warning: Failed to download $URL" >&2
+        DOWNLOAD_ERRORS=$((DOWNLOAD_ERRORS + 1))
+    fi
+done
+rm -f "$TEMP_RAW"
+
+if [[ $DOWNLOAD_ERRORS -gt 0 ]]; then
+    ERRORS=$((ERRORS + DOWNLOAD_ERRORS))
+    if [[ $DOWNLOAD_ERRORS -eq ${#URLS[@]} ]]; then
+        echo "Error: All downloads failed." >&2
+        save_metrics_state && push_metrics
+        exit 1
+    fi
 fi
 
-sed "s|acestream://|${ACESERVE_URL}|g" "${TEMP_RAW}" > "${TEMP_NEW}"
+# Deduplicate by acestream hash and replace acestream:// with ACESERVE_URL
+{
+    echo "#EXTM3U"
+    awk -v aceserve_url="$ACESERVE_URL" '
+        /^#EXTINF/ { extinf = $0; next }
+        /^acestream:\/\// {
+            hash = substr($0, 13)
+            if (!(hash in seen)) {
+                seen[hash] = 1
+                print extinf
+                sub(/^acestream:\/\//, aceserve_url)
+                print
+            }
+        }
+    ' "$TEMP_COMBINED"
+} > "$TEMP_NEW"
+
+TOTAL_IN=$(grep -c "^acestream://" "$TEMP_COMBINED" 2>/dev/null || echo 0)
+TOTAL_OUT=$(grep -v "^#" "$TEMP_NEW" | grep -c "." 2>/dev/null || echo 0)
+echo "Channels: $TOTAL_IN total from all sources, $((TOTAL_OUT / 2)) after dedup"
 
 if [[ -f "${OUTPUT_FILE}" ]] && cmp -s "${OUTPUT_FILE}" "${TEMP_NEW}"; then
     echo "No changes detected."
@@ -74,6 +112,13 @@ else
     mv "${TEMP_NEW}" "${OUTPUT_FILE}"
     echo "Changes applied."
     SUCCESS_CHANGES=$((SUCCESS_CHANGES + 1))
+    if curl -fsSL --connect-timeout 5 -X POST \
+        -H "X-Emby-Token: ${JELLYFIN_API_KEY}" \
+        "${JELLYFIN_URL}/ScheduledTasks/Running/0c9ee3a88fc15547c6852205480da1fd" > /dev/null 2>&1; then
+        echo "Jellyfin channel refresh triggered."
+    else
+        echo "Warning: Jellyfin refresh failed (non-critical)." >&2
+    fi
 fi
 
 save_metrics_state
