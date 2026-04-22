@@ -11,6 +11,40 @@ services:
       - media-network
 
 
+  # --- NODE EXPORTER (Host metrics: CPU, RAM, disk, network) ---
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    restart: unless-stopped
+    network_mode: host
+    pid: host
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+
+  # --- CADVISOR (Container metrics) ---
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    restart: unless-stopped
+    privileged: true
+    devices:
+      - /dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    networks:
+      - media-network
+
   # --- PROMETHEUS (TSDB database) ---
   prometheus:
     image: prom/prometheus:latest
@@ -19,6 +53,8 @@ services:
     user: "root"
     ports:
       - "9090:9090"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ${CONFIG_ROOT}/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ${APP_CONFIG_PATH}/prometheus/data:/prometheus
