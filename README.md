@@ -1,14 +1,8 @@
-# 🏠 Raspberry Pi Home Server
-
-A modular, Docker-based home server infrastructure for Raspberry Pi. This stack automates media acquisition, ad-blocking, network monitoring, custom bot services, and many other things...
-
 ## Infrastructure Overview
 The system is split into specialized modules using Docker Compose's include feature for better maintainability:
 
-Aquí tienes el código fuente en formato Markdown para que lo copies directamente a tu archivo README.md. He estructurado toda la información de tus archivos compose, variables de entorno y notas del sistema en un formato profesional y fácil de leer.
 
-Markdown
-# 🏠 RPi HomeServer: All-in-One Media & Monitoring Stack
+# 🏠 RPi HomeServer: All-in-One Media, Monitoring Stack & Application server
 
 A modular, Docker-based infrastructure for a Raspberry Pi home server. This setup uses Docker Compose's `include` feature to manage media, automation, monitoring, and custom bots in separate, maintainable modules.
 
@@ -132,6 +126,40 @@ sudo tailscale up --advertise-exit-node --accept-dns=false
 > Note: More documentation here: https://tailscale.com/docs/solutions/block-ads-all-devices-anywhere-using-raspberry-pi 
 
 
+### Caddy Reverse Proxy (Friendly URLs)
+
+Caddy runs on port 80 and lets you access every service by a short name instead of remembering ports.
+
+| Short URL | Service |
+| :--- | :--- |
+| `http://raspi` | Homepage dashboard |
+| `http://jellyfin` | Jellyfin |
+| `http://plex` | Plex |
+| `http://overseerr` | Overseerr |
+| `http://radarr` | Radarr |
+| `http://sonarr` | Sonarr |
+| `http://prowlarr` | Prowlarr |
+| `http://torrent` | qBittorrent |
+| `http://grafana` | Grafana |
+| `http://prometheus` | Prometheus |
+| `http://speedtest` | Speedtest Tracker |
+| `http://pihole` | Pi-hole |
+
+To make these names resolve, add the following entries to the `hosts` file on **each device** you use:
+
+**Mac / Linux** → `/etc/hosts`  
+**Windows** → `C:\Windows\System32\drivers\etc\hosts`
+
+```
+# From LAN
+<STATIC_IP> raspi homepage jellyfin overseerr plex grafana prometheus push prowlarr radarr sonarr flare torrent speedtest pihole
+
+# From Tailscale (add on devices that connect via Tailscale)
+<TAILSCALE_IP>  raspi homepage jellyfin overseerr plex grafana prometheus push prowlarr radarr sonarr flare torrent speedtest pihole
+```
+
+> Note: You only need one of the two lines depending on how you connect. If you connect from both LAN and Tailscale, add both.
+
 ### Networking & Ad-Blocking (Pi-hole)
 - Access: `http://<IP>:8081/admin`
 - Setup: Configure your router's DHCP/DNS to point to your Raspberry Pi's IP.
@@ -160,12 +188,28 @@ To link everything correctly, follow these steps:
 2. Add a _Tuner Setup (M3U)_.
 3. File path: `/data/channels_ace.m3u` (mapped from your appdata).
 
+### Auto-Deployment (deploy_control.sh)
+The script `scripts/deploy_control.sh` runs automatically every 15 minutes via cron. It pulls the latest changes from git and only rebuilds Docker images when there are actual changes — avoiding unnecessary work on every run.
+
+- **Cron entry** (already configured on the Pi):
+```bash
+*/15 * * * * /home/raspi/rpi-homeserver/scripts/deploy_control.sh > /home/raspi/rpi-homeserver/deploy_control.log 2>&1
+```
+- **Logs:** `deploy_control.log` in the project root.
+- **Metrics:** Pushes run stats to Pushgateway → visible in the **Deploy Monitor** dashboard in Grafana.
+
 ### Monitoring (Prometheus & Grafana)
 - **Grafana:** `http://<IP>:3000` (Default: admin/admin).
-- **Metrics:** Metrics are auto-provisioned (at least some of them). The `acestream-updater` sends data to the `pushgateway` which is then scraped by Prometheus.
-- **Daily Executions:** If the dashboard shows "No Data", trigger the script manually:
+- **Dashboards** are auto-provisioned from `config/grafana/dashboards_json/` under the **Scripts** folder:
+  - **Acestream Monitor** — channel sync executions, changes, errors.
+  - **Deploy Monitor** — deploy runs, changes applied, errors.
+- **System dashboards** (import by ID in Grafana → Dashboards → Import):
+  - `1860` — Node Exporter Full (CPU, RAM, disk, network)
+  - `193` — cAdvisor (per-container metrics)
+- **If a dashboard shows "No Data"**, trigger the relevant script manually:
 ```bash
-docker exec -it acestream-updater bash /app/script.sh
+docker exec -it acestream-updater bash /app/script.sh   # acestream
+bash /home/raspi/rpi-homeserver/scripts/deploy_control.sh  # deploy
 ```
 
 ### Dashboard (Homepage)
