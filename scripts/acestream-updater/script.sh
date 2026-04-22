@@ -24,6 +24,8 @@ fi
 
 TOTAL_RUNS=$((TOTAL_RUNS + 1))
 
+declare -A SOURCE_HTTP_CODES  # key=URL, value=HTTP_CODE
+
 save_metrics_state() {
     cat <<EOF > "$METRICS_FILE"
 SUCCESS_CHANGES=$SUCCESS_CHANGES
@@ -34,7 +36,8 @@ EOF
 }
 
 push_metrics() {
-    cat <<EOF | curl -fsSL --connect-timeout 5 --data-binary @- "${PUSHGATEWAY_URL}/metrics/job/acestream_updater"
+    {
+        cat <<EOF
 # HELP acestream_run_total Total executions
 # TYPE acestream_run_total counter
 acestream_run_total $TOTAL_RUNS
@@ -56,7 +59,13 @@ acestream_unique_channels $UNIQUE_CHANNELS
 # HELP acestream_jellyfin_refresh_http_code HTTP code returned by Jellyfin refresh API (0 = not called)
 # TYPE acestream_jellyfin_refresh_http_code gauge
 acestream_jellyfin_refresh_http_code $JELLYFIN_REFRESH_HTTP_CODE
+# HELP acestream_source_http_code HTTP response code per source URL (0 = connection failed)
+# TYPE acestream_source_http_code gauge
 EOF
+        for host in "${!SOURCE_HTTP_CODES[@]}"; do
+            echo "acestream_source_http_code{url=\"${host}\"} ${SOURCE_HTTP_CODES[$host]}"
+        done
+    } | curl -fsSL --connect-timeout 5 --data-binary @- "${PUSHGATEWAY_URL}/metrics/job/acestream_updater"
 }
 
 echo "Starting execution #$TOTAL_RUNS"
@@ -67,15 +76,18 @@ DOWNLOAD_ERRORS=0
 TEMP_RAW="/tmp/raw_$$.m3u"
 
 : > "$TEMP_COMBINED"  # empty file
-for URL in "${URLS[@]}"; do
-    URL="${URL// /}"  # trim spaces
+for i in "${!URLS[@]}"; do
+    URL="${URLS[$i]// /}"  # trim spaces
     [[ -z "$URL" ]] && continue
     echo "Downloading: $URL"
-    if curl -fsSL --connect-timeout 15 --max-time 60 "$URL" -o "$TEMP_RAW" 2>/dev/null; then
+    HTTP_CODE=$(curl -sL --connect-timeout 15 --max-time 60 -o "$TEMP_RAW" -w "%{http_code}" "$URL" 2>/dev/null || echo 0)
+    HOST=$(echo "$URL" | awk -F/ '{print $3}')
+    SOURCE_HTTP_CODES["$HOST"]=$HTTP_CODE
+    if [[ "$HTTP_CODE" == "200" ]]; then
         grep -v "^#EXTM3U" "$TEMP_RAW" >> "$TEMP_COMBINED" || true
-        echo "  OK"
+        echo "  OK (200)"
     else
-        echo "  Warning: Failed to download $URL" >&2
+        echo "  Warning: Failed (HTTP $HTTP_CODE)" >&2
         DOWNLOAD_ERRORS=$((DOWNLOAD_ERRORS + 1))
     fi
 done
