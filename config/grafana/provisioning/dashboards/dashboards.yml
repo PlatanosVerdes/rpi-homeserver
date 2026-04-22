@@ -1,9 +1,9 @@
 apiVersion: 1
 
 providers:
-  - name: 'Acestream Monitor'
+  - name: 'Scripts'
     orgId: 1
-    folder: ''
+    folder: 'Scripts'
     type: file
     disableDeletion: false
     editable: true
