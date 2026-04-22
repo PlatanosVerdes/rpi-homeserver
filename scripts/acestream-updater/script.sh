@@ -50,6 +50,12 @@ acestream_update_errors $ERRORS
 # HELP acestream_last_run_timestamp Last run timestamp
 # TYPE acestream_last_run_timestamp gauge
 acestream_last_run_timestamp $(date +%s)
+# HELP acestream_unique_channels Current number of unique channels after dedup
+# TYPE acestream_unique_channels gauge
+acestream_unique_channels $UNIQUE_CHANNELS
+# HELP acestream_jellyfin_refresh_http_code HTTP code returned by Jellyfin refresh API (0 = not called)
+# TYPE acestream_jellyfin_refresh_http_code gauge
+acestream_jellyfin_refresh_http_code $JELLYFIN_REFRESH_HTTP_CODE
 EOF
 }
 
@@ -103,8 +109,10 @@ fi
 
 TOTAL_IN=$(grep -c "^acestream://" "$TEMP_COMBINED" 2>/dev/null || echo 0)
 TOTAL_OUT=$(grep -v "^#" "$TEMP_NEW" | grep -c "." 2>/dev/null || echo 0)
-echo "Channels: $TOTAL_IN total from all sources, $((TOTAL_OUT / 2)) after dedup"
+UNIQUE_CHANNELS=$(( TOTAL_OUT / 2 ))
+echo "Channels: $TOTAL_IN total from all sources, $UNIQUE_CHANNELS after dedup"
 
+JELLYFIN_REFRESH_HTTP_CODE=0
 if [[ -f "${OUTPUT_FILE}" ]] && cmp -s "${OUTPUT_FILE}" "${TEMP_NEW}"; then
     echo "No changes detected."
     SUCCESS_NO_CHANGES=$((SUCCESS_NO_CHANGES + 1))
@@ -112,13 +120,10 @@ else
     mv "${TEMP_NEW}" "${OUTPUT_FILE}"
     echo "Changes applied."
     SUCCESS_CHANGES=$((SUCCESS_CHANGES + 1))
-    if curl -fsSL --connect-timeout 5 -X POST \
+    JELLYFIN_REFRESH_HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 -X POST \
         -H "X-Emby-Token: ${JELLYFIN_API_KEY}" \
-        "${JELLYFIN_URL}/ScheduledTasks/Running/0c9ee3a88fc15547c6852205480da1fd" > /dev/null 2>&1; then
-        echo "Jellyfin channel refresh triggered."
-    else
-        echo "Warning: Jellyfin refresh failed (non-critical)." >&2
-    fi
+        "${JELLYFIN_URL}/ScheduledTasks/Running/0c9ee3a88fc15547c6852205480da1fd" 2>/dev/null || echo 0)
+    echo "Jellyfin refresh HTTP code: $JELLYFIN_REFRESH_HTTP_CODE"
 fi
 
 save_metrics_state
