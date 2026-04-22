@@ -21,7 +21,7 @@ A modular, Docker-based home server for Raspberry Pi. Uses Docker Compose's `inc
 ```bash
 git clone <your-repo-url> rpi-homeserver
 cd rpi-homeserver
-cp .env.example .env   # fill in your values
+cp .env.example .env   # fill .env in your values
 docker compose up -d
 ```
 
