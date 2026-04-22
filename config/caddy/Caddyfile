@@ -1,8 +1,74 @@
 {
-    auto_https off
+    email jorgeee988@gmail.com
 }
 
-# --- MEDIA ---
+(cf_tls) {
+    tls {
+        dns cloudflare {env.CF_API_TOKEN}
+    }
+}
+
+# --- HTTPS via Cloudflare DNS (Tailscale access) ---
+https://raspi.platanosverdes.com {
+    import cf_tls
+    reverse_proxy homepage:3000 {
+        flush_interval -1
+    }
+}
+https://jellyfin.platanosverdes.com {
+    import cf_tls
+    reverse_proxy jellyfin:8096
+}
+https://overseerr.platanosverdes.com {
+    import cf_tls
+    reverse_proxy overseerr:5055
+}
+https://plex.platanosverdes.com {
+    import cf_tls
+    reverse_proxy host.docker.internal:32400
+}
+https://grafana.platanosverdes.com {
+    import cf_tls
+    reverse_proxy grafana:3000
+}
+https://prometheus.platanosverdes.com {
+    import cf_tls
+    reverse_proxy prometheus:9090
+}
+https://push.platanosverdes.com {
+    import cf_tls
+    reverse_proxy pushgateway:9091
+}
+https://prowlarr.platanosverdes.com {
+    import cf_tls
+    reverse_proxy prowlarr:9696
+}
+https://radarr.platanosverdes.com {
+    import cf_tls
+    reverse_proxy radarr:7878
+}
+https://sonarr.platanosverdes.com {
+    import cf_tls
+    reverse_proxy sonarr:8989
+}
+https://torrent.platanosverdes.com {
+    import cf_tls
+    reverse_proxy qbittorrent:8080
+}
+https://speedtest.platanosverdes.com {
+    import cf_tls
+    reverse_proxy speedtest-tracker:80
+}
+https://pihole.platanosverdes.com {
+    import cf_tls
+    reverse_proxy pihole:80
+}
+https://vault.platanosverdes.com {
+    import cf_tls
+    reverse_proxy vaultwarden:80
+}
+
+# --- HTTP (LAN short names) ---
 http://raspi http://homepage {
     reverse_proxy homepage:3000
 }
@@ -13,11 +79,8 @@ http://overseerr {
     reverse_proxy overseerr:5055
 }
 http://plex {
-    # Plex uses network_mode: host, reached via host gateway
     reverse_proxy host.docker.internal:32400
 }
-
-# --- MONITORING ---
 http://grafana {
     reverse_proxy grafana:3000
 }
@@ -27,8 +90,6 @@ http://prometheus {
 http://push {
     reverse_proxy pushgateway:9091
 }
-
-# --- INDEXERS & DOWNLOADS ---
 http://prowlarr {
     reverse_proxy prowlarr:9696
 }
@@ -44,13 +105,12 @@ http://flare {
 http://torrent {
     reverse_proxy qbittorrent:8080
 }
-
-# --- MANAGEMENT ---
+http://vault {
+    reverse_proxy vaultwarden:80
+}
 http://speedtest {
-    # Internal port is 80 (host maps 8443->80)
     reverse_proxy speedtest-tracker:80
 }
 http://pihole {
-    # Internal port is 80 (host maps 8081->80)
     reverse_proxy pihole:80
 }

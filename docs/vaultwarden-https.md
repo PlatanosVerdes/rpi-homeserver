@@ -70,7 +70,13 @@ In Pi-hole: **Settings** → **Local DNS** → **DNS Records**, add one entry pe
 | `jellyfin.yourdomain.com` | `100.x.x.x` |
 | *(repeat for all subdomains)* | |
 
-> Your Tailscale IP starts with `100.` — find it with `tailscale status`.
+> Get the **Pi's own** Tailscale IP with:
+> ```bash
+> ip addr show tailscale0 | grep "inet "
+> # or
+> tailscale ip -4
+> ```
+> Don't confuse it with another device's IP from `tailscale status`.
 
 ---
 
@@ -127,6 +133,11 @@ Use `VAULTWARDEN_ADMIN_TOKEN` from `.env` as the password.
 - Verify `CF_API_TOKEN` in `.env` is correct
 - Check Cloudflare shows the domain as Active
 - Ensure Pi-hole DNS records point to your Tailscale IP
+
+**Domain resolves but connection hangs (curl stalls at `Trying x.x.x.x:443...`):**
+- The Pi-hole DNS record has the wrong Tailscale IP
+- Verify the Pi's actual Tailscale IP: `ip addr show tailscale0 | grep "inet "`
+- Update the record in `appdata/pihole/pihole.toml` and restart Pi-hole: `docker restart pihole`
 
 **Mobile app says "cannot connect to server":**
 - Confirm your device is connected to Tailscale

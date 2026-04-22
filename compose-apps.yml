@@ -1,6 +1,29 @@
 # --- CUSTOM SERVICES & BOTS ---
 services:
-  # Telegram Bot for Academy Offers
+  # --- VAULTWARDEN (Self-hosted Bitwarden) ---
+  vaultwarden:
+    image: vaultwarden/server:latest
+    container_name: vaultwarden
+    restart: unless-stopped
+    environment:
+      - WEBSOCKET_ENABLED=true
+      - SIGNUPS_ALLOWED=false
+      - ADMIN_TOKEN=${VAULTWARDEN_ADMIN_TOKEN}
+      - DOMAIN=${VAULTWARDEN_DOMAIN}
+    volumes:
+      - ${APP_CONFIG_PATH}/vaultwarden:/data
+    ports:
+      - "8082:80"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/alive"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    networks:
+      - media-network
+
+  # --- Telegram Bot for Academy Offers ---
   pol-academy-offers-bot:
     build: https://github.com/PlatanosVerdes/PolFerrerAcademyOffers.git#main
     container_name: pol-academy-offers-bot

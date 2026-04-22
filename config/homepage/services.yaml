@@ -1,7 +1,7 @@
 - Media:
     - Plex:
         icon: plex.png
-        href: http://{{HOMEPAGE_VAR_TAILSCALE_IP}}:32400/web
+        href: https://plex.platanosverdes.com/web
         server: my-docker
         container: plex
         widget:
@@ -10,7 +10,7 @@
           key: "{{HOMEPAGE_VAR_PLEX_TOKEN}}" #https://www.plexopedia.com/plex-media-server/general/plex-token/
     - Overseerr:
         icon: overseerr.png
-        href: http://{{HOMEPAGE_VAR_TAILSCALE_IP}}:5055
+        href: https://overseerr.platanosverdes.com
         server: my-docker
         container: overseerr
         widget:
@@ -19,7 +19,7 @@
           key: "{{HOMEPAGE_VAR_OVERSEERR_TOKEN}}"
     - Jellyfin:
         icon: jellyfin.png
-        href: http://{{HOMEPAGE_VAR_TAILSCALE_IP}}:8096
+        href: https://jellyfin.platanosverdes.com
         server: my-docker
         container: jellyfin
         widget:
@@ -31,13 +31,13 @@
 - Monitoring:
     - Grafana:
         icon: grafana.png
-        href: http://{{HOMEPAGE_VAR_TAILSCALE_IP}}:3000
+        href: https://grafana.platanosverdes.com
         server: my-docker
         container: grafana
 
     - Prometheus:
         icon: prometheus.png
-        href: http://{{HOMEPAGE_VAR_TAILSCALE_IP}}:9090
+        href: https://prometheus.platanosverdes.com
         server: my-docker
         container: prometheus
         widget:
@@ -46,14 +46,14 @@
 
     - Pushgateway:
         icon: https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/png/prometheus.png
-        href: http://{{HOMEPAGE_VAR_TAILSCALE_IP}}:9091
+        href: https://push.platanosverdes.com
         server: my-docker
         container: pushgateway
 
 - Indexers:
     - Prowlarr:
         icon: prowlarr.png
-        href: http://{{HOMEPAGE_VAR_TAILSCALE_IP}}:9696
+        href: https://prowlarr.platanosverdes.com
         server: my-docker
         container: prowlarr
         widget:
@@ -63,7 +63,7 @@
 
     - Radarr:
         icon: radarr.png
-        href: http://{{HOMEPAGE_VAR_TAILSCALE_IP}}:7878
+        href: https://radarr.platanosverdes.com
         server: my-docker
         container: radarr
         widget:
@@ -73,14 +73,14 @@
 
     - Sonarr:
         icon: sonarr.png
-        href: http://{{HOMEPAGE_VAR_TAILSCALE_IP}}:8989
+        href: https://sonarr.platanosverdes.com
         server: my-docker
         container: sonarr
         widget:
           type: sonarr
           url: http://sonarr:8989
           key: "{{HOMEPAGE_VAR_SONARR_TOKEN}}"
-    
+
     - FlareSolverr:
         icon: flaresolverr.png
         href: http://{{HOMEPAGE_VAR_TAILSCALE_IP}}:8191
@@ -90,19 +90,19 @@
 - Downloads:
     - qBittorrent:
         icon: qbittorrent.png
-        href: http://{{HOMEPAGE_VAR_TAILSCALE_IP}}:8080
+        href: https://torrent.platanosverdes.com
         server: my-docker
         container: qbittorrent
         widget:
           type: qbittorrent
-          url: http://{{HOMEPAGE_VAR_TAILSCALE_IP}}:8080
+          url: http://qbittorrent:8080
           username: admin
           password: "{{HOMEPAGE_VAR_QBIT_PASSWORD}}"
 
 - Management:
     - Network:
         icon: https://img.icons8.com/?size=100&id=12995&format=png&color=000000
-        href: http://{{HOMEPAGE_VAR_TAILSCALE_IP}}:8443
+        href: https://speedtest.platanosverdes.com
         widget:
             type: speedtest
             url: http://speedtest-tracker:80
@@ -111,12 +111,12 @@
 
     - Pi-hole:
         icon: pi-hole.png
-        href: http://{{HOMEPAGE_VAR_TAILSCALE_IP}}:8081/admin
+        href: https://pihole.platanosverdes.com/admin
         server: my-docker
         container: pihole
         widget:
           type: pihole
-          url: http://{{HOMEPAGE_VAR_TAILSCALE_IP}}:8081
+          url: http://pihole:80
           version: 6
           key: "{{HOMEPAGE_VAR_PIHOLE_TOKEN}}"
 
