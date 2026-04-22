@@ -1,6 +1,7 @@
 {
   "title": "Acestream Monitor",
   "schemaVersion": 38,
+  "graphTooltip": 1,
   "panels": [
     {
       "id": 1,
@@ -123,7 +124,7 @@
       "id": 5,
       "type": "timeseries",
       "title": "Activity Timeline",
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 4 },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 4 },
       "targets": [
         {
           "expr": "increase(acestream_run_total[5m])",
@@ -170,6 +171,99 @@
             ]
           }
         ]
+      }
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Source URLs Status",
+      "gridPos": { "h": 5, "w": 24, "x": 0, "y": 12 },
+      "targets": [
+        {
+          "expr": "acestream_source_http_code",
+          "legendFormat": "{{url}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "none" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "stepBefore",
+            "lineWidth": 2,
+            "fillOpacity": 15,
+            "showPoints": "always",
+            "pointSize": 4
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0":   { "text": "Failed",   "index": 0 },
+                "200": { "text": "OK (200)", "index": 1 }
+              }
+            }
+          ],
+          "color": { "mode": "palette-classic" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red",   "value": 201  }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Jellyfin Refresh History",
+      "gridPos": { "h": 4, "w": 24, "x": 0, "y": 17 },
+      "targets": [
+        {
+          "expr": "acestream_jellyfin_refresh_http_code",
+          "legendFormat": "HTTP Code",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "tooltip": { "mode": "single" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "stepBefore",
+            "lineWidth": 2,
+            "fillOpacity": 15,
+            "showPoints": "always",
+            "pointSize": 4
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0":   { "text": "Not triggered", "index": 0 },
+                "204": { "text": "OK (204)",       "index": 1 }
+              }
+            }
+          ],
+          "color": { "mode": "fixed", "fixedColor": "blue" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "blue",  "value": null },
+              { "color": "green", "value": 204  },
+              { "color": "red",   "value": 205  }
+            ]
+          }
+        }
       }
     }
   ]
