@@ -14,10 +14,12 @@ cd "$PROJECT_DIR" || { echo "Directory not found"; exit 1; }
 
 # 1. Sync with remote repository
 log "Fetching updates from origin..."
+BEFORE=$(git rev-parse HEAD)
 if ! git pull origin main; then
     log "Error: Git pull failed."
     exit 1
 fi
+AFTER=$(git rev-parse HEAD)
 
 # 2. Security Check: Ensure .env exists
 if [ ! -f .env ]; then
@@ -26,10 +28,18 @@ if [ ! -f .env ]; then
 fi
 
 # 3. Apply changes with Docker Compose
-log "Applying Docker configurations..."
-if ! sudo docker compose up -d --build --remove-orphans; then
-    log "Error: Docker Compose failed to update."
-    exit 1
+if [ "$BEFORE" != "$AFTER" ]; then
+    log "Changes detected ($BEFORE -> $AFTER), rebuilding..."
+    if ! sudo docker compose up -d --build --remove-orphans; then
+        log "Error: Docker Compose failed to update."
+        exit 1
+    fi
+else
+    log "No changes detected, ensuring containers are running..."
+    if ! sudo docker compose up -d --remove-orphans; then
+        log "Error: Docker Compose failed."
+        exit 1
+    fi
 fi
 
 # 4. Infrastructure Cleanup
