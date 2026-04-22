@@ -1,5 +1,21 @@
   # --- CORE Services ---
 services:
+  # --- CADDY (Reverse proxy) ---
+  caddy:
+    image: caddy:latest
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ${CONFIG_ROOT}/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ${APP_CONFIG_PATH}/caddy/data:/data
+      - ${APP_CONFIG_PATH}/caddy/config:/config
+    networks:
+      - media-network
+
   # --- HOMEPAGE ---
   homepage:
     image: ghcr.io/gethomepage/homepage:latest
