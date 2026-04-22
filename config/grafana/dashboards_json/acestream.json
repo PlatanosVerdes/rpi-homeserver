@@ -6,7 +6,7 @@
       "id": 1,
       "type": "stat",
       "title": "Executions (24h)",
-      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
       "targets": [
         { "expr": "increase(acestream_run_total[24h])", "refId": "A", "instant": true }
       ],
@@ -21,7 +21,7 @@
       "id": 2,
       "type": "stat",
       "title": "Playlist Changes (24h)",
-      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
       "targets": [
         { "expr": "increase(acestream_updates_with_changes[24h])", "refId": "A", "instant": true }
       ],
@@ -36,7 +36,7 @@
       "id": 3,
       "type": "stat",
       "title": "Errors (24h)",
-      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
       "targets": [
         { "expr": "increase(acestream_update_errors[24h])", "refId": "A", "instant": true }
       ],
@@ -58,7 +58,7 @@
       "id": 4,
       "type": "stat",
       "title": "Last Run",
-      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 0 },
       "targets": [
         { "expr": "time() - acestream_last_run_timestamp", "refId": "A" }
       ],
@@ -73,6 +73,47 @@
               { "color": "green", "value": null },
               { "color": "orange", "value": 900 },
               { "color": "red", "value": 1800 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Unique Channels",
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 0 },
+      "targets": [
+        { "expr": "acestream_unique_channels", "refId": "A", "instant": true }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "color": { "mode": "fixed", "fixedColor": "green" }
+        }
+      }
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Jellyfin Refresh",
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 0 },
+      "targets": [
+        { "expr": "acestream_jellyfin_refresh_http_code", "refId": "A", "instant": true }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "0":   { "text": "Not triggered", "color": "blue"  } } },
+            { "type": "value", "options": { "204": { "text": "OK (204)",       "color": "green" } } }
+          ],
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "blue",  "value": null },
+              { "color": "green", "value": 204  },
+              { "color": "red",   "value": 205  }
             ]
           }
         }
