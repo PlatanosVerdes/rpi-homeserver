@@ -1,4 +1,5 @@
 {
+  "uid": "acestream-monitor",
   "annotations": {
     "list": [
       {
@@ -265,7 +266,7 @@
   "refresh": "",
   "schemaVersion": 38,
   "graphTooltip": 1,
-  "tags": [],
+  "tags": ["acestream", "scripts"],
   "templating": { "list": [] },
   "time": { "from": "now-6h", "to": "now" },
   "timepicker": {},

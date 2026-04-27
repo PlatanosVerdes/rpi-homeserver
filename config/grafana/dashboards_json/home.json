@@ -1,0 +1,49 @@
+{
+  "uid": "home-overview",
+  "title": "Home",
+  "tags": ["home"],
+  "schemaVersion": 38,
+  "graphTooltip": 0,
+  "refresh": "",
+  "time": { "from": "now-6h", "to": "now" },
+  "timepicker": { "hidden": true },
+  "timezone": "",
+  "links": [],
+  "annotations": { "list": [] },
+  "templating": { "list": [] },
+  "panels": [
+    {
+      "id": 1,
+      "type": "text",
+      "title": "Acestream",
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 0 },
+      "options": {
+        "mode": "markdown",
+        "content": "## 📺 Live TV\n[Live TV — channel availability](/d/acestream-livetv/live-tv)\n\n## ⚙️ Acestream Monitor\n[Acestream Monitor — sync & errors](/d/acestream-monitor/acestream-monitor)"
+      },
+      "fieldConfig": { "defaults": {}, "overrides": [] }
+    },
+    {
+      "id": 2,
+      "type": "text",
+      "title": "System",
+      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 0 },
+      "options": {
+        "mode": "markdown",
+        "content": "## 🖥️ Raspberry Pi\n[Node Exporter — CPU, RAM, disk](/d/rYdddlPWk/node-exporter-full-raspi)\n\n## 🐳 Docker\n[Docker monitoring — containers](/d/c1ff1c1e-5976-4ed2-a91f-4e70f6fcf026/docker-monitoring)"
+      },
+      "fieldConfig": { "defaults": {}, "overrides": [] }
+    },
+    {
+      "id": 3,
+      "type": "text",
+      "title": "Scripts & Network",
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 0 },
+      "options": {
+        "mode": "markdown",
+        "content": "## 🚀 Deploy Monitor\n[Deploy Monitor — deployments](/d/deploy-monitor/deploy-monitor)\n\n## 🌐 Speedtest\n[Speedtest Tracker — internet speed](/d/g7usvhZVk2/speedtest-tracker)"
+      },
+      "fieldConfig": { "defaults": {}, "overrides": [] }
+    }
+  ]
+}

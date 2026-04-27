@@ -82,9 +82,24 @@ Self-hosted Bitwarden-compatible vault. **Requires HTTPS** for the mobile app.
 - **Download client:** In Radarr/Sonarr → Settings → Download Clients → qBittorrent → host `qbittorrent`, port `8080`
 
 ### Acestream Live TV
-The `acestream-updater` fetches IPFS channel lists, deduplicates them, and writes a `.m3u` for Jellyfin. It refreshes Jellyfin automatically when the playlist changes.
+The `acestream-updater` (Go binary) fetches IPFS channel lists, deduplicates them by acestream hash, writes a `.m3u` for Jellyfin, and runs concurrent health checks to verify each channel is actually serving bytes. It refreshes Jellyfin automatically when the playlist changes.
 
 Jellyfin setup: Dashboard → Live TV → Add Tuner (M3U) → path `/data/channels_ace.m3u`
+
+**After changing Go source code** (rebuild required):
+```bash
+docker compose -f compose-media.yml up -d --build acestream-updater
+```
+
+**Trigger a run immediately** (container restart runs before the first sleep):
+```bash
+docker compose -f compose-media.yml restart acestream-updater
+```
+
+**View live logs:**
+```bash
+docker logs -f acestream-updater
+```
 
 ### Auto-Deployment (`deploy_control.sh`)
 Pulls latest git changes every 15 minutes and rebuilds only when something changed.
@@ -99,16 +114,28 @@ Metrics are pushed to Pushgateway and visible in the **Deploy Monitor** dashboar
 ### Monitoring (Prometheus & Grafana)
 - **Grafana:** `http://<IP>:3000` — default credentials: `admin / admin`
 - **Auto-provisioned dashboards** (Scripts folder in Grafana):
-  - Acestream Monitor — channel sync, changes, errors, source URL status
+  - Acestream Monitor — channel sync, changes, errors, source URL status, per-channel health (state timeline)
   - Deploy Monitor — deploy runs, changes, errors
 - **Import community dashboards** (Grafana → Dashboards → Import):
   - `1860` — Node Exporter Full (CPU, RAM, disk, network)
   - `193` — cAdvisor (per-container resource usage)
-- **No data on a dashboard?** Trigger the script manually:
+- **No data on a dashboard?** Trigger a run manually:
   ```bash
-  docker exec -it acestream-updater bash /app/script.sh
+  docker compose -f compose-media.yml restart acestream-updater
   bash /home/raspi/rpi-homeserver/scripts/deploy_control.sh
   ```
+
+---
+
+## Pending / Future Work
+
+See [PENDING.md](PENDING.md) for the full task list. Summary:
+
+| Task | Notes |
+| :--- | :--- |
+| **Bitwarden Secrets Manager** | Replace `.env` secrets with BSM; only `BWS_ACCESS_TOKEN` stays on disk |
+| **Pi-hole monitoring** | Add `pihole-exporter` to `compose-mon.yml` (commented out, ready to enable) |
+| **Tailscale monitoring** | Add `tailscale-exporter` to `compose-mon.yml` (commented out, ready to enable) |
 
 ---
 
