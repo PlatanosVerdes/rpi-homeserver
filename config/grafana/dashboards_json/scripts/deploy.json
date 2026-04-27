@@ -1,5 +1,7 @@
 {
+  "uid": "deploy-monitor",
   "title": "Deploy Monitor",
+  "tags": ["deploy", "scripts"],
   "schemaVersion": 38,
   "panels": [
     {

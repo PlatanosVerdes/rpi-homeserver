@@ -1,4 +1,5 @@
 {
+  "uid": "acestream-livetv",
   "title": "Live TV",
   "schemaVersion": 38,
   "graphTooltip": 1,
@@ -12,19 +13,18 @@
   "templating": {
     "list": [
       {
-        "name": "health_filter",
-        "label": "Show",
-        "type": "custom",
+        "name": "group",
+        "label": "Group",
+        "type": "query",
         "hide": 0,
-        "includeAll": false,
+        "includeAll": true,
+        "allValue": ".*",
         "multi": false,
-        "options": [
-          { "selected": true,  "text": "All",       "value": "acestream_channel_health" },
-          { "selected": false, "text": "OK only",   "value": "acestream_channel_health == 1" },
-          { "selected": false, "text": "Down only", "value": "acestream_channel_health == 0" }
-        ],
-        "current": { "selected": true, "text": "All", "value": "acestream_channel_health" },
-        "query": "All : acestream_channel_health, OK only : acestream_channel_health == 1, Down only : acestream_channel_health == 0"
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "query": { "query": "label_values(acestream_channel_health, group)", "refId": "A" },
+        "refresh": 2,
+        "sort": 1,
+        "current": {}
       }
     ]
   },
@@ -116,11 +116,99 @@
       }
     },
     {
+      "id": 6,
+      "type": "stat",
+      "title": "Channel summary",
+      "description": "One block per logical channel. Green = all variants OK. Orange = some variants down. Red = all variants down.",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 4 },
+      "targets": [{
+        "expr": "avg by (channel) (acestream_channel_health)",
+        "instant": true,
+        "legendFormat": "{{channel}}",
+        "refId": "A"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 2,
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red",    "value": 0    },
+              { "color": "orange", "value": 0.01 },
+              { "color": "green",  "value": 1    }
+            ]
+          },
+          "mappings": [
+            { "type": "range", "options": { "from": 0,    "to": 0.009, "result": { "text": "All down"  } } },
+            { "type": "range", "options": { "from": 0.01, "to": 0.999, "result": { "text": "Partial"   } } },
+            { "type": "range", "options": { "from": 1,    "to": 1,     "result": { "text": "OK"        } } }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "textMode": "name",
+        "wideLayout": true,
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "All channel variants",
+      "description": "One block per stream variant. Green = delivering bytes. Red = no response.",
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 12 },
+      "targets": [{
+        "expr": "acestream_channel_health",
+        "instant": true,
+        "legendFormat": "{{name}}",
+        "refId": "A"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red",   "value": 0 },
+              { "color": "green", "value": 1 }
+            ]
+          },
+          "mappings": [
+            { "type": "value", "options": {
+                "0": { "text": "Down", "index": 0 },
+                "1": { "text": "OK",   "index": 1 }
+            }}
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "textMode": "name",
+        "wideLayout": true,
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      }
+    },
+    {
       "id": 10,
       "type": "timeseries",
-      "title": "Channel Health",
-      "gridPos": { "h": 16, "w": 24, "x": 0, "y": 4 },
-      "targets": [{ "expr": "$health_filter", "legendFormat": "{{name}}", "refId": "A" }],
+      "title": "Channel health history — $group",
+      "gridPos": { "h": 16, "w": 24, "x": 0, "y": 24 },
+      "targets": [{
+        "expr": "acestream_channel_health{group=~\"$group\"}",
+        "legendFormat": "{{name}}",
+        "refId": "A"
+      }],
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -128,14 +216,14 @@
             "drawStyle": "line",
             "lineInterpolation": "stepBefore",
             "lineWidth": 2,
-            "fillOpacity": 5,
+            "fillOpacity": 10,
             "showPoints": "always",
             "pointSize": 5,
             "spanNulls": false
           },
           "decimals": 0,
-          "min": 0,
-          "max": 1,
+          "min": -0.05,
+          "max": 1.05,
           "mappings": [
             { "type": "value", "options": {
                 "0": { "text": "Down", "index": 0 },
@@ -148,7 +236,13 @@
       },
       "options": {
         "tooltip": { "mode": "multi", "sort": "none" },
-        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "calcs": ["lastNotNull"],
+          "width": 220
+        }
       }
     }
   ]

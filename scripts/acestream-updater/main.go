@@ -10,10 +10,15 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
 )
+
+// qualitySuffix strips resolution and source markers from channel names.
+// e.g. "M+ Liga de Campeones 1080p **" → "M+ Liga de Campeones"
+var qualitySuffix = regexp.MustCompile(`\s+(?:(?:720p|1080p)\s+)?\*+$`)
 
 const (
 	stateFile         = "/app/metrics.env"
@@ -42,8 +47,10 @@ type state struct {
 }
 
 type channel struct {
-	name string
-	url  string // aceserve HTTP URL (acestream:// already rewritten)
+	name    string
+	channel string // base name without quality suffix (for aggregation)
+	group   string // group-title from EXTINF
+	url     string // aceserve HTTP URL (acestream:// already rewritten)
 }
 
 func mustEnv(key string) string {
@@ -150,8 +157,10 @@ func parseAndDedup(combined []byte, aceserveURL string) ([]channel, string) {
 			}
 			seen[hash] = true
 			name := channelName(extinf)
+			group := extractAttr(extinf, "group-title")
+			base := strings.TrimSpace(qualitySuffix.ReplaceAllString(name, ""))
 			streamURL := aceserveURL + hash
-			channels = append(channels, channel{name: name, url: streamURL})
+			channels = append(channels, channel{name: name, channel: base, group: group, url: streamURL})
 			out.WriteString(extinf + "\n" + streamURL + "\n")
 			extinf = ""
 		}
@@ -258,8 +267,14 @@ func hostFromURL(rawURL string) string {
 }
 
 // pushMetrics uses PUT so stale channel metrics are removed when channels disappear.
-func pushMetrics(pushURL string, s state, uniqueChannels, jellyfinCode int,
+func pushMetrics(pushURL string, s state, channels []channel, jellyfinCode int,
 	sourceHTTPCodes map[string]int, channelHealth map[string]int) {
+
+	type meta struct{ channel, group string }
+	metaOf := make(map[string]meta, len(channels))
+	for _, ch := range channels {
+		metaOf[ch.name] = meta{ch.channel, ch.group}
+	}
 
 	var buf bytes.Buffer
 	w := func(format string, a ...any) { fmt.Fprintf(&buf, format, a...) }
@@ -269,7 +284,7 @@ func pushMetrics(pushURL string, s state, uniqueChannels, jellyfinCode int,
 	w("# HELP acestream_updates_no_changes Executions without changes\n# TYPE acestream_updates_no_changes counter\nacestream_updates_no_changes %d\n", s.successNoChanges)
 	w("# HELP acestream_update_errors Total errors\n# TYPE acestream_update_errors counter\nacestream_update_errors %d\n", s.errors)
 	w("# HELP acestream_last_run_timestamp Last run timestamp\n# TYPE acestream_last_run_timestamp gauge\nacestream_last_run_timestamp %d\n", time.Now().Unix())
-	w("# HELP acestream_unique_channels Current unique channel count\n# TYPE acestream_unique_channels gauge\nacestream_unique_channels %d\n", uniqueChannels)
+	w("# HELP acestream_unique_channels Current unique channel count\n# TYPE acestream_unique_channels gauge\nacestream_unique_channels %d\n", len(channels))
 	w("# HELP acestream_jellyfin_refresh_http_code HTTP code from Jellyfin refresh API (0=not called)\n# TYPE acestream_jellyfin_refresh_http_code gauge\nacestream_jellyfin_refresh_http_code %d\n", jellyfinCode)
 	w("# HELP acestream_jellyfin_last_refresh_timestamp Unix timestamp of last successful Jellyfin refresh\n# TYPE acestream_jellyfin_last_refresh_timestamp gauge\nacestream_jellyfin_last_refresh_timestamp %d\n", s.jellyfinLastRefreshTS)
 
@@ -281,7 +296,9 @@ func pushMetrics(pushURL string, s state, uniqueChannels, jellyfinCode int,
 	if len(channelHealth) > 0 {
 		w("# HELP acestream_channel_health 1=stream delivering bytes 0=no response within timeout\n# TYPE acestream_channel_health gauge\n")
 		for name, v := range channelHealth {
-			w("acestream_channel_health{name=\"%s\"} %d\n", prometheusLabel(name), v)
+			m := metaOf[name]
+			w("acestream_channel_health{name=\"%s\",channel=\"%s\",group=\"%s\"} %d\n",
+				prometheusLabel(name), prometheusLabel(m.channel), prometheusLabel(m.group), v)
 		}
 	}
 
@@ -331,7 +348,7 @@ func run(cfg config) {
 	if downloadErrors == len(cfg.sourceURLs) {
 		log.Printf("error: all sources failed")
 		saveState(s)
-		pushMetrics(cfg.pushgatewayURL, s, 0, 0, sourceHTTPCodes, nil)
+		pushMetrics(cfg.pushgatewayURL, s, nil, 0, sourceHTTPCodes, nil)
 		return
 	}
 
@@ -361,7 +378,7 @@ func run(cfg config) {
 	health := checkHealth(channels)
 
 	saveState(s)
-	pushMetrics(cfg.pushgatewayURL, s, len(channels), jellyfinCode, sourceHTTPCodes, health)
+	pushMetrics(cfg.pushgatewayURL, s, channels, jellyfinCode, sourceHTTPCodes, health)
 	log.Printf("Done.")
 }
 
