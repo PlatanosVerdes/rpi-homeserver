@@ -24,7 +24,8 @@ fi
 
 TOTAL_RUNS=$((TOTAL_RUNS + 1))
 
-declare -A SOURCE_HTTP_CODES  # key=URL, value=HTTP_CODE
+declare -A SOURCE_HTTP_CODES   # key=URL, value=HTTP_CODE
+declare -A CHANNEL_HEALTH_CODES # key=channel name, value=HTTP code from acestream engine
 
 save_metrics_state() {
     cat <<EOF > "$METRICS_FILE"
@@ -65,7 +66,37 @@ EOF
         for host in "${!SOURCE_HTTP_CODES[@]}"; do
             echo "acestream_source_http_code{url=\"${host}\"} ${SOURCE_HTTP_CODES[$host]}"
         done
+        if [[ ${#CHANNEL_HEALTH_CODES[@]} -gt 0 ]]; then
+            echo "# HELP acestream_channel_health HTTP code from acestream getstream (302=OK, 0=timeout)"
+            echo "# TYPE acestream_channel_health gauge"
+            for name in "${!CHANNEL_HEALTH_CODES[@]}"; do
+                safe_name=$(printf '%s' "$name" | sed 's/\\/\\\\/g; s/"/\\"/g')
+                echo "acestream_channel_health{name=\"${safe_name}\"} ${CHANNEL_HEALTH_CODES[$name]}"
+            done
+        fi
     } | curl -fsSL --connect-timeout 5 --data-binary @- "${PUSHGATEWAY_URL}/metrics/job/acestream_updater"
+}
+
+check_channel_health() {
+    local name=""
+    echo "Running channel health checks..."
+    while IFS= read -r line; do
+        if [[ "$line" =~ ^#EXTINF ]]; then
+            name="$(echo "$line" | sed 's/.*,//')"
+        elif [[ "$line" =~ ^http ]]; then
+            if [[ -n "$name" ]]; then
+                local code
+                # 302 = engine accepted the hash and is redirecting to stream = OK
+                # We use --max-redirs 0 to stop after the redirect, no stream is opened
+                code=$(curl -s -o /dev/null -w "%{http_code}" \
+                    --connect-timeout 3 --max-time 5 --max-redirs 0 \
+                    "$line" 2>/dev/null) || code=0
+                CHANNEL_HEALTH_CODES["$name"]=$code
+                echo "  ${name}: HTTP ${code}"
+            fi
+            name=""
+        fi
+    done < "$OUTPUT_FILE"
 }
 
 echo "Starting execution #$TOTAL_RUNS"
@@ -138,6 +169,9 @@ else
     echo "Jellyfin refresh HTTP code: $JELLYFIN_REFRESH_HTTP_CODE"
 fi
 
+if [[ -f "$OUTPUT_FILE" ]]; then
+    check_channel_health
+fi
 save_metrics_state
 push_metrics
 echo "Successfully finished."
