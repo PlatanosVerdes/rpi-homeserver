@@ -70,9 +70,9 @@ services:
     networks:
       - media-network
 
-  # --- Cron to get IPFS ---
+  # --- Acestream playlist updater + channel health checker ---
   acestream-updater:
-    image: alpine:latest
+    build: ./scripts/acestream-updater
     container_name: acestream-updater
     restart: unless-stopped
     dns:
@@ -82,8 +82,7 @@ services:
       - media-network
     volumes:
       - ${APP_CONFIG_PATH}/jellyfin/acestream:/data
-      #- ${SCRIPTS_PATH}/acestream-updater/script.sh:/app/script.sh:ro
-      - ${SCRIPTS_PATH}/acestream-updater:/app
+      - ${APP_CONFIG_PATH}/acestream-updater:/app
     environment:
       - TZ=${TZ}
       - OUTPUT_FILE=/data/channels_ace.m3u
@@ -92,16 +91,6 @@ services:
       - PUSHGATEWAY_URL=http://pushgateway:9091
       - JELLYFIN_URL=http://jellyfin:8096
       - JELLYFIN_API_KEY=${JELLYFIN_API_KEY}
-    command: >
-      /bin/sh -c "
-        apk add --no-cache curl sed bash coreutils tzdata > /dev/null 2>&1;
-        echo '--- Acestream Updater Active ---';
-        while true; do
-          /bin/bash /app/script.sh;
-          TIME=\$$(( (RANDOM % 241) + 60 ));
-          echo \"\$(date '+%H:%M:%S') - Sync OK. Sleeping \$$((TIME/60))m...\";
-          sleep \$$TIME;
-        done"
 
 networks:
   media-network:
