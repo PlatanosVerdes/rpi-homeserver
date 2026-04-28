@@ -4,12 +4,20 @@
   "schemaVersion": 38,
   "graphTooltip": 1,
   "refresh": "2m",
-  "time": { "from": "now-6h", "to": "now" },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
   "timepicker": {},
   "timezone": "",
-  "tags": ["livetv", "acestream"],
+  "tags": [
+    "livetv",
+    "acestream"
+  ],
   "links": [],
-  "annotations": { "list": [] },
+  "annotations": {
+    "list": []
+  },
   "templating": {
     "list": [
       {
@@ -20,8 +28,14 @@
         "includeAll": true,
         "allValue": ".*",
         "multi": false,
-        "datasource": { "type": "prometheus", "uid": "prometheus" },
-        "query": { "query": "label_values(acestream_channel_health, group)", "refId": "A" },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "label_values(acestream_channel_health, group)",
+          "refId": "A"
+        },
         "refresh": 2,
         "sort": 1,
         "current": {}
@@ -33,86 +47,202 @@
       "id": 1,
       "type": "stat",
       "title": "Channels OK",
-      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
-      "targets": [{ "expr": "count(acestream_channel_health == 1)", "instant": true, "refId": "A" }],
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 0
+      },
+      "targets": [
+        {
+          "expr": "count(acestream_channel_health == 1)",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
       "fieldConfig": {
         "defaults": {
           "decimals": 0,
-          "color": { "mode": "fixed", "fixedColor": "green" },
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": 0 }] }
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value", "graphMode": "none",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
-      }
-    },
-    {
-      "id": 2,
-      "type": "stat",
-      "title": "Channels Down",
-      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
-      "targets": [{ "expr": "count(acestream_channel_health == 0) or vector(0)", "instant": true, "refId": "A" }],
-      "fieldConfig": {
-        "defaults": {
-          "decimals": 0,
-          "color": { "mode": "thresholds" },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [{ "color": "green", "value": 0 }, { "color": "red", "value": 1 }]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value", "graphMode": "none",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
-      }
-    },
-    {
-      "id": 3,
-      "type": "stat",
-      "title": "Total Channels",
-      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
-      "targets": [{ "expr": "acestream_unique_channels", "instant": true, "refId": "A" }],
-      "fieldConfig": {
-        "defaults": {
-          "decimals": 0,
-          "color": { "mode": "fixed", "fixedColor": "blue" },
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": 0 }] }
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value", "graphMode": "none",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
-      }
-    },
-    {
-      "id": 4,
-      "type": "stat",
-      "title": "Last Check",
-      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 0 },
-      "targets": [{ "expr": "time() - acestream_last_run_timestamp", "refId": "A" }],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s", "decimals": 0,
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "green"
+          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green",  "value": 0 },
-              { "color": "orange", "value": 600 },
-              { "color": "red",    "value": 1800 }
+              {
+                "color": "green",
+                "value": 0
+              }
             ]
           }
         },
         "overrides": []
       },
       "options": {
-        "colorMode": "value", "graphMode": "none",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+        "colorMode": "value",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Channels Down",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 0
+      },
+      "targets": [
+        {
+          "expr": "count(acestream_channel_health == 0) or vector(0)",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Total Channels",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 0
+      },
+      "targets": [
+        {
+          "expr": "acestream_unique_channels",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Last Check",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 0
+      },
+      "targets": [
+        {
+          "expr": "time() - acestream_last_run_timestamp",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "orange",
+                "value": 600
+              },
+              {
+                "color": "red",
+                "value": 1800
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
       }
     },
     {
@@ -120,29 +250,74 @@
       "type": "stat",
       "title": "Channel summary",
       "description": "One block per logical channel. Green = all variants OK. Orange = some variants down. Red = all variants down.",
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 4 },
-      "targets": [{
-        "expr": "avg by (channel) (acestream_channel_health)",
-        "instant": true,
-        "legendFormat": "{{channel}}",
-        "refId": "A"
-      }],
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 4
+      },
+      "targets": [
+        {
+          "expr": "avg by (channel) (acestream_channel_health)",
+          "instant": true,
+          "legendFormat": "{{channel}}",
+          "refId": "A"
+        }
+      ],
       "fieldConfig": {
         "defaults": {
           "decimals": 2,
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "red",    "value": 0    },
-              { "color": "orange", "value": 0.01 },
-              { "color": "green",  "value": 1    }
+              {
+                "color": "red",
+                "value": 0
+              },
+              {
+                "color": "orange",
+                "value": 0.01
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
             ]
           },
           "mappings": [
-            { "type": "range", "options": { "from": 0,    "to": 0.009, "result": { "text": "All down"  } } },
-            { "type": "range", "options": { "from": 0.01, "to": 0.999, "result": { "text": "Partial"   } } },
-            { "type": "range", "options": { "from": 1,    "to": 1,     "result": { "text": "OK"        } } }
+            {
+              "type": "range",
+              "options": {
+                "from": 0,
+                "to": 0.009,
+                "result": {
+                  "text": "All down"
+                }
+              }
+            },
+            {
+              "type": "range",
+              "options": {
+                "from": 0.01,
+                "to": 0.999,
+                "result": {
+                  "text": "Partial"
+                }
+              }
+            },
+            {
+              "type": "range",
+              "options": {
+                "from": 1,
+                "to": 1,
+                "result": {
+                  "text": "OK"
+                }
+              }
+            }
           ]
         },
         "overrides": []
@@ -154,7 +329,13 @@
         "orientation": "auto",
         "textMode": "name",
         "wideLayout": true,
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
       }
     },
     {
@@ -162,29 +343,53 @@
       "type": "stat",
       "title": "All channel variants",
       "description": "One block per stream variant. Green = delivering bytes. Red = no response.",
-      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 12 },
-      "targets": [{
-        "expr": "acestream_channel_health",
-        "instant": true,
-        "legendFormat": "{{name}}",
-        "refId": "A"
-      }],
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 12
+      },
+      "targets": [
+        {
+          "expr": "acestream_channel_health",
+          "instant": true,
+          "legendFormat": "{{name}}",
+          "refId": "A"
+        }
+      ],
       "fieldConfig": {
         "defaults": {
           "decimals": 0,
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "red",   "value": 0 },
-              { "color": "green", "value": 1 }
+              {
+                "color": "red",
+                "value": 0
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
             ]
           },
           "mappings": [
-            { "type": "value", "options": {
-                "0": { "text": "Down", "index": 0 },
-                "1": { "text": "OK",   "index": 1 }
-            }}
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Down",
+                  "index": 0
+                },
+                "1": {
+                  "text": "OK",
+                  "index": 1
+                }
+              }
+            }
           ]
         },
         "overrides": []
@@ -196,22 +401,37 @@
         "orientation": "auto",
         "textMode": "name",
         "wideLayout": true,
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
       }
     },
     {
       "id": 10,
       "type": "timeseries",
-      "title": "Channel health history — $group",
-      "gridPos": { "h": 16, "w": 24, "x": 0, "y": 24 },
-      "targets": [{
-        "expr": "acestream_channel_health{group=~\"$group\"}",
-        "legendFormat": "{{name}}",
-        "refId": "A"
-      }],
+      "title": "Channel health history \u2014 $group",
+      "gridPos": {
+        "h": 16,
+        "w": 24,
+        "x": 0,
+        "y": 24
+      },
+      "targets": [
+        {
+          "expr": "acestream_channel_health{group=~\"$group\"}",
+          "legendFormat": "{{name}}",
+          "refId": "A"
+        }
+      ],
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
+          "color": {
+            "mode": "palette-classic"
+          },
           "custom": {
             "drawStyle": "line",
             "lineInterpolation": "stepBefore",
@@ -225,23 +445,45 @@
           "min": -0.05,
           "max": 1.05,
           "mappings": [
-            { "type": "value", "options": {
-                "0": { "text": "Down", "index": 0 },
-                "1": { "text": "OK",   "index": 1 }
-            }}
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Down",
+                  "index": 0
+                },
+                "1": {
+                  "text": "OK",
+                  "index": 1
+                }
+              }
+            }
           ],
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": 0 }] }
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
         },
         "overrides": []
       },
       "options": {
-        "tooltip": { "mode": "multi", "sort": "none" },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        },
         "legend": {
           "displayMode": "table",
           "placement": "right",
           "showLegend": true,
-          "calcs": ["lastNotNull"],
-          "width": 220
+          "calcs": [
+            "lastNotNull"
+          ],
+          "width": 200
         }
       }
     }
