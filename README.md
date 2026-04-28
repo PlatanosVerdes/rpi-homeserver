@@ -76,6 +76,10 @@ Add to your `hosts` file on each client device:
 Self-hosted Bitwarden-compatible vault. **Requires HTTPS** for the mobile app.
 → See [docs/vaultwarden-https.md](docs/vaultwarden-https.md)
 
+### Secrets Injection (Bitwarden Secrets Manager)
+All sensitive credentials live in Bitwarden SM — only `BWS_ACCESS_TOKEN` stays in `.env`. Secrets are injected at deploy time via `scripts/bws-run.py`, with support for JSON-grouped secrets.
+→ See [docs/secrets-manager.md](docs/secrets-manager.md)
+
 ### Media Automation (The *arrs Suite)
 - **Prowlarr → FlareSolverr:** Settings → Indexers → Add Proxy → `http://flaresolverr:8191`
 - **Prowlarr → Radarr/Sonarr:** Settings → Apps → add each with their API keys

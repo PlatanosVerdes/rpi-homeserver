@@ -1,6 +1,6 @@
 # Pending tasks
 
-## Bitwarden Secrets Manager — replace `.env` secrets
+## ✅ Bitwarden Secrets Manager — DONE
 
 Replace the `.env` file secrets with [Bitwarden Secrets Manager](https://bitwarden.com/products/secrets-manager/).
 
