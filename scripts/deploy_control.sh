@@ -73,6 +73,7 @@ if [ ! -f .env ]; then
     exit 1
 fi
 
+BWS_RUN="$PROJECT_DIR/scripts/bws-run.py"
 BWS_OK=0
 if [ -n "$BWS_ACCESS_TOKEN" ]; then
     if bws secret list &>/dev/null; then
@@ -85,10 +86,10 @@ else
     log "Warning: BWS_ACCESS_TOKEN not set — secrets will not be injected."
 fi
 
-# Wrapper: inject secrets if BWS is available, otherwise fall back to .env only
+# Wrapper: inject secrets (with JSON expansion) if BWS is available
 compose_up() {
     if [ "$BWS_OK" -eq 1 ]; then
-        bws run -- docker compose "$@"
+        python3 "$BWS_RUN" docker compose "$@"
     else
         docker compose "$@"
     fi
