@@ -118,7 +118,7 @@
       "description": "This device is routing internet traffic through a peer exit node.",
       "gridPos": { "h": 4, "w": 12, "x": 16, "y": 4 },
       "targets": [{
-        "expr": "tailscale_peer_using_as_exit_node == 1",
+        "expr": "tailscale_peer_is_active_exit_node == 1",
         "instant": true,
         "legendFormat": "via {{hostname}}",
         "refId": "A"
