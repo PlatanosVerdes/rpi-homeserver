@@ -8,7 +8,7 @@
       "id": 1,
       "type": "stat",
       "title": "Executions (24h)",
-      "gridPos": { "h": 4, "w": 5, "x": 0, "y": 0 },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
       "targets": [
         { "expr": "increase(deploy_run_total[24h])", "refId": "A", "instant": true }
       ],
@@ -23,7 +23,7 @@
       "id": 2,
       "type": "stat",
       "title": "Deployments with Changes (24h)",
-      "gridPos": { "h": 4, "w": 5, "x": 5, "y": 0 },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
       "targets": [
         { "expr": "increase(deploy_with_changes_total[24h])", "refId": "A", "instant": true }
       ],
@@ -38,7 +38,7 @@
       "id": 3,
       "type": "stat",
       "title": "Errors (24h)",
-      "gridPos": { "h": 4, "w": 5, "x": 10, "y": 0 },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
       "targets": [
         { "expr": "increase(deploy_errors_total[24h])", "refId": "A", "instant": true }
       ],
@@ -60,7 +60,7 @@
       "id": 4,
       "type": "stat",
       "title": "Last Run",
-      "gridPos": { "h": 4, "w": 4, "x": 15, "y": 0 },
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 0 },
       "targets": [
         { "expr": "time() - deploy_last_run_timestamp", "refId": "A" }
       ],
@@ -84,7 +84,7 @@
       "id": 5,
       "type": "stat",
       "title": "Last Status",
-      "gridPos": { "h": 4, "w": 5, "x": 19, "y": 0 },
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 0 },
       "targets": [
         { "expr": "deploy_last_status", "refId": "A", "instant": true }
       ],
@@ -108,26 +108,44 @@
       }
     },
     {
+      "id": 7,
+      "type": "stat",
+      "title": "Bitwarden Secrets",
+      "description": "Green = secrets loaded from BWS OK. Red = BWS unreachable or token missing.",
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 0 },
+      "targets": [
+        { "expr": "deploy_bws_secrets_ok", "refId": "A", "instant": true }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "Failed", "index": 0 } } },
+            { "type": "value", "options": { "1": { "text": "OK", "index": 1 } } }
+          ],
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": 0 },
+              { "color": "green", "value": 1 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "background", "graphMode": "none",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      }
+    },
+    {
       "id": 6,
       "type": "timeseries",
       "title": "Activity Timeline",
       "gridPos": { "h": 10, "w": 24, "x": 0, "y": 4 },
       "targets": [
-        {
-          "expr": "increase(deploy_run_total[15m])",
-          "legendFormat": "Executions",
-          "refId": "A"
-        },
-        {
-          "expr": "increase(deploy_with_changes_total[15m])",
-          "legendFormat": "Deployed",
-          "refId": "B"
-        },
-        {
-          "expr": "increase(deploy_errors_total[15m])",
-          "legendFormat": "Errors",
-          "refId": "C"
-        }
+        { "expr": "increase(deploy_run_total[15m])", "legendFormat": "Executions", "refId": "A" },
+        { "expr": "increase(deploy_with_changes_total[15m])", "legendFormat": "Deployed", "refId": "B" },
+        { "expr": "increase(deploy_errors_total[15m])", "legendFormat": "Errors", "refId": "C" }
       ],
       "fieldConfig": {
         "defaults": {
@@ -141,21 +159,15 @@
         "overrides": [
           {
             "matcher": { "id": "byName", "options": "Executions" },
-            "properties": [
-              { "id": "color", "value": { "mode": "fixed", "fixedColor": "blue" } }
-            ]
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "blue" } }]
           },
           {
             "matcher": { "id": "byName", "options": "Deployed" },
-            "properties": [
-              { "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }
-            ]
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }]
           },
           {
             "matcher": { "id": "byName", "options": "Errors" },
-            "properties": [
-              { "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }
-            ]
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }]
           }
         ]
       }
