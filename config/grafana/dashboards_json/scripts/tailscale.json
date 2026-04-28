@@ -1,0 +1,258 @@
+{
+  "uid": "tailscale-bannet",
+  "title": "Tailscale — Bannet",
+  "tags": ["tailscale", "network", "scripts"],
+  "schemaVersion": 38,
+  "graphTooltip": 1,
+  "refresh": "1m",
+  "time": { "from": "now-6h", "to": "now" },
+  "timepicker": {},
+  "timezone": "",
+  "links": [],
+  "annotations": { "list": [] },
+  "templating": { "list": [] },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Devices Online",
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
+      "targets": [{
+        "expr": "count(tailscale_peer_online == 1)",
+        "instant": true,
+        "refId": "A"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "color": { "mode": "fixed", "fixedColor": "green" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": 0 }] }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value", "graphMode": "none",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Devices Offline",
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
+      "targets": [{
+        "expr": "count(tailscale_peer_online == 0) or vector(0)",
+        "instant": true,
+        "refId": "A"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": 0 }, { "color": "orange", "value": 1 }]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value", "graphMode": "none",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      }
+    },
+    {
+      "id": 6,
+      "type": "piechart",
+      "title": "Devices by OS",
+      "description": "Breakdown of devices by operating system.",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 0 },
+      "targets": [{
+        "expr": "count by (os) (tailscale_peer_online)",
+        "instant": true,
+        "legendFormat": "{{os}}",
+        "refId": "A"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "color": { "mode": "palette-classic" }
+        },
+        "overrides": []
+      },
+      "options": {
+        "pieType": "donut",
+        "displayLabels": ["name", "value"],
+        "legend": { "displayMode": "list", "placement": "right", "showLegend": true }
+      }
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Exit Node",
+      "description": "Devices currently advertising as exit node (routing internet traffic for others).",
+      "gridPos": { "h": 4, "w": 12, "x": 16, "y": 0 },
+      "targets": [{
+        "expr": "tailscale_peer_is_exit_node == 1",
+        "instant": true,
+        "legendFormat": "{{hostname}}",
+        "refId": "A"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "color": { "mode": "fixed", "fixedColor": "blue" },
+          "mappings": [{ "type": "value", "options": { "1": { "text": "Exit Node", "index": 0 } } }]
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background", "graphMode": "none", "textMode": "name",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      }
+    },
+    {
+      "id": 8,
+      "type": "stat",
+      "title": "Using Exit Node",
+      "description": "This device is routing internet traffic through a peer exit node.",
+      "gridPos": { "h": 4, "w": 12, "x": 16, "y": 4 },
+      "targets": [{
+        "expr": "tailscale_peer_using_as_exit_node == 1",
+        "instant": true,
+        "legendFormat": "via {{hostname}}",
+        "refId": "A"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "color": { "mode": "fixed", "fixedColor": "purple" },
+          "noValue": "Not using exit node",
+          "mappings": [{ "type": "value", "options": { "1": { "text": "Active", "index": 0 } } }]
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background", "graphMode": "none", "textMode": "name",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Device Status — Bannet",
+      "description": "Green = online. Red = offline.",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
+      "targets": [{
+        "expr": "tailscale_peer_online",
+        "instant": true,
+        "legendFormat": "{{hostname}} ({{os}})",
+        "refId": "A"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red",   "value": 0 },
+              { "color": "green", "value": 1 }
+            ]
+          },
+          "mappings": [
+            { "type": "value", "options": {
+                "0": { "text": "Offline", "index": 0 },
+                "1": { "text": "Online",  "index": 1 }
+            }}
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "textMode": "name",
+        "wideLayout": true,
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Device Online History",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 16 },
+      "targets": [{
+        "expr": "tailscale_peer_online",
+        "legendFormat": "{{hostname}}",
+        "refId": "A"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "stepBefore",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "always",
+            "pointSize": 5,
+            "spanNulls": false
+          },
+          "decimals": 0,
+          "min": -0.05,
+          "max": 1.05,
+          "mappings": [
+            { "type": "value", "options": {
+                "0": { "text": "Offline", "index": 0 },
+                "1": { "text": "Online",  "index": 1 }
+            }}
+          ],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": 0 }] }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "none" },
+        "legend": { "displayMode": "table", "placement": "right", "showLegend": true, "calcs": ["lastNotNull"] }
+      }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Traffic per Device",
+      "description": "Only counts direct P2P traffic (not traffic relayed via DERP). If devices connect through relay, bytes may be 0.",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 26 },
+      "targets": [
+        {
+          "expr": "rate(tailscale_peer_rx_bytes[5m]) * 8",
+          "legendFormat": "↓ {{hostname}}",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(tailscale_peer_tx_bytes[5m]) * 8",
+          "legendFormat": "↑ {{hostname}}",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bps",
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line", "lineInterpolation": "linear",
+            "lineWidth": 1, "fillOpacity": 5, "showPoints": "never", "spanNulls": false
+          },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": 0 }] }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "none" },
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }
+      }
+    }
+  ]
+}

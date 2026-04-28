@@ -25,25 +25,23 @@ Bitwarden SM provides a proper vault with audit log, access control, and rotatio
 
 ---
 
-## Pi-hole monitoring in Grafana
+## ✅ Pi-hole monitoring in Grafana — DONE
 
-Pi-hole is installed natively (not Docker). To add metrics to Grafana:
-1. Uncomment `pihole-exporter` in [compose-mon.yml](compose-mon.yml)
-2. Add `PIHOLE_PASSWORD` to `.env` (or Bitwarden SM)
-3. Add scrape job to [config/prometheus/prometheus.yml](config/prometheus/prometheus.yml):
-   ```yaml
-   - job_name: 'pihole'
-     static_configs:
-       - targets: ['pihole-exporter:9617']
-   ```
-4. Import Grafana dashboard ID `10176` from grafana.com
+`pihole-exporter` running, scraping `host.docker.internal:8081`. Dashboard imported (uid `Pi-hole-Exporter`).
 
 ---
 
-## Tailscale monitoring in Grafana
+## Tailscale monitoring in Grafana — needs API key
 
-To monitor which Tailscale devices are online:
-1. Uncomment `tailscale-exporter` in [compose-mon.yml](compose-mon.yml)
-2. Add `TAILSCALE_API_KEY` and `TAILSCALE_TAILNET` to `.env`
-3. Add scrape job to Prometheus config
-4. Import Grafana dashboard ID `17298` from grafana.com
+Tailnet name: **Bannet**. Service is ready in [compose-mon.yml](compose-mon.yml), just needs activation:
+
+1. Generate a Tailscale **API key** (not auth key):
+   → https://login.tailscale.com/admin/settings/keys → "Generate API access token"
+2. Add to `.env`:
+   ```
+   TAILSCALE_API_KEY=tskey-api-xxxxx
+   ```
+3. Uncomment `tailscale-exporter` in [compose-mon.yml](compose-mon.yml)
+4. Uncomment `tailscale` scrape job in [config/prometheus/prometheus.yml](config/prometheus/prometheus.yml)
+5. Start: `docker compose -f compose-mon.yml up -d tailscale-exporter`
+6. Import Grafana dashboard ID `17722` from grafana.com

@@ -20,3 +20,12 @@ scrape_configs:
       - targets: ['host.docker.internal:8443']
     metrics_path: '/prometheus'
     scheme: 'http'
+
+  - job_name: 'pihole'
+    static_configs:
+      - targets: ['pihole-exporter:9617']
+
+  # Uncomment when tailscale-exporter is enabled in compose-mon.yml
+  # - job_name: 'tailscale'
+  #   static_configs:
+  #     - targets: ['tailscale-exporter:9736']

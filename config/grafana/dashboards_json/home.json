@@ -1,49 +1,120 @@
 {
-  "uid": "home-overview",
-  "title": "Home",
-  "tags": ["home"],
-  "schemaVersion": 38,
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "refresh": "",
-  "time": { "from": "now-6h", "to": "now" },
-  "timepicker": { "hidden": true },
-  "timezone": "",
+  "id": 16,
   "links": [],
-  "annotations": { "list": [] },
-  "templating": { "list": [] },
   "panels": [
     {
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 0
+      },
       "id": 1,
-      "type": "text",
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "## 📺 Live TV\n[Live TV — channel availability](/d/acestream-livetv/live-tv)\n\n## ⚙️ Acestream Monitor\n[Acestream Monitor — sync & errors](/d/acestream-monitor/acestream-monitor)",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.3.3",
       "title": "Acestream",
-      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 0 },
-      "options": {
-        "mode": "markdown",
-        "content": "## 📺 Live TV\n[Live TV — channel availability](/d/acestream-livetv/live-tv)\n\n## ⚙️ Acestream Monitor\n[Acestream Monitor — sync & errors](/d/acestream-monitor/acestream-monitor)"
-      },
-      "fieldConfig": { "defaults": {}, "overrides": [] }
+      "type": "text"
     },
     {
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 0
+      },
       "id": 2,
-      "type": "text",
-      "title": "System",
-      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 0 },
       "options": {
-        "mode": "markdown",
-        "content": "## 🖥️ Raspberry Pi\n[Node Exporter — CPU, RAM, disk](/d/rYdddlPWk/node-exporter-full-raspi)\n\n## 🐳 Docker\n[Docker monitoring — containers](/d/c1ff1c1e-5976-4ed2-a91f-4e70f6fcf026/docker-monitoring)"
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "## 🖥️ Raspberry Pi\n[Node Exporter — CPU, RAM, disk](/d/rYdddlPWk/node-exporter-full-raspi)\n\n## 🐳 Docker\n[Docker monitoring — containers](/d/c1ff1c1e-5976-4ed2-a91f-4e70f6fcf026/docker-monitoring)",
+        "mode": "markdown"
       },
-      "fieldConfig": { "defaults": {}, "overrides": [] }
+      "pluginVersion": "12.3.3",
+      "title": "System",
+      "type": "text"
     },
     {
-      "id": 3,
-      "type": "text",
-      "title": "Scripts & Network",
-      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 0 },
-      "options": {
-        "mode": "markdown",
-        "content": "## 🚀 Deploy Monitor\n[Deploy Monitor — deployments](/d/deploy-monitor/deploy-monitor)\n\n## 🌐 Speedtest\n[Speedtest Tracker — internet speed](/d/g7usvhZVk2/speedtest-tracker)"
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
       },
-      "fieldConfig": { "defaults": {}, "overrides": [] }
+      "gridPos": {
+        "h": 10,
+        "w": 8,
+        "x": 16,
+        "y": 0
+      },
+      "id": 3,
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "## 🚀 Deploy Monitor\n[Deploy Monitor — deployments](/d/deploy-monitor/deploy-monitor)\n\n## 🌐 Speedtest\n[Speedtest Tracker — internet speed](/d/g7usvhZVk2/speedtest-tracker)\n\n## 🛡️ Pi-hole\n[Pi-hole Exporter — DNS & ad blocking](/d/Pi-hole-Exporter/pi-hole-exporter)\n\n## 🔒 Tailscale\n[Tailscale — Bannet network devices](/d/tailscale-bannet/tailscale-bannet)",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.3.3",
+      "title": "Scripts & Network",
+      "type": "text"
     }
-  ]
+  ],
+  "preload": false,
+  "refresh": "",
+  "schemaVersion": 42,
+  "tags": [
+    "home"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {
+    "hidden": true
+  },
+  "timezone": "",
+  "title": "Home",
+  "uid": "home-overview",
+  "version": 5
 }
