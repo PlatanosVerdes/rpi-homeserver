@@ -2,6 +2,7 @@
 *.env
 .env_copy
 .deploy_state
+.bitwarden
 
 # Configuration directories (contains sensitive data)
 appdata/*
