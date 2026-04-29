@@ -6,6 +6,9 @@ services:
     container_name: cal-bridge
     restart: unless-stopped
     profiles: [cal, all]
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     networks:
       - media-network
     ports:
