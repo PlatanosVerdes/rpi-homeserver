@@ -94,20 +94,19 @@ services:
       - media-network
 
   # --- PIHOLE EXPORTER (Pi-hole DNS/ad-block metrics → Prometheus) ---
-  # Pi-hole runs natively on the host. Grafana dashboard ID: 10176
+  # Pi-hole v6 compatible exporter. Grafana dashboard ID: 21043
   pihole-exporter:
-    image: ekofr/pihole-exporter:latest
+    image: amonacoos/pihole6_exporter:latest
     container_name: pihole-exporter
     restart: unless-stopped
     profiles: [moni, all]
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
-      - PIHOLE_HOSTNAME=host.docker.internal
-      - PIHOLE_PASSWORD=${PIHOLE_PASSWORD}
+      - PIHOLE_HOST=host.docker.internal
+      - PIHOLE_API_KEY=${PIHOLE_PASSWORD}
+      - PIHOLE_SCHEME=http
       - PIHOLE_PORT=8081
-      - INTERVAL=30s
-      - PORT=9617
     networks:
       - media-network
 

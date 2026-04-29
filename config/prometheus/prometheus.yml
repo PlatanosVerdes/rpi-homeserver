@@ -23,7 +23,7 @@ scrape_configs:
 
   - job_name: 'pihole'
     static_configs:
-      - targets: ['pihole-exporter:9617']
+      - targets: ['pihole-exporter:9666']
 
   # Uncomment when tailscale-exporter is enabled in compose-mon.yml
   # - job_name: 'tailscale'

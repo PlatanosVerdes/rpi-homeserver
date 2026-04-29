@@ -94,19 +94,15 @@ services:
     dns:
       - 1.1.1.1
       - 8.8.8.8
-    ports:
-      - "53:53/tcp"
-      - "53:53/udp"
-      - "8081:80/tcp"
     environment:
       TZ: ${TZ}
       FTLCONF_webserver_api_password: ${PIHOLE_PASSWORD}
+      FTLCONF_webserver_port: 8081
       WEBPASSWORD: ${PIHOLE_PASSWORD}
     volumes:
       - ${APP_CONFIG_PATH}/pihole:/etc/pihole
       - ${APP_CONFIG_PATH}/dnsmasq.d:/etc/dnsmasq.d
-    networks:
-      - media-network
+    network_mode: host
 
 networks:
   media-network:
