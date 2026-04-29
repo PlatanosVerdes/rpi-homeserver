@@ -63,11 +63,6 @@ https://pihole.platanosverdes.com {
     import cf_tls
     reverse_proxy pihole:80
 }
-https://vault.platanosverdes.com {
-    import cf_tls
-    reverse_proxy vaultwarden:80
-}
-
 # --- HTTP (LAN short names) ---
 http://raspi http://homepage {
     reverse_proxy homepage:3000
@@ -104,9 +99,6 @@ http://flare {
 }
 http://torrent {
     reverse_proxy qbittorrent:8080
-}
-http://vault {
-    reverse_proxy vaultwarden:80
 }
 http://speedtest {
     reverse_proxy speedtest-tracker:80

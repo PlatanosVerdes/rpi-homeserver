@@ -1,3 +1,6 @@
+# Compiled binaries
+services/tailscale-metrics/tailscale-metrics
+
 # Environment variables (CRITICAL - contains passwords and API keys)
 *.env
 .env_copy

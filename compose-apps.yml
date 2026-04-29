@@ -14,6 +14,7 @@ services:
     volumes:
       - ${APP_CONFIG_PATH}/pol-academy-bot:/app/data
 
+
 networks:
   media-network:
     external: true

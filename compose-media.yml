@@ -72,7 +72,7 @@ services:
 
   # --- Acestream playlist updater + channel health checker ---
   acestream-updater:
-    build: ./scripts/acestream-updater
+    build: ./services/acestream-updater
     container_name: acestream-updater
     restart: unless-stopped
     dns:
