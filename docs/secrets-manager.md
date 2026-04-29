@@ -29,7 +29,7 @@ containers
 | `MEDIA` | `PLEX_API_TOKEN`, `PLEX_CLAIM`, `OVERSEERR_API_KEY`, `JELLYFIN_API_KEY`, `QBIT_PASSWORD` | JSON |
 | `MONITORING` | `PIHOLE_PASSWORD`, `SPEEDTEST_KEY`, `SPEEDTEST_API_KEY` | JSON |
 | `VPN` | `NORDVPN_USER`, `NORDVPN_PASS` | JSON |
-| `INFRA` | `CF_API_TOKEN`, `VAULTWARDEN_ADMIN_TOKEN` | JSON |
+| `INFRA` | `CF_API_TOKEN` | JSON |
 | `BOT_POL_ACADEMY_OFFERS_TOKEN` | — | Plain string |
 | `TAILSCALE_API_KEY` | — | Plain string — read by tailscale-metrics binary directly from `.env`, not via BWS |
 
@@ -45,7 +45,6 @@ TAILSCALE_IP=100.125.71.20
 PUID=1000 / PGID=1000
 DATA_ROOT, DATA_DB_ROOT, CONFIG_ROOT, APP_CONFIG_PATH
 QBIT_WEBUI_PORT=8080
-VAULTWARDEN_DOMAIN=https://vault.platanosverdes.com
 
 # Read directly by tailscale-metrics Go binary (not injected via BWS)
 TAILSCALE_API_KEY=tskey-api-...
