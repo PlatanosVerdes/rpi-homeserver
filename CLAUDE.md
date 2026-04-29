@@ -77,6 +77,23 @@ docker compose up -d
 
 ---
 
+## Profiles — selecting which services to run
+
+Controlled via `COMPOSE_PROFILES` in `.env`. No need to touch compose files.
+
+| Profile | Services |
+| :--- | :--- |
+| `essential` | Caddy, Homepage, Pi-hole, Speedtest-tracker |
+| `moni` | Prometheus, Grafana, Pushgateway, node-exporter, cAdvisor, Pihole-exporter, Speedtest-tracker |
+| `acestream` | Aceserve, Acestream-updater, Jellyfin + Grafana/Prometheus/Pushgateway |
+| `media` | Plex, Overseerr, Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr |
+| `bot` | Pol Academy Offers Bot |
+| `all` | Everything |
+
+Main Pi: `COMPOSE_PROFILES=all`. Secondary Pi: e.g. `COMPOSE_PROFILES=essential,moni`.
+
+---
+
 ## Adding a new service
 
 See [docs/add-service.md](docs/add-service.md) for the step-by-step guide. Short version:

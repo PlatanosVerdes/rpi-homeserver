@@ -5,6 +5,7 @@ services:
     build: https://github.com/PlatanosVerdes/PolFerrerAcademyOffers.git#main
     container_name: pol-academy-offers-bot
     restart: unless-stopped
+    profiles: [bot, all]
     dns:
       - 8.8.8.8
       - 1.1.1.1

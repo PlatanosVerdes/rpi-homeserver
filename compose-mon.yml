@@ -5,6 +5,7 @@ services:
     image: prom/pushgateway:latest
     container_name: pushgateway
     restart: unless-stopped
+    profiles: [moni, acestream, all]
     ports:
       - "9091:9091"
     networks:
@@ -16,6 +17,7 @@ services:
     image: prom/node-exporter:latest
     container_name: node-exporter
     restart: unless-stopped
+    profiles: [moni, all]
     network_mode: host
     pid: host
     volumes:
@@ -35,6 +37,7 @@ services:
     image: gcr.io/cadvisor/cadvisor:latest
     container_name: cadvisor
     restart: unless-stopped
+    profiles: [moni, all]
     privileged: true
     devices:
       - /dev/kmsg
@@ -52,6 +55,7 @@ services:
     image: prom/prometheus:latest
     container_name: prometheus
     restart: unless-stopped
+    profiles: [moni, acestream, all]
     user: "root"
     ports:
       - "9090:9090"
@@ -72,6 +76,7 @@ services:
     image: grafana/grafana:latest
     container_name: grafana
     restart: unless-stopped
+    profiles: [moni, acestream, all]
     user: "root"
     dns:
       - 8.8.8.8
@@ -94,6 +99,7 @@ services:
     image: ekofr/pihole-exporter:latest
     container_name: pihole-exporter
     restart: unless-stopped
+    profiles: [moni, all]
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
@@ -116,6 +122,7 @@ services:
   #   image: ghcr.io/maauso/tailscale-exporter:latest
   #   container_name: tailscale-exporter
   #   restart: unless-stopped
+  #   profiles: [moni, all]
   #   environment:
   #     - TAILSCALE_API_KEY=${TAILSCALE_API_KEY}
   #     - TAILSCALE_TAILNET=-          # "-" = default tailnet for the API key owner
