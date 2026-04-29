@@ -5,6 +5,7 @@ services:
     build: ./config/caddy/
     container_name: caddy
     restart: unless-stopped
+    profiles: [essential, all]
     ports:
       - "80:80"
       - "443:443"
@@ -27,6 +28,7 @@ services:
     image: ghcr.io/gethomepage/homepage:latest
     container_name: homepage
     restart: unless-stopped
+    profiles: [essential, all]
     dns:
       - 8.8.8.8
       - 1.1.1.1
@@ -59,6 +61,7 @@ services:
     image: lscr.io/linuxserver/speedtest-tracker:latest
     container_name: speedtest-tracker
     restart: unless-stopped
+    profiles: [essential, moni, all]
     dns:
       - 8.8.8.8
       - 1.1.1.1
@@ -79,13 +82,14 @@ services:
       - media-network
   # Temp credentials
   # Email: admin@example.com
-  # Pass: password 
-      
+  # Pass: password
+
   # --- PiHole -AdBlock ---
   pihole:
     container_name: pihole
     image: pihole/pihole:latest
     restart: unless-stopped
+    profiles: [essential, all]
     dns:
       - 1.1.1.1
       - 8.8.8.8

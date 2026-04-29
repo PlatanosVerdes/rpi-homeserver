@@ -135,6 +135,32 @@ For HTTP short names to work on your laptop/desktop:
 
 ---
 
+## Profiles — selecting which services to run
+
+Every service belongs to one or more profiles. Set `COMPOSE_PROFILES` in `.env` to control what starts — no need to touch the compose files.
+
+| Profile | Services |
+| :--- | :--- |
+| `essential` | Caddy, Homepage, Pi-hole, Speedtest-tracker |
+| `moni` | Prometheus, Grafana, Pushgateway, node-exporter, cAdvisor, Pihole-exporter, Speedtest-tracker |
+| `acestream` | Aceserve, Acestream-updater, Jellyfin + Grafana/Prometheus/Pushgateway |
+| `media` | Plex, Overseerr, Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr |
+| `bot` | Pol Academy Offers Bot |
+| `all` | Everything |
+
+```bash
+# .env — main Pi (everything)
+COMPOSE_PROFILES=all
+
+# .env — secondary Pi (only essentials + monitoring)
+COMPOSE_PROFILES=essential,moni
+
+# .env — secondary Pi (essentials + acestream only)
+COMPOSE_PROFILES=essential,acestream
+```
+
+---
+
 ## Project Structure
 
 ```

@@ -5,6 +5,7 @@ services:
     image: lscr.io/linuxserver/plex:latest
     container_name: plex
     restart: unless-stopped
+    profiles: [media, all]
     network_mode: host
     environment:
       - PUID=${PUID}
@@ -21,6 +22,7 @@ services:
     image: lscr.io/linuxserver/jellyfin:latest
     container_name: jellyfin
     restart: unless-stopped
+    profiles: [acestream, all]
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
@@ -40,6 +42,7 @@ services:
     image: lscr.io/linuxserver/overseerr:latest
     container_name: overseerr
     restart: unless-stopped
+    profiles: [media, all]
     dns:
       - 8.8.8.8
       - 1.1.1.1
@@ -53,12 +56,13 @@ services:
       - "5055:5055"
     networks:
       - media-network
-      
+
 
   # --- Acestream ---
   aceserve:
     image: jopsis/aceserve:latest
     container_name: aceserve
+    profiles: [acestream, all]
     ports:
       - "6878:6878"
       - "8621:8621"
@@ -75,6 +79,7 @@ services:
     build: ./services/acestream-updater
     container_name: acestream-updater
     restart: unless-stopped
+    profiles: [acestream, all]
     dns:
       - 1.1.1.1
       - 1.0.0.1

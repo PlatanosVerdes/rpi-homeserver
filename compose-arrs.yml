@@ -5,6 +5,7 @@ services:
     image: lscr.io/linuxserver/qbittorrent:latest
     container_name: qbittorrent
     restart: unless-stopped
+    profiles: [media, all]
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
@@ -27,6 +28,7 @@ services:
     image: ghcr.io/flaresolverr/flaresolverr:latest
     container_name: flaresolverr
     restart: unless-stopped
+    profiles: [media, all]
     dns:
       - 8.8.8.8
       - 1.1.1.1
@@ -43,6 +45,7 @@ services:
     image: lscr.io/linuxserver/prowlarr:latest
     container_name: prowlarr
     restart: unless-stopped
+    profiles: [media, all]
     dns:
       - 8.8.8.8
       - 1.1.1.1
@@ -62,11 +65,12 @@ services:
     image: lscr.io/linuxserver/radarr:latest
     container_name: radarr
     restart: unless-stopped
+    profiles: [media, all]
     dns:
       - 8.8.8.8
       - 1.1.1.1
-    extra_hosts: #LaLiga fucking things                 
-      - "api.radarr.video:172.67.180.78"      
+    extra_hosts: #LaLiga fucking things
+      - "api.radarr.video:172.67.180.78"
       - "radarr.servarr.com:172.67.180.78"
     environment:
       - PUID=${PUID}
@@ -85,6 +89,7 @@ services:
     image: lscr.io/linuxserver/sonarr:latest
     container_name: sonarr
     restart: unless-stopped
+    profiles: [media, all]
     dns:
       - 8.8.8.8
       - 1.1.1.1
