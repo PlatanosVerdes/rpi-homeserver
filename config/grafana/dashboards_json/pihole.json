@@ -1,0 +1,766 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_GRAFANACLOUD-BAZMONKEY-PROM",
+      "label": "grafanacloud-bazmonkey-prom",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    }
+  ],
+  "__elements": {},
+  "__requires": [
+    {
+      "type": "panel",
+      "id": "bargauge",
+      "name": "Bar gauge",
+      "version": ""
+    },
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "11.1.0-70724"
+    },
+    {
+      "type": "panel",
+      "id": "piechart",
+      "name": "Pie chart",
+      "version": ""
+    },
+    {
+      "type": "datasource",
+      "id": "prometheus",
+      "name": "Prometheus",
+      "version": "1.0.0"
+    },
+    {
+      "type": "panel",
+      "id": "stat",
+      "name": "Stat",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "table",
+      "name": "Table",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "text",
+      "name": "Text",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "timeseries",
+      "name": "Time series",
+      "version": ""
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 0},
+      "id": 18,
+      "title": "Totals Over Range",
+      "type": "row"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "mappings": [],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 80}]},
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 15, "w": 9, "x": 0, "y": 1},
+      "id": 17,
+      "options": {
+        "displayMode": "lcd",
+        "maxVizHeight": 300,
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "namePlacement": "top",
+        "orientation": "horizontal",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "showUnfilled": true,
+        "sizing": "auto",
+        "valueMode": "color"
+      },
+      "pluginVersion": "11.1.0-70724",
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "topk(10,sum_over_time(pihole_query_client_1m{instance=\"$instance\"}[$__range]))",
+          "format": "time_series",
+          "instant": true,
+          "legendFormat": "{{query_client}}",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Clients (Top 10)",
+      "transformations": [{"id": "renameByRegex", "options": {"regex": "(.*)( \\(.*-1\\))", "renamePattern": "$1"}}],
+      "type": "bargauge"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"fixedColor": "light-green", "mode": "palette-classic"},
+          "mappings": [],
+          "max": 40,
+          "min": 0,
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 80}]}
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 5, "w": 5, "x": 9, "y": 1},
+      "id": 4,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "showPercentChange": false,
+        "textMode": "value_and_name",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.1.0-70724",
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "pihole_client_count{instance=\"$instance\",category=\"active\"}",
+          "instant": true,
+          "legendFormat": "Active",
+          "range": false,
+          "refId": "A"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "pihole_client_count{instance=\"$instance\",category=\"total\"}",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "Total",
+          "range": false,
+          "refId": "B"
+        }
+      ],
+      "title": "Clients",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "continuous-BlPu"},
+          "mappings": [],
+          "min": 0,
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 80}]},
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 13, "w": 10, "x": 14, "y": 1},
+      "id": 5,
+      "options": {
+        "displayMode": "lcd",
+        "maxVizHeight": 298,
+        "minVizHeight": 16,
+        "minVizWidth": 0,
+        "namePlacement": "auto",
+        "orientation": "vertical",
+        "reduceOptions": {"calcs": ["last"], "fields": "", "values": false},
+        "showUnfilled": true,
+        "sizing": "auto",
+        "text": {"valueSize": 18},
+        "valueMode": "text"
+      },
+      "pluginVersion": "11.1.0-70724",
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "topk(20,sum_over_time(pihole_query_type_1m{instance=\"$instance\"}[$__range]))",
+          "format": "time_series",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "{{query_type}}",
+          "range": false,
+          "refId": "B"
+        }
+      ],
+      "title": "Query Types",
+      "type": "bargauge"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "continuous-BlPu"},
+          "mappings": [],
+          "min": 0,
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 80}]},
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 4, "w": 5, "x": 9, "y": 6},
+      "id": 3,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "showPercentChange": false,
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.1.0-70724",
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "sum(sum_over_time(pihole_query_status_1m{instance=\"$instance\",query_status=~\"(GRAVITY.*|SPECIAL_DOMAIN)\"}[$__range]))",
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Ads Blocked",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "continuous-BlYlRd"},
+          "decimals": 1,
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 80}]},
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 4, "w": 5, "x": 9, "y": 10},
+      "id": 2,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "showPercentChange": false,
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.1.0-70724",
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "sum(sum_over_time(pihole_query_status_1m{instance=\"$instance\",query_status=~\"(GRAVITY.*|SPECIAL_DOMAIN)\"}[$__range])) / sum(sum_over_time(pihole_query_status_1m{instance=\"$instance\"}[$__range])) * 100",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "B"
+        }
+      ],
+      "title": "Blocked %",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"hideFrom": {"legend": false, "tooltip": false, "viz": false}},
+          "mappings": [],
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 9, "w": 5, "x": 9, "y": 14},
+      "id": 1,
+      "options": {
+        "displayLabels": ["name", "percent"],
+        "legend": {"displayMode": "list", "placement": "bottom", "showLegend": false},
+        "pieType": "pie",
+        "reduceOptions": {"calcs": ["last"], "fields": "", "values": false},
+        "tooltip": {"mode": "single", "sort": "none"}
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "sum_over_time(pihole_query_upstream_1m{instance=\"$instance\"}[$__range])",
+          "format": "time_series",
+          "instant": true,
+          "legendFormat": "{{query_upstream}}",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Upstream DNS",
+      "transformations": [
+        {"id": "renameByRegex", "options": {"regex": "(.*)( \\(.*-1\\))", "renamePattern": "$1"}},
+        {"id": "renameByRegex", "options": {"regex": "None-(.*)", "renamePattern": "$1"}}
+      ],
+      "type": "piechart"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"fixedColor": "dark-blue", "mode": "palette-classic"},
+          "custom": {"hideFrom": {"legend": false, "tooltip": false, "viz": false}},
+          "mappings": [],
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 9, "w": 5, "x": 14, "y": 14},
+      "id": 6,
+      "options": {
+        "displayLabels": ["name", "percent"],
+        "legend": {"displayMode": "list", "placement": "bottom", "showLegend": false},
+        "pieType": "pie",
+        "reduceOptions": {"calcs": ["last"], "fields": "", "values": false},
+        "tooltip": {"mode": "multi", "sort": "desc"}
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "sum_over_time(pihole_query_status_1m{instance=\"$instance\"}[$__range])",
+          "format": "time_series",
+          "instant": true,
+          "legendFormat": "{{query_status}}",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Queries by Status",
+      "transformations": [{"id": "renameByRegex", "options": {"regex": "(.*)( \\(.*-1\\))", "renamePattern": "$1"}}],
+      "type": "piechart"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"fixedColor": "dark-blue", "mode": "palette-classic"},
+          "custom": {"hideFrom": {"legend": false, "tooltip": false, "viz": false}},
+          "mappings": [],
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 9, "w": 5, "x": 19, "y": 14},
+      "id": 16,
+      "options": {
+        "displayLabels": ["name", "percent"],
+        "legend": {"displayMode": "list", "placement": "bottom", "showLegend": false},
+        "pieType": "pie",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "tooltip": {"mode": "single", "sort": "none"}
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "sum_over_time(pihole_query_reply_1m{instance=\"$instance\"}[$__range])",
+          "format": "time_series",
+          "instant": true,
+          "legendFormat": "{{query_reply}}",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Query Replies",
+      "transformations": [{"id": "renameByRegex", "options": {"regex": "(.*)( \\(.*-1\\))", "renamePattern": "$1"}}],
+      "type": "piechart"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "custom": {"align": "auto", "cellOptions": {"type": "auto"}, "inspect": false},
+          "mappings": [],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 80}]},
+          "unit": "short"
+        },
+        "overrides": [{"matcher": {"id": "byName", "options": "Client"}, "properties": [{"id": "custom.width", "value": 310}]}]
+      },
+      "gridPos": {"h": 7, "w": 9, "x": 0, "y": 16},
+      "id": 20,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {"countRows": false, "fields": "", "reducer": ["sum"], "show": false},
+        "showHeader": true,
+        "sortBy": []
+      },
+      "pluginVersion": "11.1.0-70724",
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "topk(10,sum_over_time(pihole_query_client_1m{instance=\"$instance\"}[$__range]))",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "{{query_client}}",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Clients (Full List)",
+      "transformations": [
+        {"id": "renameByRegex", "options": {"regex": "(.*)( \\(.*-1\\))", "renamePattern": "$1"}},
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {"Time": true, "instance": true, "job": true},
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {"Value": "Query Count Over Range", "query_client": "Client"}
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "collapsed": true,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 24},
+      "id": 15,
+      "panels": [
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"fixedColor": "dark-blue", "mode": "palette-classic"},
+              "custom": {
+                "axisBorderShow": false, "axisCenteredZero": false, "axisColorMode": "text",
+                "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "drawStyle": "bars",
+                "fillOpacity": 60, "gradientMode": "none",
+                "hideFrom": {"legend": false, "tooltip": false, "viz": false},
+                "insertNulls": false, "lineInterpolation": "linear", "lineWidth": 1, "pointSize": 5,
+                "scaleDistribution": {"type": "linear"}, "showPoints": "auto", "spanNulls": false,
+                "stacking": {"group": "A", "mode": "normal"}, "thresholdsStyle": {"mode": "off"}
+              },
+              "mappings": [],
+              "thresholds": {"mode": "absolute", "steps": [{"color": "green"}, {"color": "red", "value": 80}]},
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "gridPos": {"h": 12, "w": 13, "x": 0, "y": 25},
+          "id": 8,
+          "options": {
+            "legend": {"calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true},
+            "tooltip": {"mode": "multi", "sort": "desc"}
+          },
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "editorMode": "code",
+              "exemplar": false,
+              "expr": "sum_over_time(pihole_query_status_1m{instance=\"$instance\"}[$__interval])",
+              "format": "time_series",
+              "instant": false,
+              "interval": "10m",
+              "legendFormat": "{{query_status}}",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "Queries by Status (10m)",
+          "transformations": [{"id": "renameByRegex", "options": {"regex": "(.*)( \\(.*-1\\))", "renamePattern": "$1"}}],
+          "transparent": true,
+          "type": "timeseries"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"fixedColor": "dark-blue", "mode": "palette-classic"},
+              "custom": {
+                "axisBorderShow": false, "axisCenteredZero": false, "axisColorMode": "text",
+                "axisLabel": "", "axisPlacement": "auto", "barAlignment": -1, "drawStyle": "line",
+                "fillOpacity": 67, "gradientMode": "opacity",
+                "hideFrom": {"legend": false, "tooltip": false, "viz": false},
+                "insertNulls": false, "lineInterpolation": "stepBefore", "lineWidth": 1, "pointSize": 5,
+                "scaleDistribution": {"type": "linear"}, "showPoints": "auto", "spanNulls": false,
+                "stacking": {"group": "A", "mode": "none"}, "thresholdsStyle": {"mode": "off"}
+              },
+              "mappings": [],
+              "noValue": "0",
+              "thresholds": {"mode": "absolute", "steps": [{"color": "green"}, {"color": "red", "value": 80}]},
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "gridPos": {"h": 8, "w": 11, "x": 13, "y": 25},
+          "id": 13,
+          "options": {
+            "legend": {"calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true},
+            "tooltip": {"mode": "multi", "sort": "desc"}
+          },
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "editorMode": "code",
+              "exemplar": false,
+              "expr": "sum_over_time(pihole_query_type_1m{instance=\"$instance\"}[$__interval])",
+              "format": "time_series",
+              "instant": false,
+              "interval": "10m",
+              "legendFormat": "{{query_type}}",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "Queries by Type (10m)",
+          "transformations": [{"id": "renameByRegex", "options": {"regex": "(.*)( \\(.*-1\\))", "renamePattern": "$1"}}],
+          "transparent": true,
+          "type": "timeseries"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "palette-classic"},
+              "custom": {
+                "axisBorderShow": false, "axisCenteredZero": false, "axisColorMode": "text",
+                "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "drawStyle": "line",
+                "fillOpacity": 66, "gradientMode": "opacity",
+                "hideFrom": {"legend": false, "tooltip": false, "viz": false},
+                "insertNulls": false, "lineInterpolation": "stepBefore", "lineWidth": 1, "pointSize": 5,
+                "scaleDistribution": {"type": "linear"}, "showPoints": "auto", "spanNulls": false,
+                "stacking": {"group": "A", "mode": "none"}, "thresholdsStyle": {"mode": "off"}
+              },
+              "mappings": [],
+              "noValue": "0",
+              "thresholds": {"mode": "absolute", "steps": [{"color": "green"}, {"color": "red", "value": 80}]},
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "gridPos": {"h": 8, "w": 11, "x": 13, "y": 33},
+          "id": 12,
+          "options": {
+            "legend": {"calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true},
+            "tooltip": {"mode": "multi", "sort": "none"}
+          },
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "editorMode": "code",
+              "exemplar": false,
+              "expr": "sum_over_time(pihole_query_upstream_1m{instance=\"$instance\"}[$__interval])",
+              "format": "time_series",
+              "instant": false,
+              "interval": "10m",
+              "legendFormat": "{{query_upstream}}",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "Queries by Upstream Destination (10m)",
+          "transparent": true,
+          "type": "timeseries"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"fixedColor": "dark-blue", "mode": "palette-classic"},
+              "custom": {
+                "axisBorderShow": false, "axisCenteredZero": false, "axisColorMode": "text",
+                "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "drawStyle": "bars",
+                "fillOpacity": 60, "gradientMode": "none",
+                "hideFrom": {"legend": false, "tooltip": false, "viz": false},
+                "insertNulls": false, "lineInterpolation": "linear", "lineWidth": 1, "pointSize": 5,
+                "scaleDistribution": {"type": "linear"}, "showPoints": "auto", "spanNulls": false,
+                "stacking": {"group": "A", "mode": "normal"}, "thresholdsStyle": {"mode": "off"}
+              },
+              "mappings": [],
+              "thresholds": {"mode": "absolute", "steps": [{"color": "green"}, {"color": "red", "value": 80}]},
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "gridPos": {"h": 12, "w": 13, "x": 0, "y": 37},
+          "id": 14,
+          "options": {
+            "legend": {"calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true},
+            "tooltip": {"mode": "multi", "sort": "desc"}
+          },
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "editorMode": "code",
+              "exemplar": false,
+              "expr": "sum_over_time(pihole_query_client_1m{instance=\"$instance\"}[$__interval])",
+              "format": "time_series",
+              "instant": false,
+              "interval": "10m",
+              "legendFormat": "{{query_client}}",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "Queries by Client (10m)",
+          "transformations": [{"id": "renameByRegex", "options": {"regex": "(.*)( \\(.*-1\\))", "renamePattern": "$1"}}],
+          "transparent": true,
+          "type": "timeseries"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "palette-classic"},
+              "custom": {
+                "axisBorderShow": false, "axisCenteredZero": false, "axisColorMode": "text",
+                "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "drawStyle": "line",
+                "fillOpacity": 85, "gradientMode": "opacity",
+                "hideFrom": {"legend": false, "tooltip": false, "viz": false},
+                "insertNulls": false, "lineInterpolation": "stepBefore", "lineWidth": 1, "pointSize": 5,
+                "scaleDistribution": {"type": "linear"}, "showPoints": "auto", "spanNulls": false,
+                "stacking": {"group": "A", "mode": "none"}, "thresholdsStyle": {"mode": "off"}
+              },
+              "mappings": [],
+              "noValue": "0",
+              "thresholds": {"mode": "absolute", "steps": [{"color": "green"}, {"color": "red", "value": 80}]},
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "gridPos": {"h": 8, "w": 11, "x": 13, "y": 41},
+          "id": 7,
+          "options": {
+            "legend": {"calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true},
+            "tooltip": {"mode": "multi", "sort": "none"}
+          },
+          "targets": [
+            {
+              "datasource": {"type": "prometheus", "uid": "${datasource}"},
+              "editorMode": "code",
+              "exemplar": false,
+              "expr": "sum_over_time(pihole_query_reply_1m{instance=\"$instance\"}[$__interval])",
+              "format": "time_series",
+              "instant": false,
+              "interval": "10m",
+              "legendFormat": "{{query_reply}}",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "Queries by Reply (10m)",
+          "transformations": [{"id": "renameByRegex", "options": {"regex": "None", "renamePattern": "Cached/Blocked"}}],
+          "transparent": true,
+          "type": "timeseries"
+        }
+      ],
+      "title": "Queries Over Time",
+      "type": "row"
+    }
+  ],
+  "refresh": "",
+  "schemaVersion": 39,
+  "tags": ["pihole6", "pihole"],
+  "templating": {
+    "list": [
+      {
+        "current": {"selected": false, "text": "default", "value": "default"},
+        "hide": 0,
+        "includeAll": false,
+        "label": "Datasource",
+        "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "prometheus",
+        "queryValue": "",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "current": {},
+        "datasource": {"type": "prometheus", "uid": "${datasource}"},
+        "definition": "label_values(pihole_client_count,instance)",
+        "description": "The host/instance running the pihole6_exporter.",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Host",
+        "multi": false,
+        "name": "instance",
+        "options": [],
+        "query": {
+          "qryType": 1,
+          "query": "label_values(pihole_client_count,instance)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {"from": "now-24h", "to": "now"},
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Pi-hole ver6 Stats",
+  "uid": "edknpuskjzw1sc",
+  "version": 23,
+  "weekStart": "",
+  "gnetId": 21043,
+  "description": "A dashboard for the pihole6_exporter."
+}

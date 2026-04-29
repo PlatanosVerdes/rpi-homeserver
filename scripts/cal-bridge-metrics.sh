@@ -1,5 +1,6 @@
 #!/bin/bash
 # Pushes cal-bridge secret expiry metric to Pushgateway.
+# crontab -e
 # Cron: 0 9 * * * /home/raspi/rpi-homeserver/scripts/cal-bridge-metrics.sh
 
 source "$(dirname "$0")/../.env" 2>/dev/null

@@ -26,6 +26,7 @@ services:
       - ${APP_CONFIG_PATH}/cal-bridge:/data/tokens
 
   # --- One Pace downloader (run-once, not restart) ---
+  # docker compose -f compose-apps.yml run --rm one-pace-downloader
   one-pace-downloader:
     build: ./services/one-pace-downloader
     container_name: one-pace-downloader
@@ -38,7 +39,15 @@ services:
       - media-network
     volumes:
       - ${DATA_ROOT}/series:/mnt/data/series
-    command: ["--resolution", "1080p", "--output", "/mnt/data/series"]
+    command:
+      - "--resolution"
+      - "1080p"
+      - "--output"
+      - "/mnt/data/series"
+      - "--pushgateway"
+      - "http://pushgateway:9091"
+      #- "--arc"
+      #- "skypiea"
 
   # --- Telegram Bot for Academy Offers ---
   pol-academy-offers-bot:

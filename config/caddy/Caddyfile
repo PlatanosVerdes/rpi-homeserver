@@ -61,7 +61,7 @@ https://speedtest.platanosverdes.com {
 }
 https://pihole.platanosverdes.com {
     import cf_tls
-    reverse_proxy pihole:80
+    reverse_proxy host.docker.internal:8081
 }
 https://cal.platanosverdes.com {
     import cf_tls
@@ -109,5 +109,5 @@ http://speedtest {
     reverse_proxy speedtest-tracker:80
 }
 http://pihole {
-    reverse_proxy pihole:80
+    reverse_proxy host.docker.internal:8081
 }
