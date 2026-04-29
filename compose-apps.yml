@@ -18,6 +18,8 @@ services:
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       CAL_API_KEY: ${CAL_API_KEY}
       CAL_BASE_URL: ${CAL_BASE_URL:-https://cal.platanosverdes.com}
+      MS_CLIENT_ID: ${MS_CLIENT_ID:-}
+      MS_CLIENT_SECRET: ${MS_CLIENT_SECRET:-}
     volumes:
       - ${APP_CONFIG_PATH}/cal-bridge:/data/tokens
 
