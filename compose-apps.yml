@@ -20,8 +20,25 @@ services:
       CAL_BASE_URL: ${CAL_BASE_URL:-https://cal.platanosverdes.com}
       MS_CLIENT_ID: ${MS_CLIENT_ID:-}
       MS_CLIENT_SECRET: ${MS_CLIENT_SECRET:-}
+      MS_SECRET_CREATES: ${MS_SECRET_CREATES:-}
+      MS_SECRET_DAYS_DURATION: ${MS_SECRET_DAYS_DURATION:-}
     volumes:
       - ${APP_CONFIG_PATH}/cal-bridge:/data/tokens
+
+  # --- One Pace downloader (run-once, not restart) ---
+  one-pace-downloader:
+    build: ./services/one-pace-downloader
+    container_name: one-pace-downloader
+    restart: "no"
+    profiles: [one-pace]
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    networks:
+      - media-network
+    volumes:
+      - ${DATA_ROOT}/series:/mnt/data/series
+    command: ["--resolution", "1080p", "--output", "/mnt/data/series"]
 
   # --- Telegram Bot for Academy Offers ---
   pol-academy-offers-bot:
