@@ -1,5 +1,5 @@
 {
-    email jorgeee988@gmail.com
+    email {env.CADDY_EMAIL}
 }
 
 (cf_tls) {
@@ -63,6 +63,11 @@ https://pihole.platanosverdes.com {
     import cf_tls
     reverse_proxy pihole:80
 }
+https://cal.platanosverdes.com {
+    import cf_tls
+    reverse_proxy cal-bridge:8000
+}
+
 # --- HTTP (LAN short names) ---
 http://raspi http://homepage {
     reverse_proxy homepage:3000

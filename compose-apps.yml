@@ -1,5 +1,23 @@
 # --- CUSTOM SERVICES & BOTS ---
 services:
+  # --- Google Calendar Bridge (ESP32 / local API) ---
+  cal-bridge:
+    build: https://github.com/PlatanosVerdes/cal-bridge.git#main
+    container_name: cal-bridge
+    restart: unless-stopped
+    profiles: [cal, all]
+    networks:
+      - media-network
+    ports:
+      - "8091:8000"
+    environment:
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      CAL_API_KEY: ${CAL_API_KEY}
+      CAL_BASE_URL: ${CAL_BASE_URL:-https://cal.platanosverdes.com}
+    volumes:
+      - ${APP_CONFIG_PATH}/cal-bridge:/data/tokens
+
   # --- Telegram Bot for Academy Offers ---
   pol-academy-offers-bot:
     build: https://github.com/PlatanosVerdes/PolFerrerAcademyOffers.git#main
