@@ -88,6 +88,7 @@ Controlled via `COMPOSE_PROFILES` in `.env`. No need to touch compose files.
 | `acestream` | Aceserve, Acestream-updater, Jellyfin + Grafana/Prometheus/Pushgateway |
 | `media` | Plex, Overseerr, Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr |
 | `bot` | Pol Academy Offers Bot |
+| `cal` | Google Calendar Bridge (cal-bridge) |
 | `all` | Everything |
 
 Main Pi: `COMPOSE_PROFILES=all`. Secondary Pi: e.g. `COMPOSE_PROFILES=essential,moni`.
