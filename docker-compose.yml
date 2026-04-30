@@ -3,7 +3,6 @@ include:
   - compose-media.yml
   - compose-arrs.yml
   - compose-mon.yml
-  - compose-apps.yml
   
 networks:
   media-network:

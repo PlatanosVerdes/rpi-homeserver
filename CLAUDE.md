@@ -4,6 +4,8 @@
 
 A modular Docker-based home server running on a Raspberry Pi. All services run as Docker containers managed by Docker Compose. The repo is the source of truth: a cron job (`deploy_control.sh`) pulls from git every 15 minutes and applies changes automatically.
 
+**Two-repo architecture:** This repo is public and generic (anyone can clone and use it). Personal/custom services live in a separate private repo [`rpi-services`](https://github.com/PlatanosVerdes/rpi-services). Both repos run on the same Pi, share `media-network`, and extend the same Caddy instance via the services import mechanism (see Networking section below).
+
 ---
 
 ## Repository layout
@@ -19,6 +21,7 @@ compose-apps.yml            Custom apps (Telegram bot)
 config/                     Static config files committed to git
   caddy/Caddyfile           Reverse proxy rules (HTTPS + HTTP short names)
   caddy/Dockerfile          Custom Caddy image with Cloudflare DNS plugin
+  caddy/services/           Auto-imported by Caddy — symlink rpi-services here to extend routes
   prometheus/prometheus.yml Scrape targets
   grafana/                  Provisioned datasources + dashboard JSONs
   homepage/                 Dashboard YAML configs
@@ -74,6 +77,11 @@ docker compose up -d
 - **Remote (Tailscale):** All HTTPS subdomains (`*.platanosverdes.com`) resolve to the Pi's Tailscale IP (`TAILSCALE_IP`). Certificates issued automatically via Cloudflare DNS challenge.
 - **Pi-hole:** DNS for the whole tailnet. All `*.platanosverdes.com` subdomains point to `TAILSCALE_IP` in Pi-hole's custom DNS.
 - **Docker network:** All services share `media-network` (bridge).
+- **Caddy extension from rpi-services:** Caddy auto-imports `config/caddy/services/*.caddy`. The `rpi-services` repo adds its routes by symlinking its caddy config dir here:
+  ```bash
+  ln -s ~/rpi-services/config/caddy ~/rpi-homeserver/config/caddy/services/rpi-services
+  ```
+  This way rpi-services never needs to touch this repo to add HTTPS routes.
 
 ---
 

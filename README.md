@@ -2,6 +2,8 @@
 
 A modular, Docker-based home server for Raspberry Pi. Uses Docker Compose's `include` feature to keep each concern in a separate, maintainable file.
 
+> **Companion repo:** Personal and custom services live in [rpi-services](https://github.com/PlatanosVerdes/rpi-services) — bots, integrations, and anything too personal or domain-specific to be generic. Both repos share the same Docker network and Caddy instance.
+
 ---
 
 ## Infrastructure Overview
@@ -214,6 +216,29 @@ Reference: [Tailscale — Block ads on all devices using Raspberry Pi](https://t
 Caddy provides short HTTP names on LAN (`http://jellyfin`, `http://raspi`, etc.) and HTTPS via Cloudflare DNS challenge for remote access (`https://*.platanosverdes.com`).
 
 Caddy uses a custom Docker image that includes the Cloudflare DNS plugin (see `config/caddy/Dockerfile`). Certificates are issued automatically on first request and renewed by Caddy.
+
+**Extending Caddy from a companion repo (e.g. rpi-services):**
+
+Caddy auto-imports `*.caddy` files from two directories: `config/caddy/services/` (this repo) and `/etc/caddy/ext-services/` (mounted via override). To add routes from `rpi-services` without touching this repo, create a `docker-compose.override.yml` (gitignored) on the Pi:
+
+```yaml
+# ~/rpi-homeserver/docker-compose.override.yml  (not committed to git)
+services:
+  caddy:
+    volumes:
+      - /home/raspi/rpi-services/config/caddy:/etc/caddy/ext-services:ro
+```
+
+Then in `rpi-services`, add a file like `config/caddy/myservice.caddy`:
+
+```caddy
+https://myservice.yourdomain.com {
+    import cf_tls
+    reverse_proxy myservice:8080
+}
+```
+
+Caddy picks it up on next restart — no changes needed in this repo.
 
 → See [docs/add-service.md](docs/add-service.md) to add a new service with HTTPS
 

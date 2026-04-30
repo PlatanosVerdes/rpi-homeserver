@@ -1,23 +1,22 @@
 #!/bin/bash
 
-# Project Directory
 PROJECT_DIR="$HOME/rpi-homeserver"
-LOG_FILE="$PROJECT_DIR/deploy.log"
+SERVICES_DIR="$HOME/rpi-services"
 PUSHGATEWAY_URL="http://localhost:9091"
 DEPLOY_STATE_FILE="$PROJECT_DIR/.deploy_state"
 
-# Load .env (only non-secret config + BWS_ACCESS_TOKEN)
 set -a; source "$PROJECT_DIR/.env"; set +a
 
-# Load persistent counters
 TOTAL_RUNS=0; DEPLOYS_WITH_CHANGES=0; DEPLOY_ERRORS=0
 if [[ -f "$DEPLOY_STATE_FILE" ]]; then
     source "$DEPLOY_STATE_FILE" || true
 fi
 TOTAL_RUNS=$((TOTAL_RUNS + 1))
 
+log() { echo "$(date '+%Y-%m-%d %H:%M:%S') - $1"; }
+
 push_metrics() {
-    local status=$1  # 0=no_change, 1=changed, 2=error
+    local status=$1
     cat <<EOF | curl -fsSL --connect-timeout 5 --data-binary @- "${PUSHGATEWAY_URL}/metrics/job/deploy_control" 2>/dev/null
 # HELP deploy_run_total Total deploy script executions
 # TYPE deploy_run_total counter
@@ -42,68 +41,69 @@ DEPLOY_ERRORS=$DEPLOY_ERRORS
 EOF
 }
 
-# Function for timestamped logging
-log() {
-    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1"
-}
+deploy_repo() {
+    local dir=$1
+    local label=$2
 
-# Navigate to project directory
-cd "$PROJECT_DIR" || { echo "Directory not found"; exit 1; }
+    cd "$dir" || { log "[$label] Directory not found, skipping."; return 1; }
 
-# 1. Sync with remote repository
-log "Fetching updates from origin..."
-BEFORE=$(git rev-parse HEAD)
-if ! git pull origin main; then
-    log "Error: Git pull failed."
-    DEPLOY_ERRORS=$((DEPLOY_ERRORS + 1))
-    push_metrics 2
-    exit 1
-fi
-AFTER=$(git rev-parse HEAD)
-
-# 2. Ensure .env exists (all secrets live here)
-if [ ! -f .env ]; then
-    log "Error: .env file not found. Deployment aborted."
-    DEPLOY_ERRORS=$((DEPLOY_ERRORS + 1))
-    push_metrics 2
-    exit 1
-fi
-
-compose_up() {
-    docker compose "$@"
-}
-
-# 3. Apply changes with Docker Compose
-if [ "$BEFORE" != "$AFTER" ]; then
-    log "Changes detected ($BEFORE -> $AFTER), rebuilding..."
-    if ! compose_up up -d --build --remove-orphans; then
-        log "Error: Docker Compose failed to update."
-        DEPLOY_ERRORS=$((DEPLOY_ERRORS + 1))
-        push_metrics 2
-        exit 1
+    if [ ! -f .env ]; then
+        log "[$label] .env not found, skipping."
+        return 1
     fi
+
+    local before after
+    before=$(git rev-parse HEAD 2>/dev/null || echo "none")
+
+    log "[$label] Pulling..."
+    if ! git pull origin main 2>&1 | while IFS= read -r line; do log "[$label] $line"; done; then
+        log "[$label] Git pull failed (repo may not be pushed yet), ensuring containers are running..."
+        docker compose up -d --remove-orphans 2>/dev/null
+        return 2
+    fi
+    after=$(git rev-parse HEAD 2>/dev/null || echo "none")
+
+    if [ "$before" != "$after" ]; then
+        log "[$label] Changes detected, rebuilding..."
+        if ! docker compose up -d --build --remove-orphans 2>&1 | while IFS= read -r line; do log "[$label] $line"; done; then
+            log "[$label] Docker Compose failed."
+            return 1
+        fi
+        return 0  # changed
+    else
+        log "[$label] No changes, ensuring containers are running..."
+        docker compose up -d --remove-orphans 2>/dev/null
+        return 2  # no change
+    fi
+}
+
+# --- rpi-homeserver ---
+deploy_repo "$PROJECT_DIR" "homeserver"
+RESULT_HOME=$?
+
+# --- rpi-services (optional, skipped if not present) ---
+RESULT_SERVICES=2
+if [ -d "$SERVICES_DIR" ]; then
+    deploy_repo "$SERVICES_DIR" "services"
+    RESULT_SERVICES=$?
+fi
+
+# Aggregate status: error(1)>changed(0)>no-change(2)
+if [ $RESULT_HOME -eq 1 ] || [ $RESULT_SERVICES -eq 1 ]; then
+    DEPLOY_ERRORS=$((DEPLOY_ERRORS + 1))
+    DEPLOY_STATUS=2
+elif [ $RESULT_HOME -eq 0 ] || [ $RESULT_SERVICES -eq 0 ]; then
     DEPLOYS_WITH_CHANGES=$((DEPLOYS_WITH_CHANGES + 1))
     DEPLOY_STATUS=1
 else
-    log "No changes detected, ensuring containers are running..."
-    if ! compose_up up -d --remove-orphans; then
-        log "Error: Docker Compose failed."
-        DEPLOY_ERRORS=$((DEPLOY_ERRORS + 1))
-        push_metrics 2
-        exit 1
-    fi
     DEPLOY_STATUS=0
 fi
 
-# 4. Infrastructure Cleanup
 log "Cleaning up unused Docker images..."
 sudo docker image prune -f > /dev/null
 
-log "Deployment completed successfully."
 push_metrics $DEPLOY_STATUS
-
-# Keep only the last 100 lines of the log file to save space
-tail -n 100 "$LOG_FILE" > "${LOG_FILE}.tmp" && mv "${LOG_FILE}.tmp" "$LOG_FILE"
+log "Done."
 
 # crontab -e
-# */15 * * * * /home/raspi/rpi-homeserver/deploy_control.sh >> /home/raspi/rpi-homeserver/deploy_control.log 2>&1
+# */15 * * * * /home/raspi/rpi-homeserver/scripts/deploy_control.sh >> /home/raspi/rpi-homeserver/deploy_control.log 2>&1
