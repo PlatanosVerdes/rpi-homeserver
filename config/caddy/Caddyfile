@@ -63,11 +63,6 @@ https://pihole.platanosverdes.com {
     import cf_tls
     reverse_proxy host.docker.internal:8081
 }
-https://cal.platanosverdes.com {
-    import cf_tls
-    reverse_proxy cal-bridge:8000
-}
-
 # --- HTTP (LAN short names) ---
 http://raspi http://homepage {
     reverse_proxy homepage:3000
@@ -111,3 +106,7 @@ http://speedtest {
 http://pihole {
     reverse_proxy host.docker.internal:8081
 }
+
+# --- External services (companion repos via docker-compose.override.yml) ---
+import /etc/caddy/services/*.caddy
+import /etc/caddy/ext-services/*.caddy

@@ -19,6 +19,7 @@ services:
       - CADDY_EMAIL=${CADDY_EMAIL}
     volumes:
       - ${CONFIG_ROOT}/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ${CONFIG_ROOT}/caddy/services:/etc/caddy/services:ro
       - ${APP_CONFIG_PATH}/caddy/data:/data
       - ${APP_CONFIG_PATH}/caddy/config:/config
     networks:

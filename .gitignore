@@ -1,6 +1,9 @@
 # Compiled binaries
 services/tailscale-metrics/tailscale-metrics
 
+# Pi-specific compose overrides (local setup, not committed)
+docker-compose.override.yml
+
 # Environment variables (CRITICAL - contains passwords and API keys)
 *.env
 .env_copy
