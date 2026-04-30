@@ -116,7 +116,7 @@
         container: pihole
         widget:
           type: pihole
-          url: http://pihole:80
+          url: http://host.docker.internal:8081
           version: 6
           key: "{{HOMEPAGE_VAR_PIHOLE_TOKEN}}"
 
