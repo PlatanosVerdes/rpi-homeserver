@@ -17,6 +17,7 @@ log() { echo "$(date '+%Y-%m-%d %H:%M:%S') - $1"; }
 
 push_metrics() {
     local status=$1
+    # Legacy job (keeps existing deploy dashboard working)
     cat <<EOF | curl -fsSL --connect-timeout 5 --data-binary @- "${PUSHGATEWAY_URL}/metrics/job/deploy_control" 2>/dev/null
 # HELP deploy_run_total Total deploy script executions
 # TYPE deploy_run_total counter
@@ -38,6 +39,18 @@ EOF
 TOTAL_RUNS=$TOTAL_RUNS
 DEPLOYS_WITH_CHANGES=$DEPLOYS_WITH_CHANGES
 DEPLOY_ERRORS=$DEPLOY_ERRORS
+EOF
+}
+
+push_repo_metrics() {
+    local repo=$1 status=$2 ts=$3
+    cat <<EOF | curl -fsSL --connect-timeout 5 --data-binary @- "${PUSHGATEWAY_URL}/metrics/job/deploy_repo/repo/${repo}" 2>/dev/null
+# HELP deploy_repo_last_status Last deploy status per repo (0=no_change, 1=changed, 2=error)
+# TYPE deploy_repo_last_status gauge
+deploy_repo_last_status{repo="${repo}"} $status
+# HELP deploy_repo_last_run_timestamp Last run timestamp per repo
+# TYPE deploy_repo_last_run_timestamp gauge
+deploy_repo_last_run_timestamp{repo="${repo}"} $ts
 EOF
 }
 
@@ -77,15 +90,19 @@ deploy_repo() {
     fi
 }
 
+TS=$(date +%s)
+
 # --- rpi-homeserver ---
 deploy_repo "$PROJECT_DIR" "homeserver"
 RESULT_HOME=$?
+push_repo_metrics "homeserver" $RESULT_HOME $TS
 
 # --- rpi-services (optional, skipped if not present) ---
 RESULT_SERVICES=2
 if [ -d "$SERVICES_DIR" ]; then
     deploy_repo "$SERVICES_DIR" "services"
     RESULT_SERVICES=$?
+    push_repo_metrics "services" $RESULT_SERVICES $TS
 fi
 
 # Aggregate status: error(1)>changed(0)>no-change(2)
