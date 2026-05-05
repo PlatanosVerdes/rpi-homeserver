@@ -12,7 +12,6 @@ import (
 	"os"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -21,18 +20,16 @@ import (
 var qualitySuffix = regexp.MustCompile(`\s+(?:(?:720p|1080p)\s+)?\*+$`)
 
 const (
-	stateFile         = "/app/metrics.env"
-	healthConcurrency = 3     // max parallel stream probes (Pi-friendly)
-	healthBytes       = 8192  // bytes to read to confirm a stream is live
-	healthTimeout     = 10    // seconds per stream probe
-	sleepMin          = 60    // seconds
-	sleepRange        = 241   // rand(0..240) + sleepMin = 60..300s
+	stateFile  = "/app/metrics.env"
+	sleepMin   = 60  // seconds
+	sleepRange = 241 // rand(0..240) + sleepMin = 60..300s
 )
 
 type config struct {
 	outputFile     string
 	sourceURLs     []string
-	aceserveURL    string
+	aceserveURL    string // used for health probes (direct to aceserve)
+	streamBaseURL  string // used for M3U URLs served to Jellyfin (may go via proxy)
 	pushgatewayURL string
 	jellyfinURL    string
 	jellyfinAPIKey string
@@ -68,10 +65,16 @@ func loadConfig() config {
 			urls = append(urls, u)
 		}
 	}
+	aceserveURL := mustEnv("ACESERVE_URL")
+	streamBaseURL := os.Getenv("STREAM_BASE_URL")
+	if streamBaseURL == "" {
+		streamBaseURL = aceserveURL
+	}
 	return config{
 		outputFile:     mustEnv("OUTPUT_FILE"),
 		sourceURLs:     urls,
-		aceserveURL:    mustEnv("ACESERVE_URL"),
+		aceserveURL:    aceserveURL,
+		streamBaseURL:  streamBaseURL,
 		pushgatewayURL: mustEnv("PUSHGATEWAY_URL"),
 		jellyfinURL:    mustEnv("JELLYFIN_URL"),
 		jellyfinAPIKey: mustEnv("JELLYFIN_API_KEY"),
@@ -131,7 +134,8 @@ func downloadSource(rawURL string) ([]byte, int, error) {
 // and rewrites acestream:// URLs to the aceserve HTTP URL.
 // It preserves the url-tvg attribute from the first source header so Jellyfin
 // can load the EPG guide automatically.
-func parseAndDedup(combined []byte, aceserveURL string) ([]channel, string) {
+// aceserveURL is used for health probes; streamBaseURL is written into the M3U for Jellyfin.
+func parseAndDedup(combined []byte, aceserveURL, streamBaseURL string) ([]channel, string) {
 	scanner := bufio.NewScanner(bytes.NewReader(combined))
 	seen := make(map[string]bool)
 	var channels []channel
@@ -159,9 +163,10 @@ func parseAndDedup(combined []byte, aceserveURL string) ([]channel, string) {
 			name := channelName(extinf)
 			group := extractAttr(extinf, "group-title")
 			base := strings.TrimSpace(qualitySuffix.ReplaceAllString(name, ""))
-			streamURL := aceserveURL + hash
-			channels = append(channels, channel{name: name, channel: base, group: group, url: streamURL})
-			out.WriteString(extinf + "\n" + streamURL + "\n")
+			healthURL := aceserveURL + hash  // direct to aceserve for health probes
+			m3uURL := streamBaseURL + hash   // via proxy for Jellyfin playback
+			channels = append(channels, channel{name: name, channel: base, group: group, url: healthURL})
+			out.WriteString(extinf + "\n" + m3uURL + "\n")
 			extinf = ""
 		}
 	}
@@ -196,47 +201,6 @@ func channelName(extinf string) string {
 	return extinf
 }
 
-// probeStream follows the aceserve 302 redirect and reads a few bytes from the
-// actual stream. Returns true only if the stream delivers data within the timeout,
-// meaning there are active peers serving the content right now.
-func probeStream(streamURL string) bool {
-	client := &http.Client{Timeout: healthTimeout * time.Second}
-	resp, err := client.Get(streamURL)
-	if err != nil {
-		return false
-	}
-	defer resp.Body.Close()
-	n, _ := io.CopyN(io.Discard, resp.Body, healthBytes)
-	return n > 0
-}
-
-// checkHealth probes all channels concurrently and returns a name→(1|0) map.
-func checkHealth(channels []channel) map[string]int {
-	results := make(map[string]int, len(channels))
-	var mu sync.Mutex
-	var wg sync.WaitGroup
-	sem := make(chan struct{}, healthConcurrency)
-
-	for _, ch := range channels {
-		wg.Add(1)
-		go func(ch channel) {
-			defer wg.Done()
-			sem <- struct{}{}
-			defer func() { <-sem }()
-
-			v := 0
-			if probeStream(ch.url) {
-				v = 1
-			}
-			log.Printf("  health %s: %d", ch.name, v)
-			mu.Lock()
-			results[ch.name] = v
-			mu.Unlock()
-		}(ch)
-	}
-	wg.Wait()
-	return results
-}
 
 func triggerJellyfinRefresh(jellyfinURL, apiKey string) int {
 	client := &http.Client{Timeout: 10 * time.Second}
@@ -268,13 +232,7 @@ func hostFromURL(rawURL string) string {
 
 // pushMetrics uses PUT so stale channel metrics are removed when channels disappear.
 func pushMetrics(pushURL string, s state, channels []channel, jellyfinCode int,
-	sourceHTTPCodes map[string]int, channelHealth map[string]int) {
-
-	type meta struct{ channel, group string }
-	metaOf := make(map[string]meta, len(channels))
-	for _, ch := range channels {
-		metaOf[ch.name] = meta{ch.channel, ch.group}
-	}
+	sourceHTTPCodes map[string]int) {
 
 	var buf bytes.Buffer
 	w := func(format string, a ...any) { fmt.Fprintf(&buf, format, a...) }
@@ -291,15 +249,6 @@ func pushMetrics(pushURL string, s state, channels []channel, jellyfinCode int,
 	w("# HELP acestream_source_http_code HTTP response code per source URL (0=failed)\n# TYPE acestream_source_http_code gauge\n")
 	for host, code := range sourceHTTPCodes {
 		w("acestream_source_http_code{url=\"%s\"} %d\n", prometheusLabel(host), code)
-	}
-
-	if len(channelHealth) > 0 {
-		w("# HELP acestream_channel_health 1=stream delivering bytes 0=no response within timeout\n# TYPE acestream_channel_health gauge\n")
-		for name, v := range channelHealth {
-			m := metaOf[name]
-			w("acestream_channel_health{name=\"%s\",channel=\"%s\",group=\"%s\"} %d\n",
-				prometheusLabel(name), prometheusLabel(m.channel), prometheusLabel(m.group), v)
-		}
 	}
 
 	req, err := http.NewRequest("PUT", pushURL+"/metrics/job/acestream_updater", &buf)
@@ -348,11 +297,11 @@ func run(cfg config) {
 	if downloadErrors == len(cfg.sourceURLs) {
 		log.Printf("error: all sources failed")
 		saveState(s)
-		pushMetrics(cfg.pushgatewayURL, s, nil, 0, sourceHTTPCodes, nil)
+		pushMetrics(cfg.pushgatewayURL, s, nil, 0, sourceHTTPCodes)
 		return
 	}
 
-	channels, newM3U := parseAndDedup(combined.Bytes(), cfg.aceserveURL)
+	channels, newM3U := parseAndDedup(combined.Bytes(), cfg.aceserveURL, cfg.streamBaseURL)
 	log.Printf("Channels: %d unique after dedup", len(channels))
 
 	jellyfinCode := 0
@@ -374,11 +323,8 @@ func run(cfg config) {
 		s.successNoChanges++
 	}
 
-	log.Printf("Checking channel health (%d channels, %d concurrent)...", len(channels), healthConcurrency)
-	health := checkHealth(channels)
-
 	saveState(s)
-	pushMetrics(cfg.pushgatewayURL, s, channels, jellyfinCode, sourceHTTPCodes, health)
+	pushMetrics(cfg.pushgatewayURL, s, channels, jellyfinCode, sourceHTTPCodes)
 	log.Printf("Done.")
 }
 

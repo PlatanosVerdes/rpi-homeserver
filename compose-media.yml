@@ -63,14 +63,22 @@ services:
     image: jopsis/aceserve:latest
     container_name: aceserve
     profiles: [acestream, all]
-    ports:
-      - "6878:6878"
-      - "8621:8621"
-      - "62062:62062"
+    network_mode: host
     restart: unless-stopped
-    dns:
-      - 1.1.1.1
-      - 1.0.0.1
+    environment:
+      - TZ=${TZ}
+
+  # --- Acestream warmup proxy ---
+  # Sits between Jellyfin and aceserve. Retries on HTTP 500 (stream not ready yet)
+  # for up to 45s so Jellyfin doesn't give up before the P2P swarm is established.
+  acestream-proxy:
+    build: ./services/acestream-proxy
+    container_name: acestream-proxy
+    restart: unless-stopped
+    profiles: [acestream, all]
+    environment:
+      - ACESERVE_BASE_URL=http://172.19.0.1:6878
+      - LISTEN_ADDR=:6879
     networks:
       - media-network
 
@@ -92,7 +100,8 @@ services:
       - TZ=${TZ}
       - OUTPUT_FILE=/data/channels_ace.m3u
       - SOURCE_URLS=https://k51qzi5uqu5di462t7j4vu4akwfhvtjhy88qbupktvoacqfqe9uforjvhyi4wr.ipns.dweb.link/hashes_acestream.m3u,https://ipfs.io/ipns/k51qzi5uqu5di462t7j4vu4akwfhvtjhy88qbupktvoacqfqe9uforjvhyi4wr/hashes_acestream.m3u,https://dweb.link/ipns/k51qzi5uqu5di462t7j4vu4akwfhvtjhy88qbupktvoacqfqe9uforjvhyi4wr/hashes_acestream.m3u
-      - ACESERVE_URL=http://aceserve:6878/ace/getstream?id=
+      - ACESERVE_URL=http://172.19.0.1:6878/ace/getstream?id=
+      - STREAM_BASE_URL=http://acestream-proxy:6879/ace/getstream?id=
       - PUSHGATEWAY_URL=http://pushgateway:9091
       - JELLYFIN_URL=http://jellyfin:8096
       - JELLYFIN_API_KEY=${JELLYFIN_API_KEY}
