@@ -16,7 +16,9 @@
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [{ "color": "green", "value": null }]
+            "steps": [
+              { "color": "green", "value": null }
+            ]
           },
           "unit": "short"
         },
@@ -52,7 +54,9 @@
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [{ "color": "blue", "value": null }]
+            "steps": [
+              { "color": "blue", "value": null }
+            ]
           },
           "unit": "short"
         },
@@ -127,7 +131,9 @@
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [{ "color": "text", "value": null }]
+            "steps": [
+              { "color": "text", "value": null }
+            ]
           },
           "unit": "dateTimeAsLocalNoDateIfToday"
         },
@@ -206,7 +212,9 @@
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [{ "color": "blue", "value": null }]
+            "steps": [
+              { "color": "blue", "value": null }
+            ]
           },
           "unit": "short"
         },
@@ -245,123 +253,6 @@
           "refId": "B"
         }
       ]
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "thresholds" },
-          "custom": { "align": "center", "cellOptions": { "type": "auto" }, "inspect": false },
-          "mappings": [],
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
-        },
-        "overrides": [
-          {
-            "matcher": { "id": "byName", "options": "Title" },
-            "properties": [
-              { "id": "custom.align", "value": "left" },
-              { "id": "custom.width", "value": 220 }
-            ]
-          },
-          {
-            "matcher": { "id": "byName", "options": "Season" },
-            "properties": [{ "id": "custom.width", "value": 70 }]
-          },
-          {
-            "matcher": { "id": "byName", "options": "ES" },
-            "properties": [
-              { "id": "custom.width", "value": 55 },
-              { "id": "custom.cellOptions", "value": { "type": "color-text" } },
-              { "id": "mappings", "value": [{ "type": "value", "options": {
-                "1": { "text": "✓", "color": "green", "index": 0 },
-                "0": { "text": "–", "color": "text", "index": 1 }
-              }}]}
-            ]
-          },
-          {
-            "matcher": { "id": "byName", "options": "EN" },
-            "properties": [
-              { "id": "custom.width", "value": 55 },
-              { "id": "custom.cellOptions", "value": { "type": "color-text" } },
-              { "id": "mappings", "value": [{ "type": "value", "options": {
-                "1": { "text": "✓", "color": "green", "index": 0 },
-                "0": { "text": "–", "color": "text", "index": 1 }
-              }}]}
-            ]
-          },
-          {
-            "matcher": { "id": "byName", "options": "Lang" },
-            "properties": [
-              { "id": "custom.width", "value": 80 },
-              { "id": "custom.cellOptions", "value": { "type": "color-background" } },
-              { "id": "mappings", "value": [{ "type": "value", "options": {
-                "es": { "text": "ES", "color": "green", "index": 0 },
-                "en": { "text": "EN", "color": "yellow", "index": 1 },
-                "none": { "text": "–", "color": "text", "index": 2 }
-              }}]}
-            ]
-          },
-          {
-            "matcher": { "id": "byName", "options": "Episodes" },
-            "properties": [{ "id": "custom.width", "value": 90 }]
-          }
-        ]
-      },
-      "gridPos": { "h": 14, "w": 24, "x": 0, "y": 12 },
-      "id": 7,
-      "options": {
-        "cellHeight": "sm",
-        "footer": { "countRows": false, "fields": "", "reducer": ["sum"], "show": false },
-        "showHeader": true,
-        "sortBy": [{ "desc": false, "displayName": "Season" }]
-      },
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "onepace_arc_episodes_on_disk{job=\"one-pace-downloader\"}",
-          "format": "table",
-          "instant": true,
-          "legendFormat": "__auto",
-          "refId": "A"
-        }
-      ],
-      "title": "Arc Status",
-      "transformations": [
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {
-              "Time": true,
-              "__name__": true,
-              "arc_id": true,
-              "instance": true,
-              "job": true,
-              "type": true
-            },
-            "indexByName": {
-              "season": 0,
-              "title": 1,
-              "available_es": 2,
-              "available_en": 3,
-              "lang": 4,
-              "Value": 5
-            },
-            "renameByName": {
-              "Value": "Episodes",
-              "title": "Title",
-              "season": "Season",
-              "available_es": "ES",
-              "available_en": "EN",
-              "lang": "Lang"
-            }
-          }
-        },
-        {
-          "id": "sortBy",
-          "options": { "fields": [{ "desc": false, "displayName": "Season" }] }
-        }
-      ],
-      "type": "table"
     }
   ],
   "refresh": "30s",
@@ -373,5 +264,5 @@
   "timezone": "browser",
   "title": "One Pace Downloader",
   "uid": "onepace-dl",
-  "version": 3
+  "version": 2
 }
