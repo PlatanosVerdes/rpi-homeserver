@@ -27,12 +27,12 @@
           },
           {
             "matcher": { "id": "byName", "options": "Season" },
-            "properties": [{ "id": "custom.width", "value": 70 }]
+            "properties": [{ "id": "custom.width", "value": 65 }]
           },
           {
-            "matcher": { "id": "byName", "options": "ES" },
+            "matcher": { "id": "byName", "options": "Avail. ES" },
             "properties": [
-              { "id": "custom.width", "value": 55 },
+              { "id": "custom.width", "value": 75 },
               { "id": "custom.cellOptions", "value": { "type": "color-text" } },
               { "id": "mappings", "value": [{ "type": "value", "options": {
                 "1": { "text": "✓", "color": "green", "index": 0 },
@@ -41,9 +41,9 @@
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "EN" },
+            "matcher": { "id": "byName", "options": "Avail. EN" },
             "properties": [
-              { "id": "custom.width", "value": 55 },
+              { "id": "custom.width", "value": 75 },
               { "id": "custom.cellOptions", "value": { "type": "color-text" } },
               { "id": "mappings", "value": [{ "type": "value", "options": {
                 "1": { "text": "✓", "color": "green", "index": 0 },
@@ -52,19 +52,19 @@
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "Lang" },
+            "matcher": { "id": "byName", "options": "Downloaded in" },
             "properties": [
-              { "id": "custom.width", "value": 80 },
+              { "id": "custom.width", "value": 120 },
               { "id": "custom.cellOptions", "value": { "type": "color-background" } },
               { "id": "mappings", "value": [{ "type": "value", "options": {
-                "es": { "text": "ES", "color": "green", "index": 0 },
-                "en": { "text": "EN", "color": "yellow", "index": 1 },
-                "none": { "text": "–", "color": "text", "index": 2 }
+                "es": { "text": "Spanish", "color": "green", "index": 0 },
+                "en": { "text": "English", "color": "yellow", "index": 1 },
+                "none": { "text": "Not downloaded", "color": "text", "index": 2 }
               }}]}
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "Episodes" },
+            "matcher": { "id": "byName", "options": "On disk" },
             "properties": [{ "id": "custom.width", "value": 90 }]
           }
         ]
@@ -109,12 +109,12 @@
               "Value": 5
             },
             "renameByName": {
-              "Value": "Episodes",
+              "Value": "On disk",
               "title": "Title",
               "season": "Season",
-              "available_es": "ES",
-              "available_en": "EN",
-              "lang": "Lang"
+              "available_es": "Avail. ES",
+              "available_en": "Avail. EN",
+              "lang": "Downloaded in"
             }
           }
         },
