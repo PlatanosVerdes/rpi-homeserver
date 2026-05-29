@@ -19,20 +19,20 @@
         },
         "overrides": [
           {
-            "matcher": { "id": "byName", "options": "Title" },
+            "matcher": { "id": "byName", "options": "Título" },
             "properties": [
               { "id": "custom.align", "value": "left" },
               { "id": "custom.width", "value": 220 }
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "Season" },
-            "properties": [{ "id": "custom.width", "value": 70 }]
+            "matcher": { "id": "byName", "options": "Temp." },
+            "properties": [{ "id": "custom.width", "value": 65 }]
           },
           {
-            "matcher": { "id": "byName", "options": "ES" },
+            "matcher": { "id": "byName", "options": "Disp. ES" },
             "properties": [
-              { "id": "custom.width", "value": 55 },
+              { "id": "custom.width", "value": 75 },
               { "id": "custom.cellOptions", "value": { "type": "color-text" } },
               { "id": "mappings", "value": [{ "type": "value", "options": {
                 "1": { "text": "✓", "color": "green", "index": 0 },
@@ -41,9 +41,9 @@
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "EN" },
+            "matcher": { "id": "byName", "options": "Disp. EN" },
             "properties": [
-              { "id": "custom.width", "value": 55 },
+              { "id": "custom.width", "value": 75 },
               { "id": "custom.cellOptions", "value": { "type": "color-text" } },
               { "id": "mappings", "value": [{ "type": "value", "options": {
                 "1": { "text": "✓", "color": "green", "index": 0 },
@@ -52,19 +52,19 @@
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "Lang" },
+            "matcher": { "id": "byName", "options": "Descargado en" },
             "properties": [
-              { "id": "custom.width", "value": 80 },
+              { "id": "custom.width", "value": 120 },
               { "id": "custom.cellOptions", "value": { "type": "color-background" } },
               { "id": "mappings", "value": [{ "type": "value", "options": {
-                "es": { "text": "ES", "color": "green", "index": 0 },
-                "en": { "text": "EN", "color": "yellow", "index": 1 },
-                "none": { "text": "–", "color": "text", "index": 2 }
+                "es": { "text": "Español", "color": "green", "index": 0 },
+                "en": { "text": "Inglés", "color": "yellow", "index": 1 },
+                "none": { "text": "No descargado", "color": "text", "index": 2 }
               }}]}
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "Episodes" },
+            "matcher": { "id": "byName", "options": "En disco" },
             "properties": [{ "id": "custom.width", "value": 90 }]
           }
         ]
@@ -75,7 +75,7 @@
         "cellHeight": "sm",
         "footer": { "countRows": false, "fields": "", "reducer": ["sum"], "show": false },
         "showHeader": true,
-        "sortBy": [{ "desc": false, "displayName": "Season" }]
+        "sortBy": [{ "desc": false, "displayName": "Temp." }]
       },
       "targets": [
         {
@@ -109,12 +109,12 @@
               "Value": 5
             },
             "renameByName": {
-              "Value": "Episodes",
-              "title": "Title",
-              "season": "Season",
-              "available_es": "ES",
-              "available_en": "EN",
-              "lang": "Lang"
+              "Value": "En disco",
+              "title": "Título",
+              "season": "Temp.",
+              "available_es": "Disp. ES",
+              "available_en": "Disp. EN",
+              "lang": "Descargado en"
             }
           }
         },
