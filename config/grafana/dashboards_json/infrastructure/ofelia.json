@@ -211,7 +211,7 @@
   ],
   "refresh": "1m",
   "schemaVersion": 38,
-  "tags": ["ofelia", "scheduler", "one-pace"],
+  "tags": ["ofelia", "scheduler"],
   "templating": { "list": [] },
   "time": { "from": "now-7d", "to": "now" },
   "timepicker": {},
