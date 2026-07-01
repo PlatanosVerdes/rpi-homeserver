@@ -12,6 +12,7 @@ A modular Docker-based home server running on a Raspberry Pi. All services run a
 
 ```
 docker-compose.yml          Entry point — uses `include` to load all modules
+versions.env                Single source of truth for all image versions (committed)
 compose-core.yml            Caddy, Homepage, Pi-hole, Speedtest-tracker
 compose-media.yml           Plex, Jellyfin, Overseerr, Acestream
 compose-arrs.yml            Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr
@@ -186,12 +187,25 @@ bash scripts/rebuild-service.sh <service-name>
 bash scripts/backup.sh
 ```
 
-## Image versions are pinned
+## Image versions — centralized in `versions.env`
 
-All images in the `compose-*.yml` files are pinned to explicit version tags (or digests for
-images that publish no versioned tag), NOT `:latest`. This keeps deploys reproducible and
-prevents an upstream release from silently breaking the stack on the next rebuild.
+All image versions live in a single committed file, **`versions.env`** (the equivalent of a
+`requirements.txt`). The `compose-*.yml` files reference them as `${SERVICE_VERSION}`, so
+nothing uses `:latest`. This keeps deploys reproducible and prevents an upstream release from
+silently breaking the stack on the next rebuild. Images with no published version tag
+(aceserve, pihole6_exporter) are pinned by digest; Caddy's version is passed to its Dockerfile
+as a build arg.
 
-To update a service: bump its tag in the relevant `compose-*.yml`, commit, and let the
-auto-deploy apply it (or run `bash scripts/rebuild-service.sh <service>`). Check the running
-version first with `docker inspect --format '{{.Config.Image}}' <container>`.
+`versions.env` holds only versions (no secrets) so it IS tracked in git (`.gitignore` has a
+`!versions.env` exception to the `*.env` rule).
+
+**Loading:** compose reads it via `COMPOSE_ENV_FILES=versions.env,.env`. `deploy_control.sh`
+and `rebuild-service.sh` set this automatically. To run compose manually:
+```bash
+export COMPOSE_ENV_FILES=versions.env,.env
+docker compose up -d
+```
+
+**To update a service:** bump its version in `versions.env`, commit, and let the auto-deploy
+apply it (or `bash scripts/rebuild-service.sh <service>`). Check the running version first with
+`docker inspect --format '{{.Config.Image}}' <container>`.

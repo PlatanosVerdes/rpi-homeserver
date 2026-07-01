@@ -2,7 +2,10 @@
 services:
   # --- CADDY (Reverse proxy) ---
   caddy:
-    build: ./config/caddy/
+    build:
+      context: ./config/caddy/
+      args:
+        CADDY_VERSION: ${CADDY_VERSION}
     container_name: caddy
     restart: unless-stopped
     profiles: [essential, all]
@@ -27,7 +30,7 @@ services:
 
   # --- HOMEPAGE ---
   homepage:
-    image: ghcr.io/gethomepage/homepage:v1.10.1
+    image: ghcr.io/gethomepage/homepage:${HOMEPAGE_VERSION}
     container_name: homepage
     restart: unless-stopped
     profiles: [essential, all]
@@ -60,7 +63,7 @@ services:
 
   # --- SPEEDTEST ---
   speedtest-tracker:
-    image: lscr.io/linuxserver/speedtest-tracker:v1.13.10-ls138
+    image: lscr.io/linuxserver/speedtest-tracker:${SPEEDTEST_TRACKER_VERSION}
     container_name: speedtest-tracker
     restart: unless-stopped
     profiles: [essential, moni, all]
@@ -89,7 +92,7 @@ services:
   # --- PiHole -AdBlock ---
   pihole:
     container_name: pihole
-    image: pihole/pihole:2026.02.0
+    image: pihole/pihole:${PIHOLE_VERSION}
     restart: unless-stopped
     profiles: [essential, all]
     dns:

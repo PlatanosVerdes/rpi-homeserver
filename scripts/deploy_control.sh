@@ -65,6 +65,13 @@ deploy_repo() {
         return 1
     fi
 
+    # Load image versions from versions.env alongside .env (see versions.env)
+    if [ -f versions.env ]; then
+        export COMPOSE_ENV_FILES="versions.env,.env"
+    else
+        export COMPOSE_ENV_FILES=".env"
+    fi
+
     local before after
     before=$(git rev-parse HEAD 2>/dev/null || echo "none")
 
