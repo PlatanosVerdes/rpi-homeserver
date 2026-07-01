@@ -12,8 +12,11 @@ PROJECT_DIR="$HOME/rpi-homeserver"
 PUSHGATEWAY_URL="http://localhost:9091"
 
 set -a; source "$PROJECT_DIR/.env"; set +a
+cd "$PROJECT_DIR"
 
-APPDATA="${APP_CONFIG_PATH:-$PROJECT_DIR/appdata}"
+# APP_CONFIG_PATH may be relative (e.g. ./appdata); resolve it against the project dir
+APPDATA="${APP_CONFIG_PATH:-./appdata}"
+[[ "$APPDATA" != /* ]] && APPDATA="$PROJECT_DIR/${APPDATA#./}"
 DEST="${BACKUP_DEST:-${DATA_ROOT}/backups/appdata}"
 RETENTION="${BACKUP_RETENTION:-7}"
 
