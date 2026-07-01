@@ -7,6 +7,8 @@ docker-compose.override.yml
 
 # Environment variables (CRITICAL - contains passwords and API keys)
 *.env
+# ...but versions.env holds only image versions (no secrets) and IS tracked
+!versions.env
 .env_copy
 .deploy_state
 .last_prune

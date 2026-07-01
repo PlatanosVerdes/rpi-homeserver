@@ -2,7 +2,7 @@
 services:
   # --- PLEX (Media Player) ---
   plex:
-    image: lscr.io/linuxserver/plex:1.43.0.10492-121068a07-ls293
+    image: lscr.io/linuxserver/plex:${PLEX_VERSION}
     container_name: plex
     restart: unless-stopped
     profiles: [media, all]
@@ -19,7 +19,7 @@ services:
 
   # --- JELLYFIN (Free Media Player) ---
   jellyfin:
-    image: lscr.io/linuxserver/jellyfin:10.11.6ubu2404-ls21
+    image: lscr.io/linuxserver/jellyfin:${JELLYFIN_VERSION}
     container_name: jellyfin
     restart: unless-stopped
     profiles: [acestream, all]
@@ -39,7 +39,7 @@ services:
 
   # --- OVERSEERR (Request Management) ---
   overseerr:
-    image: lscr.io/linuxserver/overseerr:v1.35.0-ls158
+    image: lscr.io/linuxserver/overseerr:${OVERSEERR_VERSION}
     container_name: overseerr
     restart: unless-stopped
     profiles: [media, all]
@@ -60,7 +60,7 @@ services:
 
   # --- Acestream ---
   aceserve:
-    image: jopsis/aceserve@sha256:b001ddb4dc060d5bbc686e07a7e7177552e0bb0ac9c4010d85f7116cff068f94  # latest as of 2026-07-01, no version tags published
+    image: jopsis/aceserve@${ACESERVE_DIGEST}
     container_name: aceserve
     profiles: [acestream, all]
     network_mode: host
