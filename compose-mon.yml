@@ -6,8 +6,16 @@ services:
     container_name: pushgateway
     restart: unless-stopped
     profiles: [moni, acestream, all]
+    # Persist pushed metrics to disk so a restart does not wipe one-shot/daily job metrics
+    # (deploy, backup, one-pace, cal-bridge). Single snapshot file, rewritten every 5m — no growth.
+    command:
+      - --persistence.file=/data/metrics
+      - --persistence.interval=5m
+    user: "65534:65534"
     ports:
       - "9091:9091"
+    volumes:
+      - ${APP_CONFIG_PATH}/pushgateway:/data
     networks:
       - media-network
 
