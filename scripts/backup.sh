@@ -47,9 +47,13 @@ STAMP=$(date +%Y%m%d-%H%M%S)
 ARCHIVE="$DEST/appdata-$STAMP.tar.gz"
 
 log "Backing up $APPDATA -> $ARCHIVE"
+tar_rc=0
 sudo tar \
+    --warning=no-file-removed --warning=no-file-changed --warning=no-file-ignored \
     --exclude='*/prometheus/*' \
     --exclude='*/Cache/*' \
+    --exclude='*/cache/*' \
+    --exclude='*/transcodes/*' \
     --exclude='*/Crash Reports/*' \
     --exclude='*/Diagnostics/*' \
     --exclude='*/Logs/*' \
@@ -57,7 +61,14 @@ sudo tar \
     --exclude='*/logs/*' \
     --exclude='*.log' \
     --exclude='*.sock' \
-    -czf "$ARCHIVE" -C "$(dirname "$APPDATA")" "$(basename "$APPDATA")"
+    -czf "$ARCHIVE" -C "$(dirname "$APPDATA")" "$(basename "$APPDATA")" || tar_rc=$?
+
+# tar exit 1 = some files changed/vanished mid-read (benign for live caches); >1 = fatal
+if [ "$tar_rc" -gt 1 ]; then
+    log "tar failed (exit $tar_rc)"
+    push_metrics 1 0
+    exit 1
+fi
 
 SIZE=$(stat -c%s "$ARCHIVE" 2>/dev/null || echo 0)
 APPDATA_SIZE=$(sudo du -sb "$APPDATA" 2>/dev/null | cut -f1 || echo 0)
