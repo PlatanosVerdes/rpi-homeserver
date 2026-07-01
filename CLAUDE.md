@@ -32,6 +32,7 @@ services/                   Source code for custom services built in this repo
   tailscale-metrics/        Go binary (cron) — exports Tailscale peer metrics to node_exporter
 
 scripts/                    Operational scripts
+  crontab                   Source of truth for all host cron jobs (install: crontab scripts/crontab)
   deploy_control.sh         Auto-deploy cron job (runs every 15 min via cron)
   backup.sh                 Daily appdata backup (cron), pushes metrics to Grafana
   mount_setup.sh            One-time external disk mount setup

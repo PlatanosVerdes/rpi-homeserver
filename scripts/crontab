@@ -1,0 +1,22 @@
+# Host crontab for the RPi home server — source of truth (keep in sync with the Pi).
+#
+# Install / update on the Pi:   crontab /home/raspi/rpi-homeserver/scripts/crontab
+# Show current:                 crontab -l
+#
+# Do NOT edit the crontab directly with `crontab -e` — edit this file, commit, and re-install,
+# so the schedule stays reproducible and any drift shows up in a diff.
+
+# Auto-deploy: pull both repos and apply, every 15 minutes
+*/15 * * * * /home/raspi/rpi-homeserver/scripts/deploy_control.sh > /home/raspi/rpi-homeserver/deploy_control.log 2>&1
+
+# Tailscale peer metrics -> node-exporter textfile collector, every minute
+* * * * * /home/raspi/rpi-homeserver/services/tailscale-metrics/tailscale-metrics
+
+# cal-bridge metrics (MS client secret expiry, etc.), daily at 09:00
+0 9 * * * /home/raspi/rpi-services/scripts/cal-bridge-metrics.sh
+
+# Daily appdata backup at 04:00
+0 4 * * * /home/raspi/rpi-homeserver/scripts/backup.sh >> /home/raspi/rpi-homeserver/backup.log 2>&1
+
+# Download new One Pace episodes daily at 03:00
+0 3 * * * cd /home/raspi/rpi-services && docker compose run --rm one-pace-downloader >> /home/raspi/rpi-services/one-pace.log 2>&1
