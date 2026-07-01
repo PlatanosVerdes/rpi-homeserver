@@ -9,6 +9,7 @@ docker-compose.override.yml
 *.env
 .env_copy
 .deploy_state
+.last_prune
 .bitwarden
 
 # Configuration directories (contains sensitive data)

@@ -1,27 +1,12 @@
 # Pending tasks
 
-## ✅ Bitwarden Secrets Manager — DONE
+## ❌ Bitwarden Secrets Manager — dropped
 
-Replace the `.env` file secrets with [Bitwarden Secrets Manager](https://bitwarden.com/products/secrets-manager/).
+Tried moving `.env` secrets to [Bitwarden Secrets Manager](https://bitwarden.com/products/secrets-manager/)
+but it did not fit the workflow, so it was abandoned. Secrets stay in `.env` (gitignored).
 
-**Why:** secrets in `.env` are plaintext on disk and in the repo history.
-Bitwarden SM provides a proper vault with audit log, access control, and rotation.
-
-**How to implement:**
-1. Create a Bitwarden SM project and add secrets (JELLYFIN_API_KEY, GF_SECURITY_ADMIN_PASSWORD, PIHOLE_PASSWORD, TAILSCALE_API_KEY, etc.)
-2. Install the [Bitwarden Secrets Manager CLI (`bws`)](https://github.com/bitwarden/sdk/releases) on the Pi
-3. Generate a machine account token and store it as the only secret in `.env` (just `BWS_ACCESS_TOKEN=...`)
-4. Create a wrapper script (`load-secrets.sh`) that runs `bws secret list` and exports vars before calling `docker compose up`
-5. Or use the [Docker secrets integration](https://docs.docker.com/compose/use-secrets/) with Bitwarden SM as the backend
-
-**Compose reference:** commented-out approach using `bws run`:
-```yaml
-# To launch with Bitwarden SM instead of .env:
-# bws run -- docker compose -f compose-mon.yml up -d
-#
-# bws run injects all secrets from the SM project as environment variables,
-# so compose files can reference them the same way as today (${VAR_NAME}).
-```
+`scripts/bws-run.py` and [docs/secrets-manager.md](docs/secrets-manager.md) are kept only as
+a reference in case it is revisited. They are NOT wired into deploy.
 
 ---
 
