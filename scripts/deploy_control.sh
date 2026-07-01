@@ -116,8 +116,13 @@ else
     DEPLOY_STATUS=0
 fi
 
-log "Cleaning up unused Docker images..."
-sudo docker image prune -f > /dev/null
+# Prune unused images at most once per day (avoids SD-card wear on every 15-min run)
+PRUNE_MARKER="$PROJECT_DIR/.last_prune"
+if [[ ! -f "$PRUNE_MARKER" ]] || find "$PRUNE_MARKER" -mmin +1380 -print 2>/dev/null | grep -q .; then
+    log "Cleaning up unused Docker images (daily)..."
+    sudo docker image prune -f > /dev/null
+    touch "$PRUNE_MARKER"
+fi
 
 push_metrics $DEPLOY_STATUS
 log "Done."

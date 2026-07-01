@@ -32,9 +32,10 @@ services/                   Source code for custom services built in this repo
 
 scripts/                    Operational scripts
   deploy_control.sh         Auto-deploy cron job (runs every 15 min via cron)
+  backup.sh                 Daily appdata backup (cron), pushes metrics to Grafana
   mount_setup.sh            One-time external disk mount setup
   rebuild-service.sh        Manual single-service rebuild helper
-  bws-run.py                Bitwarden SM wrapper (PENDING — not active, see below)
+  bws-run.py                Bitwarden SM wrapper (dropped, kept for reference only)
 
 appdata/                    Persistent container data (NOT in git, lives on disk)
 docs/                       Setup guides
@@ -50,9 +51,10 @@ Secrets currently live in **`.env`** as plain variables. Copy `.env.example` to 
 docker compose up -d
 ```
 
-> **Planned improvement:** `scripts/bws-run.py` exists and is ready to move secrets to
-> Bitwarden Secrets Manager (BWS), but that migration is paused. See [docs/secrets-manager.md](docs/secrets-manager.md).
-> Do not assume BWS is active — deploy_control.sh uses plain `docker compose`.
+> **Bitwarden Secrets Manager was evaluated and dropped.** It did not fit the workflow, so
+> secrets stay in `.env` (gitignored, never committed). `scripts/bws-run.py` and
+> [docs/secrets-manager.md](docs/secrets-manager.md) are kept only as a reference for a
+> possible future attempt — they are NOT wired into deploy. `deploy_control.sh` uses plain `docker compose`.
 
 ---
 
@@ -179,4 +181,17 @@ bash scripts/deploy_control.sh
 
 # Rebuild from scratch (single service)
 bash scripts/rebuild-service.sh <service-name>
+
+# Run a backup manually
+bash scripts/backup.sh
 ```
+
+## Image versions are pinned
+
+All images in the `compose-*.yml` files are pinned to explicit version tags (or digests for
+images that publish no versioned tag), NOT `:latest`. This keeps deploys reproducible and
+prevents an upstream release from silently breaking the stack on the next rebuild.
+
+To update a service: bump its tag in the relevant `compose-*.yml`, commit, and let the
+auto-deploy apply it (or run `bash scripts/rebuild-service.sh <service>`). Check the running
+version first with `docker inspect --format '{{.Config.Image}}' <container>`.
