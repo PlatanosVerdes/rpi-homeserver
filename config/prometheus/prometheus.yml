@@ -25,10 +25,6 @@ scrape_configs:
     static_configs:
       - targets: ['pihole-exporter:9666']
 
-  - job_name: 'ofelia'
-    static_configs:
-      - targets: ['ofelia:8080']
-
   # Uncomment when tailscale-exporter is enabled in compose-mon.yml
   # - job_name: 'tailscale'
   #   static_configs:
