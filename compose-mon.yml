@@ -2,7 +2,7 @@
 services:
   # --- PUSHGATEWAY (Metrics receiver) ---
   pushgateway:
-    image: prom/pushgateway:latest
+    image: prom/pushgateway:v1.11.2
     container_name: pushgateway
     restart: unless-stopped
     profiles: [moni, acestream, all]
@@ -14,7 +14,7 @@ services:
 
   # --- NODE EXPORTER (Host metrics: CPU, RAM, disk, network) ---
   node-exporter:
-    image: prom/node-exporter:latest
+    image: prom/node-exporter:v1.11.1
     container_name: node-exporter
     restart: unless-stopped
     profiles: [moni, all]
@@ -34,7 +34,7 @@ services:
 
   # --- CADVISOR (Container metrics) ---
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:latest
+    image: gcr.io/cadvisor/cadvisor:v0.55.1
     container_name: cadvisor
     restart: unless-stopped
     profiles: [moni, all]
@@ -56,7 +56,7 @@ services:
 
   # --- PROMETHEUS (TSDB database) ---
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v3.9.1
     container_name: prometheus
     restart: unless-stopped
     profiles: [moni, acestream, all]
@@ -77,7 +77,7 @@ services:
 
   # --- GRAFANA (Dashboard visual) ---
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:12.3.3
     container_name: grafana
     restart: unless-stopped
     profiles: [moni, acestream, all]
@@ -100,7 +100,7 @@ services:
   # --- PIHOLE EXPORTER (Pi-hole DNS/ad-block metrics → Prometheus) ---
   # Pi-hole v6 compatible exporter. Grafana dashboard ID: 21043
   pihole-exporter:
-    image: amonacoos/pihole6_exporter:latest
+    image: amonacoos/pihole6_exporter@sha256:daedc7f5c52f4a8895bae0c1a044a3428a1e884da7ada038ca8e2f4f6742de69  # latest as of 2026-07-01, no version tags published
     container_name: pihole-exporter
     restart: unless-stopped
     profiles: [moni, all]

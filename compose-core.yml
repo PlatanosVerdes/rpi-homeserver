@@ -27,7 +27,7 @@ services:
 
   # --- HOMEPAGE ---
   homepage:
-    image: ghcr.io/gethomepage/homepage:latest
+    image: ghcr.io/gethomepage/homepage:v1.10.1
     container_name: homepage
     restart: unless-stopped
     profiles: [essential, all]
@@ -60,7 +60,7 @@ services:
 
   # --- SPEEDTEST ---
   speedtest-tracker:
-    image: lscr.io/linuxserver/speedtest-tracker:latest
+    image: lscr.io/linuxserver/speedtest-tracker:v1.13.10-ls138
     container_name: speedtest-tracker
     restart: unless-stopped
     profiles: [essential, moni, all]
@@ -89,7 +89,7 @@ services:
   # --- PiHole -AdBlock ---
   pihole:
     container_name: pihole
-    image: pihole/pihole:latest
+    image: pihole/pihole:2026.02.0
     restart: unless-stopped
     profiles: [essential, all]
     dns:

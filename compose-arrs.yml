@@ -2,7 +2,7 @@
 services:
   # --- QBITTORRENT (Downloader) ---
   qbittorrent:
-    image: lscr.io/linuxserver/qbittorrent:latest
+    image: lscr.io/linuxserver/qbittorrent:5.1.4-r2-ls442
     container_name: qbittorrent
     restart: unless-stopped
     profiles: [media, all]
@@ -25,7 +25,7 @@ services:
       - media-network
 
   flaresolverr:
-    image: ghcr.io/flaresolverr/flaresolverr:latest
+    image: ghcr.io/flaresolverr/flaresolverr:v3.4.6
     container_name: flaresolverr
     restart: unless-stopped
     profiles: [media, all]
@@ -42,7 +42,7 @@ services:
 
   # --- PROWLARR (Indexer Manager) ---
   prowlarr:
-    image: lscr.io/linuxserver/prowlarr:latest
+    image: lscr.io/linuxserver/prowlarr:2.3.0.5236-ls137
     container_name: prowlarr
     restart: unless-stopped
     profiles: [media, all]
@@ -62,7 +62,7 @@ services:
 
   # --- RADARR (Movies) ---
   radarr:
-    image: lscr.io/linuxserver/radarr:latest
+    image: lscr.io/linuxserver/radarr:6.0.4.10291-ls293
     container_name: radarr
     restart: unless-stopped
     profiles: [media, all]
@@ -86,7 +86,7 @@ services:
 
   # --- SONARR (TV Series) ---
   sonarr:
-    image: lscr.io/linuxserver/sonarr:latest
+    image: lscr.io/linuxserver/sonarr:4.0.16.2944-ls303
     container_name: sonarr
     restart: unless-stopped
     profiles: [media, all]
