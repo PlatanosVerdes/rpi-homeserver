@@ -63,6 +63,10 @@ https://pihole.platanosverdes.com {
     import cf_tls
     reverse_proxy host.docker.internal:8081
 }
+https://maintainerr.platanosverdes.com {
+    import cf_tls
+    reverse_proxy maintainerr:6246
+}
 # --- HTTP (LAN short names) ---
 http://raspi http://homepage {
     reverse_proxy homepage:3000
