@@ -32,10 +32,6 @@
         href: https://maintainerr.platanosverdes.com
         server: my-docker
         container: maintainerr
-        widget:
-          type: maintainerr
-          url: http://maintainerr:6246
-          key: "{{HOMEPAGE_VAR_MAINTAINERR_TOKEN}}"
 
 - Monitoring:
     - Grafana:
