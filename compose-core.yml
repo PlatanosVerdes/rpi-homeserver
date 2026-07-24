@@ -53,6 +53,7 @@ services:
       - HOMEPAGE_VAR_SONARR_TOKEN=${SONARR_API_KEY}
       - HOMEPAGE_VAR_SPEEDTEST_TOKEN=${SPEEDTEST_API_KEY}
       - HOMEPAGE_VAR_JELLYFIN_TOKEN=${JELLYFIN_API_KEY}
+      - HOMEPAGE_VAR_MAINTAINERR_TOKEN=${MAINTAINERR_API_KEY}
     volumes:
       - ${CONFIG_ROOT}/homepage:/app/config
       - ${CONFIG_ROOT}/homepage/icons:/app/public/icons
