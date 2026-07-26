@@ -106,6 +106,22 @@ services:
       - JELLYFIN_URL=http://jellyfin:8096
       - JELLYFIN_API_KEY=${JELLYFIN_API_KEY}
 
+  # --- BAZARR (auto-download subtitles; Spanish, for the whole library) ---
+  bazarr:
+    image: lscr.io/linuxserver/bazarr:${BAZARR_VERSION}
+    container_name: bazarr
+    restart: unless-stopped
+    profiles: [media, all]
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${APP_CONFIG_PATH}/bazarr:/config
+      - ${DATA_ROOT}:/data
+    networks:
+      - media-network
+
   # --- MAINTAINERR (auto-clean watched media by rules; movies-only rule) ---
   maintainerr:
     image: ghcr.io/maintainerr/maintainerr:${MAINTAINERR_VERSION}
