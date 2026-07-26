@@ -86,6 +86,12 @@
           url: http://sonarr:8989
           key: "{{HOMEPAGE_VAR_SONARR_TOKEN}}"
 
+    - Bazarr:
+        icon: bazarr.png
+        href: https://bazarr.platanosverdes.com
+        server: my-docker
+        container: bazarr
+
     - FlareSolverr:
         icon: flaresolverr.png
         href: http://{{HOMEPAGE_VAR_TAILSCALE_IP}}:8191

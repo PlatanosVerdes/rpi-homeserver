@@ -67,6 +67,10 @@ https://maintainerr.platanosverdes.com {
     import cf_tls
     reverse_proxy maintainerr:6246
 }
+https://bazarr.platanosverdes.com {
+    import cf_tls
+    reverse_proxy bazarr:6767
+}
 # --- HTTP (LAN short names) ---
 http://raspi http://homepage {
     reverse_proxy homepage:3000
