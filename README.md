@@ -50,7 +50,21 @@ Plex runs on the Pi, which is weak at video transcoding, so files should
 
 **Supporting automation:**
 - **Bazarr** auto-downloads Spanish subtitles for the whole library.
-- **Maintainerr** auto-cleans watched movies (movies library only) to keep the 916 GB SSD from filling up.
+- **Maintainerr** auto-cleans watched movies (movies library only) to keep the data pool from filling up.
+
+### Indexers / trackers
+
+Current: public (**1337x, YTS, The Pirate Bay, LimeTorrents, Nyaa.si** for anime/JP cinema), Spanish
+(**Elitetorrent, MoviesDVDR, Frozen Layer**), plus private (**BTSchool**, Chinese NexusPHP — search works
+via FlareSolverr/byparr, but the binary `.torrent` download fails through Cloudflare's cookie-replay, so
+grabs from it are manual; it also has H&R + a newbie ratio requirement).
+
+**Next tier — pending to evaluate** (more *arr-friendly, no Cloudflare-download problem than BTSchool):
+- General / joinable now: **TorrentLeech**, **IPTorrents**, **FileList**.
+- Cinephile / top-tier (invite-only): **PassThePopcorn** (movies), **HDBits** (quality), **AnimeBytes**
+  (anime & Japanese cinema), **BroadcastTheNet** (TV).
+- Modern UNIT3D (clean API, some open signups): **Blutopia**, **Aither**, **ReelFliX**, **LST**, **Fearnopeer**.
+- Watch `r/OpenSignups` for when good trackers open registration.
 
 ---
 
