@@ -4,7 +4,10 @@
     "list": [
       {
         "builtIn": 1,
-        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
         "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
@@ -21,106 +24,287 @@
     {
       "fieldConfig": {
         "defaults": {
-          "color": { "fixedColor": "blue", "mode": "fixed" },
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
           "decimals": 0,
           "mappings": [],
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": 0 }, { "color": "red", "value": 80 }] }
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
         },
         "overrides": []
       },
-      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 0
+      },
       "id": 1,
       "options": {
-        "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-        "textMode": "auto", "wideLayout": true
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
       },
-      "targets": [{ "expr": "increase(acestream_run_total[24h])", "instant": true, "refId": "A" }],
+      "targets": [
+        {
+          "expr": "increase(acestream_run_total[24h])",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
       "title": "Executions (24h)",
       "type": "stat"
     },
     {
       "fieldConfig": {
         "defaults": {
-          "color": { "fixedColor": "purple", "mode": "fixed" },
+          "color": {
+            "fixedColor": "purple",
+            "mode": "fixed"
+          },
           "decimals": 0,
           "mappings": [],
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": 0 }, { "color": "red", "value": 80 }] }
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
         },
         "overrides": []
       },
-      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 0
+      },
       "id": 2,
       "options": {
-        "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-        "textMode": "auto", "wideLayout": true
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
       },
-      "targets": [{ "expr": "increase(acestream_updates_with_changes[24h])", "instant": true, "refId": "A" }],
+      "targets": [
+        {
+          "expr": "increase(acestream_updates_with_changes[24h])",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
       "title": "Playlist Changes (24h)",
       "type": "stat"
     },
     {
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "decimals": 0,
           "mappings": [],
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": 0 }, { "color": "red", "value": 0.1 }] }
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 0.1
+              }
+            ]
+          }
         },
         "overrides": []
       },
-      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 0
+      },
       "id": 3,
       "options": {
-        "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-        "textMode": "auto", "wideLayout": true
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
       },
-      "targets": [{ "expr": "increase(acestream_update_errors[24h])", "instant": true, "refId": "A" }],
+      "targets": [
+        {
+          "expr": "increase(acestream_update_errors[24h])",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
       "title": "Errors (24h)",
       "type": "stat"
     },
     {
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "decimals": 0,
           "mappings": [],
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": 0 }, { "color": "orange", "value": 900 }, { "color": "red", "value": 1800 }] },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "orange",
+                "value": 900
+              },
+              {
+                "color": "red",
+                "value": 1800
+              }
+            ]
+          },
           "unit": "s"
         },
         "overrides": []
       },
-      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 0 },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 0
+      },
       "id": 4,
       "options": {
-        "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-        "textMode": "auto", "wideLayout": true
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
       },
-      "targets": [{ "expr": "time() - acestream_last_run_timestamp", "refId": "A" }],
+      "targets": [
+        {
+          "expr": "time() - acestream_last_run_timestamp",
+          "refId": "A"
+        }
+      ],
       "title": "Last Run",
       "type": "stat"
     },
     {
       "fieldConfig": {
         "defaults": {
-          "color": { "fixedColor": "green", "mode": "fixed" },
+          "color": {
+            "fixedColor": "green",
+            "mode": "fixed"
+          },
           "decimals": 0,
           "mappings": [],
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": 0 }, { "color": "red", "value": 80 }] }
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
         },
         "overrides": []
       },
-      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 0 },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 0
+      },
       "id": 6,
       "options": {
-        "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-        "textMode": "auto", "wideLayout": true
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
       },
-      "targets": [{ "expr": "acestream_unique_channels", "instant": true, "refId": "A" }],
+      "targets": [
+        {
+          "expr": "acestream_unique_channels",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
       "title": "Unique Channels",
       "type": "stat"
     },
@@ -128,147 +312,428 @@
       "description": "Time elapsed since the last Jellyfin playlist refresh was triggered.",
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "decimals": 0,
           "mappings": [
-            { "options": { "0": { "color": "blue", "text": "Never" } }, "type": "value" }
+            {
+              "options": {
+                "0": {
+                  "color": "blue",
+                  "text": "Never"
+                }
+              },
+              "type": "value"
+            }
           ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": 0 },
-              { "color": "orange", "value": 3600 },
-              { "color": "red",    "value": 86400 }
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "orange",
+                "value": 3600
+              },
+              {
+                "color": "red",
+                "value": 86400
+              }
             ]
           },
           "unit": "s"
         },
         "overrides": []
       },
-      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 0 },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 0
+      },
       "id": 7,
       "options": {
-        "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-        "textMode": "auto", "wideLayout": true
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
       },
-      "targets": [{ "expr": "time() - acestream_jellyfin_last_refresh_timestamp", "refId": "A" }],
+      "targets": [
+        {
+          "expr": "time() - acestream_jellyfin_last_refresh_timestamp",
+          "refId": "A"
+        }
+      ],
       "title": "Last Jellyfin Refresh",
       "type": "stat"
     },
     {
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
+          "color": {
+            "mode": "palette-classic"
+          },
           "custom": {
-            "axisBorderShow": false, "axisCenteredZero": false, "axisColorMode": "text",
-            "axisLabel": "", "axisPlacement": "auto",
-            "barAlignment": 0, "barWidthFactor": 0.6,
-            "drawStyle": "line", "fillOpacity": 15, "gradientMode": "none",
-            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
-            "insertNulls": false, "lineInterpolation": "stepBefore", "lineWidth": 2,
-            "pointSize": 4, "scaleDistribution": { "type": "linear" },
-            "showPoints": "always", "showValues": false, "spanNulls": false,
-            "stacking": { "group": "A", "mode": "none" },
-            "thresholdsStyle": { "mode": "off" }
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "stepBefore",
+            "lineWidth": 2,
+            "pointSize": 4,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "always",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
           },
           "mappings": [
-            { "options": { "0": { "index": 0, "text": "Failed" }, "200": { "index": 1, "text": "OK (200)" } }, "type": "value" }
+            {
+              "options": {
+                "0": {
+                  "index": 0,
+                  "text": "Failed"
+                },
+                "200": {
+                  "index": 1,
+                  "text": "OK (200)"
+                }
+              },
+              "type": "value"
+            }
           ],
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": 0 }, { "color": "red", "value": 201 }] }
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 201
+              }
+            ]
+          }
         },
         "overrides": []
       },
-      "gridPos": { "h": 5, "w": 24, "x": 0, "y": 4 },
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 4
+      },
       "id": 9,
       "options": {
-        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
-        "tooltip": { "hideZeros": false, "mode": "multi", "sort": "none" }
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
+        }
       },
-      "targets": [{ "expr": "acestream_source_http_code", "legendFormat": "{{url}}", "refId": "A" }],
+      "targets": [
+        {
+          "expr": "acestream_source_http_code",
+          "legendFormat": "{{url}}",
+          "refId": "A"
+        }
+      ],
       "title": "Source URLs Status",
       "type": "timeseries"
     },
     {
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "palette-classic" },
-          "custom": {
-            "axisBorderShow": false, "axisCenteredZero": false, "axisColorMode": "text",
-            "axisLabel": "", "axisPlacement": "auto",
-            "barAlignment": -1,
-            "barWidthFactor": 0.6,
-            "drawStyle": "bars", "fillOpacity": 80, "gradientMode": "none",
-            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
-            "insertNulls": false, "lineInterpolation": "linear", "lineWidth": 0,
-            "pointSize": 5, "scaleDistribution": { "type": "linear" },
-            "showPoints": "auto", "showValues": false, "spanNulls": false,
-            "stacking": { "group": "A", "mode": "none" },
-            "thresholdsStyle": { "mode": "off" }
-          },
-          "mappings": [],
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": 0 }, { "color": "red", "value": 80 }] }
-        },
-        "overrides": [
-          { "matcher": { "id": "byName", "options": "Executions" }, "properties": [{ "id": "color", "value": { "fixedColor": "blue", "mode": "fixed" } }] },
-          { "matcher": { "id": "byName", "options": "Changes" },    "properties": [{ "id": "color", "value": { "fixedColor": "purple", "mode": "fixed" } }] },
-          { "matcher": { "id": "byName", "options": "Errors" },     "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }] }
-        ]
-      },
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 9 },
       "id": 5,
-      "options": {
-        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
-        "tooltip": { "hideZeros": false, "mode": "single", "sort": "none" }
+      "type": "timeseries",
+      "title": "Activity Timeline (runs by outcome)",
+      "description": "Each run stacks as OK (no change) / OK (updated) / Error, so you see success vs failure per interval.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 9
       },
       "targets": [
-        { "expr": "increase(acestream_run_total[5m])",              "legendFormat": "Executions", "refId": "A" },
-        { "expr": "increase(acestream_updates_with_changes[5m])",   "legendFormat": "Changes",    "refId": "B" },
-        { "expr": "increase(acestream_update_errors[5m])",          "legendFormat": "Errors",     "refId": "C" }
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "increase(acestream_updates_no_changes[5m])",
+          "refId": "A",
+          "legendFormat": "OK \u00b7 no change",
+          "instant": false,
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "increase(acestream_updates_with_changes[5m])",
+          "refId": "B",
+          "legendFormat": "OK \u00b7 updated",
+          "instant": false,
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "increase(acestream_update_errors[5m])",
+          "refId": "C",
+          "legendFormat": "Error",
+          "instant": false,
+          "range": true
+        }
       ],
-      "title": "Activity Timeline",
-      "type": "timeseries"
-    },
-    {
       "fieldConfig": {
         "defaults": {
-          "color": { "fixedColor": "blue", "mode": "fixed" },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "decimals": 0,
           "custom": {
-            "axisBorderShow": false, "axisCenteredZero": false, "axisColorMode": "text",
-            "axisLabel": "", "axisPlacement": "auto",
-            "barAlignment": 0, "barWidthFactor": 0.6,
-            "drawStyle": "line", "fillOpacity": 15, "gradientMode": "none",
-            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
-            "insertNulls": false, "lineInterpolation": "stepBefore", "lineWidth": 2,
-            "pointSize": 4, "scaleDistribution": { "type": "linear" },
-            "showPoints": "always", "showValues": false, "spanNulls": false,
-            "stacking": { "group": "A", "mode": "none" },
-            "thresholdsStyle": { "mode": "off" }
+            "drawStyle": "bars",
+            "fillOpacity": 85,
+            "lineWidth": 0,
+            "barAlignment": 0,
+            "showPoints": "never",
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "OK \u00b7 no change"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "OK \u00b7 updated"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Error"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "sum"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 8,
+      "type": "state-timeline",
+      "title": "Jellyfin refresh history",
+      "description": "Green = refresh OK (200/204), red = error, grey = not triggered.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 17
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "acestream_jellyfin_refresh_http_code",
+          "refId": "A",
+          "legendFormat": "Jellyfin refresh",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "custom": {
+            "fillOpacity": 85,
+            "lineWidth": 0
           },
           "mappings": [
-            { "options": { "0": { "index": 0, "text": "Not triggered" }, "204": { "index": 1, "text": "OK (204)" } }, "type": "value" }
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Not triggered",
+                  "color": "#4a5568",
+                  "index": 0
+                },
+                "200": {
+                  "text": "OK",
+                  "color": "green",
+                  "index": 1
+                },
+                "204": {
+                  "text": "OK",
+                  "color": "green",
+                  "index": 2
+                }
+              }
+            }
           ],
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": 0 }, { "color": "green", "value": 204 }, { "color": "red", "value": 205 }] }
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#4a5568",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 200
+              },
+              {
+                "color": "red",
+                "value": 205
+              }
+            ]
+          }
         },
         "overrides": []
       },
-      "gridPos": { "h": 4, "w": 24, "x": 0, "y": 17 },
-      "id": 8,
       "options": {
-        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
-        "tooltip": { "hideZeros": false, "mode": "single", "sort": "none" }
-      },
-      "targets": [{ "expr": "acestream_jellyfin_refresh_http_code", "legendFormat": "HTTP Code", "refId": "A" }],
-      "title": "Jellyfin Refresh History",
-      "type": "timeseries"
+        "showValue": "never",
+        "mergeValues": true,
+        "alignValue": "center",
+        "rowHeight": 0.9,
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      }
     }
   ],
   "refresh": "",
-  "schemaVersion": 38,
-  "graphTooltip": 1,
-  "tags": ["acestream", "scripts"],
-  "templating": { "list": [] },
-  "time": { "from": "now-6h", "to": "now" },
+  "schemaVersion": 42,
+  "tags": [
+    "acestream",
+    "scripts"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
   "timepicker": {},
   "timezone": "",
   "title": "Acestream Monitor"
