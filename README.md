@@ -332,9 +332,12 @@ Metrics are pushed to Pushgateway and visible in the **Deploy Monitor** dashboar
 
 ### Monitoring (Prometheus & Grafana)
 - **Grafana:** `http://<IP>:3000` — default credentials: `admin / admin`
-- **Auto-provisioned dashboards** (Scripts folder in Grafana):
+- **Auto-provisioned dashboards** (in `config/grafana/dashboards_json/`):
+  - Container Health — host stats (CPU temp, load, RAM, disk), per-container CPU/mem/network, and a Storage section (usage-by-folder pie, folder filter, largest-files table)
+  - Deploy Monitor — deploy runs, changes, errors, per-repo status
+  - Backup Monitor — last backup status/age/size and appdata growth over time
   - Acestream Monitor — channel sync, changes, errors, source URL status, per-channel health
-  - Deploy Monitor — deploy runs, changes, errors
+  - One Pace Downloader / One Pace Arc Status — episode/arc KPIs and per-arc breakdown
 - **Import community dashboards** (Grafana → Dashboards → Import):
   - `1860` — Node Exporter Full (CPU, RAM, disk, network)
   - `193` — cAdvisor (per-container resource usage)
@@ -343,6 +346,19 @@ Metrics are pushed to Pushgateway and visible in the **Deploy Monitor** dashboar
   docker compose -f compose-media.yml restart acestream-updater
   bash /home/raspi/rpi-homeserver/scripts/deploy_control.sh
   ```
+
+### Backups & Recovery
+`scripts/backup.sh` (daily cron at 04:00) snapshots `appdata/` to a compressed, rotated
+archive and pushes health metrics to the **Backup Monitor** Grafana dashboard. Full guide:
+[docs/backups.md](docs/backups.md).
+
+- **In git (survives a disk loss):** all config in this repo, plus point-in-time exports of
+  the Radarr/Sonarr custom formats + quality profiles under
+  [config/arr-exports/](config/arr-exports/) — the scoring rules that are painful to rebuild.
+- **In the backup archive:** the full app state under `appdata/` (databases, indexers, Plex
+  library, etc.).
+- **Offsite:** local archives live on the data disk, so a disk failure would lose them too.
+  Set `BACKUP_RCLONE_REMOTE` (and install rclone) for an automatic offsite copy.
 
 ---
 

@@ -46,7 +46,7 @@ docker compose up -d
 
 ## Monitoring
 
-`backup.sh` pushes to Pushgateway (visible in Grafana):
+`backup.sh` pushes to Pushgateway (visible in the **Backup Monitor** Grafana dashboard):
 
 - `backup_last_status` — 0 ok, 1 error
 - `backup_last_run_timestamp` — alert if it goes stale (no backup in >24h)
