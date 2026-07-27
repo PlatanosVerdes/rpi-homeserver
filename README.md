@@ -11,10 +11,46 @@ A modular, Docker-based home server for Raspberry Pi. Uses Docker Compose's `inc
 | Module | Purpose | Key Services |
 | :--- | :--- | :--- |
 | **Core** | Entry point & Networking | Caddy, Homepage, Pi-hole, Speedtest-tracker |
-| **Media** | Streaming & Live TV | Plex, Jellyfin, Overseerr, Acestream |
+| **Media** | Streaming & Live TV | Plex, Jellyfin, Overseerr, Bazarr, Maintainerr, Acestream |
 | **Arrs** | Automation & Downloads | Radarr, Sonarr, Prowlarr, qBittorrent, FlareSolverr |
 | **Monitoring** | System Health | Prometheus, Grafana, Pushgateway, node-exporter, cAdvisor |
 | **Apps** | Custom Services | Pol Academy Offers Bot |
+
+---
+
+## Media & Download Policy
+
+The library is deliberately tuned for how it is actually watched, not for maximum
+file fidelity. This documents the rules and the reasoning, so the choices below are
+not mistaken for misconfiguration.
+
+**Playback targets (use case):**
+- **Samsung QLED TV (Tizen) on the LAN** — the primary screen, watched in high resolution.
+- **iPad** — secondary, on the go.
+
+Plex runs on the Pi, which is weak at video transcoding, so files should
+**direct-play** (little or no transcoding) on these devices.
+
+**What the TV can and cannot play** (verified from Plex logs):
+- **Direct-plays:** H.264, HEVC (H.265), 4K, HDR10, EAC3/AC3 audio.
+- **Fails** (the TV cannot decode it and the Pi cannot transcode it in time, "Not enough CPU"): **AV1** and **VC-1**.
+- **DTS / TrueHD:** trigger an audio-only transcode, which the Pi handles fine.
+
+**Download rules (Radarr / Sonarr custom formats + quality profiles):**
+- **Reject AV1** (unplayable here).
+- **Prefer x264/H.264 1080p encodes:** excellent quality, small size, universal playback.
+- **Quality priority: Bluray-1080p is preferred over Remux-1080p**, with Remux kept as a
+  fallback so a title is never left un-downloaded. This is a deliberate inversion of the
+  tools' default (which prefers Remux for maximum fidelity): a Remux is a lossless 30-80 GB
+  copy of the disc, but that extra quality is imperceptible on a 55-inch TV or an iPad and
+  only wastes disk, whereas a Bluray-1080p encode is roughly 99% of the quality at 5-15 GB.
+- **Penalize** Remux and heavy lossless audio (DTS-HD): quality the devices cannot benefit from.
+- **Language preference:** Castilian Spanish > VOSE (original audio with Spanish subtitles) > English > Latin-American Spanish (avoided).
+- **Rule of thumb for smooth playback:** 1080p, x264/H.264, AAC or EAC3/AC3, text subtitles (SRT / mov_text).
+
+**Supporting automation:**
+- **Bazarr** auto-downloads Spanish subtitles for the whole library.
+- **Maintainerr** auto-cleans watched movies (movies library only) to keep the 916 GB SSD from filling up.
 
 ---
 
