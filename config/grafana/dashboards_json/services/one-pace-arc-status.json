@@ -1,7 +1,9 @@
 {
   "__inputs": [],
   "__requires": [],
-  "annotations": { "list": [] },
+  "annotations": {
+    "list": []
+  },
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
@@ -9,77 +11,491 @@
   "links": [],
   "panels": [
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "id": 90,
+      "type": "stat",
+      "title": "Total arcs",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
-          "custom": { "align": "center", "cellOptions": { "type": "auto" }, "inspect": false },
+          "unit": "short",
+          "decimals": 0,
           "mappings": [],
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "purple"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "pluginVersion": "12.3.3",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "count(onepace_arc_episodes_on_disk{job=\"one-pace-downloader\"})",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ]
+    },
+    {
+      "id": 91,
+      "type": "stat",
+      "title": "Total episodes",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 6,
+        "x": 6,
+        "y": 0
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "mappings": [],
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "pluginVersion": "12.3.3",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "onepace_episodes_on_disk{job=\"one-pace-downloader\"}",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ]
+    },
+    {
+      "id": 92,
+      "type": "stat",
+      "title": "Arcs in Spanish",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 6,
+        "x": 12,
+        "y": 0
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "mappings": [],
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "green"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "pluginVersion": "12.3.3",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "count(onepace_arc_episodes_on_disk{job=\"one-pace-downloader\",lang=\"es\"})",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ]
+    },
+    {
+      "id": 93,
+      "type": "stat",
+      "title": "Arcs English-only",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "mappings": [],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "pluginVersion": "12.3.3",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "count(onepace_arc_episodes_on_disk{job=\"one-pace-downloader\",lang=\"en\"})",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "center",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
         },
         "overrides": [
           {
-            "matcher": { "id": "byName", "options": "Title" },
+            "matcher": {
+              "id": "byName",
+              "options": "Title"
+            },
             "properties": [
-              { "id": "custom.align", "value": "left" },
-              { "id": "custom.width", "value": 220 }
+              {
+                "id": "custom.align",
+                "value": "left"
+              },
+              {
+                "id": "custom.width",
+                "value": 220
+              }
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "Season" },
-            "properties": [{ "id": "custom.width", "value": 65 }]
-          },
-          {
-            "matcher": { "id": "byName", "options": "Avail. ES" },
+            "matcher": {
+              "id": "byName",
+              "options": "Season"
+            },
             "properties": [
-              { "id": "custom.width", "value": 75 },
-              { "id": "custom.cellOptions", "value": { "type": "color-text" } },
-              { "id": "mappings", "value": [{ "type": "value", "options": {
-                "1": { "text": "✓", "color": "green", "index": 0 },
-                "0": { "text": "–", "color": "text", "index": 1 }
-              }}]}
+              {
+                "id": "custom.width",
+                "value": 65
+              }
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "Avail. EN" },
+            "matcher": {
+              "id": "byName",
+              "options": "Avail. ES"
+            },
             "properties": [
-              { "id": "custom.width", "value": 75 },
-              { "id": "custom.cellOptions", "value": { "type": "color-text" } },
-              { "id": "mappings", "value": [{ "type": "value", "options": {
-                "1": { "text": "✓", "color": "green", "index": 0 },
-                "0": { "text": "–", "color": "text", "index": 1 }
-              }}]}
+              {
+                "id": "custom.width",
+                "value": 75
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "1": {
+                        "text": "\u2713",
+                        "color": "green",
+                        "index": 0
+                      },
+                      "0": {
+                        "text": "\u2013",
+                        "color": "text",
+                        "index": 1
+                      }
+                    }
+                  }
+                ]
+              }
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "Downloaded in" },
+            "matcher": {
+              "id": "byName",
+              "options": "Avail. EN"
+            },
             "properties": [
-              { "id": "custom.width", "value": 120 },
-              { "id": "custom.cellOptions", "value": { "type": "color-background" } },
-              { "id": "mappings", "value": [{ "type": "value", "options": {
-                "es": { "text": "Spanish", "color": "green", "index": 0 },
-                "en": { "text": "English", "color": "yellow", "index": 1 },
-                "none": { "text": "Not downloaded", "color": "text", "index": 2 }
-              }}]}
+              {
+                "id": "custom.width",
+                "value": 75
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "1": {
+                        "text": "\u2713",
+                        "color": "green",
+                        "index": 0
+                      },
+                      "0": {
+                        "text": "\u2013",
+                        "color": "text",
+                        "index": 1
+                      }
+                    }
+                  }
+                ]
+              }
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "On disk" },
-            "properties": [{ "id": "custom.width", "value": 90 }]
+            "matcher": {
+              "id": "byName",
+              "options": "Downloaded in"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "es": {
+                        "text": "Spanish",
+                        "color": "green",
+                        "index": 0
+                      },
+                      "en": {
+                        "text": "English",
+                        "color": "yellow",
+                        "index": 1
+                      },
+                      "none": {
+                        "text": "Not downloaded",
+                        "color": "text",
+                        "index": 2
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "On disk"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 90
+              }
+            ]
           }
         ]
       },
-      "gridPos": { "h": 20, "w": 24, "x": 0, "y": 0 },
+      "gridPos": {
+        "h": 20,
+        "w": 24,
+        "x": 0,
+        "y": 3
+      },
       "id": 1,
       "options": {
         "cellHeight": "sm",
-        "footer": { "countRows": false, "fields": "", "reducer": ["sum"], "show": false },
+        "footer": {
+          "show": true,
+          "reducer": [
+            "sum"
+          ],
+          "fields": [
+            "On disk"
+          ],
+          "countRows": false
+        },
         "showHeader": true,
-        "sortBy": [{ "desc": false, "displayName": "Season" }]
+        "sortBy": [
+          {
+            "desc": false,
+            "displayName": "Season"
+          }
+        ]
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "onepace_arc_episodes_on_disk{job=\"one-pace-downloader\"}",
           "format": "table",
           "instant": true,
@@ -120,20 +536,35 @@
         },
         {
           "id": "sortBy",
-          "options": { "fields": [{ "desc": false, "displayName": "Season" }] }
+          "options": {
+            "fields": [
+              {
+                "desc": false,
+                "displayName": "Season"
+              }
+            ]
+          }
         }
       ],
       "type": "table"
     }
   ],
   "refresh": "5m",
-  "schemaVersion": 38,
-  "tags": ["one-pace", "media"],
-  "templating": { "list": [] },
-  "time": { "from": "now-24h", "to": "now" },
+  "schemaVersion": 42,
+  "tags": [
+    "one-pace",
+    "media"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
   "timepicker": {},
   "timezone": "browser",
   "title": "One Pace Arc Status",
   "uid": "onepace-arc-status",
-  "version": 1
+  "version": 2
 }
