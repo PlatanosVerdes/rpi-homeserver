@@ -61,7 +61,7 @@ sudo tar \
     --exclude='*/logs/*' \
     --exclude='*.log' \
     --exclude='*.sock' \
-    -czf "$ARCHIVE" -C "$(dirname "$APPDATA")" "$(basename "$APPDATA")" || tar_rc=$?
+    -czf "$ARCHIVE" -C "$HOME" "rpi-homeserver/appdata" $([ -d "$HOME/rpi-services/appdata" ] && echo "rpi-services/appdata") || tar_rc=$?
 
 # tar exit 1 = some files changed/vanished mid-read (benign for live caches); >1 = fatal
 if [ "$tar_rc" -gt 1 ]; then
@@ -71,7 +71,7 @@ if [ "$tar_rc" -gt 1 ]; then
 fi
 
 SIZE=$(stat -c%s "$ARCHIVE" 2>/dev/null || echo 0)
-APPDATA_SIZE=$(sudo du -sb "$APPDATA" 2>/dev/null | cut -f1 || echo 0)
+APPDATA_SIZE=$(sudo du -scb "$APPDATA" "$HOME/rpi-services/appdata" 2>/dev/null | tail -1 | cut -f1 || echo 0)
 log "Archive created ($((SIZE / 1024 / 1024)) MiB); appdata on disk: $((APPDATA_SIZE / 1024 / 1024)) MiB"
 
 # Retention: keep the newest $RETENTION archives, delete the rest
