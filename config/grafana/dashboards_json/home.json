@@ -89,7 +89,7 @@
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "## 🌐 Speedtest\n[Speedtest Tracker · internet speed](/d/g7usvhZVk2/speedtest-tracker)\n\n## 🛡️ Pi-hole\n[Pi-hole Exporter · DNS & ad blocking](/d/Pi-hole-Exporter/pi-hole-exporter)\n\n## 🔒 Tailscale\n[Tailscale · network devices](/d/tailscale-bannet/tailscale-bannet)",
+        "content": "## 🌐 Speedtest\n[Speedtest Tracker · internet speed](/d/g7usvhZVk2/speedtest-tracker)\n\n## 🛡️ Pi-hole\n[Pi-hole Exporter · DNS & ad blocking](/d/edknpuskjzw1sc/pi-hole-ver6-stats)\n\n## 🔒 Tailscale\n[Tailscale · network devices](/d/tailscale-bannet/tailscale-bannet)",
         "mode": "markdown"
       },
       "pluginVersion": "12.3.3",

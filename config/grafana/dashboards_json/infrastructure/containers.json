@@ -423,7 +423,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "100 - (node_filesystem_avail_bytes{mountpoint=\"/mnt/data\",fstype=\"ext4\"} / node_filesystem_size_bytes{mountpoint=\"/mnt/data\",fstype=\"ext4\"} * 100)",
+          "expr": "100 - (node_filesystem_avail_bytes{mountpoint=\"/mnt/data\"} / node_filesystem_size_bytes{mountpoint=\"/mnt/data\"} * 100)",
           "instant": true,
           "refId": "A"
         }
