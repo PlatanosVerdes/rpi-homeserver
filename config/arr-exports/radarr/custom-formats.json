@@ -10,7 +10,7 @@
                 "implementationName": "Language",
                 "infoLink": "https://wiki.servarr.com/radarr/settings#custom-formats-2",
                 "negate": false,
-                "required": false,
+                "required": true,
                 "fields": [
                     {
                         "order": 0,
@@ -403,7 +403,7 @@
                 "implementationName": "Language",
                 "infoLink": "https://wiki.servarr.com/radarr/settings#custom-formats-2",
                 "negate": false,
-                "required": false,
+                "required": true,
                 "fields": [
                     {
                         "order": 0,
