@@ -1,7 +1,13 @@
 # Backups
 
 Persistent container state lives in `appdata/` (not in git). `scripts/backup.sh` snapshots it
-to a compressed, rotated archive on the external disk and reports health to Grafana.
+to a compressed, rotated archive on the external disk and reports health to Grafana. It backs
+up **both** `rpi-homeserver/appdata` and `rpi-services/appdata` (the latter holds the AirTag
+keys, cal-bridge tokens, and the Telegram bot DB).
+
+Storage note: the media/data volume `/mnt/data` is a **mergerfs pool** of two disks
+(`/mnt/disk1` + `/mnt/disk2`); backups land on the pool, which is a different physical device
+from the SD card where `appdata` actually lives, so a card failure never takes the backups too.
 
 ## What is backed up
 
