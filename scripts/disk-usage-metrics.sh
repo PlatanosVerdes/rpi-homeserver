@@ -26,13 +26,13 @@ RUN="nice -n 19 ionice -c3"
             echo "disk_file_bytes{path=\"$p\"} $size"
           done
 
-    echo "# HELP disk_dir_bytes Size in bytes of the largest directories (up to depth 2) on the data disk."
-    echo "# TYPE disk_dir_bytes gauge"
-    $RUN du -b --max-depth=2 "$TARGET" 2>/dev/null | sort -rn | head -n "$TOP" \
+    echo "# HELP disk_root_bytes Size in bytes of each top-level folder on the data disk."
+    echo "# TYPE disk_root_bytes gauge"
+    $RUN du -b --max-depth=1 "$TARGET" 2>/dev/null | sort -rn \
         | while IFS=$'\t' read -r size path; do
             [ "$path" = "$TARGET" ] && continue
-            p=$(printf '%s' "${path#$TARGET/}" | esc)
-            echo "disk_dir_bytes{path=\"$p\"} $size"
+            r=$(printf '%s' "${path#$TARGET/}" | esc)
+            echo "disk_root_bytes{root=\"$r\"} $size"
           done
 
     echo "# HELP disk_usage_scrape_timestamp_seconds Unix time this metrics file was generated."

@@ -1130,9 +1130,10 @@
           },
           "editorMode": "code",
           "expr": "topk(10, sum by (name) (rate(container_cpu_usage_seconds_total{name!=\"\",name!~\".*POD.*\"}[5m])) * 100)",
-          "instant": true,
+          "instant": false,
           "refId": "A",
-          "legendFormat": "{{name}}"
+          "legendFormat": "{{name}}",
+          "range": true
         }
       ]
     },
@@ -1249,9 +1250,10 @@
           },
           "editorMode": "code",
           "expr": "sum(rate(container_network_receive_bytes_total{name!=\"\",name!~\".*POD.*\"}[5m]))",
-          "instant": true,
+          "instant": false,
           "refId": "A",
-          "legendFormat": "RX"
+          "legendFormat": "RX",
+          "range": true
         },
         {
           "datasource": {
@@ -1260,9 +1262,10 @@
           },
           "editorMode": "code",
           "expr": "sum(rate(container_network_transmit_bytes_total{name!=\"\",name!~\".*POD.*\"}[5m]))",
-          "instant": true,
+          "instant": false,
           "refId": "B",
-          "legendFormat": "TX"
+          "legendFormat": "TX",
+          "range": true
         }
       ]
     },
@@ -1550,6 +1553,77 @@
     },
     {
       "id": 141,
+      "type": "piechart",
+      "title": "Disk usage by folder",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 8,
+        "x": 0,
+        "y": 40
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "pieType": "donut",
+        "displayLabels": [
+          "percent"
+        ],
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "12.3.3",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "disk_root_bytes",
+          "instant": true,
+          "refId": "A",
+          "legendFormat": "{{root}}"
+        }
+      ]
+    },
+    {
+      "id": 142,
       "type": "bargauge",
       "title": "Largest files",
       "datasource": {
@@ -1557,9 +1631,9 @@
         "uid": "prometheus"
       },
       "gridPos": {
-        "h": 14,
-        "w": 12,
-        "x": 0,
+        "h": 12,
+        "w": 16,
+        "x": 8,
         "y": 40
       },
       "fieldConfig": {
@@ -1602,66 +1676,6 @@
           },
           "editorMode": "code",
           "expr": "disk_file_bytes",
-          "instant": true,
-          "refId": "A",
-          "legendFormat": "{{path}}"
-        }
-      ]
-    },
-    {
-      "id": 142,
-      "type": "bargauge",
-      "title": "Largest directories",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 14,
-        "w": 12,
-        "x": 12,
-        "y": 40
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes",
-          "color": {
-            "mode": "continuous-GrYlRd"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "orientation": "horizontal",
-        "displayMode": "gradient",
-        "valueMode": "color",
-        "showUnfilled": true,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "pluginVersion": "12.3.3",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "disk_dir_bytes",
           "instant": true,
           "refId": "A",
           "legendFormat": "{{path}}"

@@ -917,9 +917,10 @@
           },
           "editorMode": "code",
           "expr": "increase(deploy_run_total[15m])",
-          "instant": true,
+          "instant": false,
           "refId": "A",
-          "legendFormat": "Executions"
+          "legendFormat": "Executions",
+          "range": true
         },
         {
           "datasource": {
@@ -928,9 +929,10 @@
           },
           "editorMode": "code",
           "expr": "increase(deploy_with_changes_total[15m])",
-          "instant": true,
+          "instant": false,
           "refId": "B",
-          "legendFormat": "Deployed"
+          "legendFormat": "Deployed",
+          "range": true
         },
         {
           "datasource": {
@@ -939,9 +941,10 @@
           },
           "editorMode": "code",
           "expr": "increase(deploy_errors_total[15m])",
-          "instant": true,
+          "instant": false,
           "refId": "C",
-          "legendFormat": "Errors"
+          "legendFormat": "Errors",
+          "range": true
         }
       ]
     }
