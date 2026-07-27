@@ -24,7 +24,7 @@
       "id": 1,
       "options": {
         "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
-        "content": "## ⚙️ Acestream Monitor\n[Acestream Monitor · sync & errors](/d/acestream-monitor/acestream-monitor)\n\n[Live TV · channel availability](/d/acestream-livetv/live-tv)",
+        "content": "## ⚙️ Acestream Monitor\n[Acestream Monitor · sync & errors](/d/acestream-monitor/acestream-monitor)",
         "mode": "markdown"
       },
       "pluginVersion": "12.3.3",
