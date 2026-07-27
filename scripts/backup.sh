@@ -17,6 +17,11 @@ cd "$PROJECT_DIR"
 # APP_CONFIG_PATH may be relative (e.g. ./appdata); resolve it against the project dir
 APPDATA="${APP_CONFIG_PATH:-./appdata}"
 [[ "$APPDATA" != /* ]] && APPDATA="$PROJECT_DIR/${APPDATA#./}"
+
+# Companion repo appdata (AirTag keys, cal-bridge tokens, bot DB) — backed up too if present
+SERVICES_DIR="${SERVICES_DIR:-$HOME/rpi-services}"
+SERVICES_APPDATA="$SERVICES_DIR/appdata"
+
 DEST="${BACKUP_DEST:-${DATA_ROOT}/backups/appdata}"
 RETENTION="${BACKUP_RETENTION:-7}"
 
@@ -61,7 +66,7 @@ sudo tar \
     --exclude='*/logs/*' \
     --exclude='*.log' \
     --exclude='*.sock' \
-    -czf "$ARCHIVE" -C "$HOME" "rpi-homeserver/appdata" $([ -d "$HOME/rpi-services/appdata" ] && echo "rpi-services/appdata") || tar_rc=$?
+    -czf "$ARCHIVE" -C "$HOME" "${APPDATA#$HOME/}" $([ -d "$SERVICES_APPDATA" ] && echo "${SERVICES_APPDATA#$HOME/}") || tar_rc=$?
 
 # tar exit 1 = some files changed/vanished mid-read (benign for live caches); >1 = fatal
 if [ "$tar_rc" -gt 1 ]; then
@@ -71,7 +76,7 @@ if [ "$tar_rc" -gt 1 ]; then
 fi
 
 SIZE=$(stat -c%s "$ARCHIVE" 2>/dev/null || echo 0)
-APPDATA_SIZE=$(sudo du -scb "$APPDATA" "$HOME/rpi-services/appdata" 2>/dev/null | tail -1 | cut -f1 || echo 0)
+APPDATA_SIZE=$(sudo du -scb "$APPDATA" "$SERVICES_APPDATA" 2>/dev/null | tail -1 | cut -f1 || echo 0)
 log "Archive created ($((SIZE / 1024 / 1024)) MiB); appdata on disk: $((APPDATA_SIZE / 1024 / 1024)) MiB"
 
 # Retention: keep the newest $RETENTION archives, delete the rest
