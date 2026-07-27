@@ -40,6 +40,22 @@ services:
     networks:
       - media-network
 
+  # --- BYPARR (FlareSolverr drop-in; Camoufox browser, better against Cloudflare) ---
+  # Reached internally as http://byparr:8191 (no host port, to avoid clashing with flaresolverr).
+  byparr:
+    image: ghcr.io/thephaseless/byparr:latest
+    container_name: byparr
+    restart: unless-stopped
+    profiles: [media, all]
+    shm_size: 1gb
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    environment:
+      - TZ=${TZ}
+    networks:
+      - media-network
+
   # --- PROWLARR (Indexer Manager) ---
   prowlarr:
     image: lscr.io/linuxserver/prowlarr:${PROWLARR_VERSION}
