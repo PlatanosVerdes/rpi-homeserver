@@ -5,82 +5,198 @@
     "deploy",
     "scripts"
   ],
-  "schemaVersion": 38,
+  "schemaVersion": 42,
+  "version": 3,
+  "editable": true,
+  "graphTooltip": 1,
+  "preload": false,
+  "refresh": "30s",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timezone": "browser",
+  "timepicker": {},
+  "templating": {
+    "list": []
+  },
+  "links": [],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "type": "dashboard",
+        "name": "Annotations & Alerts"
+      }
+    ]
+  },
   "panels": [
     {
-      "id": 1,
+      "id": 200,
+      "type": "row",
+      "title": "Overview",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "panels": []
+    },
+    {
+      "id": 201,
       "type": "stat",
       "title": "Executions (24h)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "gridPos": {
         "h": 4,
         "w": 4,
         "x": 0,
-        "y": 0
+        "y": 1
       },
-      "targets": [
-        {
-          "expr": "increase(deploy_run_total[24h])",
-          "refId": "A",
-          "instant": true
-        }
-      ],
       "fieldConfig": {
         "defaults": {
+          "unit": "short",
           "decimals": 0,
+          "mappings": [],
           "color": {
             "mode": "fixed",
             "fixedColor": "blue"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
           }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
         }
-      }
+      },
+      "pluginVersion": "12.3.3",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "increase(deploy_run_total[24h])",
+          "instant": true,
+          "refId": "A"
+        }
+      ]
     },
     {
-      "id": 2,
+      "id": 202,
       "type": "stat",
-      "title": "Deployments with Changes (24h)",
+      "title": "Deployed (24h)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "gridPos": {
         "h": 4,
         "w": 4,
         "x": 4,
-        "y": 0
+        "y": 1
       },
-      "targets": [
-        {
-          "expr": "increase(deploy_with_changes_total[24h])",
-          "refId": "A",
-          "instant": true
-        }
-      ],
       "fieldConfig": {
         "defaults": {
+          "unit": "short",
           "decimals": 0,
+          "mappings": [],
           "color": {
             "mode": "fixed",
             "fixedColor": "green"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
           }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
         }
-      }
+      },
+      "pluginVersion": "12.3.3",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "increase(deploy_with_changes_total[24h])",
+          "instant": true,
+          "refId": "A"
+        }
+      ]
     },
     {
-      "id": 3,
+      "id": 203,
       "type": "stat",
       "title": "Errors (24h)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "gridPos": {
         "h": 4,
         "w": 4,
         "x": 8,
-        "y": 0
+        "y": 1
       },
-      "targets": [
-        {
-          "expr": "increase(deploy_errors_total[24h])",
-          "refId": "A",
-          "instant": true
-        }
-      ],
       "fieldConfig": {
         "defaults": {
+          "unit": "short",
           "decimals": 0,
+          "mappings": [],
           "color": {
             "mode": "thresholds"
           },
@@ -97,29 +213,57 @@
               }
             ]
           }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
         }
-      }
+      },
+      "pluginVersion": "12.3.3",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "increase(deploy_errors_total[24h])",
+          "instant": true,
+          "refId": "A"
+        }
+      ]
     },
     {
-      "id": 4,
+      "id": 204,
       "type": "stat",
-      "title": "Last Run",
+      "title": "Error rate",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "gridPos": {
         "h": 4,
         "w": 4,
         "x": 12,
-        "y": 0
+        "y": 1
       },
-      "targets": [
-        {
-          "expr": "time() - deploy_last_run_timestamp",
-          "refId": "A"
-        }
-      ],
       "fieldConfig": {
         "defaults": {
-          "unit": "s",
-          "decimals": 0,
+          "unit": "percent",
+          "decimals": 2,
+          "mappings": [],
           "color": {
             "mode": "thresholds"
           },
@@ -132,7 +276,78 @@
               },
               {
                 "color": "orange",
-                "value": 1800
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "pluginVersion": "12.3.3",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "deploy_errors_total / deploy_run_total * 100",
+          "instant": true,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 205,
+      "type": "stat",
+      "title": "Last run",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dtdurations",
+          "decimals": 0,
+          "mappings": [],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1200
               },
               {
                 "color": "red",
@@ -140,53 +355,74 @@
               }
             ]
           }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
         }
-      }
+      },
+      "pluginVersion": "12.3.3",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "time() - deploy_last_run_timestamp",
+          "instant": true,
+          "refId": "A"
+        }
+      ]
     },
     {
-      "id": 5,
+      "id": 206,
       "type": "stat",
-      "title": "Last Status",
+      "title": "Last status",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "gridPos": {
         "h": 4,
         "w": 4,
-        "x": 16,
-        "y": 0
+        "x": 20,
+        "y": 1
       },
-      "targets": [
-        {
-          "expr": "deploy_last_status",
-          "refId": "A",
-          "instant": true
-        }
-      ],
       "fieldConfig": {
         "defaults": {
+          "unit": "short",
+          "decimals": 0,
           "mappings": [
             {
               "type": "value",
               "options": {
                 "0": {
-                  "text": "No changes",
-                  "color": "blue"
-                }
-              }
-            },
-            {
-              "type": "value",
-              "options": {
+                  "text": "No change",
+                  "color": "green",
+                  "index": 0
+                },
                 "1": {
                   "text": "Deployed",
-                  "color": "green"
-                }
-              }
-            },
-            {
-              "type": "value",
-              "options": {
+                  "color": "blue",
+                  "index": 1
+                },
                 "2": {
                   "text": "Error",
-                  "color": "red"
+                  "color": "red",
+                  "index": 2
                 }
               }
             }
@@ -198,11 +434,11 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "blue",
+                "color": "green",
                 "value": null
               },
               {
-                "color": "green",
+                "color": "blue",
                 "value": 1
               },
               {
@@ -211,43 +447,403 @@
               }
             ]
           }
-        }
-      }
-    },
-    {
-      "id": 6,
-      "type": "timeseries",
-      "title": "Activity Timeline",
-      "gridPos": {
-        "h": 10,
-        "w": 24,
-        "x": 0,
-        "y": 4
+        },
+        "overrides": []
       },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "pluginVersion": "12.3.3",
       "targets": [
         {
-          "expr": "increase(deploy_run_total[15m])",
-          "legendFormat": "Executions",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "deploy_last_status",
+          "instant": true,
           "refId": "A"
-        },
-        {
-          "expr": "increase(deploy_with_changes_total[15m])",
-          "legendFormat": "Deployed",
-          "refId": "B"
-        },
-        {
-          "expr": "increase(deploy_errors_total[15m])",
-          "legendFormat": "Errors",
-          "refId": "C"
         }
-      ],
+      ]
+    },
+    {
+      "id": 210,
+      "type": "row",
+      "title": "Per repo",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "panels": []
+    },
+    {
+      "id": 211,
+      "type": "stat",
+      "title": "Homeserver \u2014 status",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 6
+      },
       "fieldConfig": {
         "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "No change",
+                  "color": "green",
+                  "index": 0
+                },
+                "1": {
+                  "text": "Deployed",
+                  "color": "blue",
+                  "index": 1
+                },
+                "2": {
+                  "text": "Error",
+                  "color": "red",
+                  "index": 2
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "blue",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 2
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "pluginVersion": "12.3.3",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "deploy_repo_last_status{repo=\"homeserver\"}",
+          "instant": true,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 212,
+      "type": "stat",
+      "title": "Services \u2014 status",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 6
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "No change",
+                  "color": "green",
+                  "index": 0
+                },
+                "1": {
+                  "text": "Deployed",
+                  "color": "blue",
+                  "index": 1
+                },
+                "2": {
+                  "text": "Error",
+                  "color": "red",
+                  "index": 2
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "blue",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 2
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "pluginVersion": "12.3.3",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "deploy_repo_last_status{repo=\"services\"}",
+          "instant": true,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 213,
+      "type": "stat",
+      "title": "Homeserver \u2014 last run",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 6
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dtdurations",
+          "decimals": 0,
+          "mappings": [],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1200
+              },
+              {
+                "color": "red",
+                "value": 3600
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "pluginVersion": "12.3.3",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "time() - deploy_repo_last_run_timestamp{repo=\"homeserver\"}",
+          "instant": true,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 214,
+      "type": "stat",
+      "title": "Services \u2014 last run",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 6
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dtdurations",
+          "decimals": 0,
+          "mappings": [],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1200
+              },
+              {
+                "color": "red",
+                "value": 3600
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "pluginVersion": "12.3.3",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "time() - deploy_repo_last_run_timestamp{repo=\"services\"}",
+          "instant": true,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 220,
+      "type": "timeseries",
+      "title": "Activity Timeline",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 10
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
           "custom": {
             "drawStyle": "bars",
             "fillOpacity": 80,
-            "barAlignment": 0,
-            "lineWidth": 0
+            "lineWidth": 0,
+            "showPoints": "never",
+            "axisPlacement": "auto"
+          },
+          "color": {
+            "mode": "palette-classic"
           }
         },
         "overrides": [
@@ -297,7 +893,57 @@
             ]
           }
         ]
-      }
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "increase(deploy_run_total[15m])",
+          "instant": true,
+          "refId": "A",
+          "legendFormat": "Executions"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "increase(deploy_with_changes_total[15m])",
+          "instant": true,
+          "refId": "B",
+          "legendFormat": "Deployed"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "increase(deploy_errors_total[15m])",
+          "instant": true,
+          "refId": "C",
+          "legendFormat": "Errors"
+        }
+      ]
     }
   ]
 }

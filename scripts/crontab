@@ -12,6 +12,9 @@
 # Tailscale peer metrics -> node-exporter textfile collector, every minute
 * * * * * /home/raspi/rpi-homeserver/services/tailscale-metrics/tailscale-metrics
 
+# Largest files/dirs on the data disk -> node-exporter textfile collector, every 6h
+0 */6 * * * /home/raspi/rpi-homeserver/scripts/disk-usage-metrics.sh >> /home/raspi/rpi-homeserver/disk-usage-metrics.log 2>&1
+
 # cal-bridge metrics (MS client secret expiry, etc.), daily at 09:00
 0 9 * * * /home/raspi/rpi-services/scripts/cal-bridge-metrics.sh
 

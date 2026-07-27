@@ -43,7 +43,16 @@ EOF
 }
 
 push_repo_metrics() {
-    local repo=$1 status=$2 ts=$3
+    local repo=$1 rc=$2 ts=$3
+    # Normalize deploy_repo() return code (0=changed, 1=error, 2=no_change) to the
+    # standard status code used everywhere else (0=no_change, 1=changed, 2=error).
+    local status
+    case "$rc" in
+        0) status=1 ;;
+        1) status=2 ;;
+        2) status=0 ;;
+        *) status=$rc ;;
+    esac
     cat <<EOF | curl -fsSL --connect-timeout 5 --data-binary @- "${PUSHGATEWAY_URL}/metrics/job/deploy_repo/repo/${repo}" 2>/dev/null
 # HELP deploy_repo_last_status Last deploy status per repo (0=no_change, 1=changed, 2=error)
 # TYPE deploy_repo_last_status gauge
