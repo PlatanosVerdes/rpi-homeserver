@@ -3,7 +3,10 @@
     "list": [
       {
         "builtIn": 1,
-        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
         "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
@@ -19,11 +22,23 @@
   "links": [],
   "panels": [
     {
-      "fieldConfig": { "defaults": {}, "overrides": [] },
-      "gridPos": { "h": 6, "w": 4, "x": 0, "y": 0 },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 4,
+        "x": 0,
+        "y": 0
+      },
       "id": 1,
       "options": {
-        "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
         "content": "## ⚙️ Acestream Monitor\n[Acestream Monitor · sync & errors](/d/acestream-monitor/acestream-monitor)",
         "mode": "markdown"
       },
@@ -32,11 +47,23 @@
       "type": "text"
     },
     {
-      "fieldConfig": { "defaults": {}, "overrides": [] },
-      "gridPos": { "h": 6, "w": 4, "x": 4, "y": 0 },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 4,
+        "x": 4,
+        "y": 0
+      },
       "id": 4,
       "options": {
-        "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
         "content": "## 🍿 One Pace\n[One Pace Downloader · episodes & arcs](/d/onepace-dl/one-pace-downloader)\n\n[Arc Status · per-arc table](/d/onepace-arc-status/one-pace-arc-status)",
         "mode": "markdown"
       },
@@ -45,11 +72,23 @@
       "type": "text"
     },
     {
-      "fieldConfig": { "defaults": {}, "overrides": [] },
-      "gridPos": { "h": 11, "w": 8, "x": 8, "y": 0 },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 8,
+        "x": 8,
+        "y": 0
+      },
       "id": 2,
       "options": {
-        "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
         "content": "## 🌐 Speedtest\n[Speedtest Tracker · internet speed](/d/g7usvhZVk2/speedtest-tracker)\n\n## 🛡️ Pi-hole\n[Pi-hole Exporter · DNS & ad blocking](/d/Pi-hole-Exporter/pi-hole-exporter)\n\n## 🔒 Tailscale\n[Tailscale · network devices](/d/tailscale-bannet/tailscale-bannet)",
         "mode": "markdown"
       },
@@ -58,11 +97,23 @@
       "type": "text"
     },
     {
-      "fieldConfig": { "defaults": {}, "overrides": [] },
-      "gridPos": { "h": 11, "w": 8, "x": 16, "y": 0 },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 8,
+        "x": 16,
+        "y": 0
+      },
       "id": 3,
       "options": {
-        "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
         "content": "## 🖥️ Raspberry Pi\n[Node Exporter · CPU, RAM, disk](/d/rYdddlPWk/node-exporter-full-raspi)\n\n## 🐳 Containers\n[Container Health · host, per-container, storage](/d/container-health/container-health)",
         "mode": "markdown"
       },
@@ -71,11 +122,23 @@
       "type": "text"
     },
     {
-      "fieldConfig": { "defaults": {}, "overrides": [] },
-      "gridPos": { "h": 5, "w": 8, "x": 0, "y": 6 },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 6
+      },
       "id": 5,
       "options": {
-        "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
         "content": "## 🚀 Deploy Monitor\n[Deploy Monitor · deployments](/d/deploy-monitor/deploy-monitor)\n\n## 💾 Backup Monitor\n[Backup Monitor · backup health](/d/backup-monitor/backup-monitor)",
         "mode": "markdown"
       },
@@ -85,65 +148,115 @@
     },
     {
       "collapsed": true,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 11 },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 12
+      },
       "id": 10,
-      "title": "Secrets",
-      "type": "row",
       "panels": [
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "fieldConfig": {
             "defaults": {
-              "color": { "mode": "thresholds" },
+              "color": {
+                "mode": "thresholds"
+              },
               "mappings": [
-                { "options": { "-1": { "color": "grey", "index": 0, "text": "N/A" } }, "type": "value" }
+                {
+                  "options": {
+                    "-1": {
+                      "color": "grey",
+                      "index": 0,
+                      "text": "N/A"
+                    }
+                  },
+                  "type": "value"
+                }
               ],
               "thresholds": {
                 "mode": "absolute",
                 "steps": [
-                  { "color": "red",    "value": null },
-                  { "color": "orange", "value": 14   },
-                  { "color": "green",  "value": 30   }
+                  {
+                    "color": "red"
+                  },
+                  {
+                    "color": "orange",
+                    "value": 14
+                  },
+                  {
+                    "color": "green",
+                    "value": 30
+                  }
                 ]
               },
               "unit": "d"
             },
             "overrides": []
           },
-          "gridPos": { "h": 4, "w": 6, "x": 0, "y": 12 },
+          "gridPos": {
+            "h": 4,
+            "w": 6,
+            "x": 0,
+            "y": 12
+          },
           "id": 11,
           "options": {
             "colorMode": "background",
             "graphMode": "none",
             "justifyMode": "center",
             "orientation": "auto",
-            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
             "textMode": "auto"
           },
-          "title": "MS Client Secret · days remaining",
-          "type": "stat",
           "targets": [
             {
-              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
               "expr": "ms_client_secret_days_remaining",
               "instant": true,
               "legendFormat": "days remaining",
               "refId": "A"
             }
-          ]
+          ],
+          "title": "MS Client Secret · days remaining",
+          "type": "stat"
         }
-      ]
+      ],
+      "title": "Secrets",
+      "type": "row"
     }
   ],
   "preload": false,
   "refresh": "",
   "schemaVersion": 42,
-  "tags": [ "home" ],
-  "templating": { "list": [] },
-  "time": { "from": "now-6h", "to": "now" },
-  "timepicker": { "hidden": true },
+  "tags": [
+    "home"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {
+    "hidden": true
+  },
   "timezone": "",
   "title": "Home",
   "uid": "home-overview",
-  "version": 6
+  "version": 10
 }
