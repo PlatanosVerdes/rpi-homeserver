@@ -18,7 +18,37 @@
   "timezone": "browser",
   "timepicker": {},
   "templating": {
-    "list": []
+    "list": [
+      {
+        "name": "root",
+        "label": "Folder",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "definition": "label_values(disk_root_bytes, root)",
+        "query": {
+          "query": "label_values(disk_root_bytes, root)",
+          "refId": "StandardVariableQuery"
+        },
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "current": {
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "refresh": 2,
+        "sort": 1,
+        "hide": 0,
+        "options": []
+      }
+    ]
   },
   "links": [],
   "annotations": {
@@ -1560,7 +1590,7 @@
         "uid": "prometheus"
       },
       "gridPos": {
-        "h": 12,
+        "h": 10,
         "w": 8,
         "x": 0,
         "y": 40
@@ -1625,13 +1655,13 @@
     {
       "id": 142,
       "type": "bargauge",
-      "title": "Largest files",
+      "title": "Largest files (filter: $root)",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
       "gridPos": {
-        "h": 12,
+        "h": 10,
         "w": 16,
         "x": 8,
         "y": 40
@@ -1675,12 +1705,157 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "disk_file_bytes",
+          "expr": "disk_file_bytes{root=~\"$root\"}",
           "instant": true,
           "refId": "A",
           "legendFormat": "{{path}}"
         }
       ]
+    },
+    {
+      "id": 143,
+      "type": "table",
+      "title": "All tracked files (raw \u2014 full paths, filterable)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 50
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "disk_file_bytes",
+          "instant": true,
+          "refId": "A",
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "job": true,
+              "instance": true
+            },
+            "renameByName": {
+              "root": "Folder",
+              "path": "Path",
+              "Value": "Size"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "Size",
+                "desc": true
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left",
+            "filterable": true,
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Size"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "gradient"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 10737418240
+                    },
+                    {
+                      "color": "red",
+                      "value": 32212254720
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 140
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Folder"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true,
+        "footer": {
+          "show": true,
+          "reducer": [
+            "sum"
+          ],
+          "fields": [
+            "Size"
+          ]
+        },
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Size"
+          }
+        ]
+      },
+      "pluginVersion": "12.3.3"
     }
   ]
 }
