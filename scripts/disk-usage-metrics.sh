@@ -10,7 +10,7 @@
 TARGET="${1:-/mnt/data}"
 OUT="/var/lib/node_exporter/textfile_collector/disk_usage.prom"
 TMP="$(mktemp)"
-TOP="${TOP:-20}"
+TOP="${TOP:-15}"
 
 # Escape backslashes and double quotes for Prometheus label values.
 esc() { sed 's/\\/\\\\/g; s/"/\\"/g'; }
@@ -22,7 +22,7 @@ RUN="nice -n 19 ionice -c3"
     echo "# TYPE disk_file_bytes gauge"
     $RUN find "$TARGET" -type f -printf '%s\t%p\n' 2>/dev/null | sort -rn | head -n "$TOP" \
         | while IFS=$'\t' read -r size path; do
-            p=$(printf '%s' "$path" | esc)
+            p=$(printf '%s' "${path#$TARGET/}" | esc)
             echo "disk_file_bytes{path=\"$p\"} $size"
           done
 
@@ -30,7 +30,8 @@ RUN="nice -n 19 ionice -c3"
     echo "# TYPE disk_dir_bytes gauge"
     $RUN du -b --max-depth=2 "$TARGET" 2>/dev/null | sort -rn | head -n "$TOP" \
         | while IFS=$'\t' read -r size path; do
-            p=$(printf '%s' "$path" | esc)
+            [ "$path" = "$TARGET" ] && continue
+            p=$(printf '%s' "${path#$TARGET/}" | esc)
             echo "disk_dir_bytes{path=\"$p\"} $size"
           done
 
