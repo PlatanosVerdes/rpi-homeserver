@@ -18,6 +18,10 @@
 # cal-bridge metrics (MS client secret expiry, etc.), daily at 09:00
 0 9 * * * /home/raspi/rpi-services/scripts/cal-bridge-metrics.sh
 
+# Radarr: search for upgrades of everything below its quality cutoff, Sundays at 05:00
+# (RSS alone misses releases that scroll out of the feed). Add `sonarr` to cover series too.
+0 5 * * 0 /home/raspi/rpi-homeserver/scripts/cutoff-search.sh >> /home/raspi/rpi-homeserver/cutoff-search.log 2>&1
+
 # Daily appdata backup at 04:00
 0 4 * * * /home/raspi/rpi-homeserver/scripts/backup.sh >> /home/raspi/rpi-homeserver/backup.log 2>&1
 
