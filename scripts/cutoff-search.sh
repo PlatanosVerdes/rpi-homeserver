@@ -64,7 +64,7 @@ for app in "${APPS[@]}"; do
 
     pending=$(curl -fsSL --connect-timeout 5 -H "X-Api-Key: $key" \
         "$api/wanted/cutoff?pageSize=1" 2>/dev/null \
-        | grep -o '"totalRecords":[0-9]*' | cut -d: -f2) || pending=""
+        | grep -o '"totalRecords"[[:space:]]*:[[:space:]]*[0-9]*' | grep -o '[0-9]*$') || pending=""
 
     if [ -z "$pending" ]; then
         log "$app: could not reach the API on port $port"
