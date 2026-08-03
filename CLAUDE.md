@@ -35,6 +35,7 @@ scripts/                    Operational scripts
   crontab                   Source of truth for all host cron jobs (install: crontab scripts/crontab)
   deploy_control.sh         Auto-deploy cron job (runs every 15 min via cron)
   backup.sh                 Daily appdata backup (cron), pushes metrics to Grafana
+  cutoff-search.sh          Weekly *arr search for items below their quality cutoff (cron)
   mount_setup.sh            One-time external disk mount setup
   rebuild-service.sh        Manual single-service rebuild helper
   bws-run.py                Bitwarden SM wrapper (dropped, kept for reference only)
