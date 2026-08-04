@@ -95,16 +95,12 @@ Icon names: search [walkxcode/dashboard-icons](https://github.com/walkxcode/dash
 
 ## Step 5 — Deploy
 
-### rpi-homeserver
+### Either repo
+A push to `main` deploys within seconds via the GitHub webhook
+(see [deploy-webhook.md](deploy-webhook.md)). One script handles both repos, so to
+trigger it by hand:
 ```bash
-# Push to git and wait up to 15 min, or trigger manually:
 bash ~/rpi-homeserver/scripts/deploy_control.sh
-```
-
-### rpi-services
-```bash
-# Push to git and wait up to 15 min, or trigger manually:
-bash ~/rpi-services/scripts/deploy_control.sh
 ```
 
 ### Reload Caddy only (if you only changed a Caddyfile):

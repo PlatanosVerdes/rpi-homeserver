@@ -16,20 +16,17 @@ a reference in case it is revisited. They are NOT wired into deploy.
 
 ---
 
-## Tailscale monitoring in Grafana — needs API key
+## ✅ Tailscale monitoring in Grafana — DONE (a different way)
 
-Tailnet name: **Bannet**. Service is ready in [compose-mon.yml](compose-mon.yml), just needs activation:
+Tailnet name: **Bannet**. This was solved without the `tailscale-exporter` container: the Go binary
+in [services/tailscale-metrics](services/tailscale-metrics) runs from host cron every minute and
+writes `tailscale.prom` to node_exporter's textfile collector, which Prometheus already scrapes.
+`TAILSCALE_API_KEY` is in `.env` and the dashboard is
+[config/grafana/dashboards_json/infrastructure/tailscale.json](config/grafana/dashboards_json/infrastructure/tailscale.json).
 
-1. Generate a Tailscale **API key** (not auth key):
-   → https://login.tailscale.com/admin/settings/keys → "Generate API access token"
-2. Add to `.env`:
-   ```
-   TAILSCALE_API_KEY=tskey-api-xxxxx
-   ```
-3. Uncomment `tailscale-exporter` in [compose-mon.yml](compose-mon.yml)
-4. Uncomment `tailscale` scrape job in [config/prometheus/prometheus.yml](config/prometheus/prometheus.yml)
-5. Start: `docker compose -f compose-mon.yml up -d tailscale-exporter`
-6. Import Grafana dashboard ID `17722` from grafana.com
+The commented-out `tailscale-exporter` service in [compose-mon.yml](compose-mon.yml) and its
+commented scrape job in [config/prometheus/prometheus.yml](config/prometheus/prometheus.yml) are
+the abandoned approach and can be deleted.
 
 ---
 
