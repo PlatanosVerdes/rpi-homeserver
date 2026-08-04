@@ -87,25 +87,27 @@ render_grafana_alerting() {
     # git, because the Telegram token and chat id must not be committed. Rules and policies are
     # copied as-is; the contact point is rendered from its .tmpl with values from .env.
     local src="$PROJECT_DIR/config/grafana/alerting"
-    # NOT under appdata/grafana: that tree is root-owned because Grafana runs as root,
-    # and this script runs as the normal user.
     local dst="$APPDATA/grafana-alerting"
     [[ -d "$src" ]] || return 0
 
-    mkdir -p "$dst"
+    # sudo throughout: Docker creates bind-mount targets under appdata as root, so this
+    # directory is root-owned whether or not the script got there first.
+    sudo mkdir -p "$dst"
 
     # No bot configured: leave the directory empty. A policy pointing at a contact point that
     # does not exist fails provisioning, and that takes all of Grafana down.
     if [[ -z "${TELEGRAM_ALERT_BOT_TOKEN:-}" || -z "${TELEGRAM_ALERT_CHAT_ID:-}" ]]; then
-        rm -f "$dst"/*.yml
+        sudo rm -f "$dst"/*.yml
         log "Grafana alerting: no Telegram credentials in .env, alerting left unprovisioned"
         return 0
     fi
 
-    cp -f "$src"/policies.yml "$src"/rules.yml "$dst"/
+    sudo cp -f "$src"/policies.yml "$src"/rules.yml "$dst"/
     sed -e "s|\${TELEGRAM_ALERT_BOT_TOKEN}|${TELEGRAM_ALERT_BOT_TOKEN}|g" \
         -e "s|\${TELEGRAM_ALERT_CHAT_ID}|${TELEGRAM_ALERT_CHAT_ID}|g" \
-        "$src/contact-points.yml.tmpl" > "$dst/contact-points.yml"
+        "$src/contact-points.yml.tmpl" | sudo tee "$dst/contact-points.yml" >/dev/null
+    # holds the bot token; Grafana runs as root in its container and can still read it
+    sudo chmod 600 "$dst/contact-points.yml"
 }
 
 deploy_repo() {
