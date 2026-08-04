@@ -28,6 +28,7 @@
 # Daily appdata backup at 04:00
 0 4 * * * /home/raspi/rpi-homeserver/scripts/backup.sh >> /home/raspi/rpi-homeserver/backup.log 2>&1
 
-# Dead man's switch: ping an external check every 5 min so someone outside notices if the Pi
-# goes dark (no-op unless HEALTHCHECK_URL is set in .env). See docs/alerting.md.
-*/5 * * * * /home/raspi/rpi-homeserver/scripts/heartbeat.sh
+# Dead man's switch: heartbeat to an external check every minute, so someone outside notices
+# within a few minutes if the Pi goes dark. Costs ~0.2s of CPU per run (0.3% of one core) and no
+# disk writes. No-op unless HEALTHCHECK_URL is set in .env. See docs/alerting.md.
+* * * * * /home/raspi/rpi-homeserver/scripts/heartbeat.sh

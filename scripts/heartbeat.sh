@@ -19,10 +19,13 @@ set -a; source "$PROJECT_DIR/.env"; set +a
 
 # Report a failure when the essentials are not actually working, so a Pi that is powered on but
 # broken does not keep sending a reassuring heartbeat.
+# One docker call, not one per container: it is the expensive part of this script (~0.5s) and this
+# runs every minute.
+running=$(docker ps --format '{{.Names}}' 2>/dev/null)
 reason=""
-docker ps --format '{{.Names}}' 2>/dev/null | grep -q '^caddy$' || reason="caddy is not running"
-[[ -z "$reason" ]] && ! docker ps --format '{{.Names}}' 2>/dev/null | grep -q '^prometheus$' \
-    && reason="prometheus is not running"
+for name in caddy prometheus; do
+    grep -qx "$name" <<< "$running" || { reason="$name is not running"; break; }
+done
 
 if [[ -n "$reason" ]]; then
     curl -fsS -m 10 --data-raw "$reason" "${HEALTHCHECK_URL}/fail" >/dev/null 2>&1
