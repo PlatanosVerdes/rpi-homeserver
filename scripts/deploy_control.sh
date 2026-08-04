@@ -136,6 +136,9 @@ if [ -d "$SERVICES_DIR" ]; then
     push_repo_metrics "services" $RESULT_SERVICES $TS
 fi
 
+# Keep the host crontab in sync with both repos' fragments
+bash "$PROJECT_DIR/scripts/install-crontab.sh" 2>&1 | while IFS= read -r line; do log "[cron] $line"; done
+
 # Aggregate status: error(1)>changed(0)>no-change(2)
 if [ $RESULT_HOME -eq 1 ] || [ $RESULT_SERVICES -eq 1 ]; then
     DEPLOY_ERRORS=$((DEPLOY_ERRORS + 1))

@@ -9,7 +9,9 @@ A modular Docker-based home server running on a Raspberry Pi. All services run a
 **Conventions both repos must follow** (they are one system, so drift hurts):
 - Image/app versions in a committed `versions.env`, never `:latest` and never inline in compose.
 - One deploy script, `rpi-homeserver/scripts/deploy_control.sh`, which deploys both repos.
-- One host crontab, `rpi-homeserver/scripts/crontab`, even for jobs that belong to rpi-services.
+- Cron: each repo owns its own `scripts/crontab` **fragment**, holding only its own jobs.
+  `scripts/install-crontab.sh` merges them and installs the result on every deploy (the
+  rpi-services fragment is optional), the same way Caddy imports `config/caddy/services/`.
 - Secrets in each repo's own `.env`, gitignored, mirrored in `.env.example`.
 
 ---
@@ -39,7 +41,8 @@ services/                   Source code for custom services built in this repo
   deploy-webhook/           Python receiver (systemd) — deploys on GitHub push via Cloudflare tunnel
 
 scripts/                    Operational scripts
-  crontab                   Source of truth for all host cron jobs (install: crontab scripts/crontab)
+  crontab                   This repo's host cron jobs (a fragment; see install-crontab.sh)
+  install-crontab.sh        Merges both repos' crontab fragments and installs them (run on deploy)
   deploy_control.sh         Auto-deploy cron job (runs every 15 min via cron)
   backup.sh                 Daily appdata backup (cron), pushes metrics to Grafana
   cutoff-search.sh          Weekly *arr search for items below their quality cutoff (cron)

@@ -1,10 +1,13 @@
-# Host crontab for the RPi home server — source of truth (keep in sync with the Pi).
+# Host crontab fragment for rpi-homeserver — generic jobs only.
 #
-# Install / update on the Pi:   crontab /home/raspi/rpi-homeserver/scripts/crontab
-# Show current:                 crontab -l
+# This file is NOT installed on its own. `scripts/install-crontab.sh` merges it with
+# rpi-services/scripts/crontab (optional, skipped if that repo is not present) and installs the
+# result, the same way Caddy imports config/caddy/services/. Personal jobs belong in the other
+# repo's fragment, never here.
 #
-# Do NOT edit the crontab directly with `crontab -e` — edit this file, commit, and re-install,
-# so the schedule stays reproducible and any drift shows up in a diff.
+# deploy_control.sh runs the installer on every deploy, so committing a change here applies it.
+# Do NOT edit the live crontab with `crontab -e`: it gets overwritten on the next deploy.
+# Show current:  crontab -l
 
 # Auto-deploy: pull both repos and apply. The GitHub webhook (services/deploy-webhook)
 # deploys on push, so this is now the every-30-min self-heal net: it restarts anything that
@@ -17,16 +20,9 @@
 # Largest files/dirs on the data disk -> node-exporter textfile collector, every 6h
 0 */6 * * * /home/raspi/rpi-homeserver/scripts/disk-usage-metrics.sh >> /home/raspi/rpi-homeserver/disk-usage-metrics.log 2>&1
 
-# cal-bridge metrics (MS client secret expiry, etc.), daily at 09:00
-0 9 * * * /home/raspi/rpi-services/scripts/cal-bridge-metrics.sh
-
 # Radarr: search for upgrades of everything below its quality cutoff, Sundays at 05:00
 # (RSS alone misses releases that scroll out of the feed). Add `sonarr` to cover series too.
 0 5 * * 0 /home/raspi/rpi-homeserver/scripts/cutoff-search.sh >> /home/raspi/rpi-homeserver/cutoff-search.log 2>&1
 
 # Daily appdata backup at 04:00
 0 4 * * * /home/raspi/rpi-homeserver/scripts/backup.sh >> /home/raspi/rpi-homeserver/backup.log 2>&1
-
-# Download new One Pace episodes daily at 03:00
-# COMPOSE_ENV_FILES is required: the image tag lives in rpi-services/versions.env
-0 3 * * * cd /home/raspi/rpi-services && COMPOSE_ENV_FILES=versions.env,.env docker compose run --rm one-pace-downloader >> /home/raspi/rpi-services/one-pace.log 2>&1
