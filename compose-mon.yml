@@ -33,6 +33,9 @@ services:
       - /sys:/host/sys:ro
       - /:/rootfs:ro
       - /var/lib/node_exporter/textfile_collector:/textfile_collector:ro
+      # The / bind mount is not recursive, so the data disk needs its own mount or the
+      # filesystem collector cannot see it (no free-space metric for it, no disk-full alert)
+      - ${DATA_ROOT}:/rootfs${DATA_ROOT}:ro
     command:
       - '--path.procfs=/host/proc'
       - '--path.sysfs=/host/sys'
@@ -98,6 +101,9 @@ services:
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
+      # Interpolated into config/grafana/provisioning/alerting/contact-points.yml
+      - TELEGRAM_ALERT_BOT_TOKEN=${TELEGRAM_ALERT_BOT_TOKEN}
+      - TELEGRAM_ALERT_CHAT_ID=${TELEGRAM_ALERT_CHAT_ID}
     volumes:
       - ${APP_CONFIG_PATH}/grafana/data:/var/lib/grafana
       - ${CONFIG_ROOT}/grafana/provisioning:/etc/grafana/provisioning:ro
