@@ -136,6 +136,12 @@ if [ -d "$SERVICES_DIR" ]; then
     push_repo_metrics "services" $RESULT_SERVICES $TS
 fi
 
+# Caddy imports config/caddy/services/*.caddy; link the companion repo's routes if present
+CADDY_LINK="$PROJECT_DIR/config/caddy/services/rpi-services"
+if [[ -d "$SERVICES_DIR/config/caddy" && ! -e "$CADDY_LINK" ]]; then
+    ln -sfn "$SERVICES_DIR/config/caddy" "$CADDY_LINK" && log "Linked rpi-services Caddy routes"
+fi
+
 # Keep the host crontab in sync with both repos' fragments
 bash "$PROJECT_DIR/scripts/install-crontab.sh" 2>&1 | while IFS= read -r line; do log "[cron] $line"; done
 
