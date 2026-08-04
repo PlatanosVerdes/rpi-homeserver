@@ -109,6 +109,22 @@ services:
       - ${APP_CONFIG_PATH}/dnsmasq.d:/etc/dnsmasq.d
     network_mode: host
 
+  # --- CLOUDFLARED (tunnel — publishes ONLY the GitHub deploy webhook) ---
+  # Host network so it can reach the webhook receiver on 127.0.0.1:9000 (systemd unit in
+  # services/deploy-webhook/). What is actually public is decided by the tunnel's public
+  # hostname config in the Cloudflare dashboard. See docs/deploy-webhook.md.
+  cloudflared:
+    image: cloudflare/cloudflared:${CLOUDFLARED_VERSION}
+    container_name: cloudflared
+    restart: unless-stopped
+    # Deliberately NOT in `all`: with an empty TUNNEL_TOKEN it would crash-loop, so it only
+    # starts when `tunnel` is added to COMPOSE_PROFILES explicitly.
+    profiles: [tunnel]
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARED_TUNNEL_TOKEN}
+    network_mode: host
+
 networks:
   media-network:
     external: true

@@ -30,6 +30,7 @@ config/                     Static config files committed to git
 services/                   Source code for custom services built in this repo
   acestream-updater/        Go service — fetches IPFS channel lists, writes .m3u for Jellyfin
   tailscale-metrics/        Go binary (cron) — exports Tailscale peer metrics to node_exporter
+  deploy-webhook/           Python receiver (systemd) — deploys on GitHub push via Cloudflare tunnel
 
 scripts/                    Operational scripts
   crontab                   Source of truth for all host cron jobs (install: crontab scripts/crontab)
@@ -63,15 +64,21 @@ docker compose up -d
 
 ## How auto-deploy works
 
-`scripts/deploy_control.sh` runs every 15 minutes via cron:
+`scripts/deploy_control.sh` runs on every GitHub push (webhook) and every 30 minutes via cron:
 1. `git pull origin main`
 2. If HEAD changed → `docker compose up -d --build --remove-orphans`
 3. If no change → `docker compose up -d --remove-orphans` (ensures containers are running)
 4. Pushes metrics to Pushgateway (visible in Grafana "Deploy Monitor" dashboard)
 
+It takes an `flock` on `.deploy.lock`, so a burst of pushes cannot start two deploys at once.
+
+**Push-triggered deploy:** GitHub webhook → Cloudflare tunnel → `services/deploy-webhook`
+(systemd, HMAC-verified) → this script. Setup in [docs/deploy-webhook.md](docs/deploy-webhook.md).
+The cron stays as the self-heal net.
+
 **Cron entry on the host:**
 ```
-*/15 * * * * /home/raspi/rpi-homeserver/scripts/deploy_control.sh >> /home/raspi/rpi-homeserver/deploy_control.log 2>&1
+*/30 * * * * /home/raspi/rpi-homeserver/scripts/deploy_control.sh >> /home/raspi/rpi-homeserver/deploy_control.log 2>&1
 ```
 
 ---
@@ -102,7 +109,8 @@ Controlled via `COMPOSE_PROFILES` in `.env`. No need to touch compose files.
 | `media` | Plex, Overseerr, Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr |
 | `bot` | Pol Academy Offers Bot |
 | `cal` | Google Calendar Bridge (cal-bridge) |
-| `all` | Everything |
+| `tunnel` | Cloudflared (publishes only the GitHub deploy webhook — see docs/deploy-webhook.md) |
+| `all` | Everything except `tunnel` (it needs a token, so it is opt-in) |
 
 Main Pi: `COMPOSE_PROFILES=all`. Secondary Pi: e.g. `COMPOSE_PROFILES=essential,moni`.
 

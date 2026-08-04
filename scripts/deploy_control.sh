@@ -15,6 +15,21 @@ TOTAL_RUNS=$((TOTAL_RUNS + 1))
 
 log() { echo "$(date '+%Y-%m-%d %H:%M:%S') - $1"; }
 
+# Cron used to truncate this log on every run; now cron and the webhook both append to it,
+# so keep it bounded. Truncate in place (not mv) or the open redirect writes to a dead inode.
+LOG_FILE="$PROJECT_DIR/deploy_control.log"
+if [[ -f "$LOG_FILE" ]] && [[ "$(stat -c%s "$LOG_FILE" 2>/dev/null || echo 0)" -gt 5242880 ]]; then
+    tail -n 500 "$LOG_FILE" > "$LOG_FILE.tmp" && cat "$LOG_FILE.tmp" > "$LOG_FILE"
+    rm -f "$LOG_FILE.tmp"
+fi
+
+# Cron and the webhook receiver can both fire this; never let two deploys overlap.
+exec 9>"$PROJECT_DIR/.deploy.lock"
+if ! flock -n 9; then
+    log "Another deploy is already running, skipping."
+    exit 0
+fi
+
 push_metrics() {
     local status=$1
     # Legacy job (keeps existing deploy dashboard working)
