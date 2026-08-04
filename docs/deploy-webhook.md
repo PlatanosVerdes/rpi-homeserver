@@ -81,6 +81,17 @@ In `rpi-homeserver` **and** `rpi-services` → Settings → Webhooks → Add web
 
 GitHub sends a `ping` on save; the receiver answers `pong`. Check *Recent Deliveries* for a 200.
 
+## Changing the receiver
+
+The receiver is a **host systemd service**, so a deploy updates its code but does not reload it.
+After changing `deploy-webhook.py`, restart it by hand or the old process keeps serving:
+
+```bash
+sudo systemctl restart deploy-webhook
+```
+
+Nothing warns you if you forget: the webhook keeps working, just with the previous code.
+
 ## Troubleshooting
 
 ```bash
