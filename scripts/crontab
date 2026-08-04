@@ -6,8 +6,10 @@
 # Do NOT edit the crontab directly with `crontab -e` — edit this file, commit, and re-install,
 # so the schedule stays reproducible and any drift shows up in a diff.
 
-# Auto-deploy: pull both repos and apply, every 15 minutes
-*/15 * * * * /home/raspi/rpi-homeserver/scripts/deploy_control.sh > /home/raspi/rpi-homeserver/deploy_control.log 2>&1
+# Auto-deploy: pull both repos and apply. The GitHub webhook (services/deploy-webhook)
+# deploys on push, so this is now the every-30-min self-heal net: it restarts anything that
+# died and covers pushes that arrived while the Pi or the tunnel was down.
+*/30 * * * * /home/raspi/rpi-homeserver/scripts/deploy_control.sh >> /home/raspi/rpi-homeserver/deploy_control.log 2>&1
 
 # Tailscale peer metrics -> node-exporter textfile collector, every minute
 * * * * * /home/raspi/rpi-homeserver/services/tailscale-metrics/tailscale-metrics

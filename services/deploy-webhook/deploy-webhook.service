@@ -1,0 +1,17 @@
+[Unit]
+Description=GitHub deploy webhook receiver
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=raspi
+WorkingDirectory=/home/raspi/rpi-homeserver
+ExecStart=/usr/bin/python3 /home/raspi/rpi-homeserver/services/deploy-webhook/deploy-webhook.py
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target
