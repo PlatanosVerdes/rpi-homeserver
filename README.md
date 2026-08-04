@@ -14,7 +14,67 @@ A modular, Docker-based home server for Raspberry Pi. Uses Docker Compose's `inc
 | **Media** | Streaming & Live TV | Plex, Jellyfin, Overseerr, Bazarr, Maintainerr, Acestream |
 | **Arrs** | Automation & Downloads | Radarr, Sonarr, Prowlarr, qBittorrent, FlareSolverr |
 | **Monitoring** | System Health | Prometheus, Grafana, Pushgateway, node-exporter, cAdvisor |
-| **Apps** | Custom Services | Pol Academy Offers Bot |
+
+---
+
+## How a change reaches the Pi
+
+Nothing is deployed by hand. A push is the only trigger, and the repo is the source of truth.
+
+```
+ cal-bridge      one-pace-downloader      air-tag      PolFerrerAcademyOffers
+     │                   │                   │                  │
+     └──── push to main ─┴───────────────────┴──────────────────┘
+                              │
+                    auto-tag.yml → tag vYYYY.MM.DD
+                              │
+                              ▼
+              ┌───────────────────────────────────────┐
+              │ rpi-services                          │
+              │ bump-app-versions.yml  (every 30 min) │
+              │ versions.env → commit + push          │
+              └───────────────────────────────────────┘
+                              │
+   your push ─────────────────┤
+                              ▼
+                    GitHub webhook (push event)
+                              │   HMAC-SHA256 signature
+                              ▼
+           Cloudflare edge   deploy.<domain>
+                              │   outbound tunnel, no ports opened
+                              ▼
+                    cloudflared ──► 127.0.0.1:9000
+                              │   deploy-webhook.py verifies the signature
+                              ▼
+                    ╔═════════════════════╗
+                    ║  deploy_control.sh  ║ ◄──── cron every 30 min
+                    ╚═════════════════════╝        (self-heal fallback)
+```
+
+The cron is not redundant: it restarts containers that died on their own and picks up pushes that
+landed while the Pi or the tunnel was down.
+
+### What a deploy actually does
+
+```
+deploy_control.sh
+   │
+   ├─ flock ................... another deploy already running? exit
+   ├─ git pull rpi-homeserver
+   ├─ render alerting ......... template (git) + secrets (.env)
+   │                            └─► appdata/grafana-alerting/
+   ├─ docker compose up -d --build
+   ├─ git pull rpi-services  ──► docker compose up -d --build
+   ├─ install-crontab.sh ...... homeserver fragment + services fragment
+   │                            └─► host crontab (and undoes any manual drift)
+   └─ metrics ──► Pushgateway
+                        │
+                        ▼
+                   Prometheus ──► Grafana ──► alert rules ──► Telegram
+```
+
+Details: [docs/deploy-webhook.md](docs/deploy-webhook.md) for the webhook and tunnel,
+[docs/alerting.md](docs/alerting.md) for the alert rules and the dead man's switch.
 
 ---
 
