@@ -87,7 +87,9 @@ render_grafana_alerting() {
     # git, because the Telegram token and chat id must not be committed. Rules and policies are
     # copied as-is; the contact point is rendered from its .tmpl with values from .env.
     local src="$PROJECT_DIR/config/grafana/alerting"
-    local dst="$APPDATA/grafana/alerting"
+    # NOT under appdata/grafana: that tree is root-owned because Grafana runs as root,
+    # and this script runs as the normal user.
+    local dst="$APPDATA/grafana-alerting"
     [[ -d "$src" ]] || return 0
 
     mkdir -p "$dst"
