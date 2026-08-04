@@ -88,7 +88,14 @@ cannot keep sending a reassuring heartbeat.
 With `HEALTHCHECK_URL` unset the script exits quietly, so a clone without an account is not broken,
 just uncovered. To turn it on:
 
-1. Create a free check at [healthchecks.io](https://healthchecks.io), period 15 minutes, grace 10.
+1. Create a free check at [healthchecks.io](https://healthchecks.io) and set **Period 1 minute,
+   Grace 3 minutes**. Those two numbers, not the cron, decide how fast you are told: the check is
+   declared down once `period + grace` passes with no ping, so this alerts about 4 minutes after
+   the Pi goes dark. Going lower turns a single missed ping into a false alarm.
 2. Put its ping URL in `.env` as `HEALTHCHECK_URL`.
+
+Cost of running it every minute, measured on the Pi: **~0.2s of CPU** per heartbeat (0.12s user +
+0.09s sys, so roughly 0.3% of one core) and no disk writes. The wall time is ~1s but almost all of
+it is waiting on the network. For comparison, `tailscale-metrics` already runs every minute.
 
 That is the only alert in this whole setup that does not depend on the Pi being alive.
