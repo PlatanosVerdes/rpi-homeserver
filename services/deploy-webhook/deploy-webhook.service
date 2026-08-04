@@ -9,9 +9,12 @@ WorkingDirectory=/home/raspi/rpi-homeserver
 ExecStart=/usr/bin/python3 /home/raspi/rpi-homeserver/services/deploy-webhook/deploy-webhook.py
 Restart=always
 RestartSec=5
-NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=full
+# No NoNewPrivileges here: the whole job of this service is to launch deploy_control.sh, which
+# needs sudo for a couple of root-owned paths under appdata. The flag is inherited by children,
+# so setting it silently breaks those steps when the deploy comes from the webhook (it still
+# worked from cron, which made it look like a random inconsistency).
 
 [Install]
 WantedBy=multi-user.target
