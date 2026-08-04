@@ -1,0 +1,12 @@
+apiVersion: 1
+
+# Everything goes to the Telegram bot. repeat_interval keeps a still-broken thing from
+# pinging every group_interval forever.
+policies:
+  - orgId: 1
+    receiver: telegram-homelab
+    group_by:
+      - alertname
+    group_wait: 30s
+    group_interval: 5m
+    repeat_interval: 6h

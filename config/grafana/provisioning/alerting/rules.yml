@@ -1,0 +1,222 @@
+apiVersion: 1
+
+# Alert rules, provisioned from git (read-only in the UI on purpose: this file is the source
+# of truth). Every expression is written to return 1 when it fires, using PromQL's `bool`
+# modifier, so all rules share the same "threshold > 0" condition and stay easy to read.
+#
+# What is NOT covered here, by design: the Pi being dead. Grafana dies with it, so that one
+# needs the external dead man's switch (see docs/alerting.md).
+
+groups:
+  - orgId: 1
+    name: homelab
+    folder: Alerts
+    interval: 1m
+    rules:
+      - uid: homelab-disk-root
+        title: System disk almost full
+        condition: C
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Less than 15% free on / (the SD card)
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: '(node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) < bool 0.15'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+
+      - uid: homelab-disk-data
+        title: Data disk almost full
+        condition: C
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Less than 10% free on the data disk
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: '(node_filesystem_avail_bytes{mountpoint="/mnt/data"} / node_filesystem_size_bytes{mountpoint="/mnt/data"}) < bool 0.10'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+
+      - uid: homelab-backup-failed
+        title: Backup failed
+        condition: C
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: The last appdata backup reported an error
+          description: Check backup.log on the Pi. Metric backup_last_status is not 0.
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: 'backup_last_status != bool 0'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+
+      - uid: homelab-backup-stale
+        title: No recent backup
+        condition: C
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: No successful backup in more than 36 hours
+          description: The daily 04:00 cron either did not run or never finished.
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: '(time() - backup_last_run_timestamp) > bool 129600'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+
+      - uid: homelab-deploy-error
+        title: Deploy failing
+        condition: C
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: The last deploy ended in error
+          description: Check deploy_control.log. Most likely a failed build or a compose error.
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: 'deploy_last_status == bool 2'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+
+      - uid: homelab-target-down
+        title: Prometheus target down
+        condition: C
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: '{{ range .Alerts }}{{ .Labels.job }} {{ end }}is not being scraped'
+          description: The exporter or the container behind it is down.
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: 'up == bool 0'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+
+      - uid: homelab-temp-high
+        title: Pi running hot
+        condition: C
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: SoC temperature above 75 C for 10 minutes
+          description: Sustained throttling territory. Check airflow and heavy containers.
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: 'node_thermal_zone_temp > bool 75'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
