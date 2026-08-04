@@ -7,6 +7,10 @@ DEPLOY_STATE_FILE="$PROJECT_DIR/.deploy_state"
 
 set -a; source "$PROJECT_DIR/.env"; set +a
 
+# APP_CONFIG_PATH may be relative (e.g. ./appdata); resolve it against the project dir
+APPDATA="${APP_CONFIG_PATH:-./appdata}"
+[[ "$APPDATA" != /* ]] && APPDATA="$PROJECT_DIR/${APPDATA#./}"
+
 TOTAL_RUNS=0; DEPLOYS_WITH_CHANGES=0; DEPLOY_ERRORS=0
 if [[ -f "$DEPLOY_STATE_FILE" ]]; then
     source "$DEPLOY_STATE_FILE" || true
@@ -78,6 +82,30 @@ deploy_repo_last_run_timestamp{repo="${repo}"} $ts
 EOF
 }
 
+render_grafana_alerting() {
+    # Grafana reads its alerting config from appdata (see compose-mon.yml), not straight from
+    # git, because the Telegram token and chat id must not be committed. Rules and policies are
+    # copied as-is; the contact point is rendered from its .tmpl with values from .env.
+    local src="$PROJECT_DIR/config/grafana/alerting"
+    local dst="$APPDATA/grafana/alerting"
+    [[ -d "$src" ]] || return 0
+
+    mkdir -p "$dst"
+
+    # No bot configured: leave the directory empty. A policy pointing at a contact point that
+    # does not exist fails provisioning, and that takes all of Grafana down.
+    if [[ -z "${TELEGRAM_ALERT_BOT_TOKEN:-}" || -z "${TELEGRAM_ALERT_CHAT_ID:-}" ]]; then
+        rm -f "$dst"/*.yml
+        log "Grafana alerting: no Telegram credentials in .env, alerting left unprovisioned"
+        return 0
+    fi
+
+    cp -f "$src"/policies.yml "$src"/rules.yml "$dst"/
+    sed -e "s|\${TELEGRAM_ALERT_BOT_TOKEN}|${TELEGRAM_ALERT_BOT_TOKEN}|g" \
+        -e "s|\${TELEGRAM_ALERT_CHAT_ID}|${TELEGRAM_ALERT_CHAT_ID}|g" \
+        "$src/contact-points.yml.tmpl" > "$dst/contact-points.yml"
+}
+
 deploy_repo() {
     local dir=$1
     local label=$2
@@ -106,6 +134,9 @@ deploy_repo() {
         return 2
     fi
     after=$(git rev-parse HEAD 2>/dev/null || echo "none")
+
+    # Must happen after the pull and before compose can restart Grafana
+    [[ "$label" == "homeserver" ]] && render_grafana_alerting
 
     if [ "$before" != "$after" ]; then
         log "[$label] Changes detected, rebuilding..."
