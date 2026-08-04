@@ -67,3 +67,7 @@ yarn-error.log
 *.crt
 secrets/
 credentials/
+
+# Caddy routes imported from companion repos: a symlink created by deploy_control.sh
+config/caddy/services/*
+!config/caddy/services/.gitkeep
