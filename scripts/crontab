@@ -28,4 +28,5 @@
 0 4 * * * /home/raspi/rpi-homeserver/scripts/backup.sh >> /home/raspi/rpi-homeserver/backup.log 2>&1
 
 # Download new One Pace episodes daily at 03:00
-0 3 * * * cd /home/raspi/rpi-services && docker compose run --rm one-pace-downloader >> /home/raspi/rpi-services/one-pace.log 2>&1
+# COMPOSE_ENV_FILES is required: the image tag lives in rpi-services/versions.env
+0 3 * * * cd /home/raspi/rpi-services && COMPOSE_ENV_FILES=versions.env,.env docker compose run --rm one-pace-downloader >> /home/raspi/rpi-services/one-pace.log 2>&1
