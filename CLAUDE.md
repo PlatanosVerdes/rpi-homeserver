@@ -30,9 +30,11 @@ compose-apps.yml            Custom apps (Telegram bot)
 config/                     Static config files committed to git
   caddy/Caddyfile           Reverse proxy rules (HTTPS + HTTP short names)
   caddy/Dockerfile          Custom Caddy image with Cloudflare DNS plugin
-  caddy/services/           Auto-imported by Caddy — symlink rpi-services here to extend routes
+  caddy/services/           Extra route files for this repo (auto-imported by Caddy)
+  caddy/ext-services/       Mount point for a companion repo's routes (see EXT_CADDY_PATH)
   prometheus/prometheus.yml Scrape targets
   grafana/                  Provisioned datasources + dashboard JSONs
+  grafana/alerting/         Alert rules, policy, contact-point template (rendered on deploy)
   homepage/                 Dashboard YAML configs
 
 services/                   Source code for custom services built in this repo
@@ -75,9 +77,18 @@ docker compose up -d
 
 `scripts/deploy_control.sh` runs on every GitHub push (webhook) and every 30 minutes via cron:
 1. `git pull origin main`
-2. If HEAD changed → `docker compose up -d --build --remove-orphans`
-3. If no change → `docker compose up -d --remove-orphans` (ensures containers are running)
-4. Pushes metrics to Pushgateway (visible in Grafana "Deploy Monitor" dashboard)
+2. **Renders Grafana's alerting config** (`render_grafana_alerting`): compose only interpolates
+   `${VAR}` inside its own YAML, never inside a config file, so something has to combine the
+   template in git with the secrets in `.env` before Grafana starts. That is this step. It writes
+   `config/grafana/alerting/*` into `appdata/grafana-alerting/` with the values filled in, which
+   is what Grafana actually mounts. See [docs/alerting.md](docs/alerting.md).
+3. If HEAD changed → `docker compose up -d --build --remove-orphans`
+4. If no change → `docker compose up -d --remove-orphans` (ensures containers are running)
+5. Installs the merged host crontab (`install-crontab.sh`)
+6. Pushes metrics to Pushgateway (visible in Grafana "Deploy Monitor" dashboard)
+
+Order matters: the render sits after the pull (or it would use a stale template) and before
+compose (or Grafana would start reading the previous file).
 
 It takes an `flock` on `.deploy.lock`, so a burst of pushes cannot start two deploys at once.
 
@@ -187,6 +198,11 @@ TAILSCALE_API_KEY              # Read directly by tailscale-metrics binary
 ## Grafana dashboards
 
 All dashboards are provisioned from JSON files in `config/grafana/dashboards_json/`. Changes to dashboards must be exported from Grafana and committed here — they are NOT persisted in the Grafana container's volume.
+
+**Alerting** is provisioned too, from `config/grafana/alerting/` (rules, notification policy, and a
+contact-point *template* for the Telegram bot). It is read-only in the Grafana UI on purpose. The
+token and chat id come from `.env` via the deploy's render step, never from git. Full explanation
+in [docs/alerting.md](docs/alerting.md).
 
 Community dashboards to import manually:
 - `1860` — Node Exporter Full
