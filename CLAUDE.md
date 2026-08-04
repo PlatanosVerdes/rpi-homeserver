@@ -2,9 +2,15 @@
 
 ## What this project is
 
-A modular Docker-based home server running on a Raspberry Pi. All services run as Docker containers managed by Docker Compose. The repo is the source of truth: a cron job (`deploy_control.sh`) pulls from git every 15 minutes and applies changes automatically.
+A modular Docker-based home server running on a Raspberry Pi. All services run as Docker containers managed by Docker Compose. The repo is the source of truth: a push to `main` deploys within seconds via a GitHub webhook, with a cron every 30 minutes as the fallback (`deploy_control.sh` handles both).
 
-**Two-repo architecture:** This repo is public and generic (anyone can clone and use it). Personal/custom services live in a separate private repo [`rpi-services`](https://github.com/PlatanosVerdes/rpi-services). Both repos run on the same Pi, share `media-network`, and extend the same Caddy instance via the services import mechanism (see Networking section below).
+**Two-repo architecture:** Both repos are public. The split is *generic vs personal*, not private vs public: this repo is meant to be clonable and useful to anyone, so nothing personal lives here. Personal/custom services (Telegram bot, calendar bridge, AirTag tracker) live in [`rpi-services`](https://github.com/PlatanosVerdes/rpi-services). Both run on the same Pi, share `media-network`, are deployed by the same script, and extend the same Caddy instance via the services import mechanism (see Networking section below).
+
+**Conventions both repos must follow** (they are one system, so drift hurts):
+- Image/app versions in a committed `versions.env`, never `:latest` and never inline in compose.
+- One deploy script, `rpi-homeserver/scripts/deploy_control.sh`, which deploys both repos.
+- One host crontab, `rpi-homeserver/scripts/crontab`, even for jobs that belong to rpi-services.
+- Secrets in each repo's own `.env`, gitignored, mirrored in `.env.example`.
 
 ---
 
