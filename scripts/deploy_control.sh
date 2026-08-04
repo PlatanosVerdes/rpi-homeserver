@@ -4,6 +4,8 @@ PROJECT_DIR="$HOME/rpi-homeserver"
 SERVICES_DIR="$HOME/rpi-services"
 PUSHGATEWAY_URL="http://localhost:9091"
 DEPLOY_STATE_FILE="$PROJECT_DIR/.deploy_state"
+# The webhook receiver sets this to "webhook"; cron leaves the default
+DEPLOY_TRIGGER="${DEPLOY_TRIGGER:-cron}"
 
 set -a; source "$PROJECT_DIR/.env"; set +a
 
@@ -53,6 +55,9 @@ deploy_last_run_timestamp $(date +%s)
 # HELP deploy_last_status Last deploy status (0=no_change, 1=changed, 2=error)
 # TYPE deploy_last_status gauge
 deploy_last_status $status
+# HELP deploy_last_trigger What ran the last deploy (webhook = push, cron = fallback sweep)
+# TYPE deploy_last_trigger gauge
+deploy_last_trigger{trigger="$DEPLOY_TRIGGER"} 1
 EOF
     cat <<EOF > "$DEPLOY_STATE_FILE"
 TOTAL_RUNS=$TOTAL_RUNS

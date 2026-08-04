@@ -25,6 +25,12 @@ scrape_configs:
     static_configs:
       - targets: ['pihole-exporter:9666']
 
+  # Cloudflare tunnel health (--metrics flag in compose-core.yml). Only up when the
+  # `tunnel` profile is active, so it shows as down on a Pi without the tunnel.
+  - job_name: 'cloudflared'
+    static_configs:
+      - targets: ['host.docker.internal:2000']
+
   # Uncomment when tailscale-exporter is enabled in compose-mon.yml
   # - job_name: 'tailscale'
   #   static_configs:
