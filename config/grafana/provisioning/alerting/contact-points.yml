@@ -11,8 +11,10 @@ contactPoints:
         type: telegram
         disableResolveMessage: false
         settings:
-          bottoken: $TELEGRAM_ALERT_BOT_TOKEN
-          chatid: $TELEGRAM_ALERT_CHAT_ID
+          # Both MUST be quoted: Grafana wants strings, and an unquoted chat id is parsed as
+          # a number, which fails provisioning and takes the whole Grafana startup down.
+          bottoken: "$TELEGRAM_ALERT_BOT_TOKEN"
+          chatid: "$TELEGRAM_ALERT_CHAT_ID"
           parse_mode: HTML
           message: |
             {{ if eq .Status "firing" }}🔴{{ else }}✅{{ end }} <b>{{ .Status | toUpper }}</b>
