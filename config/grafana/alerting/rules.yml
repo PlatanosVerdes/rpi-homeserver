@@ -168,7 +168,9 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: '{{ range .Alerts }}{{ .Labels.job }} {{ end }}is not being scraped'
+          # Annotations are rendered per alert instance, so the variables are $labels/$values.
+          # `range .Alerts` only exists in the notification template, not here.
+          summary: 'Job {{ $labels.job }} is not being scraped'
           description: The exporter or the container behind it is down.
         noDataState: OK
         execErrState: Error
