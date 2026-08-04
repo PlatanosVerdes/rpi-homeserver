@@ -25,7 +25,6 @@ compose-core.yml            Caddy, Homepage, Pi-hole, Speedtest-tracker
 compose-media.yml           Plex, Jellyfin, Overseerr, Acestream
 compose-arrs.yml            Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr
 compose-mon.yml             Prometheus, Grafana, Pushgateway, node-exporter, cAdvisor
-compose-apps.yml            Custom apps (Telegram bot)
 
 config/                     Static config files committed to git
   caddy/Caddyfile           Reverse proxy rules (HTTPS + HTTP short names)
