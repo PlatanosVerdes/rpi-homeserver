@@ -23,6 +23,8 @@ services:
     volumes:
       - ${CONFIG_ROOT}/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - ${CONFIG_ROOT}/caddy/services:/etc/caddy/services:ro
+      # Routes from a companion repo (EXT_CADDY_PATH in .env); empty dir when there is none
+      - ${EXT_CADDY_PATH:-./config/caddy/ext-services}:/etc/caddy/ext-services:ro
       - ${APP_CONFIG_PATH}/caddy/data:/data
       - ${APP_CONFIG_PATH}/caddy/config:/config
     networks:

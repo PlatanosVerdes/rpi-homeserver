@@ -98,11 +98,18 @@ The cron stays as the self-heal net.
 - **Remote (Tailscale):** All HTTPS subdomains (`*.platanosverdes.com`) resolve to the Pi's Tailscale IP (`TAILSCALE_IP`). Certificates issued automatically via Cloudflare DNS challenge.
 - **Pi-hole:** DNS for the whole tailnet. All `*.platanosverdes.com` subdomains point to `TAILSCALE_IP` in Pi-hole's custom DNS.
 - **Docker network:** All services share `media-network` (bridge).
-- **Caddy extension from rpi-services:** Caddy auto-imports `config/caddy/services/*.caddy`. The `rpi-services` repo adds its routes by symlinking its caddy config dir here:
+- **Caddy extension from a companion repo:** the Caddyfile imports two globs,
+  `config/caddy/services/*.caddy` (extra routes kept in this repo) and
+  `/etc/caddy/ext-services/*.caddy` (routes owned by another repo). The second one is a bind mount
+  driven by `EXT_CADDY_PATH` in `.env`:
   ```bash
-  ln -s ~/rpi-services/config/caddy ~/rpi-homeserver/config/caddy/services/rpi-services
+  EXT_CADDY_PATH=/home/raspi/rpi-services/config/caddy
   ```
-  This way rpi-services never needs to touch this repo to add HTTPS routes.
+  Unset it and Caddy mounts an empty dir instead. This way rpi-services adds HTTPS routes without
+  touching this repo, and the wiring lives in git rather than in a local override file.
+
+  > A `ln -s ... config/caddy/services/rpi-services` symlink is documented in older notes and does
+  > **not** work: the import glob is `*.caddy`, so a directory named `rpi-services` never matches.
 
 ---
 
