@@ -156,11 +156,17 @@ Then approve the exit node in the Tailscale admin console and set Pi-hole as the
 
 ### 9. Configure auto-deployment
 
+Install the crontab from the repo (never with `crontab -e`, the deploy overwrites the live one):
+
 ```bash
-crontab -e
-# Add:
-*/15 * * * * /home/raspi/rpi-homeserver/scripts/deploy_control.sh >> /home/raspi/rpi-homeserver/deploy_control.log 2>&1
+bash ~/rpi-homeserver/scripts/install-crontab.sh
 ```
+
+That merges this repo's `scripts/crontab` with a companion repo's fragment if there is one, and
+`deploy_control.sh` re-runs it on every deploy, so committed cron changes apply themselves.
+
+For push-triggered deploys instead of waiting for the 30-minute cron, see
+[docs/deploy-webhook.md](docs/deploy-webhook.md).
 
 ### 10. Configure Pi-hole DNS records
 
