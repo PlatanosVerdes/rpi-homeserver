@@ -198,6 +198,21 @@ TAILSCALE_API_KEY              # Read directly by tailscale-metrics binary
 
 All dashboards are provisioned from JSON files in `config/grafana/dashboards_json/`. Changes to dashboards must be exported from Grafana and committed here — they are NOT persisted in the Grafana container's volume.
 
+**Every new dashboard must be linked from the Home dashboard** (`dashboards_json/home.json`), or it
+only exists for whoever remembers the URL. Home is a grid of text panels grouped by area
+(Acestream, Media, Network, System, Scripts). Add the link to the panel it belongs to, keeping the
+format:
+
+```markdown
+## <emoji> <Group>
+[Dashboard name · what it shows](/d/<uid>/<slug>)
+```
+
+The `uid` must match the dashboard's own `uid` field, and `slug` is its title lowercased with
+dashes. Check the panel's `gridPos.h` still fits the content after adding a line: text panels do
+not grow, so bump the height and shift whatever sits below it (that is why the `Secrets` row moves
+down when the `Scripts` panel grows).
+
 **Alerting** is provisioned too, from `config/grafana/alerting/` (rules, notification policy, and a
 contact-point *template* for the Telegram bot). It is read-only in the Grafana UI on purpose. The
 token and chat id come from `.env` via the deploy's render step, never from git. Full explanation
