@@ -20,9 +20,14 @@
 # Largest files/dirs on the data disk -> node-exporter textfile collector, every 6h
 0 */6 * * * /home/raspi/rpi-homeserver/scripts/disk-usage-metrics.sh >> /home/raspi/rpi-homeserver/disk-usage-metrics.log 2>&1
 
-# Radarr: search for upgrades of everything below its quality cutoff, Sundays at 05:00
-# (RSS alone misses releases that scroll out of the feed). Add `sonarr` to cover series too.
-0 5 * * 0 /home/raspi/rpi-homeserver/scripts/cutoff-search.sh >> /home/raspi/rpi-homeserver/cutoff-search.log 2>&1
+# Radarr: search for anything missing or below its quality cutoff, nightly at 02:00.
+# RSS already catches new releases within 30 min; this is for releases that scrolled out of the
+# feed, which is why it needs an actual search. Add `sonarr` to cover series too.
+0 2 * * * /home/raspi/rpi-homeserver/scripts/cutoff-search.sh >> /home/raspi/rpi-homeserver/cutoff-search.log 2>&1
 
 # Daily appdata backup at 04:00
 0 4 * * * /home/raspi/rpi-homeserver/scripts/backup.sh >> /home/raspi/rpi-homeserver/backup.log 2>&1
+
+# Dead man's switch: ping an external check every 5 min so someone outside notices if the Pi
+# goes dark (no-op unless HEALTHCHECK_URL is set in .env). See docs/alerting.md.
+*/5 * * * * /home/raspi/rpi-homeserver/scripts/heartbeat.sh

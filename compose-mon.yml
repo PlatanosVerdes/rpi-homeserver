@@ -100,7 +100,10 @@ services:
       - "3000:3000"
     environment:
       - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      # Only applied when Grafana initialises its DB for the first time, so changing it here does
+      # not change an existing install's password. Keep it in .env so a rebuilt Pi does not
+      # silently come back up as admin/admin.
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
       # No Telegram vars here on purpose: the contact point is rendered before startup by
       # deploy_control.sh, so the token never enters the container's environment
     volumes:

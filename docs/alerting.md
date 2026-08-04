@@ -75,14 +75,20 @@ returns 1 when it should fire (`<something> > bool <threshold>`). Commit, and th
 it. A malformed rule is rejected at startup, so check `docker logs grafana | grep provision`
 after deploying.
 
-## Still missing: the dead man's switch
+## The dead man's switch
 
-Every rule above dies with the Pi. If it loses power or its internet, Grafana is not there to
-tell you. That needs something **outside** the house expecting a regular ping:
+Every rule above dies with the Pi. A power cut, a dead SD card or an ISP outage produces silence,
+and silence looks exactly like "everything is fine". So the logic is inverted: the Pi says "still
+alive" on a schedule, and an **external** service alerts when those pings stop.
 
-1. Create a free check at [healthchecks.io](https://healthchecks.io) with a period of 15 minutes
-   and a grace of 10.
+`scripts/heartbeat.sh` runs from cron every 5 minutes. It does not ping blindly: if Caddy or
+Prometheus are not running it reports a failure instead, so a Pi that is powered on but broken
+cannot keep sending a reassuring heartbeat.
+
+With `HEALTHCHECK_URL` unset the script exits quietly, so a clone without an account is not broken,
+just uncovered. To turn it on:
+
+1. Create a free check at [healthchecks.io](https://healthchecks.io), period 15 minutes, grace 10.
 2. Put its ping URL in `.env` as `HEALTHCHECK_URL`.
-3. A cron entry every 5 minutes curls it. When the pings stop, healthchecks.io emails you.
 
-Not wired up yet: it needs the account created first.
+That is the only alert in this whole setup that does not depend on the Pi being alive.
