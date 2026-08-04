@@ -11,6 +11,7 @@ docker-compose.override.yml
 !versions.env
 .env_copy
 .deploy_state
+.deploy.lock
 .last_prune
 .bitwarden
 
