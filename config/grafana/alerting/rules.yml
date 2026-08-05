@@ -170,8 +170,12 @@ groups:
         annotations:
           # Annotations are rendered per alert instance, so the variables are $labels/$values.
           # `range .Alerts` only exists in the notification template, not here.
-          summary: 'Job {{ $labels.job }} is not being scraped'
-          description: The exporter or the container behind it is down.
+          # Name the target, not just the job: the job is named after the thing being monitored
+          # (pihole) while what actually failed is its exporter (pihole-exporter:9666).
+          summary: 'Prometheus cannot scrape {{ $labels.instance }} (job {{ $labels.job }})'
+          description: >-
+            That metrics endpoint is unreachable. The service it monitors may well be fine: this
+            fires on the exporter, not on the app behind it.
         noDataState: OK
         execErrState: Error
         data:
