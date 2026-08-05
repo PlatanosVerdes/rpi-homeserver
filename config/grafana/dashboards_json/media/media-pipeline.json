@@ -1222,6 +1222,66 @@
                 }
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Category"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "radarr": {
+                        "color": "yellow",
+                        "index": 0,
+                        "text": "radarr"
+                      },
+                      "sonarr": {
+                        "color": "purple",
+                        "index": 1,
+                        "text": "sonarr"
+                      },
+                      "prowlarr": {
+                        "color": "light-blue",
+                        "index": 2,
+                        "text": "prowlarr"
+                      },
+                      "none": {
+                        "color": "text",
+                        "index": 3,
+                        "text": "none"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 125
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Torrent"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 742
+              }
+            ]
           }
         ]
       },
@@ -1689,7 +1749,8 @@
         "tooltip": {
           "mode": "single",
           "sort": "none"
-        }
+        },
+        "sort": "desc"
       },
       "targets": [
         {
@@ -2238,7 +2299,8 @@
         "tooltip": {
           "mode": "single",
           "sort": "none"
-        }
+        },
+        "sort": "desc"
       },
       "targets": [
         {
@@ -2309,7 +2371,8 @@
         "tooltip": {
           "mode": "single",
           "sort": "desc"
-        }
+        },
+        "sort": "desc"
       },
       "pluginVersion": "12.3.3",
       "targets": [
