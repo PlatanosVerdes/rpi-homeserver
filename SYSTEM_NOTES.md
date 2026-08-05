@@ -185,3 +185,20 @@ running an **empty** query in its own categories, the way an RSS refresh would. 
 nothing for an empty movie query while returning results for a real search term, so Radarr answers
 `400 No Results in configured categories` and refuses the indexer even with `forceSave=true`.
 Prowlarr logs the rejection and moves on.
+
+## Maintainerr
+
+Also `appdata`-only state, not reproducible from git. Set up on 2026-08-05 to delete a movie 7 days
+after it was watched.
+
+- **Download client wired to qBittorrent** (`download_client_url=http://qbittorrent:8080`, user
+  `admin`, `delete_data=true`). Without this, Maintainerr only removed the file from Radarr; the
+  torrent kept seeding untouched. Deleting now also removes the torrent, respecting its own seed-time
+  limit (Maintainerr's fallback ratio only kicks in when the client enforces no limit of its own,
+  which is not our case).
+- **Fixed a double grace period on the `Películas` collection.** The rule already means "last viewed
+  more than 7 days ago" (an unwatched title has no `lastViewedAt`, so it never matches). The
+  collection then waited a *second* 7 days after the item entered it before deleting, so a movie
+  actually vanished 14 days after being watched. `deleteAfterDays` is now `0`: the rule's own 7-day
+  threshold is the only wait.
+- media server is Plex (`media_server_type=plex`); it is not wired to Jellyfin/Emby.
