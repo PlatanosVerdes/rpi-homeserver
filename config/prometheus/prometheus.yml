@@ -36,6 +36,10 @@ scrape_configs:
   #   static_configs:
   #     - targets: ['tailscale-exporter:9736']
 
+  - job_name: 'qbittorrent'
+    static_configs:
+      - targets: ['qbittorrent-exporter:17871']
+
   # Liveness probes for services without an exporter (see config/blackbox/blackbox.yml).
   # The relabeling makes `instance` the probed service, so an alert says "jellyfin", not
   # "blackbox-exporter:9115".
