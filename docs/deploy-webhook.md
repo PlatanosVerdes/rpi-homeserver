@@ -83,14 +83,21 @@ GitHub sends a `ping` on save; the receiver answers `pong`. Check *Recent Delive
 
 ## Changing the receiver
 
-The receiver is a **host systemd service**, so a deploy updates its code but does not reload it.
-After changing `deploy-webhook.py`, restart it by hand or the old process keeps serving:
+The receiver is a **host systemd service**, not a container, so a `git pull` alone would leave the
+old process serving. The deploy handles it: when a pull touches `services/deploy-webhook/`, it
+reinstalls the unit if it changed, runs `daemon-reload`, and restarts the service, logging which of
+those it did.
+
+That restart happens *from inside a deploy that this same service may have spawned*, which is why
+the unit sets `KillMode=process`. With systemd's default (`control-group`) the restart would kill
+the whole cgroup, including the deploy that asked for it, halfway through. `start_new_session` in
+the Python side does not help: it changes the session, not the cgroup.
+
+To do it by hand anyway:
 
 ```bash
 sudo systemctl restart deploy-webhook
 ```
-
-Nothing warns you if you forget: the webhook keeps working, just with the previous code.
 
 ## Troubleshooting
 
