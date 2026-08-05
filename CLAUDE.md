@@ -216,6 +216,10 @@ dashes. Check the panel's `gridPos.h` still fits the content after adding a line
 not grow, so bump the height and shift whatever sits below it (that is why the `Secrets` row moves
 down when the `Scripts` panel grows).
 
+Dashboard folders come from the directory structure (`foldersFromFilesStructure`), so
+`dashboards_json/media/` is the Grafana folder "media". Put a dashboard where its subject lives, not
+where the data comes from: `/mnt/data` usage is media, not infrastructure.
+
 **Alerting** is provisioned too, from `config/grafana/alerting/` (rules, notification policy, and a
 contact-point *template* for the Telegram bot). It is read-only in the Grafana UI on purpose. The
 token and chat id come from `.env` via the deploy's render step, never from git. Full explanation
