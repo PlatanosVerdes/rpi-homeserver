@@ -226,3 +226,154 @@ groups:
               datasource: { type: __expr__, uid: __expr__ }
               conditions:
                 - evaluator: { type: gt, params: [0] }
+
+      - uid: homelab-acestream-sources-all-failing
+        title: 'Acestream, every source URL failing'
+        condition: C
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'No Acestream source URL is reachable, the channel list cannot be updated'
+          description: >-
+            Every IPFS gateway in the list is erroring, so the .m3u Jellyfin reads will go stale.
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: 'count(acestream_source_http_code != 200) == bool count(acestream_source_http_code)'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+      - uid: homelab-acestream-source-failing
+        title: 'Acestream, a source URL failing'
+        condition: C
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'At least one Acestream source URL is failing'
+          description: >-
+            Degraded but still working while another gateway answers. IPFS gateways are flaky, hence the long wait before this fires.
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: 'count(acestream_source_http_code != 200) > bool 0'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+      - uid: homelab-ms-secret-expiring
+        title: 'MS client secret expiring'
+        condition: C
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: 'The Microsoft client secret expires in less than a week'
+          description: >-
+            Renew it in Azure and update rpi-services/.env. Exact days left are on the Home dashboard.
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: '(ms_client_secret_days_remaining < bool 7) * (ms_client_secret_days_remaining > bool 0)'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+      - uid: homelab-ms-secret-expired
+        title: 'MS client secret expired'
+        condition: C
+        for: 1h
+        labels:
+          severity: critical
+        annotations:
+          summary: 'The Microsoft client secret has expired'
+          description: >-
+            cal-bridge can no longer authenticate against Microsoft, so its calendar API is dead until renewed.
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: 'ms_client_secret_days_remaining <= bool 0'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+      - uid: homelab-backup-grew
+        title: 'Backup archive grew sharply'
+        condition: C
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: 'The last backup is over 50% larger than the weekly average'
+          description: >-
+            Something new is being archived. Look for a cache or database that slipped into appdata and belongs in the exclude list.
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: 'backup_last_size_bytes > bool (avg_over_time(backup_last_size_bytes[7d]) * 1.5)'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
