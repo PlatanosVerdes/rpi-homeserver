@@ -633,7 +633,7 @@
       },
       "gridPos": {
         "h": 12,
-        "w": 24,
+        "w": 17,
         "x": 0,
         "y": 17
       },
@@ -705,6 +705,127 @@
               {
                 "id": "custom.width",
                 "value": 150
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "downloading": {
+                        "color": "blue",
+                        "index": 0,
+                        "text": "downloading"
+                      },
+                      "forcedDL": {
+                        "color": "blue",
+                        "index": 1,
+                        "text": "forcedDL"
+                      },
+                      "metaDL": {
+                        "color": "light-blue",
+                        "index": 2,
+                        "text": "metaDL"
+                      },
+                      "uploading": {
+                        "color": "green",
+                        "index": 3,
+                        "text": "uploading"
+                      },
+                      "forcedUP": {
+                        "color": "green",
+                        "index": 4,
+                        "text": "forcedUP"
+                      },
+                      "queuedUP": {
+                        "color": "semi-dark-green",
+                        "index": 5,
+                        "text": "queuedUP"
+                      },
+                      "queuedDL": {
+                        "color": "semi-dark-blue",
+                        "index": 6,
+                        "text": "queuedDL"
+                      },
+                      "stalledUP": {
+                        "color": "purple",
+                        "index": 7,
+                        "text": "stalledUP"
+                      },
+                      "stalledDL": {
+                        "color": "orange",
+                        "index": 8,
+                        "text": "stalledDL"
+                      },
+                      "pausedUP": {
+                        "color": "text",
+                        "index": 9,
+                        "text": "pausedUP"
+                      },
+                      "stoppedUP": {
+                        "color": "text",
+                        "index": 10,
+                        "text": "stoppedUP"
+                      },
+                      "pausedDL": {
+                        "color": "text",
+                        "index": 11,
+                        "text": "pausedDL"
+                      },
+                      "stoppedDL": {
+                        "color": "text",
+                        "index": 12,
+                        "text": "stoppedDL"
+                      },
+                      "checkingUP": {
+                        "color": "yellow",
+                        "index": 13,
+                        "text": "checkingUP"
+                      },
+                      "checkingDL": {
+                        "color": "yellow",
+                        "index": 14,
+                        "text": "checkingDL"
+                      },
+                      "checkingResumeData": {
+                        "color": "yellow",
+                        "index": 15,
+                        "text": "checkingResumeData"
+                      },
+                      "moving": {
+                        "color": "yellow",
+                        "index": 16,
+                        "text": "moving"
+                      },
+                      "allocating": {
+                        "color": "yellow",
+                        "index": 17,
+                        "text": "allocating"
+                      },
+                      "error": {
+                        "color": "red",
+                        "index": 18,
+                        "text": "error"
+                      },
+                      "missingFiles": {
+                        "color": "red",
+                        "index": 19,
+                        "text": "missingFiles"
+                      },
+                      "unknown": {
+                        "color": "text",
+                        "index": 20,
+                        "text": "unknown"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
               }
             ]
           }
@@ -802,6 +923,393 @@
               "Value #C": "Ratio"
             }
           }
+        }
+      ]
+    },
+    {
+      "type": "piechart",
+      "title": "Share by state",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 7,
+        "x": 17,
+        "y": 17
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": []
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "downloading"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "forcedDL"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "metaDL"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "light-blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "uploading"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "forcedUP"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "queuedUP"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "semi-dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "queuedDL"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "semi-dark-blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "stalledUP"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "purple"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "stalledDL"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pausedUP"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "stoppedUP"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pausedDL"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "stoppedDL"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "checkingUP"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "checkingDL"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "checkingResumeData"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "moving"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "allocating"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "error"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "missingFiles"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "unknown"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "text"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "pieType": "donut",
+        "displayLabels": [
+          "percent"
+        ],
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "legend": {
+          "showLegend": true,
+          "displayMode": "table",
+          "placement": "right",
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "refId": "A",
+          "expr": "sum by (state) (qbittorrent_torrents_count) > 0",
+          "legendFormat": "{{state}}"
         }
       ]
     },
