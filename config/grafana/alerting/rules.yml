@@ -604,3 +604,63 @@ groups:
               datasource: { type: __expr__, uid: __expr__ }
               conditions:
                 - evaluator: { type: gt, params: [0] }
+      - uid: homelab-indexers-all-down
+        title: 'Every indexer is down'
+        condition: C
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'Prowlarr has every enabled indexer disabled after failures'
+          description: >-
+            Nothing can be searched or grabbed at all until at least one recovers.
+        noDataState: OK
+        execErrState: KeepLast
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: 'sum(prowlarr_indexer_up{enabled="true"}) == bool 0'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+      - uid: homelab-used-indexer-down
+        title: 'An indexer you actually use is down'
+        condition: C
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Indexer {{ $labels.name }} is down and it is one you actually grab from'
+          description: >-
+            Only indexers with at least 3 grabs in the last 90 days are watched here, so the ones that have never worked stay quiet.
+        noDataState: OK
+        execErrState: KeepLast
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: '(prowlarr_indexer_up == bool 0) and on(name) (arr_indexer_grabs_90d >= 3)'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }

@@ -625,42 +625,262 @@
       ]
     },
     {
-      "type": "barchart",
-      "title": "Torrents by state",
+      "type": "table",
+      "title": "Torrents",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
       "gridPos": {
-        "h": 9,
+        "h": 12,
         "w": 24,
         "x": 0,
         "y": 17
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "custom": {
+            "align": "left",
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Progress"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "gradient"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 140
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Size"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              },
+              {
+                "id": "custom.width",
+                "value": 110
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ratio"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 90
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "State"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "sortBy": [
+          {
+            "displayName": "State",
+            "desc": false
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "qbit_torrent_progress",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "qbit_torrent_size_bytes",
+          "refId": "B",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "qbit_torrent_ratio",
+          "refId": "C",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "name",
+            "mode": "outer"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Time 1": true,
+              "Time 2": true,
+              "Time 3": true,
+              "job": true,
+              "job 1": true,
+              "job 2": true,
+              "job 3": true,
+              "instance": true,
+              "instance 1": true,
+              "instance 2": true,
+              "instance 3": true,
+              "__name__": true,
+              "state 2": true,
+              "state 3": true,
+              "category 2": true,
+              "category 3": true
+            },
+            "renameByName": {
+              "name": "Torrent",
+              "state": "State",
+              "state 1": "State",
+              "category": "Category",
+              "category 1": "Category",
+              "Value #A": "Progress",
+              "Value #B": "Size",
+              "Value #C": "Ratio"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "title": "Indexers",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 29
+      },
+      "panels": []
+    },
+    {
+      "type": "state-timeline",
+      "title": "Indexer availability",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 16,
+        "x": 0,
+        "y": 30
+      },
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "max": 1,
           "color": {
-            "mode": "palette-classic"
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "down",
+                  "color": "red",
+                  "index": 0
+                },
+                "1": {
+                  "text": "up",
+                  "color": "green",
+                  "index": 1
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              }
+            ]
           },
           "custom": {
-            "lineWidth": 1,
-            "fillOpacity": 80,
-            "gradientMode": "none",
-            "axisSoftMin": 0
+            "lineWidth": 0,
+            "fillOpacity": 85,
+            "insertNulls": false
           }
         },
         "overrides": []
       },
       "options": {
-        "orientation": "horizontal",
-        "showValue": "auto",
-        "xTickLabelRotation": 0,
+        "showValue": "never",
+        "mergeValues": true,
+        "alignValue": "left",
+        "rowHeight": 0.85,
+        "perPage": 20,
         "legend": {
           "showLegend": false,
           "displayMode": "list",
-          "placement": "bottom",
-          "calcs": []
+          "placement": "bottom"
         },
         "tooltip": {
           "mode": "single",
@@ -674,11 +894,65 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (status) (qbittorrent_torrents_count) > 0",
+          "expr": "prowlarr_indexer_up",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{name}}"
+        }
+      ]
+    },
+    {
+      "type": "barchart",
+      "title": "Grabs per indexer (90 days)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 8,
+        "x": 16,
+        "y": 30
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 80,
+            "axisSoftMin": 0
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "showValue": "always",
+        "legend": {
+          "showLegend": false,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
+        "xTickLabelRotation": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sort_desc(arr_indexer_grabs_90d)",
           "refId": "A",
           "instant": true,
           "range": false,
-          "legendFormat": "{{status}}",
           "format": "table"
         }
       ],
@@ -687,7 +961,13 @@
           "id": "organize",
           "options": {
             "excludeByName": {
-              "Time": true
+              "Time": true,
+              "job": true,
+              "instance": true
+            },
+            "renameByName": {
+              "name": "Indexer",
+              "Value": "Grabs"
             }
           }
         }

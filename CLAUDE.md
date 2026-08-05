@@ -48,7 +48,7 @@ scripts/                    Operational scripts
   backup.sh                 Daily appdata backup (cron), pushes metrics to Grafana
   heartbeat.sh              Dead man's switch ping to an external check (cron, every minute)
   cutoff-search.sh          Nightly *arr search for missing and below-cutoff items (cron)
-  arr-history-metrics.py    Recent quality upgrades -> Pushgateway (cron, for Grafana)
+  media-metrics.py          Upgrades, torrents, indexer status/usage -> Pushgateway (cron)
   mount_setup.sh            One-time external disk mount setup
   rebuild-service.sh        Manual single-service rebuild helper
   bws-run.py                Bitwarden SM wrapper (dropped, kept for reference only)
@@ -202,7 +202,8 @@ All dashboards are provisioned from JSON files in `config/grafana/dashboards_jso
 
 **Every new dashboard must be linked from the Home dashboard** (`dashboards_json/home.json`), or it
 only exists for whoever remembers the URL. Home is a grid of text panels grouped by area
-(Acestream, Media, Network, System, Scripts). Add the link to the panel it belongs to, keeping the
+(Acestream, Media, Network, System, Scripts), and its layout is the user's: keep it, do not
+"improve" the grid when adding a link. Add the link to the panel it belongs to, keeping the
 format:
 
 ```markdown

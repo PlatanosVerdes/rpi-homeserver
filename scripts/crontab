@@ -33,6 +33,6 @@
 # disk writes. No-op unless HEALTHCHECK_URL is set in .env. See docs/alerting.md.
 * * * * * /home/raspi/rpi-homeserver/scripts/heartbeat.sh
 
-# Recent *arr quality upgrades -> Pushgateway, for the Media Pipeline dashboard. Read-only, just
-# reads each app's history API. See scripts/arr-history-metrics.py.
-*/15 * * * * /home/raspi/rpi-homeserver/scripts/arr-history-metrics.py >> /home/raspi/rpi-homeserver/arr-history.log 2>&1
+# Media stack "which one" metrics -> Pushgateway (quality upgrades, torrents by name, indexer
+# status and usage) for the Media Pipeline dashboard. Read-only. See scripts/media-metrics.py.
+*/5 * * * * /home/raspi/rpi-homeserver/scripts/media-metrics.py >> /home/raspi/rpi-homeserver/media-metrics.log 2>&1
