@@ -8,7 +8,8 @@ modules:
     prober: http
     timeout: 8s
     http:
-      valid_status_codes: [200, 201, 204, 301, 302, 401, 403]
+      # 307/308 are here because Overseerr answers 307 to /: any redirect still proves it is up
+      valid_status_codes: [200, 201, 204, 301, 302, 307, 308, 401, 403]
       valid_http_versions: [HTTP/1.0, HTTP/1.1, HTTP/2.0]
       follow_redirects: false
       preferred_ip_protocol: ip4
