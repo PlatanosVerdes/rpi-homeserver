@@ -181,6 +181,30 @@ def indexer_usage():
     push("arr_indexer_usage", lines)
 
 
+def when_better(movie, today):
+    """Best honest answer to "when will this improve?".
+
+    There is no date for "when a good release gets uploaded", but there IS one for "when the film
+    becomes available at all": a title still in cinemas cannot have a Bluray, no matter how often we
+    search. Radarr carries TMDB's dates, so use them.
+    """
+    for field, label in (("digitalRelease", "digital"), ("physicalRelease", "physical")):
+        value = movie.get(field)
+        if not value:
+            continue
+        date = parse_time(value)
+        if date > today:
+            return f"{label} {date:%Y-%m-%d}"
+        return "out, waiting for a good release"
+    if movie.get("status") == "inCinemas":
+        cinema = movie.get("inCinemas")
+        since = f" since {parse_time(cinema):%Y-%m-%d}" if cinema else ""
+        return f"in cinemas{since}, no digital date"
+    if movie.get("status") == "announced":
+        return "not released yet"
+    return "unknown"
+
+
 def upgrade_queue():
     """Which titles are below their quality cutoff, and what they are waiting to become.
 
@@ -200,19 +224,23 @@ def upgrade_queue():
                  if (i.get("id") or i.get("quality", {}).get("id")) == target), str(target))
 
         # the wanted endpoint does not include the file, so take the current quality from /movie
-        current = {}
+        current, expected = {}, {}
+        today = datetime.now(timezone.utc)
         for movie in get("http://localhost:7878/api/v3/movie", key):
             f = movie.get("movieFile")
             if movie.get("hasFile") and f:
                 current[movie["title"]] = ((f.get("quality") or {}).get("quality") or {}).get("name", "Unknown")
+            expected[movie["title"]] = when_better(movie, today)
 
         wanted = get("http://localhost:7878/api/v3/wanted/cutoff?pageSize=200", key)["records"]
+
         for record in wanted:
             title = record["title"]
             lines.append(f'arr_below_cutoff{{app="radarr",title="{escape(title)[:90]}",'
                          f'current="{escape(current.get(title, "none"))}",'
                          f'target="{escape(cutoff_name.get(record.get("qualityProfileId"), "?"))}",'
-                         f'profile="{escape(profiles.get(record.get("qualityProfileId"), {}).get("name", "?"))}"}} 1')
+                         f'profile="{escape(profiles.get(record.get("qualityProfileId"), {}).get("name", "?"))}",'
+                         f'expected="{escape(expected.get(title, "unknown"))}"}} 1')
     except Exception as exc:
         failures.append(f"radarr cutoff: {exc}")
 
