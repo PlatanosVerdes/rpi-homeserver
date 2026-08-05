@@ -212,6 +212,15 @@ fi
 # Keep the host crontab in sync with both repos' fragments
 bash "$PROJECT_DIR/scripts/install-crontab.sh" 2>&1 | while IFS= read -r line; do log "[cron] $line"; done
 
+# Converge Radarr/Sonarr custom formats and quality profiles to config/arr/. These are built by
+# hand through each app's own UI and live only in its appdata database, so without this a lost
+# Pi silently loses them. Needs both apps up, hence running here rather than before compose.
+bash "$PROJECT_DIR/scripts/sync-arr-config.sh" 2>&1 | while IFS= read -r line; do log "[arr-config] $line"; done
+
+# Converge Pi-hole's custom DNS to the *.platanosverdes.com hosts declared in Caddy. Additive
+# only (see the script), so it never touches an entry it did not derive from Caddy.
+bash "$PROJECT_DIR/scripts/sync-pihole-dns.sh" 2>&1 | while IFS= read -r line; do log "[pihole-dns] $line"; done
+
 # Aggregate status: error(1)>changed(0)>no-change(2)
 if [ $RESULT_HOME -eq 1 ] || [ $RESULT_SERVICES -eq 1 ]; then
     DEPLOY_ERRORS=$((DEPLOY_ERRORS + 1))

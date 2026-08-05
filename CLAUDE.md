@@ -35,6 +35,8 @@ config/                     Static config files committed to git
   grafana/                  Provisioned datasources + dashboard JSONs
   grafana/alerting/         Alert rules, policy, contact-point template (rendered on deploy)
   homepage/                 Dashboard YAML configs
+  arr/radarr, arr/sonarr    Custom formats + quality profiles, pushed into each app on deploy
+                            (sync-arr-config.sh) — otherwise they only exist in appdata
 
 services/                   Source code for custom services built in this repo
   acestream-updater/        Go service — fetches IPFS channel lists, writes .m3u for Jellyfin
@@ -49,6 +51,8 @@ scripts/                    Operational scripts
   heartbeat.sh              Dead man's switch ping to an external check (cron, every minute)
   cutoff-search.sh          Nightly *arr search for missing and below-cutoff items (cron)
   media-metrics.py          Upgrades, torrents, indexer status/usage -> Pushgateway (cron)
+  sync-arr-config.sh        Pushes config/arr/*/*.json into Radarr/Sonarr (on deploy)
+  sync-pihole-dns.sh        Pushes Caddy's *.platanosverdes.com hosts into Pi-hole (on deploy)
   mount_setup.sh            One-time external disk mount setup
   rebuild-service.sh        Manual single-service rebuild helper
   bws-run.py                Bitwarden SM wrapper (dropped, kept for reference only)
@@ -86,7 +90,10 @@ docker compose up -d
 3. If HEAD changed → `docker compose up -d --build --remove-orphans`
 4. If no change → `docker compose up -d --remove-orphans` (ensures containers are running)
 5. Installs the merged host crontab (`install-crontab.sh`)
-6. Pushes metrics to Pushgateway (visible in Grafana "Deploy Monitor" dashboard)
+6. Converges Radarr/Sonarr's custom formats and quality profiles (`sync-arr-config.sh`) and
+   Pi-hole's `*.platanosverdes.com` DNS records (`sync-pihole-dns.sh`) to what is committed —
+   both apps must already be up, hence running after compose rather than before
+7. Pushes metrics to Pushgateway (visible in Grafana "Deploy Monitor" dashboard)
 
 Order matters: the render sits after the pull (or it would use a stale template) and before
 compose (or Grafana would start reading the previous file).
