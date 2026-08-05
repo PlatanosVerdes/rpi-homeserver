@@ -640,9 +640,9 @@
       "description": "Titles whose current file is one of the qualities the download policy rejects (cams, SD, DVD, BR-DISK). These are the ones actually worth looking at by hand: Radarr will not always see them as upgradable, and a 300 MB BR-DISK is how Gattaca hid for five months.",
       "gridPos": {
         "h": 6,
-        "w": 10,
+        "w": 24,
         "x": 0,
-        "y": 11
+        "y": 17
       },
       "fieldConfig": {
         "defaults": {
@@ -902,16 +902,16 @@
     },
     {
       "type": "table",
-      "title": "Waiting for an upgrade",
+      "title": "Waiting on Radarr",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Titles below their profile cutoff: Radarr wants something better and has\nnot found it yet.\n\n**Expected** is the honest part of \"when\". There is no date for *when someone uploads a good\nrelease*, but there is one for *when the film can even exist in that quality*:\n\n- 🟠 `in cinemas, no digital date` — no Bluray exists yet. Searching more often changes nothing.\n- 🟢 `out, waiting for a good release` — it is available, so this is down to an indexer having it.\n  The 02:00 search asks about exactly this list every night.\n- 🔵 `digital <date>` — TMDB has a release date, so that is the earliest it can improve.",
+      "description": "Everything Radarr is waiting for, and what it is waiting for.\n\n| Kind | Meaning |\n| :--- | :--- |\n| 🔵 `downloading` | in the queue right now. **Expected** is the ETA, or `stalled` when nothing has moved |\n| 🟠 `missing` | monitored with no file at all: cannot be watched |\n| 🟢 `upgrade` | watchable, but below the profile cutoff |\n\n**Expected** is the honest half of \"when\". Nobody can say when someone uploads a good release, but\nthese are knowable:\n\n- `in cinemas, no digital date` — no Bluray exists yet, searching more often changes nothing\n- `out, waiting for a good release` — available in the world, so it is down to an indexer having it.\n  The 02:00 search asks about exactly this list every night\n- `eta ...` — actually downloading",
       "gridPos": {
         "h": 6,
-        "w": 14,
-        "x": 10,
+        "w": 24,
+        "x": 0,
         "y": 11
       },
       "fieldConfig": {
@@ -1342,6 +1342,49 @@
                 }
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Kind"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "downloading": {
+                        "color": "blue",
+                        "index": 0,
+                        "text": "downloading"
+                      },
+                      "missing": {
+                        "color": "orange",
+                        "index": 1,
+                        "text": "missing"
+                      },
+                      "upgrade": {
+                        "color": "green",
+                        "index": 2,
+                        "text": "upgrade"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
           }
         ]
       },
@@ -1353,7 +1396,7 @@
         },
         "sortBy": [
           {
-            "displayName": "Now",
+            "displayName": "Kind",
             "desc": false
           }
         ]
@@ -1369,7 +1412,7 @@
           "instant": true,
           "range": false,
           "refId": "A",
-          "expr": "arr_below_cutoff"
+          "expr": "arr_waiting"
         }
       ],
       "transformations": [
@@ -1389,14 +1432,16 @@
               "current": "Now",
               "target": "Target",
               "profile": "Profile",
-              "expected": "Expected"
+              "expected": "Expected",
+              "kind": "Kind"
             },
             "indexByName": {
-              "title": 0,
-              "current": 1,
-              "target": 2,
-              "expected": 3,
-              "profile": 4
+              "kind": 0,
+              "title": 1,
+              "current": 2,
+              "target": 3,
+              "expected": 4,
+              "profile": 5
             }
           }
         }
@@ -1410,7 +1455,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 17
+        "y": 23
       },
       "panels": []
     },
@@ -1425,7 +1470,7 @@
         "h": 4,
         "w": 4,
         "x": 0,
-        "y": 18
+        "y": 24
       },
       "fieldConfig": {
         "defaults": {
@@ -1491,7 +1536,7 @@
         "h": 4,
         "w": 4,
         "x": 4,
-        "y": 18
+        "y": 24
       },
       "fieldConfig": {
         "defaults": {
@@ -1557,7 +1602,7 @@
         "h": 4,
         "w": 4,
         "x": 8,
-        "y": 18
+        "y": 24
       },
       "fieldConfig": {
         "defaults": {
@@ -1623,7 +1668,7 @@
         "h": 4,
         "w": 4,
         "x": 12,
-        "y": 18
+        "y": 24
       },
       "fieldConfig": {
         "defaults": {
@@ -1684,7 +1729,7 @@
         "h": 4,
         "w": 4,
         "x": 16,
-        "y": 18
+        "y": 24
       },
       "fieldConfig": {
         "defaults": {
@@ -1745,7 +1790,7 @@
         "h": 4,
         "w": 4,
         "x": 20,
-        "y": 18
+        "y": 24
       },
       "fieldConfig": {
         "defaults": {
@@ -1806,7 +1851,7 @@
         "h": 12,
         "w": 18,
         "x": 0,
-        "y": 22
+        "y": 28
       },
       "fieldConfig": {
         "defaults": {
@@ -2169,7 +2214,7 @@
         "h": 12,
         "w": 6,
         "x": 18,
-        "y": 22
+        "y": 28
       },
       "fieldConfig": {
         "defaults": {
@@ -2558,7 +2603,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 34
+        "y": 40
       },
       "fieldConfig": {
         "defaults": {
@@ -2745,7 +2790,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 42
+        "y": 48
       },
       "panels": []
     },
@@ -2760,7 +2805,7 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 43
+        "y": 49
       },
       "fieldConfig": {
         "defaults": {
@@ -3300,7 +3345,7 @@
         "h": 9,
         "w": 12,
         "x": 12,
-        "y": 43
+        "y": 49
       },
       "fieldConfig": {
         "defaults": {
@@ -3372,7 +3417,7 @@
         "h": 11,
         "w": 24,
         "x": 0,
-        "y": 52
+        "y": 58
       },
       "fieldConfig": {
         "defaults": {
@@ -3441,7 +3486,7 @@
         "h": 12,
         "w": 24,
         "x": 0,
-        "y": 63
+        "y": 69
       },
       "fieldConfig": {
         "defaults": {
@@ -3508,7 +3553,7 @@
     {
       "id": 143,
       "type": "table",
-      "title": "All tracked files (filter: $root)",
+      "title": "Largest files on disk, full paths",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -3517,7 +3562,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 75
+        "y": 81
       },
       "targets": [
         {
@@ -3649,7 +3694,7 @@
         ]
       },
       "pluginVersion": "12.3.3",
-      "description": "The 30 largest files on\nthe data disk, one line per **inode**.\n\nThe *arrs hardlink on import, so a grabbed file and its library copy are the same bytes under two\npaths. Listing both would double-count the footer total, so the library path is kept and the\ndownloads one dropped.\n"
+      "description": "The same 30 files as the panel above, with their full path and the **Folder** filter. Refreshed hourly by disk-usage-metrics.sh, so a file deleted a minute ago can still show up here.\n\nOne line per inode: the *arrs hardlink on import, so a grabbed file and its library copy are the same bytes under two paths."
     }
   ],
   "preload": false,

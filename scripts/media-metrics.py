@@ -7,7 +7,7 @@ Three things the existing exporters cannot answer:
   qbit_torrent_*         which torrents are in each state, not how many
   arr_indexer_grabs_90d  which indexers actually get used, so alerts can ignore the rest
   arr_media_size_bytes   where the disk went: size per title, tagged with its quality
-  arr_below_cutoff       which titles are waiting for a better release, and for which quality
+  arr_waiting            everything Radarr waits for: downloading, missing or below cutoff
   prowlarr_indexer_up    which indexers are failing right now, over time
 
 All three use labels to carry identity, which is not what Prometheus is for. It is a deliberate
@@ -205,14 +205,18 @@ def when_better(movie, today):
     return "unknown"
 
 
-def upgrade_queue():
-    """Which titles are below their quality cutoff, and what they are waiting to become.
+def waiting_on():
+    """Everything Radarr is waiting for, in one list, with what it is waiting for.
 
-    "When" is not knowable: it depends on a better release appearing on an indexer. What is knowable
-    is that cutoff-search.sh asks every night at 02:00, so this is the list it will ask about.
+      downloading  in the queue right now, so the answer to "when" is an ETA
+      missing       monitored with no file at all
+      upgrade       has a file, but below the profile cutoff
+
+    "When" for the last two is not a date anyone can give: it depends on a release appearing. What
+    can be given is when the film is even available in that quality, which is what when_better does.
     """
-    lines = ["# HELP arr_below_cutoff 1 for a title below its profile cutoff, waiting for an upgrade",
-             "# TYPE arr_below_cutoff gauge"]
+    lines = ["# HELP arr_waiting 1 for a title Radarr is waiting on; kind says what it is waiting for",
+             "# TYPE arr_waiting gauge"]
     try:
         key = api_key("radarr")
         profiles = {p["id"]: p for p in get("http://localhost:7878/api/v3/qualityprofile", key)}
@@ -223,26 +227,58 @@ def upgrade_queue():
                 ((i.get("name") or i["quality"]["name"]) for i in profile["items"]
                  if (i.get("id") or i.get("quality", {}).get("id")) == target), str(target))
 
-        # the wanted endpoint does not include the file, so take the current quality from /movie
-        current, expected = {}, {}
         today = datetime.now(timezone.utc)
-        for movie in get("http://localhost:7878/api/v3/movie", key):
+        movies = get("http://localhost:7878/api/v3/movie", key)
+        by_title, current, expected = {}, {}, {}
+        for movie in movies:
+            by_title[movie["title"]] = movie
             f = movie.get("movieFile")
             if movie.get("hasFile") and f:
                 current[movie["title"]] = ((f.get("quality") or {}).get("quality") or {}).get("name", "Unknown")
             expected[movie["title"]] = when_better(movie, today)
 
-        wanted = get("http://localhost:7878/api/v3/wanted/cutoff?pageSize=200", key)["records"]
+        rows = {}
+        # downloading wins over the other two: it is already happening
+        for item in get("http://localhost:7878/api/v3/queue?pageSize=100&includeMovie=true", key)["records"]:
+            title = (item.get("movie") or {}).get("title") or item.get("title", "?")
+            eta = item.get("timeleft") or ""
+            state = item.get("trackedDownloadState") or item.get("status") or ""
+            quality = ((item.get("quality") or {}).get("quality") or {}).get("name", "?")
+            # an ETA is only honest while bytes are moving: a queue item with nothing downloaded
+            # after hours is stalled, and saying "downloading" would hide that
+            if eta and eta not in ("00:00:00", "0:00:00"):
+                when = f"eta {eta}"
+            elif item.get("sizeleft") and item.get("sizeleft") == item.get("size"):
+                when = "stalled, no data yet"
+            else:
+                when = state or "in queue"
+            rows[title] = {"kind": "downloading", "current": current.get(title, "none"),
+                           "target": quality, "expected": when}
 
-        for record in wanted:
+        for movie in movies:
+            title = movie["title"]
+            if title in rows or not movie.get("monitored") or movie.get("hasFile"):
+                continue
+            rows[title] = {"kind": "missing", "current": "none",
+                           "target": cutoff_name.get(movie.get("qualityProfileId"), "?"),
+                           "expected": expected.get(title, "unknown")}
+
+        for record in get("http://localhost:7878/api/v3/wanted/cutoff?pageSize=200", key)["records"]:
             title = record["title"]
-            lines.append(f'arr_below_cutoff{{app="radarr",title="{escape(title)[:90]}",'
-                         f'current="{escape(current.get(title, "none"))}",'
-                         f'target="{escape(cutoff_name.get(record.get("qualityProfileId"), "?"))}",'
-                         f'profile="{escape(profiles.get(record.get("qualityProfileId"), {}).get("name", "?"))}",'
-                         f'expected="{escape(expected.get(title, "unknown"))}"}} 1')
+            if title in rows:
+                continue
+            rows[title] = {"kind": "upgrade", "current": current.get(title, "none"),
+                           "target": cutoff_name.get(record.get("qualityProfileId"), "?"),
+                           "expected": expected.get(title, "unknown")}
+
+        for title, row in rows.items():
+            profile = profiles.get((by_title.get(title) or {}).get("qualityProfileId"), {}).get("name", "?")
+            lines.append(f'arr_waiting{{app="radarr",title="{escape(title)[:90]}",'
+                         f'kind="{row["kind"]}",current="{escape(row["current"])}",'
+                         f'target="{escape(row["target"])}",expected="{escape(row["expected"])}",'
+                         f'profile="{escape(profile)}"}} 1')
     except Exception as exc:
-        failures.append(f"radarr cutoff: {exc}")
+        failures.append(f"radarr waiting: {exc}")
 
     push("arr_upgrade_queue", lines)
 
@@ -313,7 +349,7 @@ if __name__ == "__main__":
     qbit_torrents()
     indexer_usage()
     library_sizes()
-    upgrade_queue()
+    waiting_on()
     prowlarr_indexers()
     if failures:
         sys.exit("; ".join(failures))
