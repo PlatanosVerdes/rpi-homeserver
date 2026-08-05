@@ -156,3 +156,32 @@ change the queue went from 18 waiting to 0.
 The limit is 40 rather than unlimited so a much larger library cannot open hundreds of connections on
 a Pi. This setting lives in `appdata/qbittorrent/` and is therefore **not** reproducible from git:
 if the Pi is rebuilt, set it again.
+
+## Prowlarr indexers
+
+Also state that lives in `appdata/` and cannot be restored from git. A backup of every indexer,
+credentials included, is written to `appdata/prowlarr/indexers-backup.json`.
+
+Three indexers were removed on 2026-08-05 because they could not work at all: their Cardigann
+definition no longer ships with Prowlarr **and** their site failed the connection test.
+
+| Removed | Why |
+| :--- | :--- |
+| Elitetorrent-wf | definition dropped upstream, server unreachable |
+| MoviesDVDR | definition dropped upstream, server unreachable |
+| RoTorrent (API) | definition dropped upstream, API returns 404 |
+
+A missing definition on its own is *not* a reason to delete: Frozen Layer has none either and still
+works, because Prowlarr keeps running a definition it already loaded. What it does mean is that the
+indexer cannot be re-added if it is ever deleted.
+
+There is no drop-in replacement for the two Spanish trackers. Of the Spanish definitions Prowlarr
+still ships, every one that carries films or series is private, so adding one needs an account first.
+
+### Why LimeTorrents is in Sonarr but not in Radarr
+
+Not a sync failure, and forcing a sync will not fix it. Radarr validates an indexer on save by
+running an **empty** query in its own categories, the way an RSS refresh would. LimeTorrents returns
+nothing for an empty movie query while returning results for a real search term, so Radarr answers
+`400 No Results in configured categories` and refuses the indexer even with `forceSave=true`.
+Prowlarr logs the rejection and moves on.
