@@ -54,6 +54,400 @@
                 "value": 190
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "From"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "Bluray-2160p": {
+                        "color": "blue",
+                        "index": 0,
+                        "text": "Bluray-2160p"
+                      },
+                      "WEBDL-2160p": {
+                        "color": "blue",
+                        "index": 1,
+                        "text": "WEBDL-2160p"
+                      },
+                      "WEBRip-2160p": {
+                        "color": "blue",
+                        "index": 2,
+                        "text": "WEBRip-2160p"
+                      },
+                      "HDTV-2160p": {
+                        "color": "blue",
+                        "index": 3,
+                        "text": "HDTV-2160p"
+                      },
+                      "Remux-2160p": {
+                        "color": "blue",
+                        "index": 4,
+                        "text": "Remux-2160p"
+                      },
+                      "Bluray-1080p": {
+                        "color": "green",
+                        "index": 5,
+                        "text": "Bluray-1080p"
+                      },
+                      "WEBDL-1080p": {
+                        "color": "green",
+                        "index": 6,
+                        "text": "WEBDL-1080p"
+                      },
+                      "WEBRip-1080p": {
+                        "color": "green",
+                        "index": 7,
+                        "text": "WEBRip-1080p"
+                      },
+                      "Remux-1080p": {
+                        "color": "orange",
+                        "index": 8,
+                        "text": "Remux-1080p"
+                      },
+                      "HDTV-1080p": {
+                        "color": "orange",
+                        "index": 9,
+                        "text": "HDTV-1080p"
+                      },
+                      "Bluray-720p": {
+                        "color": "orange",
+                        "index": 10,
+                        "text": "Bluray-720p"
+                      },
+                      "WEBDL-720p": {
+                        "color": "orange",
+                        "index": 11,
+                        "text": "WEBDL-720p"
+                      },
+                      "WEBRip-720p": {
+                        "color": "orange",
+                        "index": 12,
+                        "text": "WEBRip-720p"
+                      },
+                      "HDTV-720p": {
+                        "color": "orange",
+                        "index": 13,
+                        "text": "HDTV-720p"
+                      },
+                      "BR-DISK": {
+                        "color": "red",
+                        "index": 14,
+                        "text": "BR-DISK"
+                      },
+                      "Raw-HD": {
+                        "color": "red",
+                        "index": 15,
+                        "text": "Raw-HD"
+                      },
+                      "SDTV": {
+                        "color": "red",
+                        "index": 16,
+                        "text": "SDTV"
+                      },
+                      "DVD": {
+                        "color": "red",
+                        "index": 17,
+                        "text": "DVD"
+                      },
+                      "DVD-R": {
+                        "color": "red",
+                        "index": 18,
+                        "text": "DVD-R"
+                      },
+                      "Bluray-576p": {
+                        "color": "red",
+                        "index": 19,
+                        "text": "Bluray-576p"
+                      },
+                      "Bluray-480p": {
+                        "color": "red",
+                        "index": 20,
+                        "text": "Bluray-480p"
+                      },
+                      "WEBDL-480p": {
+                        "color": "red",
+                        "index": 21,
+                        "text": "WEBDL-480p"
+                      },
+                      "WEBRip-480p": {
+                        "color": "red",
+                        "index": 22,
+                        "text": "WEBRip-480p"
+                      },
+                      "TELESYNC": {
+                        "color": "red",
+                        "index": 23,
+                        "text": "TELESYNC"
+                      },
+                      "TELECINE": {
+                        "color": "red",
+                        "index": 24,
+                        "text": "TELECINE"
+                      },
+                      "CAM": {
+                        "color": "red",
+                        "index": 25,
+                        "text": "CAM"
+                      },
+                      "WORKPRINT": {
+                        "color": "red",
+                        "index": 26,
+                        "text": "WORKPRINT"
+                      },
+                      "DVDSCR": {
+                        "color": "red",
+                        "index": 27,
+                        "text": "DVDSCR"
+                      },
+                      "REGIONAL": {
+                        "color": "red",
+                        "index": 28,
+                        "text": "REGIONAL"
+                      },
+                      "Unknown": {
+                        "color": "red",
+                        "index": 29,
+                        "text": "Unknown"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 130
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "To"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "Bluray-2160p": {
+                        "color": "blue",
+                        "index": 0,
+                        "text": "Bluray-2160p"
+                      },
+                      "WEBDL-2160p": {
+                        "color": "blue",
+                        "index": 1,
+                        "text": "WEBDL-2160p"
+                      },
+                      "WEBRip-2160p": {
+                        "color": "blue",
+                        "index": 2,
+                        "text": "WEBRip-2160p"
+                      },
+                      "HDTV-2160p": {
+                        "color": "blue",
+                        "index": 3,
+                        "text": "HDTV-2160p"
+                      },
+                      "Remux-2160p": {
+                        "color": "blue",
+                        "index": 4,
+                        "text": "Remux-2160p"
+                      },
+                      "Bluray-1080p": {
+                        "color": "green",
+                        "index": 5,
+                        "text": "Bluray-1080p"
+                      },
+                      "WEBDL-1080p": {
+                        "color": "green",
+                        "index": 6,
+                        "text": "WEBDL-1080p"
+                      },
+                      "WEBRip-1080p": {
+                        "color": "green",
+                        "index": 7,
+                        "text": "WEBRip-1080p"
+                      },
+                      "Remux-1080p": {
+                        "color": "orange",
+                        "index": 8,
+                        "text": "Remux-1080p"
+                      },
+                      "HDTV-1080p": {
+                        "color": "orange",
+                        "index": 9,
+                        "text": "HDTV-1080p"
+                      },
+                      "Bluray-720p": {
+                        "color": "orange",
+                        "index": 10,
+                        "text": "Bluray-720p"
+                      },
+                      "WEBDL-720p": {
+                        "color": "orange",
+                        "index": 11,
+                        "text": "WEBDL-720p"
+                      },
+                      "WEBRip-720p": {
+                        "color": "orange",
+                        "index": 12,
+                        "text": "WEBRip-720p"
+                      },
+                      "HDTV-720p": {
+                        "color": "orange",
+                        "index": 13,
+                        "text": "HDTV-720p"
+                      },
+                      "BR-DISK": {
+                        "color": "red",
+                        "index": 14,
+                        "text": "BR-DISK"
+                      },
+                      "Raw-HD": {
+                        "color": "red",
+                        "index": 15,
+                        "text": "Raw-HD"
+                      },
+                      "SDTV": {
+                        "color": "red",
+                        "index": 16,
+                        "text": "SDTV"
+                      },
+                      "DVD": {
+                        "color": "red",
+                        "index": 17,
+                        "text": "DVD"
+                      },
+                      "DVD-R": {
+                        "color": "red",
+                        "index": 18,
+                        "text": "DVD-R"
+                      },
+                      "Bluray-576p": {
+                        "color": "red",
+                        "index": 19,
+                        "text": "Bluray-576p"
+                      },
+                      "Bluray-480p": {
+                        "color": "red",
+                        "index": 20,
+                        "text": "Bluray-480p"
+                      },
+                      "WEBDL-480p": {
+                        "color": "red",
+                        "index": 21,
+                        "text": "WEBDL-480p"
+                      },
+                      "WEBRip-480p": {
+                        "color": "red",
+                        "index": 22,
+                        "text": "WEBRip-480p"
+                      },
+                      "TELESYNC": {
+                        "color": "red",
+                        "index": 23,
+                        "text": "TELESYNC"
+                      },
+                      "TELECINE": {
+                        "color": "red",
+                        "index": 24,
+                        "text": "TELECINE"
+                      },
+                      "CAM": {
+                        "color": "red",
+                        "index": 25,
+                        "text": "CAM"
+                      },
+                      "WORKPRINT": {
+                        "color": "red",
+                        "index": 26,
+                        "text": "WORKPRINT"
+                      },
+                      "DVDSCR": {
+                        "color": "red",
+                        "index": 27,
+                        "text": "DVDSCR"
+                      },
+                      "REGIONAL": {
+                        "color": "red",
+                        "index": 28,
+                        "text": "REGIONAL"
+                      },
+                      "Unknown": {
+                        "color": "red",
+                        "index": 29,
+                        "text": "Unknown"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 130
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "App"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "radarr": {
+                        "color": "yellow",
+                        "index": 0,
+                        "text": "radarr"
+                      },
+                      "sonarr": {
+                        "color": "purple",
+                        "index": 1,
+                        "text": "sonarr"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 90
+              }
+            ]
           }
         ]
       },
@@ -1316,168 +1710,458 @@
     {
       "type": "row",
       "title": "Indexers",
-      "collapsed": false,
+      "collapsed": true,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
         "y": 29
       },
-      "panels": []
-    },
-    {
-      "type": "state-timeline",
-      "title": "Indexer availability",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 10,
-        "w": 16,
-        "x": 0,
-        "y": 30
-      },
-      "fieldConfig": {
-        "defaults": {
-          "min": 0,
-          "max": 1,
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "0": {
-                  "text": "down",
-                  "color": "red",
-                  "index": 0
-                },
-                "1": {
-                  "text": "up",
-                  "color": "green",
-                  "index": 1
-                }
-              }
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              }
-            ]
-          },
-          "custom": {
-            "lineWidth": 0,
-            "fillOpacity": 85,
-            "insertNulls": false
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "showValue": "never",
-        "mergeValues": true,
-        "alignValue": "left",
-        "rowHeight": 0.85,
-        "perPage": 20,
-        "legend": {
-          "showLegend": false,
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
+      "panels": [
         {
+          "type": "state-timeline",
+          "title": "Indexer availability",
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "editorMode": "code",
-          "expr": "prowlarr_indexer_up",
-          "refId": "A",
-          "instant": false,
-          "range": true,
-          "legendFormat": "{{name}}"
+          "gridPos": {
+            "h": 10,
+            "w": 16,
+            "x": 0,
+            "y": 30
+          },
+          "fieldConfig": {
+            "defaults": {
+              "min": 0,
+              "max": 1,
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": [
+                {
+                  "type": "value",
+                  "options": {
+                    "0": {
+                      "text": "down",
+                      "color": "red",
+                      "index": 0
+                    },
+                    "1": {
+                      "text": "up",
+                      "color": "green",
+                      "index": 1
+                    }
+                  }
+                }
+              ],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  }
+                ]
+              },
+              "custom": {
+                "lineWidth": 0,
+                "fillOpacity": 85,
+                "insertNulls": false
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "showValue": "never",
+            "mergeValues": true,
+            "alignValue": "left",
+            "rowHeight": 0.85,
+            "perPage": 20,
+            "legend": {
+              "showLegend": false,
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "prowlarr_indexer_up",
+              "refId": "A",
+              "instant": false,
+              "range": true,
+              "legendFormat": "{{name}}"
+            }
+          ]
+        },
+        {
+          "type": "barchart",
+          "title": "Grabs per indexer (90 days)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "h": 10,
+            "w": 8,
+            "x": 16,
+            "y": 30
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "lineWidth": 1,
+                "fillOpacity": 80,
+                "axisSoftMin": 0
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "orientation": "horizontal",
+            "showValue": "always",
+            "legend": {
+              "showLegend": false,
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            },
+            "xTickLabelRotation": 0
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "sort_desc(arr_indexer_grabs_90d)",
+              "refId": "A",
+              "instant": true,
+              "range": false,
+              "format": "table"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true,
+                  "job": true,
+                  "instance": true
+                },
+                "renameByName": {
+                  "name": "Indexer",
+                  "Value": "Grabs"
+                }
+              }
+            }
+          ]
         }
       ]
     },
     {
-      "type": "barchart",
-      "title": "Grabs per indexer (90 days)",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
+      "type": "row",
+      "title": "Storage \u2014 largest paths on /mnt/data",
+      "collapsed": true,
       "gridPos": {
-        "h": 10,
-        "w": 8,
-        "x": 16,
+        "h": 1,
+        "w": 24,
+        "x": 0,
         "y": 30
       },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "lineWidth": 1,
-            "fillOpacity": 80,
-            "axisSoftMin": 0
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "orientation": "horizontal",
-        "showValue": "always",
-        "legend": {
-          "showLegend": false,
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        },
-        "xTickLabelRotation": 0
-      },
-      "targets": [
+      "panels": [
         {
+          "id": 141,
+          "type": "piechart",
+          "title": "Disk usage by folder",
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "editorMode": "code",
-          "expr": "sort_desc(arr_indexer_grabs_90d)",
-          "refId": "A",
-          "instant": true,
-          "range": false,
-          "format": "table"
-        }
-      ],
-      "transformations": [
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {
-              "Time": true,
-              "job": true,
-              "instance": true
+          "gridPos": {
+            "h": 10,
+            "w": 8,
+            "x": 0,
+            "y": 31
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes",
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                }
+              }
             },
-            "renameByName": {
-              "name": "Indexer",
-              "Value": "Grabs"
+            "overrides": []
+          },
+          "options": {
+            "pieType": "donut",
+            "displayLabels": [
+              "percent"
+            ],
+            "legend": {
+              "displayMode": "table",
+              "placement": "right",
+              "showLegend": true,
+              "values": [
+                "value",
+                "percent"
+              ]
+            },
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "tooltip": {
+              "mode": "single",
+              "sort": "desc"
             }
-          }
+          },
+          "pluginVersion": "12.3.3",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "disk_root_bytes",
+              "instant": true,
+              "refId": "A",
+              "legendFormat": "{{root}}"
+            }
+          ]
+        },
+        {
+          "id": 142,
+          "type": "bargauge",
+          "title": "Largest files (filter: $root)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "h": 10,
+            "w": 16,
+            "x": 8,
+            "y": 31
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes",
+              "color": {
+                "mode": "continuous-GrYlRd"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "gradient",
+            "valueMode": "color",
+            "showUnfilled": true,
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            }
+          },
+          "pluginVersion": "12.3.3",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "disk_file_bytes{root=~\"$root\"}",
+              "instant": true,
+              "refId": "A",
+              "legendFormat": "{{path}}"
+            }
+          ]
+        },
+        {
+          "id": 143,
+          "type": "table",
+          "title": "All tracked files (raw \u2014 full paths, filterable)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "h": 12,
+            "w": 24,
+            "x": 0,
+            "y": 41
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "disk_file_bytes",
+              "instant": true,
+              "refId": "A",
+              "format": "table"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true,
+                  "__name__": true,
+                  "job": true,
+                  "instance": true
+                },
+                "renameByName": {
+                  "root": "Folder",
+                  "path": "Path",
+                  "Value": "Size"
+                }
+              }
+            },
+            {
+              "id": "sortBy",
+              "options": {
+                "sort": [
+                  {
+                    "field": "Size",
+                    "desc": true
+                  }
+                ]
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "left",
+                "filterable": true,
+                "cellOptions": {
+                  "type": "auto"
+                }
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Size"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "bytes"
+                  },
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "type": "color-background",
+                      "mode": "gradient"
+                    }
+                  },
+                  {
+                    "id": "thresholds",
+                    "value": {
+                      "mode": "absolute",
+                      "steps": [
+                        {
+                          "color": "green",
+                          "value": null
+                        },
+                        {
+                          "color": "orange",
+                          "value": 10737418240
+                        },
+                        {
+                          "color": "red",
+                          "value": 32212254720
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "id": "custom.width",
+                    "value": 140
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Folder"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 130
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "cellHeight": "sm",
+            "showHeader": true,
+            "footer": {
+              "show": true,
+              "reducer": [
+                "sum"
+              ],
+              "fields": [
+                "Size"
+              ]
+            },
+            "sortBy": [
+              {
+                "desc": true,
+                "displayName": "Size"
+              }
+            ]
+          },
+          "pluginVersion": "12.3.3"
         }
       ]
     }
@@ -1491,7 +2175,37 @@
     "qbittorrent"
   ],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "name": "root",
+        "label": "Folder",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "definition": "label_values(disk_root_bytes, root)",
+        "query": {
+          "query": "label_values(disk_root_bytes, root)",
+          "refId": "StandardVariableQuery"
+        },
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "current": {
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "refresh": 2,
+        "sort": 1,
+        "hide": 0,
+        "options": []
+      }
+    ]
   },
   "time": {
     "from": "now-30d",
