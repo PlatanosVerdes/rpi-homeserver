@@ -8,7 +8,7 @@
   "panels": [
     {
       "type": "row",
-      "title": "Quality changes",
+      "title": "What changed",
       "collapsed": false,
       "gridPos": {
         "h": 1,
@@ -26,7 +26,7 @@
         "uid": "prometheus"
       },
       "gridPos": {
-        "h": 11,
+        "h": 10,
         "w": 18,
         "x": 0,
         "y": 1
@@ -575,7 +575,7 @@
         "uid": "prometheus"
       },
       "gridPos": {
-        "h": 6,
+        "h": 5,
         "w": 6,
         "x": 18,
         "y": 6
@@ -630,13 +630,13 @@
     },
     {
       "type": "row",
-      "title": "qBittorrent",
+      "title": "What is moving",
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 12
+        "y": 11
       },
       "panels": []
     },
@@ -651,7 +651,7 @@
         "h": 4,
         "w": 4,
         "x": 0,
-        "y": 13
+        "y": 12
       },
       "fieldConfig": {
         "defaults": {
@@ -716,7 +716,7 @@
         "h": 4,
         "w": 4,
         "x": 4,
-        "y": 13
+        "y": 12
       },
       "fieldConfig": {
         "defaults": {
@@ -781,7 +781,7 @@
         "h": 4,
         "w": 4,
         "x": 8,
-        "y": 13
+        "y": 12
       },
       "fieldConfig": {
         "defaults": {
@@ -846,7 +846,7 @@
         "h": 4,
         "w": 4,
         "x": 12,
-        "y": 13
+        "y": 12
       },
       "fieldConfig": {
         "defaults": {
@@ -907,7 +907,7 @@
         "h": 4,
         "w": 4,
         "x": 16,
-        "y": 13
+        "y": 12
       },
       "fieldConfig": {
         "defaults": {
@@ -968,7 +968,7 @@
         "h": 4,
         "w": 4,
         "x": 20,
-        "y": 13
+        "y": 12
       },
       "fieldConfig": {
         "defaults": {
@@ -1029,7 +1029,7 @@
         "h": 12,
         "w": 17,
         "x": 0,
-        "y": 17
+        "y": 16
       },
       "fieldConfig": {
         "defaults": {
@@ -1331,7 +1331,7 @@
         "h": 12,
         "w": 7,
         "x": 17,
-        "y": 17
+        "y": 16
       },
       "fieldConfig": {
         "defaults": {
@@ -1709,7 +1709,7 @@
     },
     {
       "type": "row",
-      "title": "Storage \u2014 largest paths on /mnt/data",
+      "title": "Where the disk went",
       "collapsed": true,
       "gridPos": {
         "h": 1,
@@ -1719,282 +1719,6 @@
       },
       "panels": [
         {
-          "id": 141,
-          "type": "piechart",
-          "title": "Disk usage by folder",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "gridPos": {
-            "h": 10,
-            "w": 8,
-            "x": 0,
-            "y": 31
-          },
-          "fieldConfig": {
-            "defaults": {
-              "unit": "bytes",
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "hideFrom": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                }
-              }
-            },
-            "overrides": []
-          },
-          "options": {
-            "pieType": "donut",
-            "displayLabels": [
-              "percent"
-            ],
-            "legend": {
-              "displayMode": "table",
-              "placement": "right",
-              "showLegend": true,
-              "values": [
-                "value",
-                "percent"
-              ]
-            },
-            "reduceOptions": {
-              "calcs": [
-                "lastNotNull"
-              ],
-              "fields": "",
-              "values": false
-            },
-            "tooltip": {
-              "mode": "single",
-              "sort": "desc"
-            }
-          },
-          "pluginVersion": "12.3.3",
-          "targets": [
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "prometheus"
-              },
-              "editorMode": "code",
-              "expr": "disk_root_bytes",
-              "instant": true,
-              "refId": "A",
-              "legendFormat": "{{root}}"
-            }
-          ]
-        },
-        {
-          "id": 142,
-          "type": "bargauge",
-          "title": "Largest files (filter: $root)",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "gridPos": {
-            "h": 10,
-            "w": 16,
-            "x": 8,
-            "y": 31
-          },
-          "fieldConfig": {
-            "defaults": {
-              "unit": "bytes",
-              "color": {
-                "mode": "continuous-GrYlRd"
-              },
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  }
-                ]
-              }
-            },
-            "overrides": []
-          },
-          "options": {
-            "orientation": "horizontal",
-            "displayMode": "gradient",
-            "valueMode": "color",
-            "showUnfilled": true,
-            "reduceOptions": {
-              "calcs": [
-                "lastNotNull"
-              ],
-              "fields": "",
-              "values": false
-            }
-          },
-          "pluginVersion": "12.3.3",
-          "targets": [
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "prometheus"
-              },
-              "editorMode": "code",
-              "expr": "disk_file_bytes{root=~\"$root\"}",
-              "instant": true,
-              "refId": "A",
-              "legendFormat": "{{path}}"
-            }
-          ]
-        },
-        {
-          "id": 143,
-          "type": "table",
-          "title": "All tracked files (raw \u2014 full paths, filterable)",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "gridPos": {
-            "h": 12,
-            "w": 24,
-            "x": 0,
-            "y": 41
-          },
-          "targets": [
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "prometheus"
-              },
-              "editorMode": "code",
-              "expr": "disk_file_bytes",
-              "instant": true,
-              "refId": "A",
-              "format": "table"
-            }
-          ],
-          "transformations": [
-            {
-              "id": "organize",
-              "options": {
-                "excludeByName": {
-                  "Time": true,
-                  "__name__": true,
-                  "job": true,
-                  "instance": true
-                },
-                "renameByName": {
-                  "root": "Folder",
-                  "path": "Path",
-                  "Value": "Size"
-                }
-              }
-            },
-            {
-              "id": "sortBy",
-              "options": {
-                "sort": [
-                  {
-                    "field": "Size",
-                    "desc": true
-                  }
-                ]
-              }
-            }
-          ],
-          "fieldConfig": {
-            "defaults": {
-              "custom": {
-                "align": "left",
-                "filterable": true,
-                "cellOptions": {
-                  "type": "auto"
-                }
-              }
-            },
-            "overrides": [
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Size"
-                },
-                "properties": [
-                  {
-                    "id": "unit",
-                    "value": "bytes"
-                  },
-                  {
-                    "id": "custom.cellOptions",
-                    "value": {
-                      "type": "color-background",
-                      "mode": "gradient"
-                    }
-                  },
-                  {
-                    "id": "thresholds",
-                    "value": {
-                      "mode": "absolute",
-                      "steps": [
-                        {
-                          "color": "green",
-                          "value": null
-                        },
-                        {
-                          "color": "orange",
-                          "value": 10737418240
-                        },
-                        {
-                          "color": "red",
-                          "value": 32212254720
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "id": "custom.width",
-                    "value": 140
-                  }
-                ]
-              },
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Folder"
-                },
-                "properties": [
-                  {
-                    "id": "custom.width",
-                    "value": 130
-                  }
-                ]
-              }
-            ]
-          },
-          "options": {
-            "cellHeight": "sm",
-            "showHeader": true,
-            "footer": {
-              "show": true,
-              "reducer": [
-                "sum"
-              ],
-              "fields": [
-                "Size"
-              ]
-            },
-            "sortBy": [
-              {
-                "desc": true,
-                "displayName": "Size"
-              }
-            ]
-          },
-          "pluginVersion": "12.3.3"
-        },
-        {
           "type": "piechart",
           "title": "Disk by quality",
           "datasource": {
@@ -2002,10 +1726,10 @@
             "uid": "prometheus"
           },
           "gridPos": {
-            "h": 11,
-            "w": 8,
+            "h": 9,
+            "w": 12,
             "x": 0,
-            "y": 53
+            "y": 30
           },
           "fieldConfig": {
             "defaults": {
@@ -2532,6 +2256,77 @@
           ]
         },
         {
+          "id": 141,
+          "type": "piechart",
+          "title": "Disk usage by folder",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "h": 9,
+            "w": 12,
+            "x": 12,
+            "y": 30
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes",
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                }
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "pieType": "donut",
+            "displayLabels": [
+              "percent"
+            ],
+            "legend": {
+              "displayMode": "table",
+              "placement": "right",
+              "showLegend": true,
+              "values": [
+                "value",
+                "percent"
+              ]
+            },
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "tooltip": {
+              "mode": "single",
+              "sort": "desc"
+            }
+          },
+          "pluginVersion": "12.3.3",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "disk_root_bytes",
+              "instant": true,
+              "refId": "A",
+              "legendFormat": "{{root}}"
+            }
+          ]
+        },
+        {
           "type": "bargauge",
           "title": "Biggest titles (top 20)",
           "datasource": {
@@ -2540,9 +2335,9 @@
           },
           "gridPos": {
             "h": 11,
-            "w": 16,
-            "x": 8,
-            "y": 53
+            "w": 12,
+            "x": 0,
+            "y": 39
           },
           "fieldConfig": {
             "defaults": {
@@ -2594,9 +2389,214 @@
               "range": false,
               "refId": "A",
               "expr": "topk(20, arr_media_size_bytes)",
-              "legendFormat": "{{title}}  \u00b7  {{quality}}"
+              "legendFormat": "{{title}}  ·  {{quality}}"
             }
           ]
+        },
+        {
+          "id": 142,
+          "type": "bargauge",
+          "title": "Largest files (filter: $root)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "h": 11,
+            "w": 12,
+            "x": 12,
+            "y": 39
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes",
+              "color": {
+                "mode": "continuous-GrYlRd"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "gradient",
+            "valueMode": "color",
+            "showUnfilled": true,
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            }
+          },
+          "pluginVersion": "12.3.3",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "disk_file_bytes{root=~\"$root\"}",
+              "instant": true,
+              "refId": "A",
+              "legendFormat": "{{path}}"
+            }
+          ]
+        },
+        {
+          "id": 143,
+          "type": "table",
+          "title": "All tracked files (raw — full paths, filterable)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "h": 10,
+            "w": 24,
+            "x": 0,
+            "y": 50
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "disk_file_bytes",
+              "instant": true,
+              "refId": "A",
+              "format": "table"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true,
+                  "__name__": true,
+                  "job": true,
+                  "instance": true
+                },
+                "renameByName": {
+                  "root": "Folder",
+                  "path": "Path",
+                  "Value": "Size"
+                }
+              }
+            },
+            {
+              "id": "sortBy",
+              "options": {
+                "sort": [
+                  {
+                    "field": "Size",
+                    "desc": true
+                  }
+                ]
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "left",
+                "filterable": true,
+                "cellOptions": {
+                  "type": "auto"
+                }
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Size"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "bytes"
+                  },
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "type": "color-background",
+                      "mode": "gradient"
+                    }
+                  },
+                  {
+                    "id": "thresholds",
+                    "value": {
+                      "mode": "absolute",
+                      "steps": [
+                        {
+                          "color": "green",
+                          "value": null
+                        },
+                        {
+                          "color": "orange",
+                          "value": 10737418240
+                        },
+                        {
+                          "color": "red",
+                          "value": 32212254720
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "id": "custom.width",
+                    "value": 140
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Folder"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 130
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "cellHeight": "sm",
+            "showHeader": true,
+            "footer": {
+              "show": true,
+              "reducer": [
+                "sum"
+              ],
+              "fields": [
+                "Size"
+              ]
+            },
+            "sortBy": [
+              {
+                "desc": true,
+                "displayName": "Size"
+              }
+            ]
+          },
+          "pluginVersion": "12.3.3"
         }
       ]
     }
