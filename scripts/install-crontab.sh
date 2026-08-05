@@ -15,7 +15,9 @@ set -euo pipefail
 PROJECT_DIR="${PROJECT_DIR:-$HOME/rpi-homeserver}"
 SERVICES_DIR="${SERVICES_DIR:-$HOME/rpi-services}"
 
-MERGED="$(mktemp)"
+# Deliberately not mktemp: this runs from a deploy whose /tmp can be pulled out from under it
+# when the webhook service restarts mid-run.
+MERGED="$PROJECT_DIR/.crontab.merged"
 trap 'rm -f "$MERGED"' EXIT
 
 cat "$PROJECT_DIR/scripts/crontab" > "$MERGED"

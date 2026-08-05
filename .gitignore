@@ -12,6 +12,7 @@ docker-compose.override.yml
 .env_copy
 .deploy_state
 .deploy.lock
+.crontab.merged
 .last_prune
 .bitwarden
 
