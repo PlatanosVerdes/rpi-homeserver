@@ -3430,6 +3430,82 @@
       "description": "Largest titles in the library, with the quality\nthat explains the size. Radarr is the source, so this counts the imported file once even when it is\nhardlinked to a torrent in downloads/.\n"
     },
     {
+      "type": "bargauge",
+      "title": "Largest files on disk",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "The 30 largest files, one line per inode, straight from the disk rather than from Radarr. That is the point: it also shows files Radarr knows nothing about, like leftovers sitting in downloads/ that were never imported.\n\nThe label is the filename only. The full paths are in the table below, which the **Folder** dropdown filters.",
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 63
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "semi-dark-blue"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "showUnfilled": true,
+        "valueMode": "text",
+        "namePlacement": "left",
+        "sizing": "manual",
+        "minVizHeight": 14,
+        "minVizWidth": 8,
+        "maxVizHeight": 20,
+        "text": {
+          "valueSize": 14,
+          "titleSize": 12
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "legend": {
+          "showLegend": false,
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "refId": "A",
+          "expr": "sort_desc(label_replace(disk_file_bytes{root=~\"$root\"}, \"file\", \"$1\", \"path\", \".*/(.*)\"))",
+          "legendFormat": "{{file}}"
+        }
+      ]
+    },
+    {
       "id": 143,
       "type": "table",
       "title": "All tracked files (filter: $root)",
@@ -3441,7 +3517,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 63
+        "y": 75
       },
       "targets": [
         {
