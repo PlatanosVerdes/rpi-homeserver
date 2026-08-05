@@ -1,0 +1,198 @@
+[
+  {
+    "name": "AV1",
+    "includeCustomFormatWhenRenaming": false,
+    "specifications": [
+      {
+        "name": "AV1",
+        "implementation": "ReleaseTitleSpecification",
+        "negate": false,
+        "required": true,
+        "fields": [
+          {
+            "name": "value",
+            "value": "\\bav1\\b"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Remux",
+    "includeCustomFormatWhenRenaming": false,
+    "specifications": [
+      {
+        "name": "Remux",
+        "implementation": "ReleaseTitleSpecification",
+        "negate": false,
+        "required": true,
+        "fields": [
+          {
+            "name": "value",
+            "value": "\\bremux\\b"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "DTS-HD/TrueHD/Atmos",
+    "includeCustomFormatWhenRenaming": false,
+    "specifications": [
+      {
+        "name": "DTS-HD/TrueHD/Atmos",
+        "implementation": "ReleaseTitleSpecification",
+        "negate": false,
+        "required": true,
+        "fields": [
+          {
+            "name": "value",
+            "value": "\\b(dts[-. ]?hd|dts[-. ]?ma|truehd|atmos)\\b"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "HEVC x265",
+    "includeCustomFormatWhenRenaming": false,
+    "specifications": [
+      {
+        "name": "HEVC x265",
+        "implementation": "ReleaseTitleSpecification",
+        "negate": false,
+        "required": true,
+        "fields": [
+          {
+            "name": "value",
+            "value": "\\b(x265|h\\.?265|hevc)\\b"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "x264 (prefer)",
+    "includeCustomFormatWhenRenaming": false,
+    "specifications": [
+      {
+        "name": "x264 (prefer)",
+        "implementation": "ReleaseTitleSpecification",
+        "negate": false,
+        "required": true,
+        "fields": [
+          {
+            "name": "value",
+            "value": "\\b(x264|h\\.?264|avc)\\b"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Audio Espanol",
+    "includeCustomFormatWhenRenaming": false,
+    "specifications": [
+      {
+        "name": "es",
+        "implementation": "ReleaseTitleSpecification",
+        "negate": false,
+        "required": true,
+        "fields": [
+          {
+            "name": "value",
+            "value": "\\b(castellano|espa[nñ]ol|spanish|esp|cast)\\b"
+          }
+        ]
+      },
+      {
+        "name": "no-latino",
+        "implementation": "ReleaseTitleSpecification",
+        "negate": true,
+        "required": true,
+        "fields": [
+          {
+            "name": "value",
+            "value": "\\b(latino|latin|lat|espa[nñ]ol[ ._-]*latino)\\b"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "VOSE subs Espanol",
+    "includeCustomFormatWhenRenaming": false,
+    "specifications": [
+      {
+        "name": "vose",
+        "implementation": "ReleaseTitleSpecification",
+        "negate": false,
+        "required": true,
+        "fields": [
+          {
+            "name": "value",
+            "value": "\\b(vose|v\\.?o\\.?s\\.?e|sub(s|titulos|titulado)?[ ._-]*(esp|spa|castellano|espa[nñ]ol))\\b"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Audio Ingles",
+    "includeCustomFormatWhenRenaming": false,
+    "specifications": [
+      {
+        "name": "English",
+        "implementation": "LanguageSpecification",
+        "negate": false,
+        "required": true,
+        "fields": [
+          {
+            "name": "value",
+            "value": 1
+          },
+          {
+            "name": "exceptLanguage",
+            "value": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Audio Latino",
+    "includeCustomFormatWhenRenaming": false,
+    "specifications": [
+      {
+        "name": "lat",
+        "implementation": "ReleaseTitleSpecification",
+        "negate": false,
+        "required": true,
+        "fields": [
+          {
+            "name": "value",
+            "value": "\\b(latino|latin|lat|espa[nñ]ol[ ._-]*latino)\\b"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Chinese WEB-DL (CSWEB)",
+    "includeCustomFormatWhenRenaming": false,
+    "specifications": [
+      {
+        "name": "CSWEB",
+        "implementation": "ReleaseTitleSpecification",
+        "negate": false,
+        "required": true,
+        "fields": [
+          {
+            "name": "value",
+            "value": "\\bCSWEB\\b"
+          }
+        ]
+      }
+    ]
+  }
+]
