@@ -105,11 +105,11 @@ services:
       # silently come back up as admin/admin.
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
       # No Telegram vars here on purpose: the contact point is rendered before startup by
-      # deploy_control.sh, so the token never enters the container's environment
+      # apply.sh, so the token never enters the container's environment
     volumes:
       - ${APP_CONFIG_PATH}/grafana/data:/var/lib/grafana
       - ${CONFIG_ROOT}/grafana/provisioning:/etc/grafana/provisioning:ro
-      # Alerting is rendered by deploy_control.sh from config/grafana/alerting/ (the bot token
+      # Alerting is rendered by apply.sh from config/grafana/alerting/ (the bot token
       # and chat id come from .env), so it is mounted over the empty dir above
       - ${APP_CONFIG_PATH}/grafana-alerting:/etc/grafana/provisioning/alerting:ro
       - ${CONFIG_ROOT}/grafana/dashboards_json:/etc/grafana/dashboards_json:ro

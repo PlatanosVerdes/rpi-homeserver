@@ -85,7 +85,7 @@ Active cron entries:
 
 ```
 # Auto-deploy: pull git + docker compose up every 15 min
-*/15 * * * * /home/raspi/rpi-homeserver/scripts/deploy_control.sh >> /home/raspi/rpi-homeserver/deploy_control.log 2>&1
+*/15 * * * * /home/raspi/rpi-homeserver/scripts/apply.sh >> /home/raspi/rpi-homeserver/apply.log 2>&1
 
 # Tailscale metrics: write .prom file every minute for node_exporter
 * * * * * /home/raspi/rpi-homeserver/services/tailscale-metrics/tailscale-metrics >> /home/raspi/rpi-homeserver/tailscale-metrics.log 2>&1

@@ -100,7 +100,7 @@ A push to `main` deploys within seconds via the GitHub webhook
 (see [deploy-webhook.md](deploy-webhook.md)). One script handles both repos, so to
 trigger it by hand:
 ```bash
-bash ~/rpi-homeserver/scripts/deploy_control.sh
+bash ~/rpi-homeserver/scripts/apply.sh
 ```
 
 ### Reload Caddy only (if you only changed a Caddyfile):

@@ -40,7 +40,7 @@ committed**. Since this repo is public, neither value can sit in a provisioning 
 
 ```
 config/grafana/alerting/          in git: rules, policies, contact-point TEMPLATE
-        │  deploy_control.sh renders it (render_grafana_alerting)
+        │  apply.sh renders it (render_grafana_alerting)
         ▼
 appdata/grafana-alerting/         gitignored, what Grafana actually reads
         │  bind-mounted over /etc/grafana/provisioning/alerting

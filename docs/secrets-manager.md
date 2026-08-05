@@ -17,7 +17,7 @@ docker compose up -d        ← receives secrets as env vars, never touches disk
 containers
 ```
 
-`deploy_control.sh` runs this automatically every 15 minutes on git pull.
+`apply.sh` runs this automatically every 15 minutes on git pull.
 
 ---
 
@@ -97,7 +97,7 @@ python3 scripts/bws-run.py docker compose -f compose-core.yml config
 
 ## Automated deploys
 
-`deploy_control.sh` runs every 15 minutes via cron. It:
+`apply.sh` runs every 15 minutes via cron. It:
 1. Loads `BWS_ACCESS_TOKEN` from `.env`
 2. Checks BWS is reachable
 3. Runs `python3 scripts/bws-run.py docker compose up -d` on git changes
@@ -125,5 +125,5 @@ Create secret with key `MY_NEW_TOKEN` and value `abc123`.
 
 | Cron | Needs BWS? | Notes |
 |---|---|---|
-| `deploy_control.sh` (every 15 min) | ✅ Yes | Uses `bws-run.py` automatically |
+| `apply.sh` (every 15 min) | ✅ Yes | Uses `bws-run.py` automatically |
 | `tailscale-metrics` (every 1 min) | ❌ No | Reads `TAILSCALE_API_KEY` from `.env` directly |

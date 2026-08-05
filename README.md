@@ -47,7 +47,7 @@ Nothing is deployed by hand. A push is the only trigger, and the repo is the sou
                               │   deploy-webhook.py verifies the signature
                               ▼
                     ╔═════════════════════╗
-                    ║  deploy_control.sh  ║ ◄──── cron every 30 min
+                    ║  apply.sh  ║ ◄──── cron every 30 min
                     ╚═════════════════════╝        (self-heal fallback)
 ```
 
@@ -57,7 +57,7 @@ landed while the Pi or the tunnel was down.
 ### What a deploy actually does
 
 ```
-deploy_control.sh
+apply.sh
    │
    ├─ flock ................... another deploy already running? exit
    ├─ git pull rpi-homeserver
@@ -223,7 +223,7 @@ bash ~/rpi-homeserver/scripts/install-crontab.sh
 ```
 
 That merges this repo's `scripts/crontab` with a companion repo's fragment if there is one, and
-`deploy_control.sh` re-runs it on every deploy, so committed cron changes apply themselves.
+`apply.sh` re-runs it on every deploy, so committed cron changes apply themselves.
 
 For push-triggered deploys instead of waiting for the 30-minute cron, see
 [docs/deploy-webhook.md](docs/deploy-webhook.md).
@@ -400,12 +400,12 @@ cd services/tailscale-metrics && make build
 * * * * * /home/raspi/rpi-homeserver/services/tailscale-metrics/tailscale-metrics >> /home/raspi/rpi-homeserver/tailscale-metrics.log 2>&1
 ```
 
-### Auto-Deployment (`deploy_control.sh`)
+### Auto-Deployment (`apply.sh`)
 Pulls latest git changes every 15 minutes and rebuilds only when something changed.
 
 ```bash
 # Cron entry (set up during install)
-*/15 * * * * /home/raspi/rpi-homeserver/scripts/deploy_control.sh >> /home/raspi/rpi-homeserver/deploy_control.log 2>&1
+*/15 * * * * /home/raspi/rpi-homeserver/scripts/apply.sh >> /home/raspi/rpi-homeserver/apply.log 2>&1
 ```
 
 Metrics are pushed to Pushgateway and visible in the **Deploy Monitor** dashboard in Grafana.
@@ -424,7 +424,7 @@ Metrics are pushed to Pushgateway and visible in the **Deploy Monitor** dashboar
 - **No data on a dashboard?** Trigger a run manually:
   ```bash
   docker compose -f compose-media.yml restart acestream-updater
-  bash /home/raspi/rpi-homeserver/scripts/deploy_control.sh
+  bash /home/raspi/rpi-homeserver/scripts/apply.sh
   ```
 
 ### Backups & Recovery

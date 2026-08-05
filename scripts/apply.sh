@@ -23,7 +23,7 @@ log() { echo "$(date '+%Y-%m-%d %H:%M:%S') - $1"; }
 
 # Cron used to truncate this log on every run; now cron and the webhook both append to it,
 # so keep it bounded. Truncate in place (not mv) or the open redirect writes to a dead inode.
-LOG_FILE="$PROJECT_DIR/deploy_control.log"
+LOG_FILE="$PROJECT_DIR/apply.log"
 if [[ -f "$LOG_FILE" ]] && [[ "$(stat -c%s "$LOG_FILE" 2>/dev/null || echo 0)" -gt 5242880 ]]; then
     tail -n 500 "$LOG_FILE" > "$LOG_FILE.tmp" && cat "$LOG_FILE.tmp" > "$LOG_FILE"
     rm -f "$LOG_FILE.tmp"
@@ -237,4 +237,4 @@ push_metrics $DEPLOY_STATUS
 log "Done."
 
 # crontab -e
-# */15 * * * * /home/raspi/rpi-homeserver/scripts/deploy_control.sh >> /home/raspi/rpi-homeserver/deploy_control.log 2>&1
+# */15 * * * * /home/raspi/rpi-homeserver/scripts/apply.sh >> /home/raspi/rpi-homeserver/apply.log 2>&1
