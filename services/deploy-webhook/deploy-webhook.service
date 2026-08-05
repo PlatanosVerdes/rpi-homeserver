@@ -14,9 +14,13 @@ RestartSec=5
 # receiver's code changes: with the default KillMode=control-group that restart would kill the
 # deploy that requested it, halfway through.
 KillMode=process
-# No PrivateTmp: the deploy this service spawns outlives a restart (see KillMode above), and a
-# private /tmp is torn down with the old instance, leaving the still-running deploy with no /tmp.
-ProtectSystem=full
+# Deliberately unhardened. Every sandboxing directive here is inherited by deploy_control.sh,
+# which this service spawns, and each one broke it in a different, silent way:
+#   NoNewPrivileges  -> sudo fails, so the Grafana alerting render was skipped
+#   PrivateTmp       -> the deploy loses /tmp when the service restarts mid-run
+#   ProtectSystem    -> /etc is read-only, so the deploy cannot reinstall this very unit
+# The receiver itself is a ~150-line stdlib HTTP server bound to 127.0.0.1 that runs no payload
+# from the request, so the sandbox bought little; the orchestrator it launches needs root paths.
 # No NoNewPrivileges here: the whole job of this service is to launch deploy_control.sh, which
 # needs sudo for a couple of root-owned paths under appdata. The flag is inherited by children,
 # so setting it silently breaks those steps when the deploy comes from the webhook (it still
