@@ -631,6 +631,723 @@
       ]
     },
     {
+      "type": "table",
+      "title": "Stuck on a bad quality",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Titles whose current file is one of the qualities the download policy rejects (cams, SD, DVD, BR-DISK). These are the ones actually worth looking at by hand: Radarr will not always see them as upgradable, and a 300 MB BR-DISK is how Gattaca hid for five months.",
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 11
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left",
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Quality"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "Bluray-2160p": {
+                        "color": "blue",
+                        "index": 0,
+                        "text": "Bluray-2160p"
+                      },
+                      "WEBDL-2160p": {
+                        "color": "blue",
+                        "index": 1,
+                        "text": "WEBDL-2160p"
+                      },
+                      "WEBRip-2160p": {
+                        "color": "blue",
+                        "index": 2,
+                        "text": "WEBRip-2160p"
+                      },
+                      "HDTV-2160p": {
+                        "color": "blue",
+                        "index": 3,
+                        "text": "HDTV-2160p"
+                      },
+                      "Remux-2160p": {
+                        "color": "blue",
+                        "index": 4,
+                        "text": "Remux-2160p"
+                      },
+                      "Bluray-1080p": {
+                        "color": "green",
+                        "index": 5,
+                        "text": "Bluray-1080p"
+                      },
+                      "WEBDL-1080p": {
+                        "color": "green",
+                        "index": 6,
+                        "text": "WEBDL-1080p"
+                      },
+                      "WEBRip-1080p": {
+                        "color": "green",
+                        "index": 7,
+                        "text": "WEBRip-1080p"
+                      },
+                      "Remux-1080p": {
+                        "color": "orange",
+                        "index": 8,
+                        "text": "Remux-1080p"
+                      },
+                      "HDTV-1080p": {
+                        "color": "orange",
+                        "index": 9,
+                        "text": "HDTV-1080p"
+                      },
+                      "Bluray-720p": {
+                        "color": "orange",
+                        "index": 10,
+                        "text": "Bluray-720p"
+                      },
+                      "WEBDL-720p": {
+                        "color": "orange",
+                        "index": 11,
+                        "text": "WEBDL-720p"
+                      },
+                      "WEBRip-720p": {
+                        "color": "orange",
+                        "index": 12,
+                        "text": "WEBRip-720p"
+                      },
+                      "HDTV-720p": {
+                        "color": "orange",
+                        "index": 13,
+                        "text": "HDTV-720p"
+                      },
+                      "BR-DISK": {
+                        "color": "red",
+                        "index": 14,
+                        "text": "BR-DISK"
+                      },
+                      "Raw-HD": {
+                        "color": "red",
+                        "index": 15,
+                        "text": "Raw-HD"
+                      },
+                      "SDTV": {
+                        "color": "red",
+                        "index": 16,
+                        "text": "SDTV"
+                      },
+                      "DVD": {
+                        "color": "red",
+                        "index": 17,
+                        "text": "DVD"
+                      },
+                      "DVD-R": {
+                        "color": "red",
+                        "index": 18,
+                        "text": "DVD-R"
+                      },
+                      "Bluray-576p": {
+                        "color": "red",
+                        "index": 19,
+                        "text": "Bluray-576p"
+                      },
+                      "Bluray-480p": {
+                        "color": "red",
+                        "index": 20,
+                        "text": "Bluray-480p"
+                      },
+                      "WEBDL-480p": {
+                        "color": "red",
+                        "index": 21,
+                        "text": "WEBDL-480p"
+                      },
+                      "WEBRip-480p": {
+                        "color": "red",
+                        "index": 22,
+                        "text": "WEBRip-480p"
+                      },
+                      "TELESYNC": {
+                        "color": "red",
+                        "index": 23,
+                        "text": "TELESYNC"
+                      },
+                      "TELECINE": {
+                        "color": "red",
+                        "index": 24,
+                        "text": "TELECINE"
+                      },
+                      "CAM": {
+                        "color": "red",
+                        "index": 25,
+                        "text": "CAM"
+                      },
+                      "WORKPRINT": {
+                        "color": "red",
+                        "index": 26,
+                        "text": "WORKPRINT"
+                      },
+                      "DVDSCR": {
+                        "color": "red",
+                        "index": 27,
+                        "text": "DVDSCR"
+                      },
+                      "REGIONAL": {
+                        "color": "red",
+                        "index": 28,
+                        "text": "REGIONAL"
+                      },
+                      "Unknown": {
+                        "color": "red",
+                        "index": 29,
+                        "text": "Unknown"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 130
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Size"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              },
+              {
+                "id": "custom.width",
+                "value": 110
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "sortBy": [
+          {
+            "displayName": "Size",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "refId": "A",
+          "expr": "arr_media_size_bytes{quality=~\"TELESYNC|TELECINE|CAM|WORKPRINT|DVDSCR|REGIONAL|Unknown|SDTV|DVD|DVD-R|BR-DISK|Raw-HD|Bluray-480p|Bluray-576p|WEBDL-480p|WEBRip-480p\"}"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "job": true,
+              "instance": true,
+              "__name__": true,
+              "app": true
+            },
+            "renameByName": {
+              "title": "Title",
+              "quality": "Quality",
+              "Value": "Size"
+            },
+            "indexByName": {
+              "title": 0,
+              "quality": 1,
+              "Value": 2
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Waiting for an upgrade",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Titles below their profile cutoff: Radarr wants something better and has not found it yet.\n\n**When**: there is no date to give. It happens when a release that beats the current file shows up on an indexer. Two things look for it: the RSS sync every 30 min, which only sees what was uploaded recently, and `cutoff-search.sh` every night at 02:00, which actively asks the indexers about exactly this list.",
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 11
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left",
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Now"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "Bluray-2160p": {
+                        "color": "blue",
+                        "index": 0,
+                        "text": "Bluray-2160p"
+                      },
+                      "WEBDL-2160p": {
+                        "color": "blue",
+                        "index": 1,
+                        "text": "WEBDL-2160p"
+                      },
+                      "WEBRip-2160p": {
+                        "color": "blue",
+                        "index": 2,
+                        "text": "WEBRip-2160p"
+                      },
+                      "HDTV-2160p": {
+                        "color": "blue",
+                        "index": 3,
+                        "text": "HDTV-2160p"
+                      },
+                      "Remux-2160p": {
+                        "color": "blue",
+                        "index": 4,
+                        "text": "Remux-2160p"
+                      },
+                      "Bluray-1080p": {
+                        "color": "green",
+                        "index": 5,
+                        "text": "Bluray-1080p"
+                      },
+                      "WEBDL-1080p": {
+                        "color": "green",
+                        "index": 6,
+                        "text": "WEBDL-1080p"
+                      },
+                      "WEBRip-1080p": {
+                        "color": "green",
+                        "index": 7,
+                        "text": "WEBRip-1080p"
+                      },
+                      "Remux-1080p": {
+                        "color": "orange",
+                        "index": 8,
+                        "text": "Remux-1080p"
+                      },
+                      "HDTV-1080p": {
+                        "color": "orange",
+                        "index": 9,
+                        "text": "HDTV-1080p"
+                      },
+                      "Bluray-720p": {
+                        "color": "orange",
+                        "index": 10,
+                        "text": "Bluray-720p"
+                      },
+                      "WEBDL-720p": {
+                        "color": "orange",
+                        "index": 11,
+                        "text": "WEBDL-720p"
+                      },
+                      "WEBRip-720p": {
+                        "color": "orange",
+                        "index": 12,
+                        "text": "WEBRip-720p"
+                      },
+                      "HDTV-720p": {
+                        "color": "orange",
+                        "index": 13,
+                        "text": "HDTV-720p"
+                      },
+                      "BR-DISK": {
+                        "color": "red",
+                        "index": 14,
+                        "text": "BR-DISK"
+                      },
+                      "Raw-HD": {
+                        "color": "red",
+                        "index": 15,
+                        "text": "Raw-HD"
+                      },
+                      "SDTV": {
+                        "color": "red",
+                        "index": 16,
+                        "text": "SDTV"
+                      },
+                      "DVD": {
+                        "color": "red",
+                        "index": 17,
+                        "text": "DVD"
+                      },
+                      "DVD-R": {
+                        "color": "red",
+                        "index": 18,
+                        "text": "DVD-R"
+                      },
+                      "Bluray-576p": {
+                        "color": "red",
+                        "index": 19,
+                        "text": "Bluray-576p"
+                      },
+                      "Bluray-480p": {
+                        "color": "red",
+                        "index": 20,
+                        "text": "Bluray-480p"
+                      },
+                      "WEBDL-480p": {
+                        "color": "red",
+                        "index": 21,
+                        "text": "WEBDL-480p"
+                      },
+                      "WEBRip-480p": {
+                        "color": "red",
+                        "index": 22,
+                        "text": "WEBRip-480p"
+                      },
+                      "TELESYNC": {
+                        "color": "red",
+                        "index": 23,
+                        "text": "TELESYNC"
+                      },
+                      "TELECINE": {
+                        "color": "red",
+                        "index": 24,
+                        "text": "TELECINE"
+                      },
+                      "CAM": {
+                        "color": "red",
+                        "index": 25,
+                        "text": "CAM"
+                      },
+                      "WORKPRINT": {
+                        "color": "red",
+                        "index": 26,
+                        "text": "WORKPRINT"
+                      },
+                      "DVDSCR": {
+                        "color": "red",
+                        "index": 27,
+                        "text": "DVDSCR"
+                      },
+                      "REGIONAL": {
+                        "color": "red",
+                        "index": 28,
+                        "text": "REGIONAL"
+                      },
+                      "Unknown": {
+                        "color": "red",
+                        "index": 29,
+                        "text": "Unknown"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 120
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Target"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "Bluray-2160p": {
+                        "color": "blue",
+                        "index": 0,
+                        "text": "Bluray-2160p"
+                      },
+                      "WEBDL-2160p": {
+                        "color": "blue",
+                        "index": 1,
+                        "text": "WEBDL-2160p"
+                      },
+                      "WEBRip-2160p": {
+                        "color": "blue",
+                        "index": 2,
+                        "text": "WEBRip-2160p"
+                      },
+                      "HDTV-2160p": {
+                        "color": "blue",
+                        "index": 3,
+                        "text": "HDTV-2160p"
+                      },
+                      "Remux-2160p": {
+                        "color": "blue",
+                        "index": 4,
+                        "text": "Remux-2160p"
+                      },
+                      "Bluray-1080p": {
+                        "color": "green",
+                        "index": 5,
+                        "text": "Bluray-1080p"
+                      },
+                      "WEBDL-1080p": {
+                        "color": "green",
+                        "index": 6,
+                        "text": "WEBDL-1080p"
+                      },
+                      "WEBRip-1080p": {
+                        "color": "green",
+                        "index": 7,
+                        "text": "WEBRip-1080p"
+                      },
+                      "Remux-1080p": {
+                        "color": "orange",
+                        "index": 8,
+                        "text": "Remux-1080p"
+                      },
+                      "HDTV-1080p": {
+                        "color": "orange",
+                        "index": 9,
+                        "text": "HDTV-1080p"
+                      },
+                      "Bluray-720p": {
+                        "color": "orange",
+                        "index": 10,
+                        "text": "Bluray-720p"
+                      },
+                      "WEBDL-720p": {
+                        "color": "orange",
+                        "index": 11,
+                        "text": "WEBDL-720p"
+                      },
+                      "WEBRip-720p": {
+                        "color": "orange",
+                        "index": 12,
+                        "text": "WEBRip-720p"
+                      },
+                      "HDTV-720p": {
+                        "color": "orange",
+                        "index": 13,
+                        "text": "HDTV-720p"
+                      },
+                      "BR-DISK": {
+                        "color": "red",
+                        "index": 14,
+                        "text": "BR-DISK"
+                      },
+                      "Raw-HD": {
+                        "color": "red",
+                        "index": 15,
+                        "text": "Raw-HD"
+                      },
+                      "SDTV": {
+                        "color": "red",
+                        "index": 16,
+                        "text": "SDTV"
+                      },
+                      "DVD": {
+                        "color": "red",
+                        "index": 17,
+                        "text": "DVD"
+                      },
+                      "DVD-R": {
+                        "color": "red",
+                        "index": 18,
+                        "text": "DVD-R"
+                      },
+                      "Bluray-576p": {
+                        "color": "red",
+                        "index": 19,
+                        "text": "Bluray-576p"
+                      },
+                      "Bluray-480p": {
+                        "color": "red",
+                        "index": 20,
+                        "text": "Bluray-480p"
+                      },
+                      "WEBDL-480p": {
+                        "color": "red",
+                        "index": 21,
+                        "text": "WEBDL-480p"
+                      },
+                      "WEBRip-480p": {
+                        "color": "red",
+                        "index": 22,
+                        "text": "WEBRip-480p"
+                      },
+                      "TELESYNC": {
+                        "color": "red",
+                        "index": 23,
+                        "text": "TELESYNC"
+                      },
+                      "TELECINE": {
+                        "color": "red",
+                        "index": 24,
+                        "text": "TELECINE"
+                      },
+                      "CAM": {
+                        "color": "red",
+                        "index": 25,
+                        "text": "CAM"
+                      },
+                      "WORKPRINT": {
+                        "color": "red",
+                        "index": 26,
+                        "text": "WORKPRINT"
+                      },
+                      "DVDSCR": {
+                        "color": "red",
+                        "index": 27,
+                        "text": "DVDSCR"
+                      },
+                      "REGIONAL": {
+                        "color": "red",
+                        "index": 28,
+                        "text": "REGIONAL"
+                      },
+                      "Unknown": {
+                        "color": "red",
+                        "index": 29,
+                        "text": "Unknown"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 120
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Profile"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "sortBy": [
+          {
+            "displayName": "Now",
+            "desc": false
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "refId": "A",
+          "expr": "arr_below_cutoff"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "job": true,
+              "instance": true,
+              "__name__": true,
+              "app": true,
+              "Value": true
+            },
+            "renameByName": {
+              "title": "Title",
+              "current": "Now",
+              "target": "Target",
+              "profile": "Profile"
+            },
+            "indexByName": {
+              "title": 0,
+              "current": 1,
+              "target": 2,
+              "profile": 3
+            }
+          }
+        }
+      ]
+    },
+    {
       "type": "row",
       "title": "Transfers",
       "collapsed": false,
@@ -638,7 +1355,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 11
+        "y": 17
       },
       "panels": []
     },
@@ -653,7 +1370,7 @@
         "h": 4,
         "w": 4,
         "x": 0,
-        "y": 12
+        "y": 18
       },
       "fieldConfig": {
         "defaults": {
@@ -719,7 +1436,7 @@
         "h": 4,
         "w": 4,
         "x": 4,
-        "y": 12
+        "y": 18
       },
       "fieldConfig": {
         "defaults": {
@@ -785,7 +1502,7 @@
         "h": 4,
         "w": 4,
         "x": 8,
-        "y": 12
+        "y": 18
       },
       "fieldConfig": {
         "defaults": {
@@ -851,7 +1568,7 @@
         "h": 4,
         "w": 4,
         "x": 12,
-        "y": 12
+        "y": 18
       },
       "fieldConfig": {
         "defaults": {
@@ -912,7 +1629,7 @@
         "h": 4,
         "w": 4,
         "x": 16,
-        "y": 12
+        "y": 18
       },
       "fieldConfig": {
         "defaults": {
@@ -973,7 +1690,7 @@
         "h": 4,
         "w": 4,
         "x": 20,
-        "y": 12
+        "y": 18
       },
       "fieldConfig": {
         "defaults": {
@@ -1034,7 +1751,7 @@
         "h": 12,
         "w": 18,
         "x": 0,
-        "y": 16
+        "y": 22
       },
       "fieldConfig": {
         "defaults": {
@@ -1397,7 +2114,7 @@
         "h": 12,
         "w": 6,
         "x": 18,
-        "y": 16
+        "y": 22
       },
       "fieldConfig": {
         "defaults": {
@@ -1775,6 +2492,197 @@
       "description": "**qBittorrent states**\n\n| State | Meaning |\n| :--- | :--- |\n| `downloading` | pulling data right now |\n| `metaDL` | fetching the .torrent metadata (magnet just added) |\n| `stalledDL` | wants to download but finds no seeds: stuck |\n| `queuedDL` | waiting for a download slot |\n| `uploading` | sending data to someone right now |\n| `stalledUP` | seeding, but nobody is downloading from you. Normal for old titles |\n| `queuedUP` | finished, waiting its turn to seed. **Not seeding at all** |\n| `pausedUP` / `stoppedUP` | stopped on purpose, or its share limit was reached |\n| `checkingUP` / `checkingDL` | verifying pieces against the disk |\n| `moving` | being moved between folders |\n| `error` / `missingFiles` | broken: the data is unreadable or gone |\n\nWhy so many queued: `MaxActiveTorrents = 18` with 36 torrents, so half wait their turn.\n"
     },
     {
+      "type": "timeseries",
+      "title": "Torrents by state over time",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Added to watch the effect of raising MaxActiveTorrents from 18 to 40 on 2026-08-05: queuedUP should stay at zero, and stalledUP should drain as each torrent reaches its 5-day share limit and stops.",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 34
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 15,
+            "showPoints": "auto",
+            "pointSize": 8,
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "spanNulls": true,
+            "axisSoftMin": 0,
+            "gradientMode": "none",
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "queuedUP"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "semi-dark-green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "stalledUP"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "purple"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "uploading"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "stalledDL"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "downloading"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "stoppedUP"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "error"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "missingFiles"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "count by (state) (qbit_torrent_progress)",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{state}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
       "type": "row",
       "title": "Disk usage",
       "collapsed": false,
@@ -1782,7 +2690,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 28
+        "y": 42
       },
       "panels": []
     },
@@ -1797,7 +2705,7 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 29
+        "y": 43
       },
       "fieldConfig": {
         "defaults": {
@@ -2337,7 +3245,7 @@
         "h": 9,
         "w": 12,
         "x": 12,
-        "y": 29
+        "y": 43
       },
       "fieldConfig": {
         "defaults": {
@@ -2409,7 +3317,7 @@
         "h": 11,
         "w": 18,
         "x": 0,
-        "y": 38
+        "y": 52
       },
       "fieldConfig": {
         "defaults": {
@@ -2478,7 +3386,7 @@
         "h": 11,
         "w": 6,
         "x": 18,
-        "y": 38
+        "y": 52
       },
       "fieldConfig": {
         "defaults": {
@@ -2539,7 +3447,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 49
+        "y": 63
       },
       "targets": [
         {

@@ -142,3 +142,17 @@ Ensure the user owns all `appdata/` and `config/` directories:
 ```bash
 sudo chown -R $USER:$USER ~/rpi-homeserver/appdata ~/rpi-homeserver/config
 ```
+
+## qBittorrent queue limits
+
+`MaxActiveTorrents` and `MaxActiveUploads` raised from 18/15 to **40/40** on 2026-08-05, applied
+live through the WebUI API (`/api/v2/app/setPreferences`).
+
+Why: with 36 torrents and 18 active slots, half of them sat in `queuedUP`, which is **not seeding**.
+Since seeding time only accumulates while active, the 5-day share limit set on each torrent took
+roughly twice as long to reach, so torrents took twice as long to retire themselves. Right after the
+change the queue went from 18 waiting to 0.
+
+The limit is 40 rather than unlimited so a much larger library cannot open hundreds of connections on
+a Pi. This setting lives in `appdata/qbittorrent/` and is therefore **not** reproducible from git:
+if the Pi is rebuilt, set it again.

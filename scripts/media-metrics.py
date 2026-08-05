@@ -7,6 +7,7 @@ Three things the existing exporters cannot answer:
   qbit_torrent_*         which torrents are in each state, not how many
   arr_indexer_grabs_90d  which indexers actually get used, so alerts can ignore the rest
   arr_media_size_bytes   where the disk went: size per title, tagged with its quality
+  arr_below_cutoff       which titles are waiting for a better release, and for which quality
   prowlarr_indexer_up    which indexers are failing right now, over time
 
 All three use labels to carry identity, which is not what Prometheus is for. It is a deliberate
@@ -180,6 +181,44 @@ def indexer_usage():
     push("arr_indexer_usage", lines)
 
 
+def upgrade_queue():
+    """Which titles are below their quality cutoff, and what they are waiting to become.
+
+    "When" is not knowable: it depends on a better release appearing on an indexer. What is knowable
+    is that cutoff-search.sh asks every night at 02:00, so this is the list it will ask about.
+    """
+    lines = ["# HELP arr_below_cutoff 1 for a title below its profile cutoff, waiting for an upgrade",
+             "# TYPE arr_below_cutoff gauge"]
+    try:
+        key = api_key("radarr")
+        profiles = {p["id"]: p for p in get("http://localhost:7878/api/v3/qualityprofile", key)}
+        cutoff_name = {}
+        for pid, profile in profiles.items():
+            target = profile["cutoff"]
+            cutoff_name[pid] = next(
+                ((i.get("name") or i["quality"]["name"]) for i in profile["items"]
+                 if (i.get("id") or i.get("quality", {}).get("id")) == target), str(target))
+
+        # the wanted endpoint does not include the file, so take the current quality from /movie
+        current = {}
+        for movie in get("http://localhost:7878/api/v3/movie", key):
+            f = movie.get("movieFile")
+            if movie.get("hasFile") and f:
+                current[movie["title"]] = ((f.get("quality") or {}).get("quality") or {}).get("name", "Unknown")
+
+        wanted = get("http://localhost:7878/api/v3/wanted/cutoff?pageSize=200", key)["records"]
+        for record in wanted:
+            title = record["title"]
+            lines.append(f'arr_below_cutoff{{app="radarr",title="{escape(title)[:90]}",'
+                         f'current="{escape(current.get(title, "none"))}",'
+                         f'target="{escape(cutoff_name.get(record.get("qualityProfileId"), "?"))}",'
+                         f'profile="{escape(profiles.get(record.get("qualityProfileId"), {}).get("name", "?"))}"}} 1')
+    except Exception as exc:
+        failures.append(f"radarr cutoff: {exc}")
+
+    push("arr_upgrade_queue", lines)
+
+
 def library_sizes():
     """Size per title, with its quality as a label, so the dashboard can answer where the disk went.
 
@@ -246,6 +285,7 @@ if __name__ == "__main__":
     qbit_torrents()
     indexer_usage()
     library_sizes()
+    upgrade_queue()
     prowlarr_indexers()
     if failures:
         sys.exit("; ".join(failures))
