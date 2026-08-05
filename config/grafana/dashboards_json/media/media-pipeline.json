@@ -505,7 +505,7 @@
           }
         }
       ],
-      "description": "Files replaced by a **different** quality, newest first.\n\nAn upgrade is two events at the same instant: the old file deleted with reason `Upgrade`, and the\nnew one imported. Same quality on both sides means it was a custom-format score upgrade, not a\nresolution change.\n\n**Colours follow the download policy, not the resolution:**\n🔵 4K · 🟢 what the TV direct-plays (Bluray/WEB 1080p) · 🟠 works but wastes space (Remux-1080p, 720p)\n· 🔴 unwanted (BR-DISK, cams, SD)\n"
+      "description": "Files replaced by a **different** quality, newest first.\n\nAn upgrade is two events at the same instant: the old file deleted with reason `Upgrade`, and the new\none imported. The same quality on both sides means it was a custom-format score upgrade, not a\nresolution change.\n\n**Colours follow the download policy, not the resolution:**\n🔵 4K · 🟢 what the TV direct-plays (Bluray/WEB 1080p) · 🟠 works but wastes space (Remux-1080p, 720p)\n· 🔴 unwanted (BR-DISK, cams, SD)"
     },
     {
       "type": "stat",
@@ -567,7 +567,7 @@
           "range": false
         }
       ],
-      "description": "How many upgrades this exporter is currently exposing (capped at the last 25)."
+      "description": "How many upgrades are currently being exposed. The exporter keeps only the most recent ones, so\nthis is a window, not a lifetime count."
     },
     {
       "type": "stat",
@@ -628,7 +628,8 @@
           "instant": true,
           "range": false
         }
-      ]
+      ],
+      "description": "Upgrades whose timestamp falls inside the last week, out of the window the exporter keeps."
     },
     {
       "type": "table",
@@ -637,7 +638,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Titles whose current file is one of the qualities the download policy rejects (cams, SD, DVD, BR-DISK). These are the ones actually worth looking at by hand: Radarr will not always see them as upgradable, and a 300 MB BR-DISK is how Gattaca hid for five months.",
+      "description": "Titles whose current file is a quality the download policy rejects: cams, telesyncs, SD, DVD,\nBR-DISK.\n\nWorth checking by hand, because Radarr does not always treat these as upgradable. A quality that is\nnot even allowed in the profile has no rank to compare against, so it can sit below the cutoff\nwithout ever appearing in the upgrade list.",
       "gridPos": {
         "h": 7,
         "w": 10,
@@ -907,7 +908,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Everything Radarr is waiting for, and what it is waiting for.\n\n| Kind | Meaning |\n| :--- | :--- |\n| 🔵 `downloading` | in the queue right now. **Expected** is the ETA, or `stalled` when nothing has moved |\n| 🟠 `missing` | monitored with no file at all: cannot be watched |\n| 🟢 `upgrade` | watchable, but below the profile cutoff |\n\n**Expected** is the honest half of \"when\". Nobody can say when someone uploads a good release, but\nthese are knowable:\n\n- `in cinemas, no digital date` — no Bluray exists yet, searching more often changes nothing\n- `out, waiting for a good release` — available in the world, so it is down to an indexer having it.\n  The 02:00 search asks about exactly this list every night\n- `eta ...` — actually downloading",
+      "description": "Everything Radarr is waiting for, and what it is waiting for.\n\n| Kind | Meaning |\n| :--- | :--- |\n| 🔵 `downloading` | in the queue right now. **Expected** is the ETA, or `stalled` when no bytes have moved |\n| 🟠 `missing` | monitored with no file at all: cannot be watched |\n| 🟢 `upgrade` | watchable, but below the profile cutoff |\n\n**Now** is the quality on disk, 🔴 `none` when there is no file.\n\n**Expected** is the honest half of \"when\". Nobody can say when someone uploads a good release, but\ntwo things are knowable:\n\n- `in cinemas, no digital date` — the film has no home release yet, so no amount of searching will\n  find a better one\n- `out, waiting for a good release` — it exists in the world, so this is down to an indexer carrying\n  it. The nightly cutoff search asks about exactly this list",
       "gridPos": {
         "h": 7,
         "w": 14,
@@ -1543,7 +1544,7 @@
           "range": false
         }
       ],
-      "description": "Whether the exporter can talk to qBittorrent's WebUI at all."
+      "description": "Whether the exporter can talk to qBittorrent's WebUI at all. Down means the metrics on this row\nare stale, not that the torrents stopped."
     },
     {
       "type": "stat",
@@ -1609,7 +1610,7 @@
           "range": false
         }
       ],
-      "description": "`error` or `missingFiles`: the data is unreadable or has been moved out from under qBittorrent. These never finish on their own."
+      "description": "Torrents in `error` or `missingFiles`: the data is unreadable, or it was moved or deleted from\nunder qBittorrent. These never recover on their own."
     },
     {
       "type": "stat",
@@ -1675,7 +1676,7 @@
           "range": false
         }
       ],
-      "description": "Torrents that want to download but find no seeds. One for hours usually means the release is dead; let Radarr blocklist it and grab another."
+      "description": "Torrents that want to download but find no seeds. One stalled for hours usually means the\nrelease is dead: blocklist it in Radarr so it grabs a different one instead of retrying the same."
     },
     {
       "type": "stat",
@@ -2221,7 +2222,7 @@
           }
         }
       ],
-      "description": "**qBittorrent states**\n\n| State | Meaning |\n| :--- | :--- |\n| `downloading` | pulling data right now |\n| `metaDL` | fetching the .torrent metadata (magnet just added) |\n| `stalledDL` | wants to download but finds no seeds: stuck |\n| `queuedDL` | waiting for a download slot |\n| `uploading` | sending data to someone right now |\n| `stalledUP` | seeding, but nobody is downloading from you. Normal for old titles |\n| `queuedUP` | finished, waiting its turn to seed. **Not seeding at all** |\n| `pausedUP` / `stoppedUP` | stopped on purpose, or its share limit was reached |\n| `checkingUP` / `checkingDL` | verifying pieces against the disk |\n| `moving` | being moved between folders |\n| `error` / `missingFiles` | broken: the data is unreadable or gone |\n\nQueue limits are `MaxActiveTorrents = 40` since 2026-08-05, up from 18. Before that half the torrents sat in `queuedUP`, which is not seeding at all.\n"
+      "description": "**What the states mean**\n\n| State | Meaning |\n| :--- | :--- |\n| `downloading` | pulling data right now |\n| `metaDL` | fetching the .torrent metadata (magnet just added) |\n| `stalledDL` | wants to download but finds no seeds: stuck |\n| `queuedDL` | waiting for a download slot |\n| `uploading` | sending data to someone right now |\n| `stalledUP` | seeding, but nobody is downloading from you. Normal for old titles |\n| `queuedUP` | finished, waiting its turn to seed. **Not seeding at all** |\n| `pausedUP` / `stoppedUP` | stopped on purpose, or its share limit was reached |\n| `checkingUP` / `checkingDL` | verifying pieces against the disk |\n| `moving` | being moved between folders |\n| `error` / `missingFiles` | broken: the data is unreadable or gone |\n\nMany torrents sitting in `queuedUP` means qBittorrent's active-torrent limit is lower than the number\nof torrents, so it is rotating them. Queued time does not count towards a share limit, so those\ntorrents also take longer to retire themselves."
     },
     {
       "type": "piechart",
@@ -2609,7 +2610,7 @@
           "legendFormat": "{{state}}"
         }
       ],
-      "description": "**qBittorrent states**\n\n| State | Meaning |\n| :--- | :--- |\n| `downloading` | pulling data right now |\n| `metaDL` | fetching the .torrent metadata (magnet just added) |\n| `stalledDL` | wants to download but finds no seeds: stuck |\n| `queuedDL` | waiting for a download slot |\n| `uploading` | sending data to someone right now |\n| `stalledUP` | seeding, but nobody is downloading from you. Normal for old titles |\n| `queuedUP` | finished, waiting its turn to seed. **Not seeding at all** |\n| `pausedUP` / `stoppedUP` | stopped on purpose, or its share limit was reached |\n| `checkingUP` / `checkingDL` | verifying pieces against the disk |\n| `moving` | being moved between folders |\n| `error` / `missingFiles` | broken: the data is unreadable or gone |\n\nQueue limits are `MaxActiveTorrents = 40` since 2026-08-05, up from 18. Before that half the torrents sat in `queuedUP`, which is not seeding at all.\n"
+      "description": "**What the states mean**\n\n| State | Meaning |\n| :--- | :--- |\n| `downloading` | pulling data right now |\n| `metaDL` | fetching the .torrent metadata (magnet just added) |\n| `stalledDL` | wants to download but finds no seeds: stuck |\n| `queuedDL` | waiting for a download slot |\n| `uploading` | sending data to someone right now |\n| `stalledUP` | seeding, but nobody is downloading from you. Normal for old titles |\n| `queuedUP` | finished, waiting its turn to seed. **Not seeding at all** |\n| `pausedUP` / `stoppedUP` | stopped on purpose, or its share limit was reached |\n| `checkingUP` / `checkingDL` | verifying pieces against the disk |\n| `moving` | being moved between folders |\n| `error` / `missingFiles` | broken: the data is unreadable or gone |\n\nMany torrents sitting in `queuedUP` means qBittorrent's active-torrent limit is lower than the number\nof torrents, so it is rotating them. Queued time does not count towards a share limit, so those\ntorrents also take longer to retire themselves."
     },
     {
       "type": "timeseries",
@@ -2618,7 +2619,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Added to watch the effect of raising MaxActiveTorrents from 18 to 40 on 2026-08-05: queuedUP should stay at zero, and stalledUP should drain as each torrent reaches its 5-day share limit and stops.",
+      "description": "How the mix of states moves. What to read into it:\n\n- `queuedUP` above zero means the active-torrent limit is below the number of torrents\n- `stalledUP` falling means torrents are reaching their share limit and stopping, which is the\n  library cleaning itself up\n- `stalledDL` that never clears is a dead release",
       "gridPos": {
         "h": 8,
         "w": 24,
@@ -3351,7 +3352,7 @@
           "legendFormat": "{{quality}}"
         }
       ],
-      "description": "Space per quality, straight from Radarr, so the quality\nis the real one and not a guess from the filename.\n\nSame colour scheme as the upgrades table: 🔵 4K · 🟢 good · 🟠 wasteful · 🔴 unwanted.\n"
+      "description": "Space per quality, taken from Radarr, so the quality is the one it recorded and not a guess from\nthe filename.\n\nSame colours as the upgrades table: 🔵 4K · 🟢 good · 🟠 wasteful · 🔴 unwanted."
     },
     {
       "id": 141,
@@ -3424,7 +3425,7 @@
           "legendFormat": "{{root}}"
         }
       ],
-      "description": "Top-level folders on the data disk, from\n`du --max-depth=1`, which counts each inode once per run. A hardlinked file therefore lands in\nwhichever folder du walks first instead of being counted twice.\n"
+      "description": "Top-level folders on the data disk, from `du`, which counts each inode once per run. A hardlinked\nfile therefore lands in whichever folder du walks first rather than being counted in both."
     },
     {
       "type": "bargauge",
@@ -3492,7 +3493,7 @@
           "legendFormat": "{{title}}  ·  {{quality}}"
         }
       ],
-      "description": "Largest titles in the library, with the quality\nthat explains the size. Radarr is the source, so this counts the imported file once even when it is\nhardlinked to a torrent in downloads/.\n"
+      "description": "Largest titles in the library, with the quality that explains the size. Radarr is the source, so\neach imported file is counted once even when it is hardlinked to a torrent in downloads/."
     },
     {
       "type": "bargauge",
@@ -3501,7 +3502,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "The 30 largest files, one line per inode, straight from the disk rather than from Radarr. That is the point: it also shows files Radarr knows nothing about, like leftovers sitting in downloads/ that were never imported.\n\nThe label is the filename only. The full paths are in the table below, which the **Folder** dropdown filters.",
+      "description": "Largest files on the data disk, one line per inode, taken from the disk rather than from Radarr.\n\nThat is the point of having it next to the panel above: it also shows files Radarr knows nothing\nabout, such as downloads that were never imported or were replaced by a better release.\n\nLabels are filenames; the full paths are in the table below.",
       "gridPos": {
         "h": 12,
         "w": 24,
@@ -3714,7 +3715,7 @@
         ]
       },
       "pluginVersion": "12.3.3",
-      "description": "The same 30 files as the panel above, with their full path and the **Folder** filter. Refreshed hourly by disk-usage-metrics.sh, so a file deleted a minute ago can still show up here.\n\nOne line per inode: the *arrs hardlink on import, so a grabbed file and its library copy are the same bytes under two paths."
+      "description": "The same files as the panel above, with their full path, and filtered by the **Folder** dropdown.\n\nWritten periodically by `disk-usage-metrics.sh`, so a file deleted moments ago can still appear here\nuntil the next run.\n\nOne line per inode: the *arrs hardlink on import, so a grabbed file and its library copy are the same\nbytes under two paths. Counting both would double the footer total."
     }
   ],
   "preload": false,

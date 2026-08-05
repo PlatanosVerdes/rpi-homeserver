@@ -85,7 +85,8 @@
           "instant": true,
           "range": false
         }
-      ]
+      ],
+      "description": "Enabled indexers Prowlarr currently considers usable."
     },
     {
       "type": "stat",
@@ -154,7 +155,8 @@
           "instant": true,
           "range": false
         }
-      ]
+      ],
+      "description": "Enabled indexers Prowlarr has disabled after failures."
     },
     {
       "type": "stat",
@@ -215,7 +217,8 @@
           "instant": true,
           "range": false
         }
-      ]
+      ],
+      "description": "Indexers that produced at least one grab in the window."
     },
     {
       "type": "stat",
@@ -276,7 +279,8 @@
           "instant": true,
           "range": false
         }
-      ]
+      ],
+      "description": "Total grabs across every indexer in the window."
     },
     {
       "type": "stat",
@@ -341,7 +345,8 @@
           "instant": true,
           "range": false
         }
-      ]
+      ],
+      "description": "Indexers configured but never used in the window."
     },
     {
       "type": "stat",
@@ -402,7 +407,8 @@
           "instant": true,
           "range": false
         }
-      ]
+      ],
+      "description": "Indexers configured and enabled in Prowlarr."
     },
     {
       "type": "row",
@@ -500,7 +506,8 @@
           "range": true,
           "legendFormat": "{{name}}"
         }
-      ]
+      ],
+      "description": "Green while Prowlarr considers the indexer usable, red while it has it disabled after repeated\nfailures. Prowlarr backs off automatically and retries later, so short red bands are normal."
     },
     {
       "type": "row",
@@ -587,7 +594,8 @@
           "range": false,
           "legendFormat": "{{name}}"
         }
-      ]
+      ],
+      "description": "How much each indexer actually contributes, counted from Radarr and Sonarr grab history. This is\nwhat separates an indexer worth fixing from one worth deleting."
     },
     {
       "type": "table",
@@ -706,7 +714,8 @@
             }
           }
         }
-      ]
+      ],
+      "description": "Indexers that have not produced a single grab in the window. Configured, enabled, and doing\nnothing: these are the candidates for deletion, and the reason the alert rule only watches indexers\nwith real usage."
     }
   ],
   "preload": false,
