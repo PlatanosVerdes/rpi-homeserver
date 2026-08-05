@@ -504,7 +504,8 @@
             }
           }
         }
-      ]
+      ],
+      "description": "Files replaced by a **different** quality, newest first.\n\nAn upgrade is two events at the same instant: the old file deleted with reason `Upgrade`, and the\nnew one imported. Same quality on both sides means it was a custom-format score upgrade, not a\nresolution change.\n\n**Colours follow the download policy, not the resolution:**\n🔵 4K · 🟢 what the TV direct-plays (Bluray/WEB 1080p) · 🟠 works but wastes space (Remux-1080p, 720p)\n· 🔴 unwanted (BR-DISK, cams, SD)\n"
     },
     {
       "type": "stat",
@@ -565,7 +566,8 @@
           "instant": true,
           "range": false
         }
-      ]
+      ],
+      "description": "How many upgrades this exporter is currently exposing (capped at the last 25)."
     },
     {
       "type": "stat",
@@ -703,7 +705,8 @@
           "instant": true,
           "range": false
         }
-      ]
+      ],
+      "description": "Whether the exporter can talk to qBittorrent's WebUI at all."
     },
     {
       "type": "stat",
@@ -768,7 +771,8 @@
           "instant": true,
           "range": false
         }
-      ]
+      ],
+      "description": "`error` or `missingFiles`: the data is unreadable or has been moved out from under qBittorrent. These never finish on their own."
     },
     {
       "type": "stat",
@@ -833,7 +837,8 @@
           "instant": true,
           "range": false
         }
-      ]
+      ],
+      "description": "Torrents that want to download but find no seeds. One for hours usually means the release is dead; let Radarr blocklist it and grab another."
     },
     {
       "type": "stat",
@@ -1378,7 +1383,8 @@
             }
           }
         }
-      ]
+      ],
+      "description": "**qBittorrent states**\n\n| State | Meaning |\n| :--- | :--- |\n| `downloading` | pulling data right now |\n| `metaDL` | fetching the .torrent metadata (magnet just added) |\n| `stalledDL` | wants to download but finds no seeds: stuck |\n| `queuedDL` | waiting for a download slot |\n| `uploading` | sending data to someone right now |\n| `stalledUP` | seeding, but nobody is downloading from you. Normal for old titles |\n| `queuedUP` | finished, waiting its turn to seed. **Not seeding at all** |\n| `pausedUP` / `stoppedUP` | stopped on purpose, or its share limit was reached |\n| `checkingUP` / `checkingDL` | verifying pieces against the disk |\n| `moving` | being moved between folders |\n| `error` / `missingFiles` | broken: the data is unreadable or gone |\n\nWhy so many queued: `MaxActiveTorrents = 18` with 36 torrents, so half wait their turn.\n"
     },
     {
       "type": "piechart",
@@ -1765,7 +1771,8 @@
           "expr": "count by (state) (qbit_torrent_progress)",
           "legendFormat": "{{state}}"
         }
-      ]
+      ],
+      "description": "**qBittorrent states**\n\n| State | Meaning |\n| :--- | :--- |\n| `downloading` | pulling data right now |\n| `metaDL` | fetching the .torrent metadata (magnet just added) |\n| `stalledDL` | wants to download but finds no seeds: stuck |\n| `queuedDL` | waiting for a download slot |\n| `uploading` | sending data to someone right now |\n| `stalledUP` | seeding, but nobody is downloading from you. Normal for old titles |\n| `queuedUP` | finished, waiting its turn to seed. **Not seeding at all** |\n| `pausedUP` / `stoppedUP` | stopped on purpose, or its share limit was reached |\n| `checkingUP` / `checkingDL` | verifying pieces against the disk |\n| `moving` | being moved between folders |\n| `error` / `missingFiles` | broken: the data is unreadable or gone |\n\nWhy so many queued: `MaxActiveTorrents = 18` with 36 torrents, so half wait their turn.\n"
     },
     {
       "type": "row",
@@ -2315,7 +2322,8 @@
           "expr": "sum by (quality) (arr_media_size_bytes)",
           "legendFormat": "{{quality}}"
         }
-      ]
+      ],
+      "description": "Space per quality, straight from Radarr, so the quality\nis the real one and not a guess from the filename.\n\nSame colour scheme as the upgrades table: 🔵 4K · 🟢 good · 🟠 wasteful · 🔴 unwanted.\n"
     },
     {
       "id": 141,
@@ -2387,7 +2395,8 @@
           "refId": "A",
           "legendFormat": "{{root}}"
         }
-      ]
+      ],
+      "description": "Top-level folders on the data disk, from\n`du --max-depth=1`, which counts each inode once per run. A hardlinked file therefore lands in\nwhichever folder du walks first instead of being counted twice.\n"
     },
     {
       "type": "bargauge",
@@ -2454,7 +2463,8 @@
           "expr": "topk(20, arr_media_size_bytes)",
           "legendFormat": "{{title}}  ·  {{quality}}"
         }
-      ]
+      ],
+      "description": "Largest titles in the library, with the quality\nthat explains the size. Radarr is the source, so this counts the imported file once even when it is\nhardlinked to a torrent in downloads/.\n"
     },
     {
       "id": 142,
@@ -2660,7 +2670,8 @@
           }
         ]
       },
-      "pluginVersion": "12.3.3"
+      "pluginVersion": "12.3.3",
+      "description": "The 30 largest files on\nthe data disk, one line per **inode**.\n\nThe *arrs hardlink on import, so a grabbed file and its library copy are the same bytes under two\npaths. Listing both would double-count the footer total, so the library path is kept and the\ndownloads one dropped.\n"
     }
   ],
   "preload": false,
