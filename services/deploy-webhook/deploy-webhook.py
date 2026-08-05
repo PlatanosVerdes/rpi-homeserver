@@ -78,8 +78,14 @@ def record(result):
             f"webhook_last_accepted_timestamp {LAST_ACCEPTED}",
             "",
         ]
+    # Off the request path: GitHub gives the hook 10s to answer, and a stuck Pushgateway would
+    # otherwise spend that budget on a metric nobody is waiting for.
+    threading.Thread(target=_push, args=("\n".join(body),), daemon=True).start()
+
+
+def _push(payload):
     request = urllib.request.Request(f"{PUSHGATEWAY}/metrics/job/deploy_webhook",
-                                    data="\n".join(body).encode(), method="POST")
+                                    data=payload.encode(), method="POST")
     try:
         urllib.request.urlopen(request, timeout=5).close()
     except (urllib.error.URLError, OSError) as exc:
