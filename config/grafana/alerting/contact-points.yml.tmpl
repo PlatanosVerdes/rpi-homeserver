@@ -23,6 +23,8 @@ contactPoints:
             {{ if eq .Status "firing" }}🔴{{ else }}✅{{ end }} <b>{{ .Status | toUpper }}</b>
             {{ range .Alerts }}
             <b>{{ .Labels.alertname }}</b>
+            {{ if eq .Status "firing" }}
             {{ .Annotations.summary }}
             {{ if .Annotations.description }}{{ .Annotations.description }}{{ end }}
+            {{ end }}
             {{ end }}
