@@ -1308,7 +1308,7 @@
           "instant": true,
           "range": false,
           "refId": "A",
-          "expr": "sum by (state) (qbittorrent_torrents_count) > 0",
+          "expr": "count by (state) (qbit_torrent_progress)",
           "legendFormat": "{{state}}"
         }
       ]
