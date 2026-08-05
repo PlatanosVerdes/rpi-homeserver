@@ -11,7 +11,7 @@ GitHub push ──► https://deploy.<domain>/hooks/deploy
                                                 │  deploy-webhook.py (systemd, user raspi)
                                                 │  verifies X-Hub-Signature-256
                                                 ▼
-                                        scripts/deploy_control.sh  (under flock)
+                                        scripts/apply.sh  (under flock)
 ```
 
 The cron stays enabled: it restarts anything that died and catches pushes that arrived while the
@@ -104,7 +104,7 @@ sudo systemctl restart deploy-webhook
 ```bash
 journalctl -u deploy-webhook -f                  # receiver: signature rejections, triggers
 docker logs -f cloudflared                       # tunnel health
-tail -f ~/rpi-homeserver/deploy_control.log      # the deploy itself
+tail -f ~/rpi-homeserver/apply.log      # the deploy itself
 ```
 
 - `401 unauthorized` in the journal: the secret in `.env` and in the GitHub webhook differ.

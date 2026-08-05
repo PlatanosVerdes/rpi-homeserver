@@ -2,13 +2,13 @@
 
 ## What this project is
 
-A modular Docker-based home server running on a Raspberry Pi. All services run as Docker containers managed by Docker Compose. The repo is the source of truth: a push to `main` deploys within seconds via a GitHub webhook, with a cron every 30 minutes as the fallback (`deploy_control.sh` handles both).
+A modular Docker-based home server running on a Raspberry Pi. All services run as Docker containers managed by Docker Compose. The repo is the source of truth: a push to `main` deploys within seconds via a GitHub webhook, with a cron every 30 minutes as the fallback (`apply.sh` handles both).
 
 **Two-repo architecture:** Both repos are public. The split is *generic vs personal*, not private vs public: this repo is meant to be clonable and useful to anyone, so nothing personal lives here. Personal/custom services (Telegram bot, calendar bridge, AirTag tracker) live in [`rpi-services`](https://github.com/PlatanosVerdes/rpi-services). Both run on the same Pi, share `media-network`, are deployed by the same script, and extend the same Caddy instance via the services import mechanism (see Networking section below).
 
 **Conventions both repos must follow** (they are one system, so drift hurts):
 - Image/app versions in a committed `versions.env`, never `:latest` and never inline in compose.
-- One deploy script, `rpi-homeserver/scripts/deploy_control.sh`, which deploys both repos.
+- One deploy script, `rpi-homeserver/scripts/apply.sh`, which deploys both repos.
 - Cron: each repo owns its own `scripts/crontab` **fragment**, holding only its own jobs.
   `scripts/install-crontab.sh` merges them and installs the result on every deploy (the
   rpi-services fragment is optional), the same way Caddy imports `config/caddy/services/`.
@@ -43,10 +43,11 @@ services/                   Source code for custom services built in this repo
 
 scripts/                    Operational scripts
   crontab                   This repo's host cron jobs (a fragment; see install-crontab.sh)
-  install-crontab.sh        Merges both repos' crontab fragments and installs them (run on deploy)
-  deploy_control.sh         Auto-deploy cron job (runs every 15 min via cron)
+  install-crontab.sh        Merges both repos' crontab fragments and installs them (on deploy)
+  apply.sh                  Makes the host match the repos (webhook on push + cron fallback)
   backup.sh                 Daily appdata backup (cron), pushes metrics to Grafana
-  cutoff-search.sh          Weekly *arr search for items below their quality cutoff (cron)
+  heartbeat.sh              Dead man's switch ping to an external check (cron, every minute)
+  cutoff-search.sh          Nightly *arr search for missing and below-cutoff items (cron)
   mount_setup.sh            One-time external disk mount setup
   rebuild-service.sh        Manual single-service rebuild helper
   bws-run.py                Bitwarden SM wrapper (dropped, kept for reference only)
@@ -68,13 +69,13 @@ docker compose up -d
 > **Bitwarden Secrets Manager was evaluated and dropped.** It did not fit the workflow, so
 > secrets stay in `.env` (gitignored, never committed). `scripts/bws-run.py` and
 > [docs/secrets-manager.md](docs/secrets-manager.md) are kept only as a reference for a
-> possible future attempt — they are NOT wired into deploy. `deploy_control.sh` uses plain `docker compose`.
+> possible future attempt — they are NOT wired into deploy. `apply.sh` uses plain `docker compose`.
 
 ---
 
 ## How auto-deploy works
 
-`scripts/deploy_control.sh` runs on every GitHub push (webhook) and every 30 minutes via cron:
+`scripts/apply.sh` runs on every GitHub push (webhook) and every 30 minutes via cron:
 1. `git pull origin main`
 2. **Renders Grafana's alerting config** (`render_grafana_alerting`): compose only interpolates
    `${VAR}` inside its own YAML, never inside a config file, so something has to combine the
@@ -97,7 +98,7 @@ The cron stays as the self-heal net.
 
 **Cron entry on the host:**
 ```
-*/30 * * * * /home/raspi/rpi-homeserver/scripts/deploy_control.sh >> /home/raspi/rpi-homeserver/deploy_control.log 2>&1
+*/30 * * * * /home/raspi/rpi-homeserver/scripts/apply.sh >> /home/raspi/rpi-homeserver/apply.log 2>&1
 ```
 
 ---
@@ -234,7 +235,7 @@ docker compose -f compose-core.yml restart caddy
 docker logs -f <container-name>
 
 # Trigger deploy manually
-bash scripts/deploy_control.sh
+bash scripts/apply.sh
 
 # Rebuild from scratch (single service)
 bash scripts/rebuild-service.sh <service-name>
@@ -255,7 +256,7 @@ as a build arg.
 `versions.env` holds only versions (no secrets) so it IS tracked in git (`.gitignore` has a
 `!versions.env` exception to the `*.env` rule).
 
-**Loading:** compose reads it via `COMPOSE_ENV_FILES=versions.env,.env`. `deploy_control.sh`
+**Loading:** compose reads it via `COMPOSE_ENV_FILES=versions.env,.env`. `apply.sh`
 and `rebuild-service.sh` set this automatically. To run compose manually:
 ```bash
 export COMPOSE_ENV_FILES=versions.env,.env

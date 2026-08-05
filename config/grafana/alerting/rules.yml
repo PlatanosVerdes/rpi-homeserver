@@ -139,7 +139,7 @@ groups:
           severity: critical
         annotations:
           summary: The last deploy ended in error
-          description: Check deploy_control.log. Most likely a failed build or a compose error.
+          description: Check apply.log. Most likely a failed build or a compose error.
         noDataState: OK
         execErrState: Error
         data:

@@ -5,14 +5,14 @@
 # result, the same way Caddy imports config/caddy/services/. Personal jobs belong in the other
 # repo's fragment, never here.
 #
-# deploy_control.sh runs the installer on every deploy, so committing a change here applies it.
+# apply.sh runs the installer on every deploy, so committing a change here applies it.
 # Do NOT edit the live crontab with `crontab -e`: it gets overwritten on the next deploy.
 # Show current:  crontab -l
 
 # Auto-deploy: pull both repos and apply. The GitHub webhook (services/deploy-webhook)
 # deploys on push, so this is now the every-30-min self-heal net: it restarts anything that
 # died and covers pushes that arrived while the Pi or the tunnel was down.
-*/30 * * * * /home/raspi/rpi-homeserver/scripts/deploy_control.sh >> /home/raspi/rpi-homeserver/deploy_control.log 2>&1
+*/30 * * * * /home/raspi/rpi-homeserver/scripts/apply.sh >> /home/raspi/rpi-homeserver/apply.log 2>&1
 
 # Tailscale peer metrics -> node-exporter textfile collector, every minute
 * * * * * /home/raspi/rpi-homeserver/services/tailscale-metrics/tailscale-metrics
