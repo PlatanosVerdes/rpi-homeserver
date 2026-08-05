@@ -36,27 +36,36 @@ the abandoned approach and can be deleted.
 the versions in between carry no documented breaking change, so it never nags about the ones
 that need a manual look.
 
-**Snapshot taken 2026-08-05** (do not trust this list forever — re-run the check below before
-acting on it, versions move):
+**2026-08-05 snapshot: all 12 safe updates applied and verified, one by one, lowest to highest
+risk.** Each was bumped in its own commit, deployed via the webhook, and checked on the Pi
+(container healthy, logs clean, functional smoke test) before moving to the next:
 
-| Service | Pinned | Latest upstream | Verdict |
+| Service | Was | Now | Notes |
 | :--- | :--- | :--- | :--- |
-| caddy | 2.10.2 | 2.11.4 | safe (see note) |
-| homepage | v1.10.1 | v1.13.2 | safe |
-| speedtest-tracker | v1.13.10 | v1.14.7 | safe |
-| pihole | 2026.02.0 | 2026.07.2 | safe |
-| jellyfin | 10.11.6 | 10.11.11 | safe |
-| maintainerr | 3.18.0 | 3.21.1 | safe |
-| qbittorrent | 5.1.4 | 5.2.3 | safe |
-| flaresolverr | v3.4.6 | v3.5.0 | safe |
-| pushgateway | v1.11.2 | v1.11.3 | safe |
-| node_exporter | v1.11.1 | v1.12.1 | safe |
-| cadvisor | v0.55.1 | v0.60.5 | safe, but pre-1.0: semver does not promise this |
-| prometheus | v3.9.1 | v3.13.2 | safe |
-| **grafana** | **12.3.3** | **v13.1.2** | **NOT safe, do not auto-bump** |
-| cloudflared, overseerr, prowlarr, radarr, sonarr, bazarr, blackbox-exporter | — | — | already current |
-| aceserve, qbittorrent-exporter, pihole6_exporter | — | — | pinned by digest, no version to check at all |
-| plex | — | — | closed source, no public releases to check against |
+| pushgateway | v1.11.2 | v1.11.3 | |
+| node_exporter | v1.11.1 | v1.12.1 | |
+| cadvisor | v0.55.1 | v0.60.5 | `gcr.io/cadvisor/cadvisor` (the old mirror) has nothing past v0.55.1; `compose-mon.yml` now points at `ghcr.io/google/cadvisor`, the registry cadvisor's own README says to use since v0.53.0 |
+| flaresolverr | v3.4.6 | v3.5.0 | |
+| prometheus | v3.9.1 | v3.13.2 | |
+| homepage | v1.10.1 | v1.13.2 | |
+| speedtest-tracker | v1.13.10-ls138 | v1.14.7-ls165 | |
+| maintainerr | 3.18.0 | 3.21.1 | |
+| qbittorrent | 5.1.4-r2-ls442 | 5.2.3_v2.0.13-ls469 | LinuxServer's tag format for this image now embeds the libtorrent version |
+| jellyfin | 10.11.6ubu2404-ls21 | 10.11.11ubu2604-ls43 | base OS moved Ubuntu 24.04 -> 26.04 |
+| pihole | 2026.02.0 | 2026.07.2 | DNS/gravity DB auto-migrated v21->v22 on first boot; verified both `*.platanosverdes.com` resolution and ad-blocking after |
+| caddy | 2.10.2 | 2.11.4 | checked the v2.11.4 security-patch caveat (backslash path normalization, stripHTML, underscore-headers) against `config/caddy/Caddyfile` — only plain `reverse_proxy` blocks, none of it applies |
+
+**grafana stays pinned at 12.3.3** — the 12->13 bump is a real breaking change per Grafana's own
+docs and is intentionally excluded from the above, see below.
+
+| Service | Verdict |
+| :--- | :--- |
+| **grafana** | **12.3.3 -> v13.1.2 NOT safe, do not auto-bump** |
+| cloudflared, overseerr, prowlarr, radarr, sonarr, bazarr, blackbox-exporter | already current as of 2026-08-05 |
+| aceserve, qbittorrent-exporter, pihole6_exporter | pinned by digest, no version to check at all |
+| plex | closed source, no public releases to check against |
+
+Re-run the check below periodically — this table goes stale as soon as upstream ships again.
 
 "Safe" means: read every release note between the pinned tag and upstream latest (not just the
 latest one — a multi-version jump can hide a breaking change in the middle) and found no mention
