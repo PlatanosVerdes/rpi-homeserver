@@ -132,6 +132,23 @@ services:
     networks:
       - media-network
 
+  # --- QBITTORRENT EXPORTER (torrent states, speeds, ratios) ---
+  # The WebUI's AuthSubnetWhitelist covers localhost, the LAN and the tailnet, but not the Docker
+  # bridge this container sits on, so it authenticates like any other client.
+  qbittorrent-exporter:
+    image: esanchezm/prometheus-qbittorrent-exporter@${QBIT_EXPORTER_DIGEST}
+    container_name: qbittorrent-exporter
+    restart: unless-stopped
+    profiles: [moni, all]
+    environment:
+      - QBITTORRENT_HOST=qbittorrent
+      - QBITTORRENT_PORT=8080
+      - QBITTORRENT_USER=admin
+      - QBITTORRENT_PASS=${QBIT_PASSWORD}
+      - EXPORTER_PORT=17871
+    networks:
+      - media-network
+
   # --- PIHOLE EXPORTER (Pi-hole DNS/ad-block metrics → Prometheus) ---
   # Pi-hole v6 compatible exporter. Grafana dashboard ID: 21043
   pihole-exporter:
