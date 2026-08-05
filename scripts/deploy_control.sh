@@ -154,9 +154,12 @@ deploy_repo() {
         git diff --name-only "$before" "$after" | grep -q '^services/deploy-webhook/'; then
         local unit=/etc/systemd/system/deploy-webhook.service
         if ! sudo cmp -s services/deploy-webhook/deploy-webhook.service "$unit"; then
-            sudo cp services/deploy-webhook/deploy-webhook.service "$unit"
-            sudo systemctl daemon-reload
-            log "[$label] webhook unit updated"
+            if sudo cp services/deploy-webhook/deploy-webhook.service "$unit" &&
+                sudo systemctl daemon-reload; then
+                log "[$label] webhook unit updated"
+            else
+                log "[$label] WARNING: could not install the new webhook unit"
+            fi
         fi
         if sudo systemctl restart deploy-webhook; then
             log "[$label] webhook receiver restarted with the new code"
