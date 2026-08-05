@@ -19,6 +19,26 @@
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
   "links": [],
+  "preload": false,
+  "refresh": "",
+  "schemaVersion": 42,
+  "tags": [
+    "home"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {
+    "hidden": true
+  },
+  "timezone": "",
+  "title": "Home",
+  "uid": "home-overview",
+  "version": 19,
   "panels": [
     {
       "fieldConfig": {
@@ -26,7 +46,7 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
+        "h": 5,
         "w": 4,
         "x": 0,
         "y": 0
@@ -38,7 +58,7 @@
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "## \u2699\ufe0f Acestream Monitor\n[Acestream Monitor \u00b7 sync & errors](/d/acestream-monitor/acestream-monitor)",
+        "content": "## ⚙️ Acestream Monitor\n[Acestream Monitor · sync & errors](/d/acestream-monitor/acestream-monitor)",
         "mode": "markdown"
       },
       "pluginVersion": "12.3.3",
@@ -51,7 +71,7 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
+        "h": 5,
         "w": 4,
         "x": 4,
         "y": 0
@@ -63,7 +83,7 @@
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "## \ud83c\udf7f Media\n[One Pace](/d/onepace-dl/one-pace)  \n[Media Pipeline](/d/media-pipeline/media-pipeline)  \n[Indexers](/d/indexers/indexers)",
+        "content": "## 🍿 Media\n🏴‍☠️ [One Pace](/d/onepace-dl/one-pace)  \n🎬 [Media Pipeline](/d/media-pipeline/media-pipeline)  \n🔎 [Indexers](/d/indexers/indexers)",
         "mode": "markdown"
       },
       "pluginVersion": "12.3.3",
@@ -88,7 +108,7 @@
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "## \ud83c\udf10 Speedtest\n[Speedtest Tracker \u00b7 internet speed](/d/g7usvhZVk2/speedtest-tracker)\n\n## \ud83d\udee1\ufe0f Pi-hole\n[Pi-hole Exporter \u00b7 DNS & ad blocking](/d/edknpuskjzw1sc/pi-hole-ver6-stats)\n\n## \ud83d\udd12 Tailscale\n[Tailscale \u00b7 network devices](/d/tailscale-bannet/tailscale-bannet)",
+        "content": "## 🌐 Speedtest\n[Speedtest Tracker · internet speed](/d/g7usvhZVk2/speedtest-tracker)\n\n## 🛡️ Pi-hole\n[Pi-hole Exporter · DNS & ad blocking](/d/edknpuskjzw1sc/pi-hole-ver6-stats)\n\n## 🔒 Tailscale\n[Tailscale · network devices](/d/tailscale-bannet/tailscale-bannet)",
         "mode": "markdown"
       },
       "pluginVersion": "12.3.3",
@@ -113,7 +133,7 @@
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "## \ud83d\udda5\ufe0f Raspberry Pi\n[Node Exporter \u00b7 CPU, RAM, disk](/d/rYdddlPWk/node-exporter-full-raspi)\n\n## \ud83d\udc33 Containers\n[Container Health \u00b7 host, per-container, storage](/d/container-health/container-health)",
+        "content": "## 🖥️ Raspberry Pi\n[Node Exporter · CPU, RAM, disk](/d/rYdddlPWk/node-exporter-full-raspi)\n\n## 🐳 Containers\n[Container Health · host, per-container, storage](/d/container-health/container-health)",
         "mode": "markdown"
       },
       "pluginVersion": "12.3.3",
@@ -129,7 +149,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 8
+        "y": 5
       },
       "id": 5,
       "options": {
@@ -138,7 +158,7 @@
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "## \ud83d\ude80 Deploy Monitor\n[Deploy Monitor \u00b7 deployments](/d/deploy-monitor/deploy-monitor)\n\n## \ud83d\udcbe Backup Monitor\n[Backup Monitor \u00b7 backup health](/d/backup-monitor/backup-monitor)\n\n## \ud83d\udd17 Webhook & Tunnel\n[Webhook & Tunnel \u00b7 push deploys & Cloudflare tunnel](/d/webhook-tunnel/webhook-tunnel)",
+        "content": "## 🚀 Deploy Monitor\n[Deploy Monitor · deployments](/d/deploy-monitor/deploy-monitor)\n\n## 💾 Backup Monitor\n[Backup Monitor · backup health](/d/backup-monitor/backup-monitor)\n\n## 🔗 Webhook & Tunnel\n[Webhook & Tunnel · push deploys & Cloudflare tunnel](/d/webhook-tunnel/webhook-tunnel)",
         "mode": "markdown"
       },
       "pluginVersion": "12.3.3",
@@ -151,7 +171,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 16
+        "y": 13
       },
       "id": 10,
       "title": "Secrets",
@@ -232,30 +252,10 @@
               "refId": "A"
             }
           ],
-          "title": "MS Client Secret \u00b7 days remaining",
+          "title": "MS Client Secret · days remaining",
           "type": "stat"
         }
       ]
     }
-  ],
-  "preload": false,
-  "refresh": "",
-  "schemaVersion": 42,
-  "tags": [
-    "home"
-  ],
-  "templating": {
-    "list": []
-  },
-  "time": {
-    "from": "now-6h",
-    "to": "now"
-  },
-  "timepicker": {
-    "hidden": true
-  },
-  "timezone": "",
-  "title": "Home",
-  "uid": "home-overview",
-  "version": 14
+  ]
 }
