@@ -501,3 +501,37 @@ groups:
               datasource: { type: __expr__, uid: __expr__ }
               conditions:
                 - evaluator: { type: gt, params: [0] }
+
+      - uid: homelab-service-not-answering
+        title: 'Service not answering'
+        condition: C
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          # instance is rewritten to the probed URL in prometheus.yml, so this names the service
+          summary: '{{ $labels.instance }} is not responding'
+          description: >-
+            The blackbox probe got no valid answer. Unlike the container-level rules this one means
+            the app itself is not serving, even if its container is up.
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: 'probe_success == bool 0'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+

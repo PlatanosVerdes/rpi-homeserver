@@ -75,6 +75,25 @@ returns 1 when it should fire (`<something> > bool <threshold>`). Commit, and th
 it. A malformed rule is rejected at startup, so check `docker logs grafana | grep provision`
 after deploying.
 
+## The *arrs notify on their own
+
+Radarr, Sonarr and Prowlarr have a native Telegram connection pointing at the same bot and chat,
+because some things are events, not metrics: "this movie was upgraded to Bluray-1080p" has no
+sensible threshold. Configured via their API, visible in each app under Settings → Connect.
+
+| Event | Why |
+| :--- | :--- |
+| On Upgrade | a file was replaced by better quality (Radarr/Sonarr) |
+| On Health Issue / Restored | this is where **indexer failures** show up |
+| On Manual Interaction Required | an import is stuck waiting for a human |
+
+`includeHealthWarnings` is on deliberately: an indexer failing is raised as a *warning*
+(`IndexerLongTermStatusCheck`), so with it off the main reason for wiring this up would never fire.
+The cost is the occasional "new update available" message, which is arguably useful here anyway
+since versions are pinned by hand in `versions.env`.
+
+Not enabled: On Grab and On Download. Every single import would be a message.
+
 ## The dead man's switch
 
 Every rule above dies with the Pi. A power cut, a dead SD card or an ISP outage produces silence,
