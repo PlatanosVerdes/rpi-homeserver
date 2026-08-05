@@ -14,7 +14,8 @@ RestartSec=5
 # receiver's code changes: with the default KillMode=control-group that restart would kill the
 # deploy that requested it, halfway through.
 KillMode=process
-PrivateTmp=true
+# No PrivateTmp: the deploy this service spawns outlives a restart (see KillMode above), and a
+# private /tmp is torn down with the old instance, leaving the still-running deploy with no /tmp.
 ProtectSystem=full
 # No NoNewPrivileges here: the whole job of this service is to launch deploy_control.sh, which
 # needs sudo for a couple of root-owned paths under appdata. The flag is inherited by children,
