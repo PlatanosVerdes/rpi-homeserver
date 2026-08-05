@@ -168,6 +168,18 @@ deploy_repo() {
         fi
     fi
 
+    # Grafana reads alerting provisioning ONLY at startup. Dashboards reload on their own (their
+    # file provider polls), alert rules do not, so a committed rule would sit there doing nothing.
+    if [[ "$label" == "homeserver" && "$before" != "$after" ]] &&
+        git diff --name-only "$before" "$after" | grep -q '^config/grafana/alerting/' &&
+        docker ps --format '{{.Names}}' | grep -qx grafana; then
+        if docker restart grafana >/dev/null 2>&1; then
+            log "[$label] alerting rules changed, Grafana restarted to load them"
+        else
+            log "[$label] WARNING: alerting changed but Grafana would not restart"
+        fi
+    fi
+
     if [ "$before" != "$after" ]; then
         log "[$label] Changes detected, rebuilding..."
         if ! docker compose up -d --build --remove-orphans 2>&1 | while IFS= read -r line; do log "[$label] $line"; done; then
