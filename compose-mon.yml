@@ -116,6 +116,22 @@ services:
     networks:
       - media-network
 
+  # --- BLACKBOX EXPORTER (is that service actually answering?) ---
+  # cAdvisor says a container is running; this says it responds. Covers the services with no
+  # exporter of their own (Plex, Jellyfin, the *arrs, qBittorrent). Targets live in
+  # config/prometheus/prometheus.yml.
+  blackbox-exporter:
+    image: prom/blackbox-exporter:${BLACKBOX_EXPORTER_VERSION}
+    container_name: blackbox-exporter
+    restart: unless-stopped
+    profiles: [moni, all]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ${CONFIG_ROOT}/blackbox/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
+    networks:
+      - media-network
+
   # --- PIHOLE EXPORTER (Pi-hole DNS/ad-block metrics → Prometheus) ---
   # Pi-hole v6 compatible exporter. Grafana dashboard ID: 21043
   pihole-exporter:

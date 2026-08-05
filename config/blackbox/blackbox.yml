@@ -1,0 +1,14 @@
+# Blackbox probes for services with no exporter of their own.
+#
+# The point here is liveness, not authentication: Plex, Jellyfin, the *arrs and qBittorrent all
+# answer 401/302/403 to an unauthenticated request, and that is a perfectly good "I am alive".
+# Treating those as failures would make the module useless, so they count as success.
+modules:
+  http_alive:
+    prober: http
+    timeout: 8s
+    http:
+      valid_status_codes: [200, 201, 204, 301, 302, 401, 403]
+      valid_http_versions: [HTTP/1.0, HTTP/1.1, HTTP/2.0]
+      follow_redirects: false
+      preferred_ip_protocol: ip4
