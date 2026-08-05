@@ -1,0 +1,36 @@
+{
+  "radarr": {
+    "name": "Radarr",
+    "hostname": "radarr",
+    "port": 7878,
+    "useSsl": false,
+    "baseUrl": "",
+    "activeProfileName": "HD-1080p",
+    "activeDirectory": "/data/films",
+    "is4k": false,
+    "minimumAvailability": "released",
+    "isDefault": true,
+    "syncEnabled": false,
+    "preventSearch": false,
+    "tagRequests": false,
+    "tags": []
+  },
+  "sonarr": {
+    "name": "Sonarr",
+    "hostname": "sonarr",
+    "port": 8989,
+    "useSsl": false,
+    "baseUrl": "",
+    "activeProfileName": "HD-1080p",
+    "activeLanguageProfileId": 1,
+    "activeDirectory": "/data/series",
+    "is4k": false,
+    "isDefault": true,
+    "syncEnabled": false,
+    "enableSeasonFolders": false,
+    "preventSearch": false,
+    "tagRequests": false,
+    "tags": [],
+    "animeTags": []
+  }
+}
