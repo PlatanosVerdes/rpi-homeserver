@@ -94,6 +94,19 @@ since versions are pinned by hand in `versions.env`.
 
 Not enabled: On Grab and On Download. Every single import would be a message.
 
+### Seeing upgrades without being told about them
+
+Alerts are for things that need doing. "This movie is now Bluray-2160p" is just news, so it goes on
+a dashboard instead: `scripts/arr-history-metrics.py` pairs each *upgrade* history event (old file
+deleted with reason `Upgrade`) with the import that replaced it and pushes one series per upgrade,
+titles and qualities as labels, to Pushgateway. The **Media Pipeline** dashboard renders them as a
+table, next to the qBittorrent state.
+
+Labels as an event log is not what Prometheus is for. The alternative was the Infinity datasource
+querying the *arr APIs live, which means a Grafana plugin plus each app's API key stored in Grafana.
+The set here is capped at the last 25 upgrades and pushed with PUT, so it replaces itself instead of
+growing.
+
 ## The dead man's switch
 
 Every rule above dies with the Pi. A power cut, a dead SD card or an ISP outage produces silence,

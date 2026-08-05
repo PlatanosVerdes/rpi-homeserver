@@ -52,7 +52,7 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
+        "h": 12,
         "w": 4,
         "x": 4,
         "y": 0
@@ -64,7 +64,7 @@
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "## \ud83c\udf7f One Pace\n[One Pace Downloader \u00b7 episodes & arcs](/d/onepace-dl/one-pace-downloader)\n\n[Arc Status \u00b7 per-arc table](/d/onepace-arc-status/one-pace-arc-status)",
+        "content": "## \ud83c\udf7f One Pace\n[One Pace Downloader \u00b7 episodes & arcs](/d/onepace-dl/one-pace-downloader)\n\n[Arc Status \u00b7 per-arc table](/d/onepace-arc-status/one-pace-arc-status)\n\n## \ud83c\udfac Library\n[Media Pipeline \u00b7 quality upgrades & qBittorrent](/d/media-pipeline/media-pipeline)",
         "mode": "markdown"
       },
       "pluginVersion": "12.3.3",
