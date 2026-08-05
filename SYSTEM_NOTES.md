@@ -196,9 +196,10 @@ after it was watched.
   torrent kept seeding untouched. Deleting now also removes the torrent, respecting its own seed-time
   limit (Maintainerr's fallback ratio only kicks in when the client enforces no limit of its own,
   which is not our case).
-- **Fixed a double grace period on the `Películas` collection.** The rule already means "last viewed
-  more than 7 days ago" (an unwatched title has no `lastViewedAt`, so it never matches). The
-  collection then waited a *second* 7 days after the item entered it before deleting, so a movie
-  actually vanished 14 days after being watched. `deleteAfterDays` is now `0`: the rule's own 7-day
-  threshold is the only wait.
+- **Fixed a double grace period on the `Películas` collection.** The rule means "last viewed more
+  than N days ago" (an unwatched title has no `lastViewedAt`, so it never matches). The collection
+  used to wait a *second* 7 days after the item entered it before deleting, doubling the real delay.
+  `deleteAfterDays` is now `0`: the rule's own threshold is the only wait. That threshold is
+  `customVal.value` in `rules[0].ruleJson` (seconds) — currently **1209600 = 14 days**, changed from
+  the original 7 on 2026-08-05.
 - media server is Plex (`media_server_type=plex`); it is not wired to Jellyfin/Emby.
