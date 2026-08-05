@@ -1993,6 +1993,610 @@
             ]
           },
           "pluginVersion": "12.3.3"
+        },
+        {
+          "type": "piechart",
+          "title": "Disk by quality",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "h": 11,
+            "w": 8,
+            "x": 0,
+            "y": 53
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes",
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                }
+              },
+              "mappings": []
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Bluray-2160p"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "blue"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "WEBDL-2160p"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "blue"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "WEBRip-2160p"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "blue"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "HDTV-2160p"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "blue"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Remux-2160p"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "blue"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Bluray-1080p"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "green"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "WEBDL-1080p"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "green"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "WEBRip-1080p"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "green"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Remux-1080p"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "orange"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "HDTV-1080p"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "orange"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Bluray-720p"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "orange"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "WEBDL-720p"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "orange"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "WEBRip-720p"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "orange"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "HDTV-720p"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "orange"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "mixed"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "orange"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "BR-DISK"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "red"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Raw-HD"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "red"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "SDTV"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "red"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "DVD"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "red"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "DVD-R"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "red"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Bluray-576p"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "red"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Bluray-480p"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "red"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "WEBDL-480p"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "red"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "WEBRip-480p"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "red"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "TELESYNC"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "red"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "TELECINE"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "red"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "CAM"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "red"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "WORKPRINT"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "red"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "DVDSCR"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "red"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "REGIONAL"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "red"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Unknown"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "red"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "pieType": "donut",
+            "displayLabels": [
+              "percent"
+            ],
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "legend": {
+              "showLegend": true,
+              "displayMode": "table",
+              "placement": "right",
+              "values": [
+                "value",
+                "percent"
+              ]
+            },
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "instant": true,
+              "range": false,
+              "refId": "A",
+              "expr": "sum by (quality) (arr_media_size_bytes)",
+              "legendFormat": "{{quality}}"
+            }
+          ]
+        },
+        {
+          "type": "bargauge",
+          "title": "Biggest titles (top 20)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "h": 11,
+            "w": 16,
+            "x": 8,
+            "y": 53
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes",
+              "min": 0,
+              "color": {
+                "mode": "continuous-BlYlRd"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "text",
+                    "value": null
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "displayMode": "gradient",
+            "orientation": "horizontal",
+            "showUnfilled": false,
+            "valueMode": "text",
+            "namePlacement": "left",
+            "sizing": "auto",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "legend": {
+              "showLegend": false,
+              "displayMode": "list",
+              "placement": "bottom"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "instant": true,
+              "range": false,
+              "refId": "A",
+              "expr": "topk(20, arr_media_size_bytes)",
+              "legendFormat": "{{title}}  \u00b7  {{quality}}"
+            }
+          ]
         }
       ]
     }

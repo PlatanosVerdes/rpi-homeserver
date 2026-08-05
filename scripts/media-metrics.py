@@ -6,6 +6,7 @@ Three things the existing exporters cannot answer:
   arr_quality_change_*   which movie was upgraded, from which quality to which
   qbit_torrent_*         which torrents are in each state, not how many
   arr_indexer_grabs_90d  which indexers actually get used, so alerts can ignore the rest
+  arr_media_size_bytes   where the disk went: size per title, tagged with its quality
   prowlarr_indexer_up    which indexers are failing right now, over time
 
 All three use labels to carry identity, which is not what Prometheus is for. It is a deliberate
@@ -179,6 +180,40 @@ def indexer_usage():
     push("arr_indexer_usage", lines)
 
 
+def library_sizes():
+    """Size per title, with its quality as a label, so the dashboard can answer where the disk went.
+
+    Radarr knows both the size and the quality of every file; the disk_file_bytes metric from
+    disk-usage-metrics.sh only knows paths, and guessing quality from a filename is a losing game.
+    Sonarr series get quality "mixed" (a season is many files, often several qualities).
+    """
+    lines = ["# HELP arr_media_size_bytes Size on disk per title, with its quality",
+             "# TYPE arr_media_size_bytes gauge"]
+    try:
+        for movie in get("http://localhost:7878/api/v3/movie", api_key("radarr")):
+            f = movie.get("movieFile")
+            if not movie.get("hasFile") or not f:
+                continue
+            q = ((f.get("quality") or {}).get("quality") or {}).get("name", "Unknown")
+            lines.append(f'arr_media_size_bytes{{app="radarr",'
+                         f'title="{escape(movie["title"])[:90]}",quality="{escape(q)}"}} '
+                         f'{f.get("size", 0)}')
+    except Exception as exc:
+        failures.append(f"radarr library: {exc}")
+
+    try:
+        for series in get("http://localhost:8989/api/v3/series", api_key("sonarr")):
+            size = (series.get("statistics") or {}).get("sizeOnDisk", 0)
+            if not size:
+                continue
+            lines.append(f'arr_media_size_bytes{{app="sonarr",'
+                         f'title="{escape(series["title"])[:90]}",quality="mixed"}} {size}')
+    except Exception as exc:
+        failures.append(f"sonarr library: {exc}")
+
+    push("arr_library", lines)
+
+
 def prowlarr_indexers():
     """1 when working, 0 while Prowlarr has it disabled after failures. One series per indexer, so a
     state timeline shows them dropping out and coming back."""
@@ -210,6 +245,7 @@ if __name__ == "__main__":
     quality_changes()
     qbit_torrents()
     indexer_usage()
+    library_sizes()
     prowlarr_indexers()
     if failures:
         sys.exit("; ".join(failures))
