@@ -9,6 +9,11 @@ WorkingDirectory=/home/raspi/rpi-homeserver
 ExecStart=/usr/bin/python3 /home/raspi/rpi-homeserver/services/deploy-webhook/deploy-webhook.py
 Restart=always
 RestartSec=5
+# Kill only the main process on stop/restart, not the whole cgroup. The deploy this service
+# spawns is a child in that cgroup, and deploy_control.sh restarts this very unit when the
+# receiver's code changes: with the default KillMode=control-group that restart would kill the
+# deploy that requested it, halfway through.
+KillMode=process
 PrivateTmp=true
 ProtectSystem=full
 # No NoNewPrivileges here: the whole job of this service is to launch deploy_control.sh, which

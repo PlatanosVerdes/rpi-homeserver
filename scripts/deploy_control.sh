@@ -147,6 +147,24 @@ deploy_repo() {
     # Must happen after the pull and before compose can restart Grafana
     [[ "$label" == "homeserver" ]] && render_grafana_alerting
 
+    # The webhook receiver is a host systemd service, so a pull updates its files while the old
+    # process keeps serving. Apply them here or the change is silently ignored. Safe to restart
+    # from inside a deploy this same service may have spawned, thanks to KillMode=process.
+    if [[ "$label" == "homeserver" && "$before" != "$after" ]] &&
+        git diff --name-only "$before" "$after" | grep -q '^services/deploy-webhook/'; then
+        local unit=/etc/systemd/system/deploy-webhook.service
+        if ! sudo cmp -s services/deploy-webhook/deploy-webhook.service "$unit"; then
+            sudo cp services/deploy-webhook/deploy-webhook.service "$unit"
+            sudo systemctl daemon-reload
+            log "[$label] webhook unit updated"
+        fi
+        if sudo systemctl restart deploy-webhook; then
+            log "[$label] webhook receiver restarted with the new code"
+        else
+            log "[$label] WARNING: could not restart deploy-webhook, it is still running the old code"
+        fi
+    fi
+
     if [ "$before" != "$after" ]; then
         log "[$label] Changes detected, rebuilding..."
         if ! docker compose up -d --build --remove-orphans 2>&1 | while IFS= read -r line; do log "[$label] $line"; done; then
