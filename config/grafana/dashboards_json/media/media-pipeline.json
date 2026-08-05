@@ -26,7 +26,7 @@
         "uid": "prometheus"
       },
       "gridPos": {
-        "h": 10,
+        "h": 9,
         "w": 18,
         "x": 0,
         "y": 1
@@ -577,7 +577,7 @@
         "uid": "prometheus"
       },
       "gridPos": {
-        "h": 5,
+        "h": 4,
         "w": 6,
         "x": 18,
         "y": 6
@@ -639,10 +639,10 @@
       },
       "description": "Titles whose current file is one of the qualities the download policy rejects (cams, SD, DVD, BR-DISK). These are the ones actually worth looking at by hand: Radarr will not always see them as upgradable, and a 300 MB BR-DISK is how Gattaca hid for five months.",
       "gridPos": {
-        "h": 6,
-        "w": 24,
+        "h": 7,
+        "w": 10,
         "x": 0,
-        "y": 17
+        "y": 10
       },
       "fieldConfig": {
         "defaults": {
@@ -909,10 +909,10 @@
       },
       "description": "Everything Radarr is waiting for, and what it is waiting for.\n\n| Kind | Meaning |\n| :--- | :--- |\n| 🔵 `downloading` | in the queue right now. **Expected** is the ETA, or `stalled` when nothing has moved |\n| 🟠 `missing` | monitored with no file at all: cannot be watched |\n| 🟢 `upgrade` | watchable, but below the profile cutoff |\n\n**Expected** is the honest half of \"when\". Nobody can say when someone uploads a good release, but\nthese are knowable:\n\n- `in cinemas, no digital date` — no Bluray exists yet, searching more often changes nothing\n- `out, waiting for a good release` — available in the world, so it is down to an indexer having it.\n  The 02:00 search asks about exactly this list every night\n- `eta ...` — actually downloading",
       "gridPos": {
-        "h": 6,
-        "w": 24,
-        "x": 0,
-        "y": 11
+        "h": 7,
+        "w": 14,
+        "x": 10,
+        "y": 10
       },
       "fieldConfig": {
         "defaults": {
@@ -1083,6 +1083,16 @@
                         "color": "red",
                         "index": 29,
                         "text": "Unknown"
+                      },
+                      "none": {
+                        "color": "red",
+                        "index": 30,
+                        "text": "none"
+                      },
+                      "?": {
+                        "color": "text",
+                        "index": 31,
+                        "text": "?"
                       }
                     }
                   }
@@ -1261,6 +1271,16 @@
                         "color": "red",
                         "index": 29,
                         "text": "Unknown"
+                      },
+                      "none": {
+                        "color": "red",
+                        "index": 30,
+                        "text": "none"
+                      },
+                      "?": {
+                        "color": "text",
+                        "index": 31,
+                        "text": "?"
                       }
                     }
                   }
@@ -1455,7 +1475,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 23
+        "y": 17
       },
       "panels": []
     },
@@ -1470,7 +1490,7 @@
         "h": 4,
         "w": 4,
         "x": 0,
-        "y": 24
+        "y": 18
       },
       "fieldConfig": {
         "defaults": {
@@ -1536,7 +1556,7 @@
         "h": 4,
         "w": 4,
         "x": 4,
-        "y": 24
+        "y": 18
       },
       "fieldConfig": {
         "defaults": {
@@ -1602,7 +1622,7 @@
         "h": 4,
         "w": 4,
         "x": 8,
-        "y": 24
+        "y": 18
       },
       "fieldConfig": {
         "defaults": {
@@ -1668,7 +1688,7 @@
         "h": 4,
         "w": 4,
         "x": 12,
-        "y": 24
+        "y": 18
       },
       "fieldConfig": {
         "defaults": {
@@ -1729,7 +1749,7 @@
         "h": 4,
         "w": 4,
         "x": 16,
-        "y": 24
+        "y": 18
       },
       "fieldConfig": {
         "defaults": {
@@ -1790,7 +1810,7 @@
         "h": 4,
         "w": 4,
         "x": 20,
-        "y": 24
+        "y": 18
       },
       "fieldConfig": {
         "defaults": {
@@ -1851,7 +1871,7 @@
         "h": 12,
         "w": 18,
         "x": 0,
-        "y": 28
+        "y": 22
       },
       "fieldConfig": {
         "defaults": {
@@ -2201,7 +2221,7 @@
           }
         }
       ],
-      "description": "**qBittorrent states**\n\n| State | Meaning |\n| :--- | :--- |\n| `downloading` | pulling data right now |\n| `metaDL` | fetching the .torrent metadata (magnet just added) |\n| `stalledDL` | wants to download but finds no seeds: stuck |\n| `queuedDL` | waiting for a download slot |\n| `uploading` | sending data to someone right now |\n| `stalledUP` | seeding, but nobody is downloading from you. Normal for old titles |\n| `queuedUP` | finished, waiting its turn to seed. **Not seeding at all** |\n| `pausedUP` / `stoppedUP` | stopped on purpose, or its share limit was reached |\n| `checkingUP` / `checkingDL` | verifying pieces against the disk |\n| `moving` | being moved between folders |\n| `error` / `missingFiles` | broken: the data is unreadable or gone |\n\nWhy so many queued: `MaxActiveTorrents = 18` with 36 torrents, so half wait their turn.\n"
+      "description": "**qBittorrent states**\n\n| State | Meaning |\n| :--- | :--- |\n| `downloading` | pulling data right now |\n| `metaDL` | fetching the .torrent metadata (magnet just added) |\n| `stalledDL` | wants to download but finds no seeds: stuck |\n| `queuedDL` | waiting for a download slot |\n| `uploading` | sending data to someone right now |\n| `stalledUP` | seeding, but nobody is downloading from you. Normal for old titles |\n| `queuedUP` | finished, waiting its turn to seed. **Not seeding at all** |\n| `pausedUP` / `stoppedUP` | stopped on purpose, or its share limit was reached |\n| `checkingUP` / `checkingDL` | verifying pieces against the disk |\n| `moving` | being moved between folders |\n| `error` / `missingFiles` | broken: the data is unreadable or gone |\n\nQueue limits are `MaxActiveTorrents = 40` since 2026-08-05, up from 18. Before that half the torrents sat in `queuedUP`, which is not seeding at all.\n"
     },
     {
       "type": "piechart",
@@ -2214,7 +2234,7 @@
         "h": 12,
         "w": 6,
         "x": 18,
-        "y": 28
+        "y": 22
       },
       "fieldConfig": {
         "defaults": {
@@ -2589,7 +2609,7 @@
           "legendFormat": "{{state}}"
         }
       ],
-      "description": "**qBittorrent states**\n\n| State | Meaning |\n| :--- | :--- |\n| `downloading` | pulling data right now |\n| `metaDL` | fetching the .torrent metadata (magnet just added) |\n| `stalledDL` | wants to download but finds no seeds: stuck |\n| `queuedDL` | waiting for a download slot |\n| `uploading` | sending data to someone right now |\n| `stalledUP` | seeding, but nobody is downloading from you. Normal for old titles |\n| `queuedUP` | finished, waiting its turn to seed. **Not seeding at all** |\n| `pausedUP` / `stoppedUP` | stopped on purpose, or its share limit was reached |\n| `checkingUP` / `checkingDL` | verifying pieces against the disk |\n| `moving` | being moved between folders |\n| `error` / `missingFiles` | broken: the data is unreadable or gone |\n\nWhy so many queued: `MaxActiveTorrents = 18` with 36 torrents, so half wait their turn.\n"
+      "description": "**qBittorrent states**\n\n| State | Meaning |\n| :--- | :--- |\n| `downloading` | pulling data right now |\n| `metaDL` | fetching the .torrent metadata (magnet just added) |\n| `stalledDL` | wants to download but finds no seeds: stuck |\n| `queuedDL` | waiting for a download slot |\n| `uploading` | sending data to someone right now |\n| `stalledUP` | seeding, but nobody is downloading from you. Normal for old titles |\n| `queuedUP` | finished, waiting its turn to seed. **Not seeding at all** |\n| `pausedUP` / `stoppedUP` | stopped on purpose, or its share limit was reached |\n| `checkingUP` / `checkingDL` | verifying pieces against the disk |\n| `moving` | being moved between folders |\n| `error` / `missingFiles` | broken: the data is unreadable or gone |\n\nQueue limits are `MaxActiveTorrents = 40` since 2026-08-05, up from 18. Before that half the torrents sat in `queuedUP`, which is not seeding at all.\n"
     },
     {
       "type": "timeseries",
@@ -2603,7 +2623,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 40
+        "y": 34
       },
       "fieldConfig": {
         "defaults": {
@@ -2790,7 +2810,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 48
+        "y": 42
       },
       "panels": []
     },
@@ -2805,7 +2825,7 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 49
+        "y": 43
       },
       "fieldConfig": {
         "defaults": {
@@ -3345,7 +3365,7 @@
         "h": 9,
         "w": 12,
         "x": 12,
-        "y": 49
+        "y": 43
       },
       "fieldConfig": {
         "defaults": {
@@ -3417,7 +3437,7 @@
         "h": 11,
         "w": 24,
         "x": 0,
-        "y": 58
+        "y": 52
       },
       "fieldConfig": {
         "defaults": {
@@ -3486,7 +3506,7 @@
         "h": 12,
         "w": 24,
         "x": 0,
-        "y": 69
+        "y": 63
       },
       "fieldConfig": {
         "defaults": {
@@ -3562,7 +3582,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 81
+        "y": 75
       },
       "targets": [
         {
