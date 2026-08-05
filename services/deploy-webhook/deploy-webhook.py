@@ -182,7 +182,10 @@ def main():
         sys.exit("GITHUB_WEBHOOK_SECRET is not set (add it to .env)")
     if not os.access(DEPLOY_SCRIPT, os.X_OK):
         sys.exit(f"{DEPLOY_SCRIPT} is missing or not executable")
-    log(f"listening on 127.0.0.1:{PORT}{HOOK_PATH}")
+    # Stamp which code is actually serving: this file lives in git but runs as a host service, so
+    # "is the running process the version I just pushed?" is a real question with a real answer.
+    stamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(os.path.getmtime(__file__)))
+    log(f"listening on 127.0.0.1:{PORT}{HOOK_PATH} (code dated {stamp})")
     ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
 
 
