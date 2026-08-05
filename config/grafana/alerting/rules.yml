@@ -264,9 +264,12 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: 'At least one Acestream source URL is failing'
+          # Per series, not a count: each failing gateway is its own alert instance, so the
+          # message can name it while the others keep working.
+          summary: 'Acestream source {{ $labels.url }} is failing'
           description: >-
-            Degraded but still working while another gateway answers. IPFS gateways are flaky, hence the long wait before this fires.
+            Degraded but still working as long as another gateway answers. IPFS gateways are flaky,
+            hence the long wait before this fires.
         noDataState: OK
         execErrState: Error
         data:
@@ -277,7 +280,7 @@ groups:
               refId: A
               instant: true
               editorMode: code
-              expr: 'count(acestream_source_http_code != 200) > bool 0'
+              expr: 'acestream_source_http_code != bool 200'
           - refId: C
             datasourceUid: __expr__
             model:
@@ -368,6 +371,127 @@ groups:
               instant: true
               editorMode: code
               expr: 'backup_last_size_bytes > bool (avg_over_time(backup_last_size_bytes[7d]) * 1.5)'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+
+      - uid: homelab-container-restart-loop
+        title: 'Container restart loop'
+        condition: C
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'Container {{ $labels.name }} has restarted more than twice in an hour'
+          description: >-
+            Something is crashing on startup. docker logs on that container is the place to look.
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: 'changes(container_start_time_seconds{name!=""}[1h]) > bool 2'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+      - uid: homelab-memory-low
+        title: 'Memory almost exhausted'
+        condition: C
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Less than 10% of RAM available'
+          description: >-
+            Below this the Pi starts swapping to the SD card and everything crawls. Usually a container leaking or a transcode.
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: '100 * node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes < bool 10'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+      - uid: homelab-acestream-stale
+        title: 'Acestream updater not running'
+        condition: C
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'The Acestream updater has not run in over an hour'
+          description: >-
+            The source URLs can still answer 200 while the updater is stuck, so this is the rule that catches a frozen container: without it the channel list silently goes stale.
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: '(time() - acestream_last_run_timestamp) > bool 3600'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+      - uid: homelab-onepace-failures
+        title: 'One Pace downloads failing'
+        condition: C
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'The last One Pace run left failed episodes'
+          description: >-
+            Stays firing until a later run reports zero failures, since the metric holds its last value between daily runs.
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: 'onepace_episodes_failed > bool 0'
           - refId: C
             datasourceUid: __expr__
             model:
