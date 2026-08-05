@@ -6,6 +6,12 @@ apiVersion: 1
 #
 # What is NOT covered here, by design: the Pi being dead. Grafana dies with it, so that one
 # needs the external dead man's switch (see docs/alerting.md).
+#
+# execErrState is KeepLast everywhere, NOT Error. With Error, a query that merely fails to run
+# raises a DatasourceError alert with no labels ("source [no value] is failing"), so restarting
+# Prometheus pages you about a service that is perfectly fine. KeepLast holds the previous state
+# instead. The trade-off is that a permanently broken expression stays quiet, so check
+# `docker logs grafana | grep provision` after editing this file.
 
 groups:
   - orgId: 1
@@ -22,7 +28,7 @@ groups:
         annotations:
           summary: Less than 15% free on / (the SD card)
         noDataState: OK
-        execErrState: Error
+        execErrState: KeepLast
         data:
           - refId: A
             relativeTimeRange: { from: 300, to: 0 }
@@ -51,7 +57,7 @@ groups:
         annotations:
           summary: Less than 10% free on the data disk
         noDataState: OK
-        execErrState: Error
+        execErrState: KeepLast
         data:
           - refId: A
             relativeTimeRange: { from: 300, to: 0 }
@@ -81,7 +87,7 @@ groups:
           summary: The last appdata backup reported an error
           description: Check backup.log on the Pi. Metric backup_last_status is not 0.
         noDataState: OK
-        execErrState: Error
+        execErrState: KeepLast
         data:
           - refId: A
             relativeTimeRange: { from: 300, to: 0 }
@@ -111,7 +117,7 @@ groups:
           summary: No successful backup in more than 36 hours
           description: The daily 04:00 cron either did not run or never finished.
         noDataState: OK
-        execErrState: Error
+        execErrState: KeepLast
         data:
           - refId: A
             relativeTimeRange: { from: 300, to: 0 }
@@ -141,7 +147,7 @@ groups:
           summary: The last deploy ended in error
           description: Check apply.log. Most likely a failed build or a compose error.
         noDataState: OK
-        execErrState: Error
+        execErrState: KeepLast
         data:
           - refId: A
             relativeTimeRange: { from: 300, to: 0 }
@@ -177,7 +183,7 @@ groups:
             That metrics endpoint is unreachable. The service it monitors may well be fine: this
             fires on the exporter, not on the app behind it.
         noDataState: OK
-        execErrState: Error
+        execErrState: KeepLast
         data:
           - refId: A
             relativeTimeRange: { from: 300, to: 0 }
@@ -207,7 +213,7 @@ groups:
           summary: SoC temperature above 75 C for 10 minutes
           description: Sustained throttling territory. Check airflow and heavy containers.
         noDataState: OK
-        execErrState: Error
+        execErrState: KeepLast
         data:
           - refId: A
             relativeTimeRange: { from: 300, to: 0 }
@@ -238,7 +244,7 @@ groups:
           description: >-
             Every IPFS gateway in the list is erroring, so the .m3u Jellyfin reads will go stale.
         noDataState: OK
-        execErrState: Error
+        execErrState: KeepLast
         data:
           - refId: A
             relativeTimeRange: { from: 300, to: 0 }
@@ -271,7 +277,7 @@ groups:
             Degraded but still working as long as another gateway answers. IPFS gateways are flaky,
             hence the long wait before this fires.
         noDataState: OK
-        execErrState: Error
+        execErrState: KeepLast
         data:
           - refId: A
             relativeTimeRange: { from: 300, to: 0 }
@@ -301,7 +307,7 @@ groups:
           description: >-
             Renew it in Azure and update rpi-services/.env. Exact days left are on the Home dashboard.
         noDataState: OK
-        execErrState: Error
+        execErrState: KeepLast
         data:
           - refId: A
             relativeTimeRange: { from: 300, to: 0 }
@@ -331,7 +337,7 @@ groups:
           description: >-
             cal-bridge can no longer authenticate against Microsoft, so its calendar API is dead until renewed.
         noDataState: OK
-        execErrState: Error
+        execErrState: KeepLast
         data:
           - refId: A
             relativeTimeRange: { from: 300, to: 0 }
@@ -361,7 +367,7 @@ groups:
           description: >-
             Something new is being archived. Look for a cache or database that slipped into appdata and belongs in the exclude list.
         noDataState: OK
-        execErrState: Error
+        execErrState: KeepLast
         data:
           - refId: A
             relativeTimeRange: { from: 300, to: 0 }
@@ -392,7 +398,7 @@ groups:
           description: >-
             Something is crashing on startup. docker logs on that container is the place to look.
         noDataState: OK
-        execErrState: Error
+        execErrState: KeepLast
         data:
           - refId: A
             relativeTimeRange: { from: 300, to: 0 }
@@ -422,7 +428,7 @@ groups:
           description: >-
             Below this the Pi starts swapping to the SD card and everything crawls. Usually a container leaking or a transcode.
         noDataState: OK
-        execErrState: Error
+        execErrState: KeepLast
         data:
           - refId: A
             relativeTimeRange: { from: 300, to: 0 }
@@ -452,7 +458,7 @@ groups:
           description: >-
             The source URLs can still answer 200 while the updater is stuck, so this is the rule that catches a frozen container: without it the channel list silently goes stale.
         noDataState: OK
-        execErrState: Error
+        execErrState: KeepLast
         data:
           - refId: A
             relativeTimeRange: { from: 300, to: 0 }
@@ -482,7 +488,7 @@ groups:
           description: >-
             Stays firing until a later run reports zero failures, since the metric holds its last value between daily runs.
         noDataState: OK
-        execErrState: Error
+        execErrState: KeepLast
         data:
           - refId: A
             relativeTimeRange: { from: 300, to: 0 }
@@ -515,7 +521,7 @@ groups:
             The blackbox probe got no valid answer. Unlike the container-level rules this one means
             the app itself is not serving, even if its container is up.
         noDataState: OK
-        execErrState: Error
+        execErrState: KeepLast
         data:
           - refId: A
             relativeTimeRange: { from: 300, to: 0 }
@@ -535,3 +541,66 @@ groups:
               conditions:
                 - evaluator: { type: gt, params: [0] }
 
+      - uid: homelab-qbit-torrent-error
+        title: 'Torrents in error'
+        condition: C
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'qBittorrent has torrents in error or with missing files'
+          description: >-
+            Those will never finish or seed on their own. missingFiles usually means the data was
+            moved or deleted underneath qBittorrent.
+        noDataState: OK
+        execErrState: KeepLast
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: 'sum(qbittorrent_torrents_count{status=~"error|missingFiles"}) > bool 0'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+
+      - uid: homelab-qbit-stalled-download
+        title: 'Download stalled for hours'
+        condition: C
+        for: 6h
+        labels:
+          severity: warning
+        annotations:
+          summary: 'A download has been stalled with no peers for 6 hours'
+          description: >-
+            Long stalled downloads rarely recover. Worth a manual look, or letting Radarr blocklist
+            the release and try another one.
+        noDataState: OK
+        execErrState: KeepLast
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: 'sum(qbittorrent_torrents_count{status="stalledDL"}) > bool 0'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
