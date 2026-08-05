@@ -580,13 +580,17 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: 'A download has been stalled with no peers for 6 hours'
+          summary: '{{ $labels.name }} has been stalled with no peers for 6 hours'
           description: >-
             Long stalled downloads rarely recover. Worth a manual look, or letting Radarr blocklist
             the release and try another one.
         noDataState: OK
         execErrState: KeepLast
         data:
+          # No aggregation on purpose: qbit_torrent_progress carries a `name` label per torrent
+          # (media-metrics.py), so each stalled torrent becomes its OWN alert instance with its
+          # own `for` timer, instead of one nameless blob that also mis-resets when a different
+          # torrent starts stalling while another one is already being counted.
           - refId: A
             relativeTimeRange: { from: 300, to: 0 }
             datasourceUid: prometheus
@@ -594,7 +598,7 @@ groups:
               refId: A
               instant: true
               editorMode: code
-              expr: 'sum(qbittorrent_torrents_count{status="stalledDL"}) > bool 0'
+              expr: 'qbit_torrent_progress{state="stalledDL"}'
           - refId: C
             datasourceUid: __expr__
             model:
@@ -603,7 +607,7 @@ groups:
               expression: A
               datasource: { type: __expr__, uid: __expr__ }
               conditions:
-                - evaluator: { type: gt, params: [0] }
+                - evaluator: { type: gt, params: [-1] }
       - uid: homelab-indexers-all-down
         title: 'Every indexer is down'
         condition: C
