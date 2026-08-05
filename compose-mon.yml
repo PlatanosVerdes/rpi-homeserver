@@ -45,7 +45,7 @@ services:
 
   # --- CADVISOR (Container metrics) ---
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:${CADVISOR_VERSION}
+    image: ghcr.io/google/cadvisor:${CADVISOR_VERSION}
     container_name: cadvisor
     restart: unless-stopped
     profiles: [moni, all]
