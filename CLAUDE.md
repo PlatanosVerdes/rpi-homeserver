@@ -48,6 +48,7 @@ scripts/                    Operational scripts
   backup.sh                 Daily appdata backup (cron), pushes metrics to Grafana
   heartbeat.sh              Dead man's switch ping to an external check (cron, every minute)
   cutoff-search.sh          Nightly *arr search for missing and below-cutoff items (cron)
+  arr-history-metrics.py    Recent quality upgrades -> Pushgateway (cron, for Grafana)
   mount_setup.sh            One-time external disk mount setup
   rebuild-service.sh        Manual single-service rebuild helper
   bws-run.py                Bitwarden SM wrapper (dropped, kept for reference only)
