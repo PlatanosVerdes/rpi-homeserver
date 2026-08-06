@@ -10,78 +10,16 @@ a reference in case it is revisited. They are NOT wired into deploy.
 
 ---
 
-## ✅ Pi-hole monitoring in Grafana — DONE
-
-`pihole-exporter` running, scraping `host.docker.internal:8081`. Dashboard imported (uid `Pi-hole-Exporter`).
-
----
-
-## ✅ Tailscale monitoring in Grafana — DONE (a different way)
-
-Tailnet name: **Bannet**. This was solved without the `tailscale-exporter` container: the Go binary
-in [services/tailscale-metrics](services/tailscale-metrics) runs from host cron every minute and
-writes `tailscale.prom` to node_exporter's textfile collector, which Prometheus already scrapes.
-`TAILSCALE_API_KEY` is in `.env` and the dashboard is
-[config/grafana/dashboards_json/infrastructure/tailscale.json](config/grafana/dashboards_json/infrastructure/tailscale.json).
-
-The commented-out `tailscale-exporter` service in [compose-mon.yml](compose-mon.yml) and its
-commented scrape job in [config/prometheus/prometheus.yml](config/prometheus/prometheus.yml) are
-the abandoned approach and can be deleted.
-
----
-
 ## Update alert: notify when a service has a newer, non-breaking version (not implemented)
 
 **Goal:** a Grafana alert that fires only when a `versions.env` pin is behind upstream **and**
 the versions in between carry no documented breaking change, so it never nags about the ones
 that need a manual look.
 
-**2026-08-05 snapshot: all 12 safe updates applied and verified, one by one, lowest to highest
-risk.** Each was bumped in its own commit, deployed via the webhook, and checked on the Pi
-(container healthy, logs clean, functional smoke test) before moving to the next:
-
-| Service | Was | Now | Notes |
-| :--- | :--- | :--- | :--- |
-| pushgateway | v1.11.2 | v1.11.3 | |
-| node_exporter | v1.11.1 | v1.12.1 | |
-| cadvisor | v0.55.1 | v0.60.5 | `gcr.io/cadvisor/cadvisor` (the old mirror) has nothing past v0.55.1; `compose-mon.yml` now points at `ghcr.io/google/cadvisor`, the registry cadvisor's own README says to use since v0.53.0 |
-| flaresolverr | v3.4.6 | v3.5.0 | |
-| prometheus | v3.9.1 | v3.13.2 | |
-| homepage | v1.10.1 | v1.13.2 | |
-| speedtest-tracker | v1.13.10-ls138 | v1.14.7-ls165 | |
-| maintainerr | 3.18.0 | 3.21.1 | |
-| qbittorrent | 5.1.4-r2-ls442 | 5.2.3_v2.0.13-ls469 | LinuxServer's tag format for this image now embeds the libtorrent version |
-| jellyfin | 10.11.6ubu2404-ls21 | 10.11.11ubu2604-ls43 | base OS moved Ubuntu 24.04 -> 26.04 |
-| pihole | 2026.02.0 | 2026.07.2 | DNS/gravity DB auto-migrated v21->v22 on first boot; verified both `*.platanosverdes.com` resolution and ad-blocking after |
-| caddy | 2.10.2 | 2.11.4 | checked the v2.11.4 security-patch caveat (backslash path normalization, stripHTML, underscore-headers) against `config/caddy/Caddyfile` — only plain `reverse_proxy` blocks, none of it applies |
-
-**grafana: 12.3.3 -> 13.1.2, done separately on 2026-08-06** after actually reading the v13.0
-upgrade guide's breaking-changes list end to end and checking each one against this instance:
-
-- numeric datasource-id APIs disabled by default — not used, provisioning and every dashboard
-  already reference Prometheus by `uid`.
-- `grafana-cli`/`grafana-server` removed — not used anywhere in this repo.
-- Image Renderer plugin removed — not installed, no screenshots/reports configured.
-- legacy Alertmanager API endpoints removed/restricted — alerting is entirely file-provisioned
-  (`rules.yml`, `policies.yml`, the contact-point template), no script calls those endpoints.
-- tightened RBAC — single org, default admin user only, no custom roles.
-- the one-time, irreversible-without-a-restore unified-storage migration — ran `scripts/backup.sh`
-  by hand right before deploying, so a fresh `appdata` backup existed regardless of the daily cron.
-
-Landed on v13.1.2 directly rather than v13.0.0 (which shipped a real migration bug for Git Sync
-users, irrelevant here since Git Sync isn't used, but no reason to land on the known-bad tag) and
-skipped the "bump to latest 12.x patch first" step from Grafana's own guide (that step exists to
-de-risk plugin compatibility before the React 19 jump; this instance has zero custom plugins).
-Migration logs confirmed a clean run: 6 folders + 14 dashboards migrated, counts validated, zero
-rejected.
-
-| Service | Verdict |
-| :--- | :--- |
-| cloudflared, overseerr, prowlarr, radarr, sonarr, bazarr, blackbox-exporter | already current as of 2026-08-05 |
-| aceserve, qbittorrent-exporter, pihole6_exporter | pinned by digest, no version to check at all |
-| plex | closed source, no public releases to check against |
-
-Re-run the check below periodically — this table goes stale as soon as upstream ships again.
+**2026-08-05/06: all 13 pending bumps (12 safe ones plus Grafana, whose 12->13 jump was read
+against its own breaking-changes guide first) were applied by hand, one at a time, each verified
+on the Pi before moving to the next.** See `versions.env`'s git history for what changed and why.
+The alert itself is still not built — everything below is the design for it.
 
 "Safe" means: read every release note between the pinned tag and upstream latest (not just the
 latest one — a multi-version jump can hide a breaking change in the middle) and found no mention
