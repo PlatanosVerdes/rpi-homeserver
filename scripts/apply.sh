@@ -181,6 +181,16 @@ deploy_repo() {
     fi
 
     if [ "$before" != "$after" ]; then
+        # Docs-only commits (e.g. PENDING.md, README.md) touch nothing Docker reads, so skip the
+        # rebuild — a `.md`-only diff would otherwise still trigger a full `--build` pass.
+        local changed
+        changed=$(git diff --name-only "$before" "$after")
+        if [[ -n "$changed" ]] && ! grep -qvE '\.md$' <<<"$changed"; then
+            log "[$label] Only *.md files changed, skipping rebuild..."
+            docker compose up -d --remove-orphans 2>/dev/null
+            return 2  # no-op, nothing to rebuild
+        fi
+
         log "[$label] Changes detected, rebuilding..."
         if ! docker compose up -d --build --remove-orphans 2>&1 | while IFS= read -r line; do log "[$label] $line"; done; then
             log "[$label] Docker Compose failed."
