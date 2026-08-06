@@ -55,12 +55,28 @@ risk.** Each was bumped in its own commit, deployed via the webhook, and checked
 | pihole | 2026.02.0 | 2026.07.2 | DNS/gravity DB auto-migrated v21->v22 on first boot; verified both `*.platanosverdes.com` resolution and ad-blocking after |
 | caddy | 2.10.2 | 2.11.4 | checked the v2.11.4 security-patch caveat (backslash path normalization, stripHTML, underscore-headers) against `config/caddy/Caddyfile` — only plain `reverse_proxy` blocks, none of it applies |
 
-**grafana stays pinned at 12.3.3** — the 12->13 bump is a real breaking change per Grafana's own
-docs and is intentionally excluded from the above, see below.
+**grafana: 12.3.3 -> 13.1.2, done separately on 2026-08-06** after actually reading the v13.0
+upgrade guide's breaking-changes list end to end and checking each one against this instance:
+
+- numeric datasource-id APIs disabled by default — not used, provisioning and every dashboard
+  already reference Prometheus by `uid`.
+- `grafana-cli`/`grafana-server` removed — not used anywhere in this repo.
+- Image Renderer plugin removed — not installed, no screenshots/reports configured.
+- legacy Alertmanager API endpoints removed/restricted — alerting is entirely file-provisioned
+  (`rules.yml`, `policies.yml`, the contact-point template), no script calls those endpoints.
+- tightened RBAC — single org, default admin user only, no custom roles.
+- the one-time, irreversible-without-a-restore unified-storage migration — ran `scripts/backup.sh`
+  by hand right before deploying, so a fresh `appdata` backup existed regardless of the daily cron.
+
+Landed on v13.1.2 directly rather than v13.0.0 (which shipped a real migration bug for Git Sync
+users, irrelevant here since Git Sync isn't used, but no reason to land on the known-bad tag) and
+skipped the "bump to latest 12.x patch first" step from Grafana's own guide (that step exists to
+de-risk plugin compatibility before the React 19 jump; this instance has zero custom plugins).
+Migration logs confirmed a clean run: 6 folders + 14 dashboards migrated, counts validated, zero
+rejected.
 
 | Service | Verdict |
 | :--- | :--- |
-| **grafana** | **12.3.3 -> v13.1.2 NOT safe, do not auto-bump** |
 | cloudflared, overseerr, prowlarr, radarr, sonarr, bazarr, blackbox-exporter | already current as of 2026-08-05 |
 | aceserve, qbittorrent-exporter, pihole6_exporter | pinned by digest, no version to check at all |
 | plex | closed source, no public releases to check against |
