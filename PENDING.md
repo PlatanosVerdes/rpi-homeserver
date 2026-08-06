@@ -72,6 +72,14 @@ API call — this snapshot took multiple registries/APIs to get right:
 
 ---
 
+## Plex casting/sharing from same-network devices (not investigated)
+
+**Goal:** figure out how to cast/share to Plex from other devices on the same LAN (phone, TV,
+whatever) — the whole "Chromecast-style" flow, not just opening the web player. Not researched
+yet, no plan exists. Revisit when there's time to dig into it.
+
+---
+
 ## Acestream channel health metric (not implemented)
 
 **Goal:** emit `acestream_channel_health{channel,group} = 1|0` from the `acestream-updater` Go
