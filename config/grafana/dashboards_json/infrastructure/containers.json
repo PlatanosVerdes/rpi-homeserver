@@ -1139,7 +1139,7 @@
     },
     {
       "id": 122,
-      "type": "bargauge",
+      "type": "timeseries",
       "title": "Top memory consumers",
       "datasource": {
         "type": "prometheus",
@@ -1154,32 +1154,32 @@
       "fieldConfig": {
         "defaults": {
           "unit": "bytes",
-          "color": {
-            "mode": "continuous-GrYlRd"
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "lineWidth": 1,
+            "showPoints": "never",
+            "axisPlacement": "auto"
           },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
+          "color": {
+            "mode": "palette-classic"
           }
         },
         "overrides": []
       },
       "options": {
-        "orientation": "horizontal",
-        "displayMode": "gradient",
-        "valueMode": "color",
-        "showUnfilled": true,
-        "reduceOptions": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "table",
+          "placement": "right",
           "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
         }
       },
       "pluginVersion": "12.3.3",
@@ -1191,9 +1191,10 @@
           },
           "editorMode": "code",
           "expr": "topk(10, sum by (name) (container_memory_working_set_bytes{name!=\"\",name!~\".*POD.*\"}))",
-          "instant": true,
+          "instant": false,
           "refId": "A",
-          "legendFormat": "{{name}}"
+          "legendFormat": "{{name}}",
+          "range": true
         }
       ]
     },
@@ -1291,7 +1292,7 @@
         "uid": "prometheus"
       },
       "gridPos": {
-        "h": 12,
+        "h": 16,
         "w": 8,
         "x": 0,
         "y": 27
@@ -1393,7 +1394,7 @@
         "uid": "prometheus"
       },
       "gridPos": {
-        "h": 12,
+        "h": 16,
         "w": 8,
         "x": 8,
         "y": 27
@@ -1488,57 +1489,24 @@
     },
     {
       "id": 133,
-      "type": "state-timeline",
+      "type": "bargauge",
       "title": "Uptime",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
       "gridPos": {
-        "h": 12,
+        "h": 16,
         "w": 8,
         "x": 16,
         "y": 27
       },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "(time() - container_last_seen{name!=\"\",name!~\".*POD.*\"}) < bool 60",
-          "legendFormat": "{{name}}",
-          "refId": "A"
-        }
-      ],
       "fieldConfig": {
         "defaults": {
+          "unit": "s",
           "color": {
-            "mode": "thresholds"
+            "mode": "continuous-GrYlRd"
           },
-          "custom": {
-            "fillOpacity": 100,
-            "lineWidth": 0,
-            "spanNulls": false
-          },
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "0": {
-                  "text": "Down",
-                  "color": "red",
-                  "index": 0
-                },
-                "1": {
-                  "text": "Up",
-                  "color": "green",
-                  "index": 1
-                }
-              }
-            }
-          ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1552,22 +1520,33 @@
         "overrides": []
       },
       "options": {
-        "showValue": "never",
-        "alignValue": "left",
-        "mergeValues": true,
-        "rowHeight": 0.8,
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "valueMode": "color",
+        "showUnfilled": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
         }
       },
       "pluginVersion": "12.3.3",
-      "description": "Green/red strip per container over time \u2014 a gap or red segment is exactly when it went down, not just how long ago."
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "topk(50, time() - sum by (name) (container_start_time_seconds{name!=\"\",name!~\".*POD.*\"}))",
+          "instant": true,
+          "refId": "A",
+          "legendFormat": "{{name}}"
+        }
+      ],
+      "description": "How long each container has been running, longest first. A container that just restarted (crash loop, redeploy) drops to the bottom."
     }
   ]
 }
