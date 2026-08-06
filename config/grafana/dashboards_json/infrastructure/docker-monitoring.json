@@ -177,7 +177,8 @@
       ],
       "title": "Total Memory Usage",
       "transparent": true,
-      "type": "stat"
+      "type": "stat",
+      "description": "Same underlying metric as Container Health (container_cpu_usage_seconds_total / container_memory_working_set_bytes). This dashboard refreshes every 10s and its legend shows Mean/Last over the selected range; Container Health refreshes every 30s and shows Last/Max instead \u2014 a momentary difference between the two is expected for bursty containers, not a data error."
     },
     {
       "datasource": {
@@ -258,7 +259,8 @@
       ],
       "title": "Total CPU Usage",
       "transparent": true,
-      "type": "stat"
+      "type": "stat",
+      "description": "Same underlying metric as Container Health (container_cpu_usage_seconds_total / container_memory_working_set_bytes). This dashboard refreshes every 10s and its legend shows Mean/Last over the selected range; Container Health refreshes every 30s and shows Last/Max instead \u2014 a momentary difference between the two is expected for bursty containers, not a data error."
     },
     {
       "datasource": {
@@ -361,7 +363,8 @@
         }
       ],
       "title": "CPU Usage",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "Same underlying metric as Container Health (container_cpu_usage_seconds_total / container_memory_working_set_bytes). This dashboard refreshes every 10s and its legend shows Mean/Last over the selected range; Container Health refreshes every 30s and shows Last/Max instead \u2014 a momentary difference between the two is expected for bursty containers, not a data error."
     },
     {
       "datasource": {
@@ -465,7 +468,8 @@
         }
       ],
       "title": "Memory Usage",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "Same underlying metric as Container Health (container_cpu_usage_seconds_total / container_memory_working_set_bytes). This dashboard refreshes every 10s and its legend shows Mean/Last over the selected range; Container Health refreshes every 30s and shows Last/Max instead \u2014 a momentary difference between the two is expected for bursty containers, not a data error."
     },
     {
       "datasource": {
@@ -687,7 +691,7 @@
   "timepicker": {},
   "timezone": "browser",
   "title": "Docker monitoring",
-  "uid": "c1ff1c1e-5976-4ed2-a91f-4e70f6fcf026",
+  "uid": "docker-monitoring",
   "version": 1,
   "weekStart": ""
 }

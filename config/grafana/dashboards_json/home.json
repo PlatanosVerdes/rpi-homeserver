@@ -133,7 +133,7 @@
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "## 🖥️ Raspberry Pi\n[Node Exporter · CPU, RAM, disk](/d/rYdddlPWk/node-exporter-full-raspi)\n\n## 🐳 Containers\n[Container Health · host, per-container, storage](/d/container-health/container-health)\n[Docker monitoring · same metrics, per-container graphs](/d/c1ff1c1e-5976-4ed2-a91f-4e70f6fcf026/docker-monitoring)",
+        "content": "## 🖥️ Raspberry Pi\n[Node Exporter · CPU, RAM, disk](/d/rYdddlPWk/node-exporter-full-raspi)\n\n## 🐳 Containers\n[Container Health · host, per-container, storage](/d/container-health/container-health)\n[Docker monitoring · same metrics, per-container graphs](/d/docker-monitoring/docker-monitoring)",
         "mode": "markdown"
       },
       "pluginVersion": "12.3.3",

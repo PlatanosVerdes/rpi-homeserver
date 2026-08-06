@@ -1532,11 +1532,12 @@
         "sortBy": [
           {
             "desc": true,
-            "displayName": "CPU %"
+            "displayName": "Last Seen"
           }
         ]
       },
-      "pluginVersion": "12.3.3"
+      "pluginVersion": "12.3.3",
+      "description": "Sorted by Last Seen (most stale first), so the containers behind the Down/Stale count above show up at the top, highlighted in red."
     }
   ]
 }
