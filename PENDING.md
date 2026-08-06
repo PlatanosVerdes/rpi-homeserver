@@ -116,21 +116,32 @@ other reasons.
 **Goal:** trigger playback on the home TV from a phone that is away from home (mobile data, another
 network), not just watch on the phone itself.
 
-**Why it needs a different approach:** confirmed via Plex's own docs that Plex Companion (their
-remote-control protocol) explicitly requires **both** the controller and the receiver to be on the
-Plex server's local network — it is not brokered through plex.tv the way remote *streaming* is.
-Chromecast's own discovery (mDNS/SSDP) is local-network-only full stop, no VPN changes that. So
-there is no way to make literal "cast to Chromecast" or "Plex Companion" work across networks.
+**Why it's not a simple config toggle (but is NOT flatly impossible either):**
+- The actual cast protocol, once a target's IP is known, is ordinary routable TCP/UDP (ports
+  8008/8009 control, 8443 for Google Home, a wide UDP range for the media stream itself) — nothing
+  about the protocol itself requires same-network. This repo's own `docs/tailscale.md` already
+  documents standing up the Pi as a **subnet router** (`--advertise-routes=192.168.1.0/24`), which
+  would make the home LAN's IPs reachable from a remote tailnet device.
+- The actual blocker is **discovery**: Chromecast/Plex Companion find each other via mDNS
+  (multicast), and Tailscale is a Layer-3 overlay that does not carry multicast/broadcast traffic
+  at all, by design — confirmed on Tailscale's own OSI-model docs, and there are still-open feature
+  requests asking for this. A subnet router does not fix that; multicast just doesn't traverse the
+  tunnel regardless of routes.
+- Bridging mDNS across that gap for real is possible but genuinely fragile: converting multicast
+  announcements into targeted unicast for a specific tailnet peer (custom reflector trickery), or
+  running VXLAN over Tailscale on Linux to fake a real L2 segment. Neither is a quick win, and
+  consumer apps (Google Home, Plex mobile) don't offer "enter the Chromecast's IP manually" as a
+  fallback, so even a working subnet route doesn't help without solving discovery first.
 
-**Approach when implemented:** the realistic path is a local hub that already sits on the LAN
-(so it can talk to the Chromecast/cast target directly) and that you command *remotely* over
-Tailscale instead of trying to reach the Chromecast directly — i.e. Home Assistant running on the
-Pi, using its Google Cast integration (`media_player.play_media` service call to a cast entity),
-exposed to the tailnet the same way every other `*.platanosverdes.com` service is. The phone talks
-to Home Assistant over Tailscale (ordinary HTTPS, no multicast involved), and Home Assistant, being
-local, does the actual casting. Not started: no Home Assistant instance exists in this repo yet —
-would need its own compose service, Caddy route, and a first pass at the Cast integration to see
-how reliably it discovers cast targets before promising this actually works end to end.
+**Approach when implemented:** given the above, the practical path is still to sidestep the mDNS
+problem entirely rather than solve it: a local hub that already sits on the LAN (so it does its own
+normal local discovery) and that you command *remotely* over Tailscale as an ordinary HTTPS call —
+i.e. Home Assistant running on the Pi, using its Google Cast integration
+(`media_player.play_media` service call to a cast entity), exposed to the tailnet the same way
+every other `*.platanosverdes.com` service is. Not started: no Home Assistant instance exists in
+this repo yet — would need its own compose service, Caddy route, and a first pass at the Cast
+integration to see how reliably it discovers cast targets before promising this actually works
+end to end.
 
 ---
 
