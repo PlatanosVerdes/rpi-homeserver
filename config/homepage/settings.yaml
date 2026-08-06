@@ -26,9 +26,6 @@ layout:
   Downloads:
     style: grid
     columns: 3
-  Music:
-    style: grid
-    columns: 3
   Management:
     style: grid
     columns: 3
