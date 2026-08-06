@@ -1285,14 +1285,14 @@
     {
       "id": 131,
       "type": "table",
-      "title": "Container Status",
+      "title": "CPU",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
       "gridPos": {
         "h": 12,
-        "w": 24,
+        "w": 8,
         "x": 0,
         "y": 27
       },
@@ -1307,46 +1307,9 @@
           "instant": true,
           "refId": "A",
           "format": "table"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "sum by (name, container_label_com_docker_compose_project) (container_memory_working_set_bytes{name!=\"\",name!~\".*POD.*\"})",
-          "instant": true,
-          "refId": "B",
-          "format": "table"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "time() - sum by (name, container_label_com_docker_compose_project) (container_last_seen{name!=\"\",name!~\".*POD.*\"})",
-          "instant": true,
-          "refId": "C",
-          "format": "table"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "time() - sum by (name, container_label_com_docker_compose_project) (container_start_time_seconds{name!=\"\",name!~\".*POD.*\"})",
-          "instant": true,
-          "refId": "D",
-          "format": "table"
         }
       ],
       "transformations": [
-        {
-          "id": "merge",
-          "options": {}
-        },
         {
           "id": "organize",
           "options": {
@@ -1356,10 +1319,7 @@
             "renameByName": {
               "name": "Container",
               "container_label_com_docker_compose_project": "Repo",
-              "Value #A": "CPU %",
-              "Value #B": "Memory",
-              "Value #C": "Last Seen",
-              "Value #D": "Uptime"
+              "Value": "CPU %"
             }
           }
         }
@@ -1399,13 +1359,101 @@
               {
                 "id": "max",
                 "value": 100
-              },
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Container"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Repo"
+            },
+            "properties": [
               {
                 "id": "custom.width",
                 "value": 130
               }
             ]
+          }
+        ]
+      },
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "CPU %"
+          }
+        ]
+      },
+      "pluginVersion": "12.3.3",
+      "description": "Top CPU consumers, sorted highest first."
+    },
+    {
+      "id": 132,
+      "type": "table",
+      "title": "Memory",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 8,
+        "x": 8,
+        "y": 27
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
           },
+          "editorMode": "code",
+          "expr": "sum by (name, container_label_com_docker_compose_project) (container_memory_working_set_bytes{name!=\"\",name!~\".*POD.*\"})",
+          "instant": true,
+          "refId": "A",
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "name": "Container",
+              "container_label_com_docker_compose_project": "Repo",
+              "Value": "Memory"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left",
+            "filterable": true,
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": [
           {
             "matcher": {
               "id": "byName",
@@ -1448,6 +1496,114 @@
           {
             "matcher": {
               "id": "byName",
+              "options": "Container"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Repo"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Memory"
+          }
+        ]
+      },
+      "pluginVersion": "12.3.3",
+      "description": "Top memory consumers, sorted highest first."
+    },
+    {
+      "id": 133,
+      "type": "table",
+      "title": "Uptime",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 8,
+        "x": 16,
+        "y": 27
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "time() - sum by (name, container_label_com_docker_compose_project) (container_last_seen{name!=\"\",name!~\".*POD.*\"})",
+          "instant": true,
+          "refId": "A",
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "time() - sum by (name, container_label_com_docker_compose_project) (container_start_time_seconds{name!=\"\",name!~\".*POD.*\"})",
+          "instant": true,
+          "refId": "B",
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "name": "Container",
+              "container_label_com_docker_compose_project": "Repo",
+              "Value #A": "Last Seen",
+              "Value #B": "Uptime"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left",
+            "filterable": true,
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
               "options": "Last Seen"
             },
             "properties": [
@@ -1480,7 +1636,7 @@
               },
               {
                 "id": "custom.width",
-                "value": 110
+                "value": 100
               }
             ]
           },
@@ -1493,10 +1649,6 @@
               {
                 "id": "unit",
                 "value": "s"
-              },
-              {
-                "id": "custom.width",
-                "value": 130
               }
             ]
           },
@@ -1508,7 +1660,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 200
+                "value": 160
               }
             ]
           },
@@ -1520,7 +1672,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 150
+                "value": 130
               }
             ]
           }
@@ -1537,7 +1689,7 @@
         ]
       },
       "pluginVersion": "12.3.3",
-      "description": "Sorted by Last Seen (most stale first), so the containers behind the Down/Stale count above show up at the top, highlighted in red."
+      "description": "Sorted by Last Seen (most stale first), so the containers behind the Down/Stale count float to the top, highlighted in red."
     }
   ]
 }

@@ -85,9 +85,17 @@ logs normally, nothing gets created. Disabling the `provisioning` feature toggle
 (`GF_FEATURE_TOGGLES_provisioning=false`) did not help either, so there is some other piece of
 state (not yet found) still tombstoning that UID.
 
-**Workaround used:** picked a fresh UID instead of reusing the old one. Fine for this one case, but
-worth knowing before ever trying to re-provision a UID that pre-dates provisioning again — pick a
-new UID rather than losing time on this.
+**Workaround used:** picked a fresh UID (`docker-monitoring`) and even that only saved successfully
+through the normal **Import** UI flow, not through file provisioning — a second, related bug: even
+a brand-new UID's file got `"failed to save dashboard" ... error="Dashboard not found"` on save.
+Gave up chasing the exact cause; not worth more time on a single dashboard.
+
+**Current state:** "Docker monitoring" is NOT provisioned from git — it lives only in Grafana's own
+DB, imported by hand with the corrected queries (`container_cpu_usage_seconds_total`,
+`container_memory_working_set_bytes`, matching Container Health). Same category as the other
+manually-imported community dashboards. If this dashboard is ever lost, re-import it by hand and
+fix those same two metric names again; don't bother trying to provision it from a file until this
+Grafana bug is understood.
 
 ---
 
