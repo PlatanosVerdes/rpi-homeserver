@@ -22,7 +22,7 @@ A modular Docker-based home server running on a Raspberry Pi. All services run a
 docker-compose.yml          Entry point — uses `include` to load all modules
 versions.env                Single source of truth for all image versions (committed)
 compose-core.yml            Caddy, Homepage, Pi-hole, Speedtest-tracker
-compose-media.yml           Plex, Jellyfin, Overseerr, Acestream, Ytify
+compose-media.yml           Plex, Jellyfin, Overseerr, Acestream
 compose-arrs.yml            Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr
 compose-mon.yml             Prometheus, Grafana, Pushgateway, node-exporter, cAdvisor
 
@@ -37,9 +37,6 @@ config/                     Static config files committed to git
   homepage/                 Dashboard YAML configs
   arr/radarr, arr/sonarr    Custom formats + quality profiles, pushed into each app on deploy
                             (sync-arr-config.sh) — otherwise they only exist in appdata
-  ytify/                    From-source build of ytify (self-hosted YouTube-audio player,
-                            no local music library — see docs/music-access.md), same pattern
-                            as caddy/Dockerfile: built here, not custom code we wrote
 
 services/                   Source code for custom services built in this repo
   acestream-updater/        Go service — fetches IPFS channel lists, writes .m3u for Jellyfin
@@ -133,12 +130,6 @@ The cron stays as the self-heal net.
   > A `ln -s ... config/caddy/services/rpi-services` symlink is documented in older notes and does
   > **not** work: the import glob is `*.caddy`, so a directory named `rpi-services` never matches.
 
-- **One exception to Tailscale-only:** `music.platanosverdes.com` (ytify) is also reachable from
-  the open internet through the same Cloudflare Tunnel used for the deploy webhook, gated by
-  Cloudflare Access (Google login, specific emails only) rather than Tailscale. On the tailnet it
-  still resolves straight to `TAILSCALE_IP` like everything else and never touches the tunnel.
-  See [docs/music-access.md](docs/music-access.md).
-
 ---
 
 ## Profiles — selecting which services to run
@@ -150,10 +141,10 @@ Controlled via `COMPOSE_PROFILES` in `.env`. No need to touch compose files.
 | `essential` | Caddy, Homepage, Pi-hole, Speedtest-tracker |
 | `moni` | Prometheus, Grafana, Pushgateway, node-exporter, cAdvisor, Pihole-exporter, Speedtest-tracker |
 | `acestream` | Aceserve, Acestream-updater, Jellyfin + Grafana/Prometheus/Pushgateway |
-| `media` | Plex, Overseerr, Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr, Ytify |
+| `media` | Plex, Overseerr, Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr |
 | `bot` | Pol Academy Offers Bot |
 | `cal` | Google Calendar Bridge (cal-bridge) |
-| `tunnel` | Cloudflared — publishes the GitHub deploy webhook (docs/deploy-webhook.md) and, on the same tunnel, `music.platanosverdes.com` gated by Cloudflare Access (docs/music-access.md) |
+| `tunnel` | Cloudflared (publishes only the GitHub deploy webhook — see docs/deploy-webhook.md) |
 | `all` | Everything except `tunnel` (it needs a token, so it is opt-in) |
 
 Main Pi: `COMPOSE_PROFILES=all`. Secondary Pi: e.g. `COMPOSE_PROFILES=essential,moni`.

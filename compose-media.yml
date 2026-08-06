@@ -122,18 +122,6 @@ services:
     networks:
       - media-network
 
-  # --- YTIFY (self-hosted YouTube-audio player: like acestream, no local music library) ---
-  ytify:
-    build:
-      context: ./config/ytify
-      args:
-        YTIFY_COMMIT: ${YTIFY_COMMIT}
-    container_name: ytify
-    restart: unless-stopped
-    profiles: [media, all]
-    networks:
-      - media-network
-
   # --- MAINTAINERR (auto-clean watched media by rules; movies-only rule) ---
   maintainerr:
     image: ghcr.io/maintainerr/maintainerr:${MAINTAINERR_VERSION}

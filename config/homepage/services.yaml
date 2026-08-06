@@ -110,14 +110,6 @@
           username: admin
           password: "{{HOMEPAGE_VAR_QBIT_PASSWORD}}"
 
-- Music:
-    - Ytify:
-        icon: mdi-music-note-#8b5cf6
-        description: No local library, streams from YouTube
-        href: https://music.platanosverdes.com
-        server: my-docker
-        container: ytify
-
 - Management:
     - Network:
         icon: https://img.icons8.com/?size=100&id=12995&format=png&color=000000
