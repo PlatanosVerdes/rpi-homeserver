@@ -99,11 +99,38 @@ Grafana bug is understood.
 
 ---
 
-## Plex casting/sharing from same-network devices (not investigated)
+## ✅ Plex casting to a TV while at home — SOLVED (2026-08-06)
 
-**Goal:** figure out how to cast/share to Plex from other devices on the same LAN (phone, TV,
-whatever) — the whole "Chromecast-style" flow, not just opening the web player. Not researched
-yet, no plan exists. Revisit when there's time to dig into it.
+Casting (Chromecast) and Plex Companion remote control both rely on local mDNS/SSDP discovery,
+which does not survive Tailscale routing everything through an exit node — with one active, local
+discovery traffic gets swallowed by the tunnel same as any other traffic. Fix: when casting from a
+phone that's on the same wifi as the TV, make sure Tailscale has **no exit node selected** (iOS:
+Tailscale app → exit node picker at top → "None"). Without an exit node, local traffic bypasses the
+tunnel by default and casting works normally. Android has a more granular option too (Tailscale
+v1.70+, avatar → App-based split tunneling → exclude the Plex app specifically; Chromecast's own
+app is excluded by Tailscale automatically already), useful if an always-on exit node is wanted for
+other reasons.
+
+## Cast/control the home TV from outside the house (not implemented)
+
+**Goal:** trigger playback on the home TV from a phone that is away from home (mobile data, another
+network), not just watch on the phone itself.
+
+**Why it needs a different approach:** confirmed via Plex's own docs that Plex Companion (their
+remote-control protocol) explicitly requires **both** the controller and the receiver to be on the
+Plex server's local network — it is not brokered through plex.tv the way remote *streaming* is.
+Chromecast's own discovery (mDNS/SSDP) is local-network-only full stop, no VPN changes that. So
+there is no way to make literal "cast to Chromecast" or "Plex Companion" work across networks.
+
+**Approach when implemented:** the realistic path is a local hub that already sits on the LAN
+(so it can talk to the Chromecast/cast target directly) and that you command *remotely* over
+Tailscale instead of trying to reach the Chromecast directly — i.e. Home Assistant running on the
+Pi, using its Google Cast integration (`media_player.play_media` service call to a cast entity),
+exposed to the tailnet the same way every other `*.platanosverdes.com` service is. The phone talks
+to Home Assistant over Tailscale (ordinary HTTPS, no multicast involved), and Home Assistant, being
+local, does the actual casting. Not started: no Home Assistant instance exists in this repo yet —
+would need its own compose service, Caddy route, and a first pass at the Cast integration to see
+how reliably it discovers cast targets before promising this actually works end to end.
 
 ---
 
