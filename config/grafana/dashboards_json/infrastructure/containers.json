@@ -1135,7 +1135,8 @@
           "legendFormat": "{{name}}",
           "range": true
         }
-      ]
+      ],
+      "description": "CPU % is user + system (kernel) time combined (container_cpu_usage_seconds_total), not just application code time. That matters for I/O-heavy containers (torrenting, transcoding, network-facing apps): a real chunk of their CPU cost is kernel-side \u2014 syscalls, network stack, disk I/O \u2014 not user-space, so a user-time-only metric would understate them. Docker monitoring used to query container_cpu_user_seconds_total (user-only) and showed lower numbers for exactly this reason; it's been switched to the same full metric as this panel."
     },
     {
       "id": 122,
@@ -1383,7 +1384,7 @@
         }
       },
       "pluginVersion": "12.3.3",
-      "description": "Top 8 CPU consumers over time."
+      "description": "CPU % is user + system (kernel) time combined (container_cpu_usage_seconds_total), not just application code time. That matters for I/O-heavy containers (torrenting, transcoding, network-facing apps): a real chunk of their CPU cost is kernel-side \u2014 syscalls, network stack, disk I/O \u2014 not user-space, so a user-time-only metric would understate them. Docker monitoring used to query container_cpu_user_seconds_total (user-only) and showed lower numbers for exactly this reason; it's been switched to the same full metric as this panel."
     },
     {
       "id": 132,
