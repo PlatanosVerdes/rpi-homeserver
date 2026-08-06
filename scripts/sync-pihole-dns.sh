@@ -61,7 +61,10 @@ while IFS= read -r host; do
     fi
 
     new_value=$(jq -rn --arg v "$TAILSCALE_IP $host" '$v|@uri')
-    curl -s -o /dev/null -X PUT "$PIHOLE_BASE/config/dns/hosts/$new_value?sid=$sid"
+    status=$(curl -s -o /dev/null -w '%{http_code}' -X PUT "$PIHOLE_BASE/config/dns/hosts/$new_value?sid=$sid")
+    if [[ "$status" != 2* ]]; then
+        echo "sync-pihole-dns: failed to write $host (HTTP $status)" >&2
+    fi
 done <<< "$wanted"
 
 left_alone=$(comm -23 \
