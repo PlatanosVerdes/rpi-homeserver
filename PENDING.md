@@ -72,6 +72,25 @@ API call — this snapshot took multiple registries/APIs to get right:
 
 ---
 
+## Grafana v13: file-provisioning a dashboard whose UID previously existed silently no-ops
+
+**Found 2026-08-06** while bringing the manually-imported "Docker monitoring" dashboard under
+provisioning. Confirmed with a control test: a brand-new UID provisions fine (creates rows in the
+new `resource`/`resource_history` unified-storage tables — the actual source of truth in v13, the
+legacy `dashboard` SQL table is no longer written for new creates, only kept for old migrated
+rows). But re-provisioning a UID that existed before and was deleted (even after fully removing it
+from `dashboard`, `dashboard_tag`, `dashboard_version`, `resource`, and `resource_history`) just
+silently does nothing — no error in the logs, the file is read, "finished to provision dashboards"
+logs normally, nothing gets created. Disabling the `provisioning` feature toggle
+(`GF_FEATURE_TOGGLES_provisioning=false`) did not help either, so there is some other piece of
+state (not yet found) still tombstoning that UID.
+
+**Workaround used:** picked a fresh UID instead of reusing the old one. Fine for this one case, but
+worth knowing before ever trying to re-provision a UID that pre-dates provisioning again — pick a
+new UID rather than losing time on this.
+
+---
+
 ## Plex casting/sharing from same-network devices (not investigated)
 
 **Goal:** figure out how to cast/share to Plex from other devices on the same LAN (phone, TV,
