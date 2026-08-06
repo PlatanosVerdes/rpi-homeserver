@@ -99,7 +99,7 @@ Grafana bug is understood.
 
 ---
 
-## ✅ Plex casting to a TV while at home — SOLVED (2026-08-06)
+## ✅ Plex casting to a TV while at home — SOLVED (2026-08-06, confirmed working)
 
 Casting (Chromecast) and Plex Companion remote control both rely on local mDNS/SSDP discovery,
 which does not survive Tailscale routing everything through an exit node — with one active, local
