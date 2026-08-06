@@ -71,6 +71,10 @@ https://bazarr.platanosverdes.com {
     import cf_tls
     reverse_proxy bazarr:6767
 }
+https://music.platanosverdes.com {
+    import cf_tls
+    reverse_proxy ytify:80
+}
 # --- HTTP (LAN short names) ---
 http://raspi http://homepage {
     reverse_proxy homepage:3000
@@ -113,6 +117,9 @@ http://speedtest {
 }
 http://pihole {
     reverse_proxy host.docker.internal:8081
+}
+http://music {
+    reverse_proxy ytify:80
 }
 
 # --- External services (companion repos via docker-compose.override.yml) ---
