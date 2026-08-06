@@ -33,14 +33,6 @@
         server: my-docker
         container: maintainerr
 
-- Music:
-    - Ytify:
-        icon: https://raw.githubusercontent.com/n-ce/ytify/main/public/logo192.png
-        description: Self-hosted YouTube-audio streaming (no local library, gated by Cloudflare Access)
-        href: https://music.platanosverdes.com
-        server: my-docker
-        container: ytify
-
 - Monitoring:
     - Grafana:
         icon: grafana.png
@@ -117,6 +109,14 @@
           url: http://qbittorrent:8080
           username: admin
           password: "{{HOMEPAGE_VAR_QBIT_PASSWORD}}"
+
+- Music:
+    - Ytify:
+        icon: mdi-music-note-#8b5cf6
+        description: No local library, streams from YouTube
+        href: https://music.platanosverdes.com
+        server: my-docker
+        container: ytify
 
 - Management:
     - Network:
