@@ -118,6 +118,11 @@
           url: http://qbittorrent:8080
           username: admin
           password: "{{HOMEPAGE_VAR_QBIT_PASSWORD}}"
+    - Subtitulos:
+        icon: bazarr.png
+        href: https://subs.platanosverdes.com
+        server: my-docker
+        container: subtitle-links
 
 - Management:
     - Network:
