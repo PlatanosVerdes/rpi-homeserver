@@ -100,7 +100,30 @@ sync_app() {
     echo "[$app] $cf_count custom formats, $qp_count quality profiles synced"
 }
 
+# Radarr's QualityProfiles.Language column is a legacy field the current API/UI never reads or
+# writes (confirmed: PUTting an explicit "language" value gets echoed back in the response but
+# never reaches the database), yet the decision engine (LanguageSpecification.cs) still reads it
+# directly and hard-rejects every release that doesn't match. NULL there is not the same as
+# Language.Any (id -1) the way the API pretends when displaying it — it silently rejects
+# everything regardless of language, defeating the whole point of the custom-format-based
+# language scoring (Audio Espanol/VOSE/Ingles) configured above. Since the API can't write this
+# column, go around it directly; a container with the appdata dir bind-mounted can update the
+# live sqlite file's row without stopping Radarr (verified safe: normal SQLite file locking).
+# Sonarr has no Language column on this table at all, so this is Radarr-only.
+fix_radarr_language() {
+    local db="$APPDATA_ROOT/radarr/radarr.db"
+    sudo test -f "$db" || return 0
+    docker run --rm -v "$APPDATA_ROOT/radarr:/data" python:3-alpine python3 -c "
+import sqlite3
+conn = sqlite3.connect('/data/radarr.db', timeout=10)
+conn.execute('UPDATE QualityProfiles SET Language = -1 WHERE Language IS NULL OR Language != -1')
+conn.commit()
+conn.close()
+" > /dev/null 2>&1 || echo "[radarr] WARNING: could not fix QualityProfiles.Language" >&2
+}
+
 sync_app radarr 7878
+fix_radarr_language
 sync_app sonarr 8989
 
 [[ $failures -eq 0 ]] || exit 1
