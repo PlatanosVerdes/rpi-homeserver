@@ -8,6 +8,8 @@ services:
         CADDY_VERSION: ${CADDY_VERSION}
     container_name: caddy
     restart: unless-stopped
+    mem_limit: 128m
+    memswap_limit: 128m
     profiles: [essential, all]
     ports:
       - "80:80"
@@ -35,6 +37,8 @@ services:
     image: ghcr.io/gethomepage/homepage:${HOMEPAGE_VERSION}
     container_name: homepage
     restart: unless-stopped
+    mem_limit: 256m
+    memswap_limit: 256m
     profiles: [essential, all]
     dns:
       - 8.8.8.8
@@ -70,6 +74,8 @@ services:
     image: lscr.io/linuxserver/speedtest-tracker:${SPEEDTEST_TRACKER_VERSION}
     container_name: speedtest-tracker
     restart: unless-stopped
+    mem_limit: 256m
+    memswap_limit: 256m
     profiles: [essential, moni, all]
     dns:
       - 8.8.8.8
@@ -98,6 +104,8 @@ services:
     container_name: pihole
     image: pihole/pihole:${PIHOLE_VERSION}
     restart: unless-stopped
+    mem_limit: 256m
+    memswap_limit: 256m
     profiles: [essential, all]
     dns:
       - 1.1.1.1
@@ -124,6 +132,8 @@ services:
     image: cloudflare/cloudflared:${CLOUDFLARED_VERSION}
     container_name: cloudflared
     restart: unless-stopped
+    mem_limit: 128m
+    memswap_limit: 128m
     # Deliberately NOT in `all`: with an empty TUNNEL_TOKEN it would crash-loop, so it only
     # starts when `tunnel` is added to COMPOSE_PROFILES explicitly.
     profiles: [tunnel]
