@@ -75,6 +75,10 @@ https://tautulli.platanosverdes.com {
     import cf_tls
     reverse_proxy tautulli:8181
 }
+https://subs.platanosverdes.com {
+    import cf_tls
+    reverse_proxy subtitle-links:8085
+}
 # --- HTTP (LAN short names) ---
 http://raspi http://homepage {
     reverse_proxy homepage:3000

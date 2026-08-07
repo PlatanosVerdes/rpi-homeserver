@@ -171,6 +171,17 @@ services:
     networks:
       - media-network
 
+  # --- subtitle-links: a page listing movies with an external Bazarr subtitle, download-able one by one ---
+  subtitle-links:
+    build: ./services/subtitle-links
+    container_name: subtitle-links
+    restart: unless-stopped
+    profiles: [media, all]
+    environment:
+      - JELLYFIN_API_KEY=${JELLYFIN_API_KEY}
+    networks:
+      - media-network
+
 networks:
   media-network:
     external: true

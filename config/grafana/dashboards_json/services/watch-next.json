@@ -28,15 +28,15 @@
     {
       "id": 1,
       "type": "stat",
-      "title": "Watched (Tautulli)",
+      "title": "Actions tracked",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Watched-episode hooks received from Tautulli (Plex) since watch-next last restarted.",
+      "description": "How many watched-triggered actions are in the rolling window right now (the last 20 — see the tables below). Not a lifetime total.",
       "gridPos": {
         "h": 4,
-        "w": 4,
+        "w": 6,
         "x": 0,
         "y": 0
       },
@@ -81,7 +81,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "watch_next_events_total{source=\"tautulli\"}",
+          "expr": "count(watch_next_action_timestamp) or vector(0)",
           "refId": "A",
           "instant": true,
           "range": false
@@ -91,205 +91,16 @@
     {
       "id": 2,
       "type": "stat",
-      "title": "Watched (Jellyfin)",
+      "title": "Errors tracked",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Watched-episode hooks received from Jellyfin since watch-next last restarted.",
+      "description": "Watched-hook calls in the rolling window that did NOT result in a monitor/search action. See the Recent errors table for detail.",
       "gridPos": {
         "h": 4,
-        "w": 4,
-        "x": 4,
-        "y": 0
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "mappings": [],
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "text",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "watch_next_events_total{source=\"jellyfin\"}",
-          "refId": "A",
-          "instant": true,
-          "range": false
-        }
-      ]
-    },
-    {
-      "id": 3,
-      "type": "stat",
-      "title": "Episodes monitored",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "description": "Episodes newly monitored across every watched event.",
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 8,
-        "y": 0
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "mappings": [],
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "text",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "watch_next_episodes_monitored_total",
-          "refId": "A",
-          "instant": true,
-          "range": false
-        }
-      ]
-    },
-    {
-      "id": 4,
-      "type": "stat",
-      "title": "Episodes searched",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "description": "Episodes watch-next fired an EpisodeSearch for (only those missing a file; already-downloaded ones are just monitored, not re-searched).",
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 12,
-        "y": 0
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "mappings": [],
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "text",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "watch_next_episodes_searched_total",
-          "refId": "A",
-          "instant": true,
-          "range": false
-        }
-      ]
-    },
-    {
-      "id": 5,
-      "type": "stat",
-      "title": "Errors",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "description": "Watched-hook calls that did not result in a monitor/search action: unauthorized, a bad payload, no tvdb id, or the series/episode not found in Sonarr. See the breakdown table below.",
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 16,
+        "w": 6,
+        "x": 6,
         "y": 0
       },
       "fieldConfig": {
@@ -337,7 +148,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(watch_next_errors_total)",
+          "expr": "count(watch_next_error_timestamp) or vector(0)",
           "refId": "A",
           "instant": true,
           "range": false
@@ -345,18 +156,18 @@
       ]
     },
     {
-      "id": 6,
+      "id": 3,
       "type": "stat",
-      "title": "Last watched event",
+      "title": "Last action",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "When watch-next last successfully monitored/searched something. 0 (epoch) means never since the service last restarted.",
+      "description": "When watch-next last successfully monitored/searched something.",
       "gridPos": {
         "h": 4,
-        "w": 4,
-        "x": 20,
+        "w": 6,
+        "x": 12,
         "y": 0
       },
       "fieldConfig": {
@@ -400,7 +211,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "watch_next_last_event_timestamp * 1000",
+          "expr": "max(watch_next_action_timestamp) * 1000",
           "refId": "A",
           "instant": true,
           "range": false
@@ -408,16 +219,79 @@
       ]
     },
     {
-      "id": 7,
-      "type": "table",
-      "title": "Errors by reason",
+      "id": 4,
+      "type": "stat",
+      "title": "Last error",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "unauthorized: bad/missing token in the webhook URL · bad_payload: not valid JSON (or season/episode missing/unparseable) · missing_tvdb_id:\nTautulli/Jellyfin sent no TVDB id · handle_failed: Sonarr didn't have that series/episode, or its API\ncall failed, check `docker logs watch-next` for the exact one.",
+      "description": "When watch-next last received a watched-hook call it couldn't act on.",
       "gridPos": {
-        "h": 8,
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dateTimeFromNow",
+          "mappings": [],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "max(watch_next_error_timestamp) * 1000",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "table",
+      "title": "By show",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Grouped from the same rolling window as the tables below: how many times each show was watched (that triggered an action), the season/episode it was last watched at, and how many episodes ended up monitored/searched in total.",
+      "gridPos": {
+        "h": 9,
         "w": 24,
         "x": 0,
         "y": 4
@@ -433,12 +307,98 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Count"
+              "options": "Source"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "jellyfin": {
+                        "color": "purple",
+                        "index": 1,
+                        "text": "jellyfin"
+                      },
+                      "tautulli": {
+                        "color": "orange",
+                        "index": 0,
+                        "text": "tautulli"
+                      }
+                    },
+                    "type": "value"
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 100
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Times watched"
             },
             "properties": [
               {
                 "id": "custom.width",
-                "value": 120
+                "value": 130
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Last season"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Last episode"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Monitored"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Searched"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
               }
             ]
           }
@@ -452,7 +412,7 @@
         },
         "sortBy": [
           {
-            "displayName": "Count",
+            "displayName": "Times watched",
             "desc": true
           }
         ]
@@ -468,7 +428,7 @@
           "instant": true,
           "range": false,
           "refId": "A",
-          "expr": "watch_next_errors_total"
+          "expr": "watch_next_action_timestamp * 1000"
         }
       ],
       "transformations": [
@@ -479,30 +439,106 @@
               "Time": true,
               "job": true,
               "instance": true,
-              "__name__": true
+              "__name__": true,
+              "idx": true
             },
             "renameByName": {
-              "reason": "Reason",
-              "Value": "Count"
+              "source": "Source",
+              "title": "Title",
+              "season": "Season",
+              "episode": "Episode",
+              "monitored": "Monitored",
+              "searched": "Searched",
+              "Value": "When"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "field": "When",
+                "desc": true
+              }
+            ]
+          }
+        },
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "Episode": {
+                "aggregations": [
+                  "first"
+                ],
+                "operation": "aggregate"
+              },
+              "Monitored": {
+                "aggregations": [
+                  "sum"
+                ],
+                "operation": "aggregate"
+              },
+              "Searched": {
+                "aggregations": [
+                  "sum"
+                ],
+                "operation": "aggregate"
+              },
+              "Season": {
+                "aggregations": [
+                  "first"
+                ],
+                "operation": "aggregate"
+              },
+              "Source": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "Title": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "When": {
+                "aggregations": [
+                  "count"
+                ],
+                "operation": "aggregate"
+              }
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "renameByName": {
+              "Episode (first)": "Last episode",
+              "Monitored (sum)": "Monitored",
+              "Searched (sum)": "Searched",
+              "Season (first)": "Last season",
+              "When (count)": "Times watched"
             }
           }
         }
       ]
     },
     {
-      "id": 8,
+      "id": 6,
       "type": "table",
       "title": "Recent actions",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "The last 20 watched-triggered actions (oldest dropped, and the whole list resets when watch-next\nrestarts). Monitored/Searched are per-event counts, not running totals.",
+      "description": "One row per watched-triggered action, most recent first (last 20, oldest dropped, resets when watch-next restarts).",
       "gridPos": {
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 12
+        "y": 13
       },
       "fieldConfig": {
         "defaults": {
@@ -525,6 +561,44 @@
               {
                 "id": "custom.width",
                 "value": 190
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "jellyfin": {
+                        "color": "purple",
+                        "index": 1,
+                        "text": "jellyfin"
+                      },
+                      "tautulli": {
+                        "color": "orange",
+                        "index": 0,
+                        "text": "tautulli"
+                      }
+                    },
+                    "type": "value"
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 100
               }
             ]
           },
@@ -589,14 +663,142 @@
               "Time": true,
               "job": true,
               "instance": true,
-              "__name__": true
+              "__name__": true,
+              "idx": true
             },
             "renameByName": {
+              "source": "Source",
               "title": "Title",
               "season": "Season",
               "episode": "Episode",
               "monitored": "Monitored",
               "searched": "Searched",
+              "Value": "When"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "table",
+      "title": "Recent errors",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "unauthorized: bad/missing token in the webhook URL · bad_payload: not valid JSON (or season/episode missing/unparseable) · missing_tvdb_id:\nTautulli/Jellyfin sent no TVDB id · handle_failed: Sonarr didn't have that series/episode, or its API\ncall failed, check `docker logs watch-next` for the exact one. Last 20, resets when watch-next restarts.",
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 21
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left",
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "When"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dateTimeAsIso"
+              },
+              {
+                "id": "custom.width",
+                "value": 190
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "jellyfin": {
+                        "color": "purple",
+                        "index": 1,
+                        "text": "jellyfin"
+                      },
+                      "tautulli": {
+                        "color": "orange",
+                        "index": 0,
+                        "text": "tautulli"
+                      }
+                    },
+                    "type": "value"
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 100
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "sortBy": [
+          {
+            "displayName": "When",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "refId": "A",
+          "expr": "watch_next_error_timestamp * 1000"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "job": true,
+              "instance": true,
+              "__name__": true,
+              "idx": true
+            },
+            "renameByName": {
+              "source": "Source",
+              "reason": "Reason",
               "Value": "When"
             }
           }
