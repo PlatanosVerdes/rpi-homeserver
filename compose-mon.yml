@@ -64,7 +64,9 @@ services:
       # disk/diskIO are the expensive ones (each housekeeping cycle walks every container's
       # filesystem on external/mergerfs storage); we already track disk usage separately via
       # disk-usage-metrics.sh, so cAdvisor's own per-container copy of that isn't needed.
-      - --disable_metrics=advtcp,tcp,udp,percpu,sched,process,disk,diskIO,accelerator
+      # "accelerator" doesn't exist as a metric kind in v0.60.5 (unlike newer cAdvisor releases)
+      # and made the flag parse fail outright, crash-looping the whole container.
+      - --disable_metrics=advtcp,tcp,udp,percpu,sched,process,disk,diskIO
     networks:
       - media-network
 
