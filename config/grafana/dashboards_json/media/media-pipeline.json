@@ -2825,9 +2825,9 @@
         "uid": "prometheus"
       },
       "gridPos": {
-        "h": 7,
-        "w": 8,
-        "x": 0,
+        "h": 9,
+        "w": 4,
+        "x": 16,
         "y": 43
       },
       "fieldConfig": {
@@ -2886,6 +2886,68 @@
       ]
     },
     {
+      "id": 172,
+      "type": "stat",
+      "title": "Free space",
+      "description": "Absolute free space left on the /mnt/data pool: the gauge only shows the percentage.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 4,
+        "x": 20,
+        "y": 43
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "mappings": [],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "node_filesystem_avail_bytes{mountpoint=\"/mnt/data\"}",
+          "instant": true,
+          "refId": "A"
+        }
+      ]
+    },
+    {
       "type": "piechart",
       "title": "Disk by quality",
       "datasource": {
@@ -2894,9 +2956,9 @@
       },
       "gridPos": {
         "h": 9,
-        "w": 12,
+        "w": 9,
         "x": 0,
-        "y": 50
+        "y": 43
       },
       "fieldConfig": {
         "defaults": {
@@ -3434,9 +3496,9 @@
       },
       "gridPos": {
         "h": 9,
-        "w": 12,
-        "x": 12,
-        "y": 50
+        "w": 7,
+        "x": 9,
+        "y": 43
       },
       "fieldConfig": {
         "defaults": {
@@ -3505,10 +3567,10 @@
         "uid": "prometheus"
       },
       "gridPos": {
-        "h": 11,
-        "w": 24,
+        "h": 12,
+        "w": 12,
         "x": 0,
-        "y": 59
+        "y": 52
       },
       "fieldConfig": {
         "defaults": {
@@ -3575,9 +3637,9 @@
       "description": "Largest files on the data disk, one line per inode, taken from the disk rather than from Radarr.\n\nThat is the point of having it next to the panel above: it also shows files Radarr knows nothing\nabout, such as downloads that were never imported or were replaced by a better release.\n\nLabels are filenames; the full paths are in the table below.",
       "gridPos": {
         "h": 12,
-        "w": 24,
-        "x": 0,
-        "y": 70
+        "w": 12,
+        "x": 12,
+        "y": 52
       },
       "fieldConfig": {
         "defaults": {
@@ -3653,7 +3715,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 82
+        "y": 64
       },
       "targets": [
         {
