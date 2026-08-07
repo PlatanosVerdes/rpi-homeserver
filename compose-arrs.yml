@@ -28,6 +28,8 @@ services:
     image: ghcr.io/flaresolverr/flaresolverr:${FLARESOLVERR_VERSION}
     container_name: flaresolverr
     restart: unless-stopped
+    mem_limit: 768m
+    memswap_limit: 768m
     profiles: [media, all]
     dns:
       - 8.8.8.8

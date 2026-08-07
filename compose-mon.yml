@@ -5,6 +5,8 @@ services:
     image: prom/pushgateway:${PUSHGATEWAY_VERSION}
     container_name: pushgateway
     restart: unless-stopped
+    mem_limit: 128m
+    memswap_limit: 128m
     profiles: [moni, acestream, all]
     # Persist pushed metrics to disk so a restart does not wipe one-shot/daily job metrics
     # (deploy, backup, one-pace, cal-bridge). Single snapshot file, rewritten every 5m — no growth.
@@ -25,6 +27,8 @@ services:
     image: prom/node-exporter:${NODE_EXPORTER_VERSION}
     container_name: node-exporter
     restart: unless-stopped
+    mem_limit: 128m
+    memswap_limit: 128m
     profiles: [moni, all]
     network_mode: host
     pid: host
@@ -48,6 +52,8 @@ services:
     image: ghcr.io/google/cadvisor:${CADVISOR_VERSION}
     container_name: cadvisor
     restart: unless-stopped
+    mem_limit: 256m
+    memswap_limit: 256m
     profiles: [moni, all]
     privileged: true
     devices:
@@ -129,6 +135,8 @@ services:
     image: prom/blackbox-exporter:${BLACKBOX_EXPORTER_VERSION}
     container_name: blackbox-exporter
     restart: unless-stopped
+    mem_limit: 128m
+    memswap_limit: 128m
     profiles: [moni, all]
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -144,6 +152,8 @@ services:
     image: esanchezm/prometheus-qbittorrent-exporter@${QBIT_EXPORTER_DIGEST}
     container_name: qbittorrent-exporter
     restart: unless-stopped
+    mem_limit: 128m
+    memswap_limit: 128m
     profiles: [moni, all]
     environment:
       - QBITTORRENT_HOST=qbittorrent
@@ -160,6 +170,8 @@ services:
     image: amonacoos/pihole6_exporter@${PIHOLE_EXPORTER_DIGEST}
     container_name: pihole-exporter
     restart: unless-stopped
+    mem_limit: 128m
+    memswap_limit: 128m
     profiles: [moni, all]
     extra_hosts:
       - "host.docker.internal:host-gateway"

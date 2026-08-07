@@ -65,6 +65,8 @@ services:
     profiles: [acestream, all]
     network_mode: host
     restart: unless-stopped
+    mem_limit: 256m
+    memswap_limit: 256m
     environment:
       - TZ=${TZ}
 
@@ -75,6 +77,8 @@ services:
     build: ./services/acestream-proxy
     container_name: acestream-proxy
     restart: unless-stopped
+    mem_limit: 64m
+    memswap_limit: 64m
     profiles: [acestream, all]
     environment:
       - ACESERVE_BASE_URL=http://172.19.0.1:6878
@@ -87,6 +91,8 @@ services:
     build: ./services/acestream-updater
     container_name: acestream-updater
     restart: unless-stopped
+    mem_limit: 128m
+    memswap_limit: 128m
     profiles: [acestream, all]
     dns:
       - 1.1.1.1
@@ -127,6 +133,8 @@ services:
     image: ghcr.io/maintainerr/maintainerr:${MAINTAINERR_VERSION}
     container_name: maintainerr
     restart: unless-stopped
+    mem_limit: 256m
+    memswap_limit: 256m
     profiles: [media, all]
     user: "${PUID}:${PGID}"
     environment:
@@ -141,6 +149,8 @@ services:
     image: ghcr.io/tautulli/tautulli:${TAUTULLI_VERSION}
     container_name: tautulli
     restart: unless-stopped
+    mem_limit: 256m
+    memswap_limit: 256m
     profiles: [media, all]
     environment:
       - PUID=${PUID}
@@ -161,6 +171,8 @@ services:
     build: ./services/watch-next
     container_name: watch-next
     restart: unless-stopped
+    mem_limit: 64m
+    memswap_limit: 64m
     profiles: [media, all]
     environment:
       - WATCH_NEXT_TOKEN=${WATCH_NEXT_TOKEN}
@@ -176,6 +188,8 @@ services:
     build: ./services/subtitle-links
     container_name: subtitle-links
     restart: unless-stopped
+    mem_limit: 64m
+    memswap_limit: 64m
     profiles: [media, all]
     environment:
       - JELLYFIN_API_KEY=${JELLYFIN_API_KEY}
