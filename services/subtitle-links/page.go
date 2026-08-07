@@ -153,12 +153,8 @@ var FLAGS = {
   ind: '\ud83c\uddee\ud83c\udde9'
 };
 
-function flag(lang) {
-  return FLAGS[lang] || '\ud83c\udf10';
-}
-
 function langLabel(lang) {
-  return flag(lang) + ' ' + lang.toUpperCase();
+  return FLAGS[lang] || lang.toUpperCase();
 }
 
 function chip(href, label, extra, stop) {
