@@ -387,6 +387,12 @@ docker compose -f compose-media.yml restart acestream-updater
 docker logs -f acestream-updater
 ```
 
+### Watch-next (auto-fetch on watch)
+`services/watch-next/` (Go, Dockerized) monitors and searches the next episode(s) in Sonarr when
+Tautulli (Plex) or Jellyfin reports one watched, so a season fills in progressively instead of all
+at once. See [docs/watch-next.md](docs/watch-next.md) for the full setup (Tautulli/Jellyfin
+webhook configuration).
+
 ### Tailscale Metrics
 `services/tailscale-metrics/` is a Go binary that runs as a **host cron job** (not a Docker container). It exports Tailscale peer status to Prometheus via node_exporter's textfile collector.
 
