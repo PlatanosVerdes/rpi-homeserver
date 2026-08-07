@@ -11,12 +11,28 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(indexPage))
 }
 
+func iconHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "image/svg+xml")
+	w.Header().Set("Cache-Control", "public, max-age=86400")
+	w.Write([]byte(iconSVG))
+}
+
+// A rounded-square glyph of two staggered subtitle lines over a play triangle, in the same teal
+// accent as the page itself, since none of Homepage's bundled icons fit a homegrown tool.
+const iconSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#0f2f2b"/>
+  <path d="M24 20 L44 32 L24 44 Z" fill="#2dd4bf" opacity="0.35"/>
+  <rect x="14" y="38" width="24" height="6" rx="3" fill="#2dd4bf"/>
+  <rect x="14" y="48" width="36" height="6" rx="3" fill="#2dd4bf"/>
+</svg>`
+
 const indexPage = `<!doctype html>
 <html lang="es">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Subtitulos</title>
+<title>SubDown</title>
+<link rel="icon" href="/icon.svg">
 <style>
   :root {
     --bg: #0b0d10;
@@ -38,7 +54,17 @@ const indexPage = `<!doctype html>
   }
   .wrap { max-width: 720px; margin: 0 auto; padding: 1.5rem 1.25rem 4rem; }
   header { position: sticky; top: 0; background: var(--bg); padding: 1.25rem 0 0.75rem; z-index: 10; }
-  h1 { font-size: 1.35rem; margin: 0 0 0.9rem; font-weight: 650; letter-spacing: -0.01em; }
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.9rem; }
+  h1 { font-size: 1.35rem; margin: 0; font-weight: 650; letter-spacing: -0.01em; }
+  a.all-btn {
+    background: var(--accent); color: #06201c; text-decoration: none; font-weight: 650;
+    font-size: 0.82rem; padding: 0.5rem 0.85rem; border-radius: 10px; white-space: nowrap;
+  }
+  a.all-btn:active { opacity: 0.8; }
+  .poster {
+    width: 40px; height: 58px; border-radius: 7px; object-fit: cover; flex: none;
+    background: var(--surface-2);
+  }
   .search {
     display: flex; align-items: center; gap: 0.6rem;
     background: var(--surface); border: 1px solid var(--border);
@@ -88,7 +114,10 @@ const indexPage = `<!doctype html>
 <body>
 <div class="wrap">
   <header>
-    <h1>Subtitulos descargables</h1>
+    <div class="top">
+      <h1>SubDown</h1>
+      <a class="all-btn" href="/download-all">Descargar todo</a>
+    </div>
     <div class="search">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
@@ -117,11 +146,16 @@ function chip(href, label, extra, stop) {
   return '<a class="chip' + (extra ? ' ' + extra : '') + '" href="' + href + '"' + onclick + '>' + label + '</a>';
 }
 
+function poster(id) {
+  return '<img class="poster" src="/image/' + id + '" loading="lazy" onerror="this.style.visibility=\'hidden\'" alt="">';
+}
+
 function movieCard(m) {
   var chips = m.subs.map(function (s) {
     return chip('/download/' + m.id + '?index=' + s.index + '&lang=' + s.lang + '&name=' + encodeURIComponent(m.title), s.lang);
   }).join('');
   return '<div class="card"><div class="row">' +
+    poster(m.id) +
     '<span class="title">' + m.title + '</span>' +
     '<span class="chips">' + chips + '</span>' +
     '</div></div>';
@@ -141,6 +175,7 @@ function seriesCard(s) {
   var allHref = '/download-all/' + s.id + '?name=' + encodeURIComponent(s.title);
   return '<div class="card series" data-id="' + s.id + '">' +
     '<div class="row" onclick="toggleSeries(this)">' +
+    poster(s.id) +
     '<span class="title">' + s.title + ' <span style="color:var(--text-dim);font-weight:400;">(' + s.episodes.length + ' ep.)</span></span>' +
     '<span class="chips">' + chip(allHref, 'Descargar todos', 'all', true) +
     '<svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>' +
