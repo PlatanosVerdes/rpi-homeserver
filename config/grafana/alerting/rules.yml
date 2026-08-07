@@ -641,24 +641,27 @@ groups:
       - uid: homelab-used-indexer-down
         title: 'An indexer you actually use is down'
         condition: C
-        for: 30m
+        for: 5m
         labels:
           severity: warning
         annotations:
           summary: 'Indexer {{ $labels.name }} is down and it is one you actually grab from'
           description: >-
             Only indexers with at least 3 grabs in the last 90 days are watched here, so the ones that have never worked stay quiet.
+            Down means "mostly down over the last hour", not a single failed check — a brief
+            recovery blip in the middle of an otherwise-broken indexer no longer resolves and
+            re-fires the alert every time.
         noDataState: OK
         execErrState: KeepLast
         data:
           - refId: A
-            relativeTimeRange: { from: 300, to: 0 }
+            relativeTimeRange: { from: 3600, to: 0 }
             datasourceUid: prometheus
             model:
               refId: A
               instant: true
               editorMode: code
-              expr: '(prowlarr_indexer_up == bool 0) and on(name) (arr_indexer_grabs_90d >= 3)'
+              expr: '(avg_over_time(prowlarr_indexer_up[1h]) < bool 0.5) and on(name) (arr_indexer_grabs_90d >= 3)'
           - refId: C
             datasourceUid: __expr__
             model:
