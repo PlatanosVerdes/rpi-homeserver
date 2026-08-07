@@ -411,7 +411,11 @@
         "score": 3000
       }
     ],
-    "minUpgradeFormatScore": 1
+    "minUpgradeFormatScore": 1,
+    "language": {
+      "id": -1,
+      "name": "Any"
+    }
   },
   {
     "name": "Ultra-HD",
@@ -825,7 +829,11 @@
         "score": 3000
       }
     ],
-    "minUpgradeFormatScore": 1
+    "minUpgradeFormatScore": 1,
+    "language": {
+      "id": -1,
+      "name": "Any"
+    }
   },
   {
     "name": "HD + UHD",
@@ -1239,6 +1247,10 @@
         "score": 3000
       }
     ],
-    "minUpgradeFormatScore": 1
+    "minUpgradeFormatScore": 1,
+    "language": {
+      "id": -1,
+      "name": "Any"
+    }
   }
 ]
