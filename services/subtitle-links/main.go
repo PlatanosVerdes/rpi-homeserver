@@ -248,6 +248,29 @@ func downloadHandler(cfg config) http.HandlerFunc {
 	}
 }
 
+// zipEpisodes writes every given episode's external subtitle(s) into zw, under dir/ if dir is
+// non-empty (used to nest a series' episodes inside their own folder in the everything-zip).
+func zipEpisodes(cfg config, zw *zip.Writer, dir string, episodes []episode) {
+	for _, ep := range episodes {
+		for _, s := range ep.Subs {
+			body, err := jellyfinGet(cfg, fmt.Sprintf("/Videos/%s/%s/Subtitles/%d/Stream.srt", ep.ID, ep.ID, s.Index))
+			if err != nil {
+				log.Printf("zip: episode %s sub %d: %v", ep.ID, s.Index, err)
+				continue
+			}
+			fname := fmt.Sprintf("S%02dE%02d.%s.srt", ep.Season, ep.Episode, s.Lang)
+			if dir != "" {
+				fname = dir + "/" + fname
+			}
+			fw, err := zw.Create(fname)
+			if err != nil {
+				continue
+			}
+			fw.Write(body)
+		}
+	}
+}
+
 // downloadAllHandler zips every episode's external subtitle(s) for one series.
 func downloadAllHandler(cfg config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -269,22 +292,77 @@ func downloadAllHandler(cfg config) http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/zip")
 		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", name+".zip"))
 		zw := zip.NewWriter(w)
-		for _, ep := range episodes {
-			for _, s := range ep.Subs {
-				body, err := jellyfinGet(cfg, fmt.Sprintf("/Videos/%s/%s/Subtitles/%d/Stream.srt", ep.ID, ep.ID, s.Index))
+		zipEpisodes(cfg, zw, "", episodes)
+		zw.Close()
+	}
+}
+
+// downloadEverythingHandler zips every movie's and every series' external subtitles in one go:
+// movies at the zip root, each series' episodes nested under a folder named after the series.
+func downloadEverythingHandler(cfg config) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		movies, err := fetchMovies(cfg)
+		if err != nil {
+			log.Printf("download-everything: %v", err)
+			http.Error(w, "could not reach Jellyfin", http.StatusBadGateway)
+			return
+		}
+		ser, err := fetchSeries(cfg)
+		if err != nil {
+			log.Printf("download-everything: %v", err)
+			http.Error(w, "could not reach Jellyfin", http.StatusBadGateway)
+			return
+		}
+		w.Header().Set("Content-Type", "application/zip")
+		w.Header().Set("Content-Disposition", `attachment; filename="Subtitulos.zip"`)
+		zw := zip.NewWriter(w)
+		for _, m := range movies {
+			for _, s := range m.Subs {
+				body, err := jellyfinGet(cfg, fmt.Sprintf("/Videos/%s/%s/Subtitles/%d/Stream.srt", m.ID, m.ID, s.Index))
 				if err != nil {
-					log.Printf("download-all %s: episode %s sub %d: %v", id, ep.ID, s.Index, err)
+					log.Printf("download-everything: movie %s sub %d: %v", m.ID, s.Index, err)
 					continue
 				}
-				fname := fmt.Sprintf("S%02dE%02d.%s.srt", ep.Season, ep.Episode, s.Lang)
-				fw, err := zw.Create(fname)
+				fw, err := zw.Create(fmt.Sprintf("%s.%s.srt", m.Title, s.Lang))
 				if err != nil {
 					continue
 				}
 				fw.Write(body)
 			}
 		}
+		for _, s := range ser {
+			zipEpisodes(cfg, zw, s.Title, s.Episodes)
+		}
 		zw.Close()
+	}
+}
+
+// imageHandler proxies an item's poster from Jellyfin, so the api_key never reaches the browser.
+func imageHandler(cfg config) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := strings.TrimPrefix(r.URL.Path, "/image/")
+		if id == "" {
+			http.NotFound(w, r)
+			return
+		}
+		req, err := http.NewRequest("GET", cfg.jellyfinURL+"/Items/"+id+"/Images/Primary?maxHeight=300&quality=85", nil)
+		if err != nil {
+			http.Error(w, "bad request", http.StatusInternalServerError)
+			return
+		}
+		req.Header.Set("X-Emby-Token", cfg.apiKey)
+		client := &http.Client{Timeout: 15 * time.Second}
+		resp, err := client.Do(req)
+		if err != nil || resp.StatusCode >= 300 {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		defer resp.Body.Close()
+		if ct := resp.Header.Get("Content-Type"); ct != "" {
+			w.Header().Set("Content-Type", ct)
+		}
+		w.Header().Set("Cache-Control", "public, max-age=86400")
+		io.Copy(w, resp.Body)
 	}
 }
 
@@ -294,8 +372,11 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", indexHandler)
+	mux.HandleFunc("/icon.svg", iconHandler)
 	mux.HandleFunc("/api/items", apiHandler(cfg))
+	mux.HandleFunc("/image/", imageHandler(cfg))
 	mux.HandleFunc("/download/", downloadHandler(cfg))
 	mux.HandleFunc("/download-all/", downloadAllHandler(cfg))
+	mux.HandleFunc("/download-all", downloadEverythingHandler(cfg))
 	log.Fatal(http.ListenAndServe(":"+listenPort, mux))
 }

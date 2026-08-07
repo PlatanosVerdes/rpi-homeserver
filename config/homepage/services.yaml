@@ -119,7 +119,7 @@
           username: admin
           password: "{{HOMEPAGE_VAR_QBIT_PASSWORD}}"
     - SubDown:
-        icon: cc.png
+        icon: https://subs.platanosverdes.com/icon.svg
         href: https://subs.platanosverdes.com
         server: my-docker
         container: subtitle-links
