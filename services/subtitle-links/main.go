@@ -1,12 +1,13 @@
-// subtitle-links serves a small page listing every movie that has an external (Bazarr-downloaded)
-// .srt subtitle, with a direct download link per language, so subtitles can be grabbed by hand onto
-// a device (e.g. to load into VLC alongside an offline-downloaded video) without hand-building URLs.
+// subtitle-links serves a small page listing every movie/episode that has an external
+// (Bazarr-downloaded) .srt subtitle, with a direct download link per language (and a
+// download-all-as-zip option per series), so subtitles can be grabbed by hand onto a device
+// (e.g. to load into VLC alongside an offline-downloaded video) without hand-building URLs.
 package main
 
 import (
+	"archive/zip"
 	"encoding/json"
 	"fmt"
-	"html/template"
 	"io"
 	"log"
 	"net/http"
@@ -40,14 +41,28 @@ func loadConfig() config {
 }
 
 type subtitle struct {
-	Index int
-	Lang  string
+	Index int    `json:"index"`
+	Lang  string `json:"lang"`
 }
 
 type movie struct {
-	ID    string
-	Title string
-	Subs  []subtitle
+	ID    string     `json:"id"`
+	Title string     `json:"title"`
+	Subs  []subtitle `json:"subs"`
+}
+
+type episode struct {
+	ID      string     `json:"id"`
+	Season  int        `json:"season"`
+	Episode int        `json:"episode"`
+	Title   string     `json:"title"`
+	Subs    []subtitle `json:"subs"`
+}
+
+type series struct {
+	ID       string    `json:"id"`
+	Title    string    `json:"title"`
+	Episodes []episode `json:"episodes"`
 }
 
 func jellyfinGet(cfg config, path string) ([]byte, error) {
@@ -72,9 +87,31 @@ func jellyfinGet(cfg config, path string) ([]byte, error) {
 	return body, nil
 }
 
-// fetchMovies only surfaces external, text-based (subrip) subtitle streams: that's exactly what
+type mediaStream struct {
+	Type       string `json:"Type"`
+	Codec      string `json:"Codec"`
+	Language   string `json:"Language"`
+	Index      int    `json:"Index"`
+	IsExternal bool   `json:"IsExternal"`
+}
+
+// externalSubs keeps only external, text-based (subrip) subtitle streams: that's exactly what
 // Bazarr manages as sidecar .srt files. Embedded/image-based (e.g. PGS) tracks are skipped, since
 // there's no equivalent plain-file download for those.
+func externalSubs(streams []mediaStream) []subtitle {
+	var subs []subtitle
+	for _, s := range streams {
+		if s.Type == "Subtitle" && s.IsExternal && s.Codec == "subrip" {
+			lang := s.Language
+			if lang == "" {
+				lang = "?"
+			}
+			subs = append(subs, subtitle{Index: s.Index, Lang: lang})
+		}
+	}
+	return subs
+}
+
 func fetchMovies(cfg config) ([]movie, error) {
 	body, err := jellyfinGet(cfg, "/Items?IncludeItemTypes=Movie&Recursive=true&Fields=MediaStreams&SortBy=SortName")
 	if err != nil {
@@ -82,15 +119,9 @@ func fetchMovies(cfg config) ([]movie, error) {
 	}
 	var resp struct {
 		Items []struct {
-			Id           string `json:"Id"`
-			Name         string `json:"Name"`
-			MediaStreams []struct {
-				Type       string `json:"Type"`
-				Codec      string `json:"Codec"`
-				Language   string `json:"Language"`
-				Index      int    `json:"Index"`
-				IsExternal bool   `json:"IsExternal"`
-			} `json:"MediaStreams"`
+			Id           string        `json:"Id"`
+			Name         string        `json:"Name"`
+			MediaStreams []mediaStream `json:"MediaStreams"`
 		} `json:"Items"`
 	}
 	if err := json.Unmarshal(body, &resp); err != nil {
@@ -98,17 +129,7 @@ func fetchMovies(cfg config) ([]movie, error) {
 	}
 	var movies []movie
 	for _, it := range resp.Items {
-		var subs []subtitle
-		for _, s := range it.MediaStreams {
-			if s.Type == "Subtitle" && s.IsExternal && s.Codec == "subrip" {
-				lang := s.Language
-				if lang == "" {
-					lang = "?"
-				}
-				subs = append(subs, subtitle{Index: s.Index, Lang: lang})
-			}
-		}
-		if len(subs) > 0 {
+		if subs := externalSubs(it.MediaStreams); len(subs) > 0 {
 			movies = append(movies, movie{ID: it.Id, Title: it.Name, Subs: subs})
 		}
 	}
@@ -116,44 +137,70 @@ func fetchMovies(cfg config) ([]movie, error) {
 	return movies, nil
 }
 
-const pageTemplate = `<!doctype html>
-<html lang="es">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Subtitulos</title>
-<style>
-  body { font-family: -apple-system, sans-serif; background:#111; color:#eee; margin:0; padding:1.5rem; }
-  h1 { font-size:1.3rem; margin-bottom:1rem; }
-  ul { list-style:none; padding:0; margin:0; }
-  li { background:#1c1c1c; border-radius:10px; padding:0.9rem 1rem; margin-bottom:0.6rem;
-       display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; }
-  .title { flex:1; min-width:55%; }
-  .links { display:flex; gap:0.5rem; flex-wrap:wrap; }
-  a.dl { background:#2d6cdf; color:#fff; text-decoration:none; padding:0.5rem 0.9rem;
-         border-radius:8px; font-size:0.95rem; white-space:nowrap; }
-  a.dl:active { background:#1e4fa8; }
-</style>
-</head>
-<body>
-<h1>Subtitulos descargables ({{len .}} pelis)</h1>
-<ul>
-{{range $m := .}}
-  <li>
-    <span class="title">{{$m.Title}}</span>
-    <span class="links">
-    {{range $m.Subs}}
-      <a class="dl" href="/download/{{$m.ID}}?index={{.Index}}&amp;lang={{.Lang}}&amp;name={{$m.Title}}">{{.Lang}}</a>
-    {{end}}
-    </span>
-  </li>
-{{end}}
-</ul>
-</body>
-</html>`
+func fetchEpisodes(cfg config, seriesID string) ([]episode, error) {
+	body, err := jellyfinGet(cfg, "/Shows/"+seriesID+"/Episodes?Fields=MediaStreams")
+	if err != nil {
+		return nil, err
+	}
+	var resp struct {
+		Items []struct {
+			Id                string        `json:"Id"`
+			Name              string        `json:"Name"`
+			IndexNumber       int           `json:"IndexNumber"`
+			ParentIndexNumber int           `json:"ParentIndexNumber"`
+			MediaStreams      []mediaStream `json:"MediaStreams"`
+		} `json:"Items"`
+	}
+	if err := json.Unmarshal(body, &resp); err != nil {
+		return nil, err
+	}
+	var episodes []episode
+	for _, it := range resp.Items {
+		if subs := externalSubs(it.MediaStreams); len(subs) > 0 {
+			episodes = append(episodes, episode{
+				ID: it.Id, Season: it.ParentIndexNumber, Episode: it.IndexNumber, Title: it.Name, Subs: subs,
+			})
+		}
+	}
+	sort.Slice(episodes, func(i, j int) bool {
+		if episodes[i].Season != episodes[j].Season {
+			return episodes[i].Season < episodes[j].Season
+		}
+		return episodes[i].Episode < episodes[j].Episode
+	})
+	return episodes, nil
+}
 
-func indexHandler(cfg config) http.HandlerFunc {
-	tmpl := template.Must(template.New("page").Parse(pageTemplate))
+func fetchSeries(cfg config) ([]series, error) {
+	body, err := jellyfinGet(cfg, "/Items?IncludeItemTypes=Series&Recursive=true")
+	if err != nil {
+		return nil, err
+	}
+	var resp struct {
+		Items []struct {
+			Id   string `json:"Id"`
+			Name string `json:"Name"`
+		} `json:"Items"`
+	}
+	if err := json.Unmarshal(body, &resp); err != nil {
+		return nil, err
+	}
+	var out []series
+	for _, it := range resp.Items {
+		episodes, err := fetchEpisodes(cfg, it.Id)
+		if err != nil {
+			log.Printf("fetchEpisodes %s: %v", it.Id, err)
+			continue
+		}
+		if len(episodes) > 0 {
+			out = append(out, series{ID: it.Id, Title: it.Name, Episodes: episodes})
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Title < out[j].Title })
+	return out, nil
+}
+
+func apiHandler(cfg config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		movies, err := fetchMovies(cfg)
 		if err != nil {
@@ -161,10 +208,17 @@ func indexHandler(cfg config) http.HandlerFunc {
 			http.Error(w, "could not reach Jellyfin", http.StatusBadGateway)
 			return
 		}
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		if err := tmpl.Execute(w, movies); err != nil {
-			log.Printf("template: %v", err)
+		ser, err := fetchSeries(cfg)
+		if err != nil {
+			log.Printf("fetchSeries: %v", err)
+			http.Error(w, "could not reach Jellyfin", http.StatusBadGateway)
+			return
 		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		json.NewEncoder(w).Encode(struct {
+			Movies []movie  `json:"movies"`
+			Series []series `json:"series"`
+		}{movies, ser})
 	}
 }
 
@@ -194,12 +248,54 @@ func downloadHandler(cfg config) http.HandlerFunc {
 	}
 }
 
+// downloadAllHandler zips every episode's external subtitle(s) for one series.
+func downloadAllHandler(cfg config) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := strings.TrimPrefix(r.URL.Path, "/download-all/")
+		if id == "" {
+			http.NotFound(w, r)
+			return
+		}
+		name := r.URL.Query().Get("name")
+		if name == "" {
+			name = "series"
+		}
+		episodes, err := fetchEpisodes(cfg, id)
+		if err != nil {
+			log.Printf("download-all %s: %v", id, err)
+			http.Error(w, "could not reach Jellyfin", http.StatusBadGateway)
+			return
+		}
+		w.Header().Set("Content-Type", "application/zip")
+		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", name+".zip"))
+		zw := zip.NewWriter(w)
+		for _, ep := range episodes {
+			for _, s := range ep.Subs {
+				body, err := jellyfinGet(cfg, fmt.Sprintf("/Videos/%s/%s/Subtitles/%d/Stream.srt", ep.ID, ep.ID, s.Index))
+				if err != nil {
+					log.Printf("download-all %s: episode %s sub %d: %v", id, ep.ID, s.Index, err)
+					continue
+				}
+				fname := fmt.Sprintf("S%02dE%02d.%s.srt", ep.Season, ep.Episode, s.Lang)
+				fw, err := zw.Create(fname)
+				if err != nil {
+					continue
+				}
+				fw.Write(body)
+			}
+		}
+		zw.Close()
+	}
+}
+
 func main() {
 	cfg := loadConfig()
 	log.Printf("subtitle-links started, jellyfin=%s", cfg.jellyfinURL)
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", indexHandler(cfg))
+	mux.HandleFunc("/", indexHandler)
+	mux.HandleFunc("/api/items", apiHandler(cfg))
 	mux.HandleFunc("/download/", downloadHandler(cfg))
+	mux.HandleFunc("/download-all/", downloadAllHandler(cfg))
 	log.Fatal(http.ListenAndServe(":"+listenPort, mux))
 }
