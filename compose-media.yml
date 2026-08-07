@@ -136,6 +136,40 @@ services:
     networks:
       - media-network
 
+  # --- TAUTULLI (Plex watch history / notifications) ---
+  tautulli:
+    image: ghcr.io/tautulli/tautulli:${TAUTULLI_VERSION}
+    container_name: tautulli
+    restart: unless-stopped
+    profiles: [media, all]
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${APP_CONFIG_PATH}/tautulli:/config
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - media-network
+
+  # --- watch-next: monitor + search the next Sonarr episode(s) when one is watched ---
+  # See docs/watch-next.md. Reached by Tautulli/Jellyfin over media-network by container name,
+  # never published to the host, so the shared WATCH_NEXT_TOKEN is defense-in-depth, not the
+  # only thing standing between it and the internet.
+  watch-next:
+    build: ./services/watch-next
+    container_name: watch-next
+    restart: unless-stopped
+    profiles: [media, all]
+    environment:
+      - WATCH_NEXT_TOKEN=${WATCH_NEXT_TOKEN}
+      - WATCH_NEXT_MARGIN=${WATCH_NEXT_MARGIN}
+    volumes:
+      - ${APP_CONFIG_PATH}/sonarr/config.xml:/config.xml:ro
+    networks:
+      - media-network
+
 networks:
   media-network:
     external: true

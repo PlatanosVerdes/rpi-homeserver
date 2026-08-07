@@ -32,6 +32,15 @@
         href: https://maintainerr.platanosverdes.com
         server: my-docker
         container: maintainerr
+    - Tautulli:
+        icon: tautulli.png
+        href: https://tautulli.platanosverdes.com
+        server: my-docker
+        container: tautulli
+        widget:
+          type: tautulli
+          url: http://tautulli:8181
+          key: "{{HOMEPAGE_VAR_TAUTULLI_TOKEN}}"
 
 - Monitoring:
     - Grafana:

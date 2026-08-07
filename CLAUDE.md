@@ -22,7 +22,7 @@ A modular Docker-based home server running on a Raspberry Pi. All services run a
 docker-compose.yml          Entry point — uses `include` to load all modules
 versions.env                Single source of truth for all image versions (committed)
 compose-core.yml            Caddy, Homepage, Pi-hole, Speedtest-tracker
-compose-media.yml           Plex, Jellyfin, Overseerr, Acestream
+compose-media.yml           Plex, Jellyfin, Overseerr, Acestream, Tautulli, watch-next
 compose-arrs.yml            Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr
 compose-mon.yml             Prometheus, Grafana, Pushgateway, node-exporter, cAdvisor
 
@@ -42,6 +42,7 @@ services/                   Source code for custom services built in this repo
   acestream-updater/        Go service — fetches IPFS channel lists, writes .m3u for Jellyfin
   tailscale-metrics/        Go binary (cron) — exports Tailscale peer metrics to node_exporter
   deploy-webhook/           Python receiver (systemd) — deploys on GitHub push via Cloudflare tunnel
+  watch-next/               Go service — monitors + searches the next Sonarr episode(s) on watch
 
 scripts/                    Operational scripts
   crontab                   This repo's host cron jobs (a fragment; see install-crontab.sh)
@@ -141,7 +142,7 @@ Controlled via `COMPOSE_PROFILES` in `.env`. No need to touch compose files.
 | `essential` | Caddy, Homepage, Pi-hole, Speedtest-tracker |
 | `moni` | Prometheus, Grafana, Pushgateway, node-exporter, cAdvisor, Pihole-exporter, Speedtest-tracker |
 | `acestream` | Aceserve, Acestream-updater, Jellyfin + Grafana/Prometheus/Pushgateway |
-| `media` | Plex, Overseerr, Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr |
+| `media` | Plex, Overseerr, Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr, Bazarr, Maintainerr, Tautulli, watch-next |
 | `bot` | Pol Academy Offers Bot |
 | `cal` | Google Calendar Bridge (cal-bridge) |
 | `tunnel` | Cloudflared (publishes only the GitHub deploy webhook — see docs/deploy-webhook.md) |
@@ -184,6 +185,17 @@ The compiled binary is NOT committed to git. Run `make build` after cloning.
 Cron entry:
 ```
 * * * * * /home/raspi/rpi-homeserver/services/tailscale-metrics/tailscale-metrics >> /home/raspi/rpi-homeserver/tailscale-metrics.log 2>&1
+```
+
+### watch-next
+Go service, Dockerized, no published port (reached by Tautulli/Jellyfin over `media-network` by
+container name only). Monitors and searches the next `WATCH_NEXT_MARGIN` Sonarr episodes when
+Tautulli or Jellyfin reports one watched, so a season fills in progressively instead of all at
+once. Setup in [docs/watch-next.md](docs/watch-next.md).
+
+Rebuild after Go source changes:
+```bash
+docker compose -f compose-media.yml up -d --build watch-next
 ```
 
 ---
