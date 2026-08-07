@@ -141,6 +141,26 @@ function norm(s) {
   return (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
+var FLAGS = {
+  spa: '\ud83c\uddea\ud83c\uddf8', eng: '\ud83c\uddec\ud83c\udde7', fre: '\ud83c\uddeb\ud83c\uddf7', fra: '\ud83c\uddeb\ud83c\uddf7',
+  ger: '\ud83c\udde9\ud83c\uddea', deu: '\ud83c\udde9\ud83c\uddea', ita: '\ud83c\uddee\ud83c\uddf9', por: '\ud83c\uddf5\ud83c\uddf9',
+  ara: '\ud83c\uddf8\ud83c\udde6', jpn: '\ud83c\uddef\ud83c\uddf5', kor: '\ud83c\uddf0\ud83c\uddf7', chi: '\ud83c\udde8\ud83c\uddf3',
+  zho: '\ud83c\udde8\ud83c\uddf3', rus: '\ud83c\uddf7\ud83c\uddfa', dut: '\ud83c\uddf3\ud83c\uddf1', nld: '\ud83c\uddf3\ud83c\uddf1',
+  swe: '\ud83c\uddf8\ud83c\uddea', nor: '\ud83c\uddf3\ud83c\uddf4', dan: '\ud83c\udde9\ud83c\uddf0', fin: '\ud83c\uddeb\ud83c\uddee',
+  pol: '\ud83c\uddf5\ud83c\uddf1', tur: '\ud83c\uddf9\ud83c\uddf7', gre: '\ud83c\uddec\ud83c\uddf7', ell: '\ud83c\uddec\ud83c\uddf7',
+  heb: '\ud83c\uddee\ud83c\uddf1', hin: '\ud83c\uddee\ud83c\uddf3', cze: '\ud83c\udde8\ud83c\uddff', ces: '\ud83c\udde8\ud83c\uddff',
+  hun: '\ud83c\udded\ud83c\uddfa', ukr: '\ud83c\uddfa\ud83c\udde6', vie: '\ud83c\uddfb\ud83c\uddf3', tha: '\ud83c\uddf9\ud83c\udded',
+  ind: '\ud83c\uddee\ud83c\udde9'
+};
+
+function flag(lang) {
+  return FLAGS[lang] || '\ud83c\udf10';
+}
+
+function langLabel(lang) {
+  return flag(lang) + ' ' + lang.toUpperCase();
+}
+
 function chip(href, label, extra, stop) {
   var onclick = stop ? ' onclick="event.stopPropagation()"' : '';
   return '<a class="chip' + (extra ? ' ' + extra : '') + '" href="' + href + '"' + onclick + '>' + label + '</a>';
@@ -152,7 +172,7 @@ function poster(id) {
 
 function movieCard(m) {
   var chips = m.subs.map(function (s) {
-    return chip('/download/' + m.id + '?index=' + s.index + '&lang=' + s.lang + '&name=' + encodeURIComponent(m.title), s.lang);
+    return chip('/download/' + m.id + '?index=' + s.index + '&lang=' + s.lang + '&name=' + encodeURIComponent(m.title), langLabel(s.lang));
   }).join('');
   return '<div class="card"><div class="row">' +
     poster(m.id) +
@@ -165,7 +185,7 @@ function seriesCard(s) {
   var epRows = s.episodes.map(function (ep) {
     var chips = ep.subs.map(function (sub) {
       var label = 'S' + String(ep.season).padStart(2, '0') + 'E' + String(ep.episode).padStart(2, '0') + ' ' + sub.lang;
-      return chip('/download/' + ep.id + '?index=' + sub.index + '&lang=' + sub.lang + '&name=' + encodeURIComponent(s.title + ' ' + label), sub.lang);
+      return chip('/download/' + ep.id + '?index=' + sub.index + '&lang=' + sub.lang + '&name=' + encodeURIComponent(s.title + ' ' + label), langLabel(sub.lang));
     }).join('');
     return '<div class="episode">' +
       '<span class="ep-title"><span class="ep-num">S' + String(ep.season).padStart(2, '0') + 'E' + String(ep.episode).padStart(2, '0') + '</span>' + ep.title + '</span>' +

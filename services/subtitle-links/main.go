@@ -14,6 +14,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -185,40 +186,81 @@ func fetchSeries(cfg config) ([]series, error) {
 	if err := json.Unmarshal(body, &resp); err != nil {
 		return nil, err
 	}
+	// One fetch per series in parallel: a big show (e.g. hundreds of episodes) shouldn't make
+	// every other series wait behind it just to find out most of them have no subtitles at all.
+	results := make([]series, len(resp.Items))
+	var wg sync.WaitGroup
+	for i, it := range resp.Items {
+		wg.Add(1)
+		go func(i int, id, name string) {
+			defer wg.Done()
+			episodes, err := fetchEpisodes(cfg, id)
+			if err != nil {
+				log.Printf("fetchEpisodes %s: %v", id, err)
+				return
+			}
+			if len(episodes) > 0 {
+				results[i] = series{ID: id, Title: name, Episodes: episodes}
+			}
+		}(i, it.Id, it.Name)
+	}
+	wg.Wait()
+
 	var out []series
-	for _, it := range resp.Items {
-		episodes, err := fetchEpisodes(cfg, it.Id)
-		if err != nil {
-			log.Printf("fetchEpisodes %s: %v", it.Id, err)
-			continue
-		}
-		if len(episodes) > 0 {
-			out = append(out, series{ID: it.Id, Title: it.Name, Episodes: episodes})
+	for _, s := range results {
+		if s.ID != "" {
+			out = append(out, s)
 		}
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Title < out[j].Title })
 	return out, nil
 }
 
+type itemsResponse struct {
+	Movies []movie  `json:"movies"`
+	Series []series `json:"series"`
+}
+
+// itemsCache avoids re-walking the whole library (including every series' episodes) on every
+// page load: the library changes on the order of hours (a new Bazarr grab, a new episode), not
+// seconds, so a short TTL turns repeat loads near-instant without ever serving very stale data.
+const itemsCacheTTL = 2 * time.Minute
+
+var (
+	itemsCacheMu   sync.Mutex
+	itemsCacheData itemsResponse
+	itemsCacheAt   time.Time
+)
+
+func getItems(cfg config) (itemsResponse, error) {
+	itemsCacheMu.Lock()
+	defer itemsCacheMu.Unlock()
+	if time.Since(itemsCacheAt) < itemsCacheTTL {
+		return itemsCacheData, nil
+	}
+	movies, err := fetchMovies(cfg)
+	if err != nil {
+		return itemsResponse{}, err
+	}
+	ser, err := fetchSeries(cfg)
+	if err != nil {
+		return itemsResponse{}, err
+	}
+	itemsCacheData = itemsResponse{Movies: movies, Series: ser}
+	itemsCacheAt = time.Now()
+	return itemsCacheData, nil
+}
+
 func apiHandler(cfg config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		movies, err := fetchMovies(cfg)
+		items, err := getItems(cfg)
 		if err != nil {
-			log.Printf("fetchMovies: %v", err)
-			http.Error(w, "could not reach Jellyfin", http.StatusBadGateway)
-			return
-		}
-		ser, err := fetchSeries(cfg)
-		if err != nil {
-			log.Printf("fetchSeries: %v", err)
+			log.Printf("getItems: %v", err)
 			http.Error(w, "could not reach Jellyfin", http.StatusBadGateway)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		json.NewEncoder(w).Encode(struct {
-			Movies []movie  `json:"movies"`
-			Series []series `json:"series"`
-		}{movies, ser})
+		json.NewEncoder(w).Encode(items)
 	}
 }
 
@@ -301,13 +343,7 @@ func downloadAllHandler(cfg config) http.HandlerFunc {
 // movies at the zip root, each series' episodes nested under a folder named after the series.
 func downloadEverythingHandler(cfg config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		movies, err := fetchMovies(cfg)
-		if err != nil {
-			log.Printf("download-everything: %v", err)
-			http.Error(w, "could not reach Jellyfin", http.StatusBadGateway)
-			return
-		}
-		ser, err := fetchSeries(cfg)
+		items, err := getItems(cfg)
 		if err != nil {
 			log.Printf("download-everything: %v", err)
 			http.Error(w, "could not reach Jellyfin", http.StatusBadGateway)
@@ -316,7 +352,7 @@ func downloadEverythingHandler(cfg config) http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/zip")
 		w.Header().Set("Content-Disposition", `attachment; filename="Subtitulos.zip"`)
 		zw := zip.NewWriter(w)
-		for _, m := range movies {
+		for _, m := range items.Movies {
 			for _, s := range m.Subs {
 				body, err := jellyfinGet(cfg, fmt.Sprintf("/Videos/%s/%s/Subtitles/%d/Stream.srt", m.ID, m.ID, s.Index))
 				if err != nil {
@@ -330,12 +366,28 @@ func downloadEverythingHandler(cfg config) http.HandlerFunc {
 				fw.Write(body)
 			}
 		}
-		for _, s := range ser {
+		for _, s := range items.Series {
 			zipEpisodes(cfg, zw, s.Title, s.Episodes)
 		}
 		zw.Close()
 	}
 }
+
+type cachedImage struct {
+	body        []byte
+	contentType string
+	at          time.Time
+}
+
+// Posters change essentially never (a re-download replacing the file is the only case), so an
+// in-memory cache well past this service's own restart cadence is safe and turns every repeat
+// page load's ~40 poster fetches from a live Jellyfin round-trip into a map lookup.
+const imageCacheTTL = 24 * time.Hour
+
+var (
+	imageCacheMu sync.Mutex
+	imageCache   = map[string]cachedImage{}
+)
 
 // imageHandler proxies an item's poster from Jellyfin, so the api_key never reaches the browser.
 func imageHandler(cfg config) http.HandlerFunc {
@@ -345,6 +397,17 @@ func imageHandler(cfg config) http.HandlerFunc {
 			http.NotFound(w, r)
 			return
 		}
+
+		imageCacheMu.Lock()
+		cached, ok := imageCache[id]
+		imageCacheMu.Unlock()
+		if ok && time.Since(cached.at) < imageCacheTTL {
+			w.Header().Set("Content-Type", cached.contentType)
+			w.Header().Set("Cache-Control", "public, max-age=86400")
+			w.Write(cached.body)
+			return
+		}
+
 		req, err := http.NewRequest("GET", cfg.jellyfinURL+"/Items/"+id+"/Images/Primary?maxHeight=300&quality=85", nil)
 		if err != nil {
 			http.Error(w, "bad request", http.StatusInternalServerError)
@@ -358,11 +421,22 @@ func imageHandler(cfg config) http.HandlerFunc {
 			return
 		}
 		defer resp.Body.Close()
-		if ct := resp.Header.Get("Content-Type"); ct != "" {
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			w.WriteHeader(http.StatusBadGateway)
+			return
+		}
+		ct := resp.Header.Get("Content-Type")
+
+		imageCacheMu.Lock()
+		imageCache[id] = cachedImage{body: body, contentType: ct, at: time.Now()}
+		imageCacheMu.Unlock()
+
+		if ct != "" {
 			w.Header().Set("Content-Type", ct)
 		}
 		w.Header().Set("Cache-Control", "public, max-age=86400")
-		io.Copy(w, resp.Body)
+		w.Write(body)
 	}
 }
 
