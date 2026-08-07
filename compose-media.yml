@@ -165,6 +165,7 @@ services:
     environment:
       - WATCH_NEXT_TOKEN=${WATCH_NEXT_TOKEN}
       - WATCH_NEXT_MARGIN=${WATCH_NEXT_MARGIN}
+      - PUSHGATEWAY_URL=http://pushgateway:9091
     volumes:
       - ${APP_CONFIG_PATH}/sonarr/config.xml:/config.xml:ro
     networks:
