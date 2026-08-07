@@ -65,7 +65,7 @@ Webhook → **Add Generic Destination**:
 - Webhook Url: `http://watch-next:9010/hooks/jellyfin?token=<WATCH_NEXT_TOKEN>`
 - Notification Type: **Playback Stop**
 - Item Type: **Episodes**
-- Send All Properties: on (so `ProviderIds`, `SeasonNumber`, `EpisodeNumber`,
+- Send All Properties: on (so `Provider_tvdb`, `SeasonNumber`, `EpisodeNumber`,
   `PlayedToCompletion` are all included; `watch-next` ignores anything it doesn't recognize)
 
 ### 4. New shows in Sonarr
