@@ -297,8 +297,8 @@ func tautulliHandler(cfg config) http.HandlerFunc {
 		recordEvent("tautulli")
 		var payload struct {
 			TVDBID  string `json:"tvdb_id"`
-			Season  int    `json:"season"`
-			Episode int    `json:"episode"`
+			Season  string `json:"season"`
+			Episode string `json:"episode"`
 		}
 		if err := json.NewDecoder(io.LimitReader(r.Body, maxBody)).Decode(&payload); err != nil {
 			log.Printf("tautulli: bad payload: %v", err)
@@ -315,7 +315,16 @@ func tautulliHandler(cfg config) http.HandlerFunc {
 			w.WriteHeader(http.StatusOK)
 			return
 		}
-		monitored, searched, err := handleWatched(cfg, tvdbID, payload.Season, payload.Episode)
+		season, sErr := strconv.Atoi(strings.TrimSpace(payload.Season))
+		episode, eErr := strconv.Atoi(strings.TrimSpace(payload.Episode))
+		if sErr != nil || eErr != nil {
+			log.Printf("tautulli: missing or invalid season/episode in payload")
+			recordError("bad_payload")
+			go pushMetrics(cfg.pushgatewayURL)
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		monitored, searched, err := handleWatched(cfg, tvdbID, season, episode)
 		if err != nil {
 			log.Printf("tautulli: %v", err)
 			recordError("handle_failed")

@@ -49,10 +49,13 @@ Settings → Notification Agents → **+ Add a new notification agent** → **We
 - Triggers tab: enable **Watched**
 - Data tab (Watched): JSON payload, built from Tautulli's own variable picker —
   ```json
-  {"tvdb_id": "{thetvdb_id}", "season": {season_num}, "episode": {episode_num}}
+  {"tvdb_id": "{thetvdb_id}", "season": "{season_num}", "episode": "{episode_num}"}
   ```
-  Confirm `{thetvdb_id}` in that same picker; the exact variable name has moved before across
-  Tautulli versions.
+  Every value must be quoted, season/episode included: Tautulli's Webhook agent parses the
+  template *as typed* as JSON before substituting anything, so an unquoted `{season_num}` makes
+  the raw template invalid JSON and Tautulli silently sends an empty body instead (no error
+  surfaced anywhere except its own log). Confirm `{thetvdb_id}` in that same picker; the exact
+  variable name has moved before across Tautulli versions.
 
 ### 3. Jellyfin
 
