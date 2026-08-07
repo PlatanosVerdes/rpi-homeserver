@@ -107,19 +107,26 @@ sync_app() {
 # Language.Any (id -1) the way the API pretends when displaying it — it silently rejects
 # everything regardless of language, defeating the whole point of the custom-format-based
 # language scoring (Audio Espanol/VOSE/Ingles) configured above. Since the API can't write this
-# column, go around it directly; a container with the appdata dir bind-mounted can update the
-# live sqlite file's row without stopping Radarr (verified safe: normal SQLite file locking).
+# column, go around it directly with a container that bind-mounts the appdata dir. A *live* write
+# while Radarr keeps running does NOT stick — Radarr already has the old (null) value cached in
+# memory from its own startup read and overwrites the file back to match it within moments,
+# regardless of what the row says on disk in between. Only a write immediately followed by a
+# restart survives, so Radarr loads the corrected value fresh instead of clobbering it.
 # Sonarr has no Language column on this table at all, so this is Radarr-only.
 fix_radarr_language() {
     local db="$APPDATA_ROOT/radarr/radarr.db"
     sudo test -f "$db" || return 0
-    docker run --rm -v "$APPDATA_ROOT/radarr:/data" python:3-alpine python3 -c "
+    local changed
+    changed=$(docker run --rm -v "$APPDATA_ROOT/radarr:/data" python:3-alpine python3 -c "
 import sqlite3
 conn = sqlite3.connect('/data/radarr.db', timeout=10)
-conn.execute('UPDATE QualityProfiles SET Language = -1 WHERE Language IS NULL OR Language != -1')
+cur = conn.execute('UPDATE QualityProfiles SET Language = -1 WHERE Language IS NULL OR Language != -1')
 conn.commit()
+print(cur.rowcount)
 conn.close()
-" > /dev/null 2>&1 || echo "[radarr] WARNING: could not fix QualityProfiles.Language" >&2
+" 2>/dev/null) || { echo "[radarr] WARNING: could not fix QualityProfiles.Language" >&2; return 1; }
+    [[ "$changed" =~ ^[0-9]+$ && "$changed" -gt 0 ]] || return 0  # already fixed, no restart needed
+    docker restart radarr > /dev/null && echo "[radarr] QualityProfiles.Language was reset ($changed row(s)), fixed and restarted"
 }
 
 sync_app radarr 7878
