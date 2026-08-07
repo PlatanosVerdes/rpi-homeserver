@@ -61,7 +61,10 @@ services:
     command:
       - --housekeeping_interval=30s
       - --docker_only=true
-      - --disable_metrics=advtcp,tcp,udp,percpu,sched,process
+      # disk/diskIO are the expensive ones (each housekeeping cycle walks every container's
+      # filesystem on external/mergerfs storage); we already track disk usage separately via
+      # disk-usage-metrics.sh, so cAdvisor's own per-container copy of that isn't needed.
+      - --disable_metrics=advtcp,tcp,udp,percpu,sched,process,disk,diskIO,accelerator
     networks:
       - media-network
 
