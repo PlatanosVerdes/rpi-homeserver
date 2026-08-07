@@ -505,7 +505,7 @@
           }
         }
       ],
-      "description": "Files replaced by a **different** quality, newest first.\n\nAn upgrade is two events at the same instant: the old file deleted with reason `Upgrade`, and the new\none imported. The same quality on both sides means it was a custom-format score upgrade, not a\nresolution change.\n\n**Colours follow the download policy, not the resolution:**\n🔵 4K · 🟢 what the TV direct-plays (Bluray/WEB 1080p) · 🟠 works but wastes space (Remux-1080p, 720p)\n· 🔴 unwanted (BR-DISK, cams, SD)"
+      "description": "Files replaced by a **different** quality, newest first.\n\nAn upgrade is two events at the same instant: the old file deleted with reason `Upgrade`, and the new\none imported. The same quality on both sides means it was a custom-format score upgrade, not a\nresolution change.\n\n**Colours follow the download policy, not the resolution:**\n\ud83d\udd35 4K \u00b7 \ud83d\udfe2 what the TV direct-plays (Bluray/WEB 1080p) \u00b7 \ud83d\udfe0 works but wastes space (Remux-1080p, 720p)\n\u00b7 \ud83d\udd34 unwanted (BR-DISK, cams, SD)"
     },
     {
       "type": "stat",
@@ -908,7 +908,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Everything Radarr is waiting for, and what it is waiting for.\n\n| Kind | Meaning |\n| :--- | :--- |\n| 🔵 `downloading` | in the queue right now. **Expected** is the ETA, or `stalled` when no bytes have moved |\n| 🟠 `missing` | monitored with no file at all: cannot be watched |\n| 🟢 `upgrade` | watchable, but below the profile cutoff |\n\n**Now** is the quality on disk, 🔴 `none` when there is no file.\n\n**Expected** is the honest half of \"when\". Nobody can say when someone uploads a good release, but\ntwo things are knowable:\n\n- `in cinemas, no digital date` — the film has no home release yet, so no amount of searching will\n  find a better one\n- `out, waiting for a good release` — it exists in the world, so this is down to an indexer carrying\n  it. The nightly cutoff search asks about exactly this list",
+      "description": "Everything Radarr is waiting for, and what it is waiting for.\n\n| Kind | Meaning |\n| :--- | :--- |\n| \ud83d\udd35 `downloading` | in the queue right now. **Expected** is the ETA, or `stalled` when no bytes have moved |\n| \ud83d\udfe0 `missing` | monitored with no file at all: cannot be watched |\n| \ud83d\udfe2 `upgrade` | watchable, but below the profile cutoff |\n\n**Now** is the quality on disk, \ud83d\udd34 `none` when there is no file.\n\n**Expected** is the honest half of \"when\". Nobody can say when someone uploads a good release, but\ntwo things are knowable:\n\n- `in cinemas, no digital date` \u2014 the film has no home release yet, so no amount of searching will\n  find a better one\n- `out, waiting for a good release` \u2014 it exists in the world, so this is down to an indexer carrying\n  it. The nightly cutoff search asks about exactly this list",
       "gridPos": {
         "h": 7,
         "w": 14,
@@ -2816,6 +2816,76 @@
       "panels": []
     },
     {
+      "id": 150,
+      "type": "gauge",
+      "title": "Storage used",
+      "description": "% of the /mnt/data pool in use. Max is the pool's real total capacity, not a guess \u2014 turns orange/red as it fills up.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 43
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "decimals": 1,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 75
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "auto",
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "pluginVersion": "12.3.3",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "((node_filesystem_size_bytes{mountpoint=\"/mnt/data\"} - node_filesystem_avail_bytes{mountpoint=\"/mnt/data\"}) / node_filesystem_size_bytes{mountpoint=\"/mnt/data\"}) * 100",
+          "instant": true,
+          "refId": "A"
+        }
+      ]
+    },
+    {
       "type": "piechart",
       "title": "Disk by quality",
       "datasource": {
@@ -2826,7 +2896,7 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 43
+        "y": 50
       },
       "fieldConfig": {
         "defaults": {
@@ -3352,7 +3422,7 @@
           "legendFormat": "{{quality}}"
         }
       ],
-      "description": "Space per quality, taken from Radarr, so the quality is the one it recorded and not a guess from\nthe filename.\n\nSame colours as the upgrades table: 🔵 4K · 🟢 good · 🟠 wasteful · 🔴 unwanted."
+      "description": "Space per quality, taken from Radarr, so the quality is the one it recorded and not a guess from\nthe filename.\n\nSame colours as the upgrades table: \ud83d\udd35 4K \u00b7 \ud83d\udfe2 good \u00b7 \ud83d\udfe0 wasteful \u00b7 \ud83d\udd34 unwanted."
     },
     {
       "id": 141,
@@ -3366,7 +3436,7 @@
         "h": 9,
         "w": 12,
         "x": 12,
-        "y": 43
+        "y": 50
       },
       "fieldConfig": {
         "defaults": {
@@ -3438,7 +3508,7 @@
         "h": 11,
         "w": 24,
         "x": 0,
-        "y": 52
+        "y": 59
       },
       "fieldConfig": {
         "defaults": {
@@ -3490,7 +3560,7 @@
           "range": false,
           "refId": "A",
           "expr": "topk(20, arr_media_size_bytes)",
-          "legendFormat": "{{title}}  ·  {{quality}}"
+          "legendFormat": "{{title}}  \u00b7  {{quality}}"
         }
       ],
       "description": "Largest titles in the library, with the quality that explains the size. Radarr is the source, so\neach imported file is counted once even when it is hardlinked to a torrent in downloads/."
@@ -3507,7 +3577,7 @@
         "h": 12,
         "w": 24,
         "x": 0,
-        "y": 63
+        "y": 70
       },
       "fieldConfig": {
         "defaults": {
@@ -3583,7 +3653,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 75
+        "y": 82
       },
       "targets": [
         {
