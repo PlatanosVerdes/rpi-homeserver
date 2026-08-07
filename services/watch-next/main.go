@@ -37,9 +37,16 @@ type config struct {
 	pushgatewayURL string
 }
 
-const recentActionsLimit = 20
+// Deliberately NOT running totals: those reset to 0 on every restart/deploy (in-memory state),
+// but Pushgateway only overwrites label combinations it's told about, so an incrementing counter
+// either resets misleadingly on every deploy or gets stuck forever on a stale value once a label
+// combo stops recurring. A bounded, timestamped event log sidesteps both: age/count are computed
+// at query time (e.g. `count(... > time() - 86400)`), the same pattern already used for
+// arr_quality_change_timestamp in scripts/media-metrics.py.
+const recentLimit = 20
 
 type recentAction struct {
+	source    string
 	title     string
 	season    int
 	episode   int
@@ -48,39 +55,32 @@ type recentAction struct {
 	ts        int64
 }
 
+type recentError struct {
+	source string
+	reason string
+	ts     int64
+}
+
 var (
-	metricsMu         sync.Mutex
-	eventsBySource    = map[string]int{}
-	errorsByReason    = map[string]int{}
-	episodesMonitored int
-	episodesSearched  int
-	lastEventTS       int64
-	recentActions     []recentAction
+	metricsMu     sync.Mutex
+	recentActions []recentAction
+	recentErrors  []recentError
 )
 
-func recordEvent(source string) {
+func recordAction(source, title string, season, episode, monitored, searched int) {
 	metricsMu.Lock()
-	eventsBySource[source]++
+	recentActions = append(recentActions, recentAction{source, title, season, episode, monitored, searched, time.Now().Unix()})
+	if len(recentActions) > recentLimit {
+		recentActions = recentActions[len(recentActions)-recentLimit:]
+	}
 	metricsMu.Unlock()
 }
 
-func recordError(reason string) {
+func recordError(source, reason string) {
 	metricsMu.Lock()
-	errorsByReason[reason]++
-	metricsMu.Unlock()
-}
-
-func recordProcessed(title string, season, episode, monitored, searched int) {
-	metricsMu.Lock()
-	episodesMonitored += monitored
-	episodesSearched += searched
-	lastEventTS = time.Now().Unix()
-	recentActions = append(recentActions, recentAction{
-		title: title, season: season, episode: episode,
-		monitored: monitored, searched: searched, ts: lastEventTS,
-	})
-	if len(recentActions) > recentActionsLimit {
-		recentActions = recentActions[len(recentActions)-recentActionsLimit:]
+	recentErrors = append(recentErrors, recentError{source, reason, time.Now().Unix()})
+	if len(recentErrors) > recentLimit {
+		recentErrors = recentErrors[len(recentErrors)-recentLimit:]
 	}
 	metricsMu.Unlock()
 }
@@ -92,25 +92,21 @@ func pushMetrics(pushgatewayURL string) {
 	var buf bytes.Buffer
 	w := func(format string, a ...any) { fmt.Fprintf(&buf, format, a...) }
 
-	w("# HELP watch_next_events_total Watched-hook calls received, by source\n# TYPE watch_next_events_total counter\n")
-	for source, n := range eventsBySource {
-		w("watch_next_events_total{source=%q} %d\n", source, n)
+	w("# HELP watch_next_action_timestamp Recent watched-triggered actions (last %d)\n# TYPE watch_next_action_timestamp gauge\n", recentLimit)
+	for i, a := range recentActions {
+		w("watch_next_action_timestamp{idx=\"%d\",source=%q,title=%q,season=\"%d\",episode=\"%d\",monitored=\"%d\",searched=\"%d\"} %d\n",
+			i, a.source, a.title, a.season, a.episode, a.monitored, a.searched, a.ts)
 	}
-	w("# HELP watch_next_episodes_monitored_total Episodes newly monitored\n# TYPE watch_next_episodes_monitored_total counter\nwatch_next_episodes_monitored_total %d\n", episodesMonitored)
-	w("# HELP watch_next_episodes_searched_total Episodes a search was fired for\n# TYPE watch_next_episodes_searched_total counter\nwatch_next_episodes_searched_total %d\n", episodesSearched)
-	w("# HELP watch_next_errors_total Watched-hook calls that did not result in an action, by reason\n# TYPE watch_next_errors_total counter\n")
-	for reason, n := range errorsByReason {
-		w("watch_next_errors_total{reason=%q} %d\n", reason, n)
-	}
-	w("# HELP watch_next_last_event_timestamp Unix timestamp of the last successfully processed watched event\n# TYPE watch_next_last_event_timestamp gauge\nwatch_next_last_event_timestamp %d\n", lastEventTS)
-	w("# HELP watch_next_action_timestamp When each of the last %d watched-triggered actions happened\n# TYPE watch_next_action_timestamp gauge\n", recentActionsLimit)
-	for _, a := range recentActions {
-		w("watch_next_action_timestamp{title=%q,season=\"%d\",episode=\"%d\",monitored=\"%d\",searched=\"%d\"} %d\n",
-			a.title, a.season, a.episode, a.monitored, a.searched, a.ts)
+	w("# HELP watch_next_error_timestamp Recent watched-hook calls that did not result in an action (last %d)\n# TYPE watch_next_error_timestamp gauge\n", recentLimit)
+	for i, e := range recentErrors {
+		w("watch_next_error_timestamp{idx=\"%d\",source=%q,reason=%q} %d\n", i, e.source, e.reason, e.ts)
 	}
 	metricsMu.Unlock()
 
-	req, err := http.NewRequest("POST", pushgatewayURL+"/metrics/job/watch_next", &buf)
+	// PUT, not POST: replaces the whole job every time, so an entry that rolled out of the
+	// last-`recentLimit` window (or an error that got fixed and stopped recurring) actually
+	// disappears from Prometheus instead of lingering forever under its old label set.
+	req, err := http.NewRequest("PUT", pushgatewayURL+"/metrics/job/watch_next", &buf)
 	if err != nil {
 		log.Printf("warning: metrics request build failed: %v", err)
 		return
@@ -313,12 +309,11 @@ func checkToken(r *http.Request, token string) bool {
 func tautulliHandler(cfg config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !checkToken(r, cfg.token) {
-			recordError("unauthorized")
+			recordError("tautulli", "unauthorized")
 			go pushMetrics(cfg.pushgatewayURL)
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
-		recordEvent("tautulli")
 		var payload struct {
 			TVDBID  string `json:"tvdb_id"`
 			Season  string `json:"season"`
@@ -326,7 +321,7 @@ func tautulliHandler(cfg config) http.HandlerFunc {
 		}
 		if err := json.NewDecoder(io.LimitReader(r.Body, maxBody)).Decode(&payload); err != nil {
 			log.Printf("tautulli: bad payload: %v", err)
-			recordError("bad_payload")
+			recordError("tautulli", "bad_payload")
 			go pushMetrics(cfg.pushgatewayURL)
 			w.WriteHeader(http.StatusOK)
 			return
@@ -334,7 +329,7 @@ func tautulliHandler(cfg config) http.HandlerFunc {
 		tvdbID, err := strconv.Atoi(strings.TrimSpace(payload.TVDBID))
 		if err != nil || tvdbID == 0 {
 			log.Printf("tautulli: missing or invalid tvdb_id in payload")
-			recordError("missing_tvdb_id")
+			recordError("tautulli", "missing_tvdb_id")
 			go pushMetrics(cfg.pushgatewayURL)
 			w.WriteHeader(http.StatusOK)
 			return
@@ -343,7 +338,7 @@ func tautulliHandler(cfg config) http.HandlerFunc {
 		episode, eErr := strconv.Atoi(strings.TrimSpace(payload.Episode))
 		if sErr != nil || eErr != nil {
 			log.Printf("tautulli: missing or invalid season/episode in payload")
-			recordError("bad_payload")
+			recordError("tautulli", "bad_payload")
 			go pushMetrics(cfg.pushgatewayURL)
 			w.WriteHeader(http.StatusOK)
 			return
@@ -351,9 +346,9 @@ func tautulliHandler(cfg config) http.HandlerFunc {
 		title, monitored, searched, err := handleWatched(cfg, tvdbID, season, episode)
 		if err != nil {
 			log.Printf("tautulli: %v", err)
-			recordError("handle_failed")
+			recordError("tautulli", "handle_failed")
 		} else {
-			recordProcessed(title, season, episode, monitored, searched)
+			recordAction("tautulli", title, season, episode, monitored, searched)
 		}
 		go pushMetrics(cfg.pushgatewayURL)
 		w.WriteHeader(http.StatusOK)
@@ -363,7 +358,7 @@ func tautulliHandler(cfg config) http.HandlerFunc {
 func jellyfinHandler(cfg config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !checkToken(r, cfg.token) {
-			recordError("unauthorized")
+			recordError("jellyfin", "unauthorized")
 			go pushMetrics(cfg.pushgatewayURL)
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
@@ -377,7 +372,7 @@ func jellyfinHandler(cfg config) http.HandlerFunc {
 		}
 		if err := json.NewDecoder(io.LimitReader(r.Body, maxBody)).Decode(&payload); err != nil {
 			log.Printf("jellyfin: bad payload: %v", err)
-			recordError("bad_payload")
+			recordError("jellyfin", "bad_payload")
 			go pushMetrics(cfg.pushgatewayURL)
 			w.WriteHeader(http.StatusOK)
 			return
@@ -387,11 +382,10 @@ func jellyfinHandler(cfg config) http.HandlerFunc {
 			w.WriteHeader(http.StatusOK)
 			return
 		}
-		recordEvent("jellyfin")
 		tvdbID, err := strconv.Atoi(strings.TrimSpace(payload.ProviderTvdb))
 		if err != nil || tvdbID == 0 {
 			log.Printf("jellyfin: missing or invalid Provider_tvdb in payload")
-			recordError("missing_tvdb_id")
+			recordError("jellyfin", "missing_tvdb_id")
 			go pushMetrics(cfg.pushgatewayURL)
 			w.WriteHeader(http.StatusOK)
 			return
@@ -399,9 +393,9 @@ func jellyfinHandler(cfg config) http.HandlerFunc {
 		title, monitored, searched, err := handleWatched(cfg, tvdbID, payload.SeasonNumber, payload.EpisodeNumber)
 		if err != nil {
 			log.Printf("jellyfin: %v", err)
-			recordError("handle_failed")
+			recordError("jellyfin", "handle_failed")
 		} else {
-			recordProcessed(title, payload.SeasonNumber, payload.EpisodeNumber, monitored, searched)
+			recordAction("jellyfin", title, payload.SeasonNumber, payload.EpisodeNumber, monitored, searched)
 		}
 		go pushMetrics(cfg.pushgatewayURL)
 		w.WriteHeader(http.StatusOK)

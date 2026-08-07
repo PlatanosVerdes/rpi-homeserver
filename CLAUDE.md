@@ -43,6 +43,7 @@ services/                   Source code for custom services built in this repo
   tailscale-metrics/        Go binary (cron) — exports Tailscale peer metrics to node_exporter
   deploy-webhook/           Python receiver (systemd) — deploys on GitHub push via Cloudflare tunnel
   watch-next/               Go service: monitors + searches the next Sonarr episode(s) on watch
+  subtitle-links/           Go service: page listing movies with a downloadable external subtitle
 
 scripts/                    Operational scripts
   crontab                   This repo's host cron jobs (a fragment; see install-crontab.sh)
