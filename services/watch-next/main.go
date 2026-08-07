@@ -37,6 +37,17 @@ type config struct {
 	pushgatewayURL string
 }
 
+const recentActionsLimit = 20
+
+type recentAction struct {
+	title     string
+	season    int
+	episode   int
+	monitored int
+	searched  int
+	ts        int64
+}
+
 var (
 	metricsMu         sync.Mutex
 	eventsBySource    = map[string]int{}
@@ -44,6 +55,7 @@ var (
 	episodesMonitored int
 	episodesSearched  int
 	lastEventTS       int64
+	recentActions     []recentAction
 )
 
 func recordEvent(source string) {
@@ -58,11 +70,18 @@ func recordError(reason string) {
 	metricsMu.Unlock()
 }
 
-func recordProcessed(monitored, searched int) {
+func recordProcessed(title string, season, episode, monitored, searched int) {
 	metricsMu.Lock()
 	episodesMonitored += monitored
 	episodesSearched += searched
 	lastEventTS = time.Now().Unix()
+	recentActions = append(recentActions, recentAction{
+		title: title, season: season, episode: episode,
+		monitored: monitored, searched: searched, ts: lastEventTS,
+	})
+	if len(recentActions) > recentActionsLimit {
+		recentActions = recentActions[len(recentActions)-recentActionsLimit:]
+	}
 	metricsMu.Unlock()
 }
 
@@ -84,6 +103,11 @@ func pushMetrics(pushgatewayURL string) {
 		w("watch_next_errors_total{reason=%q} %d\n", reason, n)
 	}
 	w("# HELP watch_next_last_event_timestamp Unix timestamp of the last successfully processed watched event\n# TYPE watch_next_last_event_timestamp gauge\nwatch_next_last_event_timestamp %d\n", lastEventTS)
+	w("# HELP watch_next_action_timestamp When each of the last %d watched-triggered actions happened\n# TYPE watch_next_action_timestamp gauge\n", recentActionsLimit)
+	for _, a := range recentActions {
+		w("watch_next_action_timestamp{title=%q,season=\"%d\",episode=\"%d\",monitored=\"%d\",searched=\"%d\"} %d\n",
+			a.title, a.season, a.episode, a.monitored, a.searched, a.ts)
+	}
 	metricsMu.Unlock()
 
 	req, err := http.NewRequest("POST", pushgatewayURL+"/metrics/job/watch_next", &buf)
@@ -200,29 +224,29 @@ func sonarrRequest(cfg config, method, path string, body []byte) ([]byte, error)
 
 // handleWatched monitors and, if needed, searches the next cfg.margin episodes in the same
 // series after the one just watched (season/episode as reported by the watched hook). Returns
-// how many episodes were newly monitored and how many were searched, for the caller to record.
-func handleWatched(cfg config, tvdbID, season, episodeNum int) (monitoredCount, searchedCount int, err error) {
+// the series title and how many episodes were newly monitored/searched, for the caller to record.
+func handleWatched(cfg config, tvdbID, season, episodeNum int) (title string, monitoredCount, searchedCount int, err error) {
 	seriesBody, err := sonarrRequest(cfg, "GET", fmt.Sprintf("/api/v3/series?tvdbId=%d", tvdbID), nil)
 	if err != nil {
-		return 0, 0, fmt.Errorf("series lookup: %w", err)
+		return "", 0, 0, fmt.Errorf("series lookup: %w", err)
 	}
 	var seriesList []map[string]interface{}
 	if err := json.Unmarshal(seriesBody, &seriesList); err != nil {
-		return 0, 0, fmt.Errorf("series lookup: bad json: %w", err)
+		return "", 0, 0, fmt.Errorf("series lookup: bad json: %w", err)
 	}
 	if len(seriesList) == 0 {
-		return 0, 0, fmt.Errorf("no series found for tvdbId %d", tvdbID)
+		return "", 0, 0, fmt.Errorf("no series found for tvdbId %d", tvdbID)
 	}
 	seriesID := toInt(seriesList[0]["id"])
-	title, _ := seriesList[0]["title"].(string)
+	title, _ = seriesList[0]["title"].(string)
 
 	epsBody, err := sonarrRequest(cfg, "GET", fmt.Sprintf("/api/v3/episode?seriesId=%d", seriesID), nil)
 	if err != nil {
-		return 0, 0, fmt.Errorf("%s: episode list: %w", title, err)
+		return title, 0, 0, fmt.Errorf("%s: episode list: %w", title, err)
 	}
 	var episodes []map[string]interface{}
 	if err := json.Unmarshal(epsBody, &episodes); err != nil {
-		return 0, 0, fmt.Errorf("%s: episode list: bad json: %w", title, err)
+		return title, 0, 0, fmt.Errorf("%s: episode list: bad json: %w", title, err)
 	}
 
 	// Drop specials (season 0) and sort as one flat run, so the margin rolls into the next
@@ -249,7 +273,7 @@ func handleWatched(cfg config, tvdbID, season, episodeNum int) (monitoredCount, 
 		}
 	}
 	if idx == -1 {
-		return 0, 0, fmt.Errorf("%s: S%02dE%02d not found among its episodes", title, season, episodeNum)
+		return title, 0, 0, fmt.Errorf("%s: S%02dE%02d not found among its episodes", title, season, episodeNum)
 	}
 
 	var toSearch []int
@@ -273,12 +297,12 @@ func handleWatched(cfg config, tvdbID, season, episodeNum int) (monitoredCount, 
 	if len(toSearch) > 0 {
 		cmdBody, _ := json.Marshal(map[string]interface{}{"name": "EpisodeSearch", "episodeIds": toSearch})
 		if _, err := sonarrRequest(cfg, "POST", "/api/v3/command", cmdBody); err != nil {
-			return monitoredCount, 0, fmt.Errorf("%s: search command: %w", title, err)
+			return title, monitoredCount, 0, fmt.Errorf("%s: search command: %w", title, err)
 		}
 	}
 
 	log.Printf("%s S%02dE%02d watched: monitored %d, searching %d", title, season, episodeNum, monitoredCount, len(toSearch))
-	return monitoredCount, len(toSearch), nil
+	return title, monitoredCount, len(toSearch), nil
 }
 
 func checkToken(r *http.Request, token string) bool {
@@ -324,12 +348,12 @@ func tautulliHandler(cfg config) http.HandlerFunc {
 			w.WriteHeader(http.StatusOK)
 			return
 		}
-		monitored, searched, err := handleWatched(cfg, tvdbID, season, episode)
+		title, monitored, searched, err := handleWatched(cfg, tvdbID, season, episode)
 		if err != nil {
 			log.Printf("tautulli: %v", err)
 			recordError("handle_failed")
 		} else {
-			recordProcessed(monitored, searched)
+			recordProcessed(title, season, episode, monitored, searched)
 		}
 		go pushMetrics(cfg.pushgatewayURL)
 		w.WriteHeader(http.StatusOK)
@@ -349,9 +373,7 @@ func jellyfinHandler(cfg config) http.HandlerFunc {
 			PlayedToCompletion bool   `json:"PlayedToCompletion"`
 			SeasonNumber       int    `json:"SeasonNumber"`
 			EpisodeNumber      int    `json:"EpisodeNumber"`
-			ProviderIds        struct {
-				Tvdb string `json:"Tvdb"`
-			} `json:"ProviderIds"`
+			ProviderTvdb       string `json:"Provider_tvdb"`
 		}
 		if err := json.NewDecoder(io.LimitReader(r.Body, maxBody)).Decode(&payload); err != nil {
 			log.Printf("jellyfin: bad payload: %v", err)
@@ -366,20 +388,20 @@ func jellyfinHandler(cfg config) http.HandlerFunc {
 			return
 		}
 		recordEvent("jellyfin")
-		tvdbID, err := strconv.Atoi(strings.TrimSpace(payload.ProviderIds.Tvdb))
+		tvdbID, err := strconv.Atoi(strings.TrimSpace(payload.ProviderTvdb))
 		if err != nil || tvdbID == 0 {
-			log.Printf("jellyfin: missing or invalid ProviderIds.Tvdb in payload")
+			log.Printf("jellyfin: missing or invalid Provider_tvdb in payload")
 			recordError("missing_tvdb_id")
 			go pushMetrics(cfg.pushgatewayURL)
 			w.WriteHeader(http.StatusOK)
 			return
 		}
-		monitored, searched, err := handleWatched(cfg, tvdbID, payload.SeasonNumber, payload.EpisodeNumber)
+		title, monitored, searched, err := handleWatched(cfg, tvdbID, payload.SeasonNumber, payload.EpisodeNumber)
 		if err != nil {
 			log.Printf("jellyfin: %v", err)
 			recordError("handle_failed")
 		} else {
-			recordProcessed(monitored, searched)
+			recordProcessed(title, payload.SeasonNumber, payload.EpisodeNumber, monitored, searched)
 		}
 		go pushMetrics(cfg.pushgatewayURL)
 		w.WriteHeader(http.StatusOK)
