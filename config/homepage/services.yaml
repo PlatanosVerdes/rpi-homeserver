@@ -1,7 +1,7 @@
 - Media:
     - Plex:
         icon: plex.png
-        href: https://plex.platanosverdes.com/web
+        href: http://{{HOMEPAGE_VAR_TAILSCALE_IP}}:32400/web
         server: my-docker
         container: plex
         widget:
