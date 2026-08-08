@@ -101,7 +101,7 @@ the paywall on their account.
 | Option | What it costs | Catch |
 | :--- | :--- | :--- |
 | **Plex Pass on the owner's account** | One subscription | None. Covers the owner and every shared user, remotely, with no network setup |
-| **Invite the friend into the tailnet** as an external user | Free | Their Tailscale ACL is allow-all by default, so restrict them to `192.168.1.180:32400` **before** inviting. Only works on devices that can run Tailscale, so no TVs or Chromecasts. As "local" they escape the per-user bandwidth limits |
+| **Invite the friend into the tailnet** as an external user | Free | Needs an ACL written **before** inviting, or they reach every machine in the house: step 7 of [tailscale.md](tailscale.md) has the policy. Only works on devices that can run Tailscale, so no TVs or Chromecasts. As "local" they escape the per-user bandwidth limits |
 | **Their own Remote Watch Pass** | One subscription per viewer | Covers only that account, does not extend to anyone else |
 
 Prefer the Plex Pass for more than a person or two. The `local` flag behaviour is not documented by

@@ -70,6 +70,74 @@ subnet routes for it.
 
 ---
 
+## Step 7 — Giving Someone Else Access
+
+Before inviting anyone, understand what the tailnet grants by default: **everything**. With no
+policy of its own a tailnet is allow-all, so an invited person reaches every device on every port,
+including the other machines in the house and SSH on the Pi. Write the policy first, invite second.
+
+### Invite, do not share
+
+Two different features, and only one of them works here:
+
+| | What the other person gets |
+| :--- | :--- |
+| **Share a machine** (Machines → Share) | The device itself, and it can be used as an exit node. **Not its subnet routes**, which Tailscale states outright: *"Shared machines do not advertise subnets to the tailnets they're shared into"* |
+| **Invite an external user** (Settings → Users → Invite) | A place in the tailnet, subnet routes included, restricted by whatever the policy says |
+
+Sharing the machine is the intuitive choice and it is the wrong one: without the subnet routes the
+guest can only reach Plex on the `100.x` address, which is the one that triggers the paywall (see
+[plex-remote-access.md](plex-remote-access.md)).
+
+### The policy
+
+Paste into Access controls, replacing the two placeholder addresses:
+
+```json
+{
+  "acls": [
+    {"action": "accept", "src": ["owner@example.com"], "dst": ["*:*"]},
+    {"action": "accept", "src": ["owner@example.com"], "dst": ["autogroup:internet:*"]},
+
+    {"action": "accept",
+     "src": ["friend@example.com"],
+     "dst": ["100.125.71.20:*", "192.168.1.180:*", "192.168.1.154:*"]}
+  ],
+
+  "tests": [
+    {"src": "friend@example.com",
+     "accept": ["192.168.1.180:32400"],
+     "deny":   ["100.120.107.32:22"]}
+  ]
+}
+```
+
+| Rule | Why it is there |
+| :--- | :--- |
+| Owner → `*:*` | Defining any ACL flips the tailnet to **deny by default**. Without this line you lock yourself out of your own machines |
+| Owner → `autogroup:internet:*` | **The exit node stops working without it.** Allowing the exit node device as a destination is not the same thing: *"That only permits connections to the exit node, such as SSH. It does not permit using the device as an internet gateway"* |
+| Friend → the Pi's three addresses | The tailnet address plus the two advertised `/32`s, so Plex resolves to a `local=true` connection. All ports, so they also get Grafana and the rest of the Pi. Narrow the ports if that is not wanted |
+| `tests` | Tailscale refuses to save a policy whose tests fail, so the guest being locked out of the other machines is enforced, not assumed |
+
+Press **Preview** before saving. A policy that denies your own account is recoverable only from
+another admin session.
+
+### Why the /32 routes matter here
+
+The guest rule hands over the advertised subnet routes, and those are only `192.168.1.180/32` and
+`192.168.1.154/32`, both of which are the Pi itself. Nothing else on the home LAN is reachable
+through them. Had the Pi advertised `192.168.1.0/24`, that same rule would have handed the guest
+every device in the house.
+
+### What this does not touch
+
+Devices on the home LAN without Tailscale (a TV, a phone on the wifi) never enter the tailnet at
+all, so no policy applies to them and local playback is unaffected. A machine that *does* run
+Tailscale at home reaches the Pi through the tunnel because of the `/32` routes, so it is the
+owner's own rule above that keeps it working.
+
+---
+
 ## Further Reading
 
 - [Tailscale docs: Block ads on all devices using Raspberry Pi](https://tailscale.com/docs/solutions/block-ads-all-devices-anywhere-using-raspberry-pi)
