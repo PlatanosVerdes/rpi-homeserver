@@ -55,6 +55,7 @@ scripts/                    Operational scripts
   media-metrics.py          Upgrades, torrents, indexer status/usage -> Pushgateway (cron)
   sync-arr-config.sh        Pushes config/arr/*/*.json into Radarr/Sonarr (on deploy)
   sync-pihole-dns.sh        Pushes Caddy's *.platanosverdes.com hosts into Pi-hole (on deploy)
+  sync-plex-prefs.sh        Pushes PLEX_LAN_NETWORKS into Plex's LAN Networks (on deploy)
   mount_setup.sh            One-time external disk mount setup
   rebuild-service.sh        Manual single-service rebuild helper
   bws-run.py                Bitwarden SM wrapper (dropped, kept for reference only)
@@ -92,9 +93,10 @@ docker compose up -d
 3. If HEAD changed → `docker compose up -d --build --remove-orphans`
 4. If no change → `docker compose up -d --remove-orphans` (ensures containers are running)
 5. Installs the merged host crontab (`install-crontab.sh`)
-6. Converges Radarr/Sonarr's custom formats and quality profiles (`sync-arr-config.sh`) and
-   Pi-hole's `*.platanosverdes.com` DNS records (`sync-pihole-dns.sh`) to what is committed —
-   both apps must already be up, hence running after compose rather than before
+6. Converges Radarr/Sonarr's custom formats and quality profiles (`sync-arr-config.sh`),
+   Pi-hole's `*.platanosverdes.com` DNS records (`sync-pihole-dns.sh`) and Plex's LAN Networks
+   (`sync-plex-prefs.sh`) to what is committed — the apps must already be up, hence running
+   after compose rather than before
 7. Pushes metrics to Pushgateway (visible in Grafana "Deploy Monitor" dashboard)
 
 Order matters: the render sits after the pull (or it would use a stale template) and before
@@ -119,6 +121,13 @@ The cron stays as the self-heal net.
 - **Remote (Tailscale):** All HTTPS subdomains (`*.platanosverdes.com`) resolve to the Pi's Tailscale IP (`TAILSCALE_IP`). Certificates issued automatically via Cloudflare DNS challenge.
 - **Pi-hole:** DNS for the whole tailnet. All `*.platanosverdes.com` subdomains point to `TAILSCALE_IP` in Pi-hole's custom DNS.
 - **Docker network:** All services share `media-network` (bridge).
+- **Plex over Tailscale:** Plex bills playback as remote (Plex Pass / Remote Watch Pass, paid since
+  April 2025) based on the *source IP* of the connection. It runs on the host network and its
+  `tailscale0` address is a `/32`, so tailnet peers look external unless `100.64.0.0/10` is listed
+  in Settings > Network > LAN Networks. That list is `PLEX_LAN_NETWORKS` in `.env`, pushed on every
+  deploy by `scripts/sync-plex-prefs.sh` — no Plex image exposes it as an env var, see
+  [docs/tailscale.md](docs/tailscale.md). Do not confuse it with `allowedNetworks`, which only
+  skips authentication.
 - **Caddy extension from a companion repo:** the Caddyfile imports two globs,
   `config/caddy/services/*.caddy` (extra routes kept in this repo) and
   `/etc/caddy/ext-services/*.caddy` (routes owned by another repo). The second one is a bind mount
@@ -212,6 +221,7 @@ CONFIG_ROOT=./config
 APP_CONFIG_PATH=./appdata
 CF_API_TOKEN                   # Cloudflare DNS token for HTTPS certs
 TAILSCALE_API_KEY              # Read directly by tailscale-metrics binary
+PLEX_LAN_NETWORKS              # Networks Plex treats as local (see Networking)
 ```
 
 ---
