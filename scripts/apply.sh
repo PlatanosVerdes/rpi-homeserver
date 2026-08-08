@@ -194,6 +194,21 @@ deploy_repo() {
         fi
     fi
 
+    # Same trap as the alerting config above: the Caddyfile is a bind mount, so changing it never
+    # makes compose recreate the container, and Caddy only reads it at startup. Every routing change
+    # committed here has silently needed a manual restart to take effect.
+    # `caddy reload` and not `docker restart`: it swaps the config in place without dropping
+    # connections or re-reading the certificate store.
+    if [[ "$label" == "homeserver" && "$before" != "$after" ]] &&
+        git diff --name-only "$before" "$after" | grep -q '^config/caddy/' &&
+        docker ps --format '{{.Names}}' | grep -qx caddy; then
+        if docker exec caddy caddy reload --config /etc/caddy/Caddyfile >/dev/null 2>&1; then
+            log "[$label] Caddy config changed, reloaded"
+        else
+            log "[$label] WARNING: Caddy config changed but the reload was rejected, still on the old routes"
+        fi
+    fi
+
     if [ "$before" != "$after" ]; then
         # Docs-only commits (e.g. PENDING.md, README.md) touch nothing Docker reads, so skip the
         # rebuild — a `.md`-only diff would otherwise still trigger a full `--build` pass.
