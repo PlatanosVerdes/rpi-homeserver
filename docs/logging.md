@@ -86,8 +86,30 @@ Worth knowing before you go looking for something that was never there:
   is doing. Read those with `docker exec`, or point Vector at the file if it earns the mount.
 - **The host itself.** The Raspberry Pi's own system log, SSH logins and `auth.log` are not here.
   Use `journalctl` on the Pi for those.
-- **Caddy's access log.** Caddy records errors, but not every request, unless a site is given a
-  `log` directive. Nothing here turns that on.
+- **Requests that never reach Caddy.** Plex is deliberately not proxied and Jellyfin apps often talk
+  to the Pi directly by IP, so neither shows up in the access log below. It records what went
+  through the reverse proxy, which is not the same as everything you watched.
+
+## The Caddy access log
+
+Every site block in the Caddyfile carries a `log` directive, so Caddy writes one JSON line per
+request to stderr, where Vector picks it up like any other container output. There is no extra
+pipeline and no file on disk to rotate.
+
+It exists because nothing else knows which services actually get *used*. Prometheus measures whether
+they are up; being up and being opened are different questions, and only this answers the second.
+
+The blackbox probes hit containers directly (`http://jellyfin:8096/health`), not these routes, so
+the access log is real browser traffic rather than a health check every 30 seconds.
+
+Which hosts you opened, busiest first:
+
+```logsql
+container:caddy AND _msg:"handled request" | stats by (request.host) count() as hits | sort by (hits desc)
+```
+
+Bear in mind one page view is many lines: a web UI pulls scripts, icons and API calls, all of them
+logged. It ranks reliably but the counts are requests, not visits.
 
 ## Where it is stored
 
