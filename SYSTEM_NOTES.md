@@ -157,6 +157,44 @@ The limit is 40 rather than unlimited so a much larger library cannot open hundr
 a Pi. This setting lives in `appdata/qbittorrent/` and is therefore **not** reproducible from git:
 if the Pi is rebuilt, set it again.
 
+## qBittorrent global download limit
+
+`dl_limit` set to **10 MiB/s** (10485760 B/s) on 2026-08-08, live through the WebUI API. It was
+unlimited. Same caveat as above: `appdata/` only, set it again if the Pi is rebuilt.
+
+Why: that night the 02:00 `cutoff-search.sh` run found upgrades for 7 films at once and handed
+qBittorrent ~226 GB. Load average hit **16** on a 4-core Pi and stayed there for 100 minutes, with 8
+processes blocked on I/O. Nothing actually failed — no blackbox probe missed, latency went from 0.03s
+to 0.25s — but everything was sluggish for an hour and a half.
+
+**The line is not the constraint and never was.** Speedtest gives a steady 770 Mbps (96 MB/s, 30-day
+minimum 716), so even the burst that caused this was using 40% of the fibre. What cannot keep up is
+the storage: `/mnt/data` is mergerfs over two USB spinning disks, and mergerfs is FUSE, so every
+written byte crosses userspace and costs CPU. That is where the 1.0-1.5 cores of kernel time came
+from, alongside the seeking of three torrents writing to platters at once.
+
+Where 10 comes from, correlating download rate against load over 14 days:
+
+| MB/s | cores busy (of 4) | load5 median |
+| ---: | ---: | ---: |
+| 5-8 | 1.39 | 2.43 |
+| 8-12 | 1.82 | 3.39 |
+| 12-16 | 2.10 | 5.24 |
+| 25-40 | 3.03 | 12.08 |
+
+Load crosses the core count somewhere around 10 MB/s, so that is the ceiling worth holding: it keeps
+the run queue under 4 while still clearing a 50 GB release in about 85 minutes. Since the fibre is
+nowhere near the limiting factor, buying speed above this point costs responsiveness and saves
+nothing that matters.
+
+The knob is the rate, not the concurrency. `max_active_downloads` was already 3; three 4K torrents
+pulling at line speed saturate this box on their own, so capping how many run in parallel would not
+have helped.
+
+`alt_dl_limit` (also 10 MiB/s) is unrelated and deliberately left alone: it only applies while
+`scheduler_enabled` is true, and it is false, so it is dead config — mentioned here only so it is not
+mistaken for the limit in force.
+
 ## Prowlarr indexers
 
 Also state that lives in `appdata/` and cannot be restored from git. A backup of every indexer,
