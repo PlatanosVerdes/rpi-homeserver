@@ -221,34 +221,77 @@ type itemsResponse struct {
 	Series []series `json:"series"`
 }
 
-// itemsCache avoids re-walking the whole library (including every series' episodes) on every
-// page load: the library changes on the order of hours (a new Bazarr grab, a new episode), not
-// seconds, so a short TTL turns repeat loads near-instant without ever serving very stale data.
-const itemsCacheTTL = 2 * time.Minute
+// Nobody waits for Jellyfin. A goroutine keeps a snapshot of the library fresh and every request
+// is answered from it, because walking the library is expensive and the old TTL cache made a
+// visitor pay for it: ~0.7s for the movie list (Fields=MediaStreams costs 69x the same query
+// without it) plus ~2s for One Pace's episodes alone, on every load past the TTL. The page itself
+// has always rendered in 0.02s; this is what the browser was waiting on afterwards.
+const itemsRefreshEvery = 2 * time.Minute
 
 var (
-	itemsCacheMu   sync.Mutex
-	itemsCacheData itemsResponse
-	itemsCacheAt   time.Time
+	itemsMu   sync.RWMutex
+	itemsData itemsResponse
+	itemsAt   time.Time
+	refreshMu sync.Mutex // one walk at a time, so a cold start cannot trigger two at once
 )
 
+// refreshItems replaces the snapshot. Movies and series are independent calls, so they go at the
+// same time instead of one after the other.
+func refreshItems(cfg config) error {
+	refreshMu.Lock()
+	defer refreshMu.Unlock()
+
+	var (
+		wg               sync.WaitGroup
+		movies           []movie
+		ser              []series
+		movieErr, serErr error
+	)
+	wg.Add(2)
+	go func() { defer wg.Done(); movies, movieErr = fetchMovies(cfg) }()
+	go func() { defer wg.Done(); ser, serErr = fetchSeries(cfg) }()
+	wg.Wait()
+	if movieErr != nil {
+		return movieErr
+	}
+	if serErr != nil {
+		return serErr
+	}
+
+	itemsMu.Lock()
+	itemsData = itemsResponse{Movies: movies, Series: ser}
+	itemsAt = time.Now()
+	itemsMu.Unlock()
+	return nil
+}
+
+// getItems answers from the snapshot, and only blocks on the very first call, before the
+// background refresher has produced one.
 func getItems(cfg config) (itemsResponse, error) {
-	itemsCacheMu.Lock()
-	defer itemsCacheMu.Unlock()
-	if time.Since(itemsCacheAt) < itemsCacheTTL {
-		return itemsCacheData, nil
+	itemsMu.RLock()
+	data, at := itemsData, itemsAt
+	itemsMu.RUnlock()
+	if !at.IsZero() {
+		return data, nil
 	}
-	movies, err := fetchMovies(cfg)
-	if err != nil {
+	if err := refreshItems(cfg); err != nil {
 		return itemsResponse{}, err
 	}
-	ser, err := fetchSeries(cfg)
-	if err != nil {
-		return itemsResponse{}, err
+	itemsMu.RLock()
+	defer itemsMu.RUnlock()
+	return itemsData, nil
+}
+
+// keepItemsFresh refreshes forever in the background. A failed refresh keeps the previous
+// snapshot instead of blanking the page: a subtitle list a few minutes old beats an error, and
+// Jellyfin restarting should not take this page down with it.
+func keepItemsFresh(cfg config) {
+	for {
+		if err := refreshItems(cfg); err != nil {
+			log.Printf("refresh items: %v (serving the previous snapshot)", err)
+		}
+		time.Sleep(itemsRefreshEvery)
 	}
-	itemsCacheData = itemsResponse{Movies: movies, Series: ser}
-	itemsCacheAt = time.Now()
-	return itemsCacheData, nil
 }
 
 func apiHandler(cfg config) http.HandlerFunc {
@@ -443,6 +486,7 @@ func imageHandler(cfg config) http.HandlerFunc {
 func main() {
 	cfg := loadConfig()
 	log.Printf("subtitle-links started, jellyfin=%s", cfg.jellyfinURL)
+	go keepItemsFresh(cfg)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", indexHandler)
