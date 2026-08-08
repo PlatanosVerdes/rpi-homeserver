@@ -505,7 +505,7 @@
           }
         }
       ],
-      "description": "Files replaced by a **different** quality, newest first.\n\nAn upgrade is two events at the same instant: the old file deleted with reason `Upgrade`, and the new\none imported. The same quality on both sides means it was a custom-format score upgrade, not a\nresolution change.\n\n**Colours follow the download policy, not the resolution:**\n\ud83d\udd35 4K \u00b7 \ud83d\udfe2 what the TV direct-plays (Bluray/WEB 1080p) \u00b7 \ud83d\udfe0 works but wastes space (Remux-1080p, 720p)\n\u00b7 \ud83d\udd34 unwanted (BR-DISK, cams, SD)"
+      "description": "Files replaced by a **different** quality, newest first.\n\nAn upgrade is two events at the same instant: the old file deleted with reason `Upgrade`, and the new\none imported. The same quality on both sides means it was a custom-format score upgrade, not a\nresolution change.\n\n**Colours follow the download policy, not the resolution:**\n🔵 4K · 🟢 what the TV direct-plays (Bluray/WEB 1080p) · 🟠 works but wastes space (Remux-1080p, 720p)\n· 🔴 unwanted (BR-DISK, cams, SD)"
     },
     {
       "type": "stat",
@@ -908,7 +908,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Everything Radarr is waiting for, and what it is waiting for.\n\n| Kind | Meaning |\n| :--- | :--- |\n| \ud83d\udd35 `downloading` | in the queue right now. **Expected** is the ETA, or `stalled` when no bytes have moved |\n| \ud83d\udfe0 `missing` | monitored with no file at all: cannot be watched |\n| \ud83d\udfe2 `upgrade` | watchable, but below the profile cutoff |\n\n**Now** is the quality on disk, \ud83d\udd34 `none` when there is no file.\n\n**Expected** is the honest half of \"when\". Nobody can say when someone uploads a good release, but\ntwo things are knowable:\n\n- `in cinemas, no digital date` \u2014 the film has no home release yet, so no amount of searching will\n  find a better one\n- `out, waiting for a good release` \u2014 it exists in the world, so this is down to an indexer carrying\n  it. The nightly cutoff search asks about exactly this list",
+      "description": "Everything Radarr is waiting for, and what it is waiting for.\n\n| Kind | Meaning |\n| :--- | :--- |\n| 🔵 `downloading` | in the queue right now. **Expected** is the ETA, or `stalled` when no bytes have moved |\n| 🟠 `missing` | monitored with no file at all: cannot be watched |\n| 🟢 `upgrade` | watchable, but below the profile cutoff |\n\n**Now** is the quality on disk, 🔴 `none` when there is no file.\n\n**Expected** is the honest half of \"when\". Nobody can say when someone uploads a good release, but\ntwo things are knowable:\n\n- `in cinemas, no digital date` — the film has no home release yet, so no amount of searching will\n  find a better one\n- `out, waiting for a good release` — it exists in the world, so this is down to an indexer carrying\n  it. The nightly cutoff search asks about exactly this list",
       "gridPos": {
         "h": 7,
         "w": 14,
@@ -2819,7 +2819,7 @@
       "id": 150,
       "type": "gauge",
       "title": "Storage used",
-      "description": "% of the /mnt/data pool in use. Max is the pool's real total capacity, not a guess \u2014 turns orange/red as it fills up.",
+      "description": "% of the /mnt/data pool in use. Max is the pool's real total capacity, not a guess — turns orange/red as it fills up.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -3484,7 +3484,7 @@
           "legendFormat": "{{quality}}"
         }
       ],
-      "description": "Space per quality, taken from Radarr, so the quality is the one it recorded and not a guess from\nthe filename.\n\nSame colours as the upgrades table: \ud83d\udd35 4K \u00b7 \ud83d\udfe2 good \u00b7 \ud83d\udfe0 wasteful \u00b7 \ud83d\udd34 unwanted."
+      "description": "Space per quality, taken from Radarr, so the quality is the one it recorded and not a guess from\nthe filename.\n\nSame colours as the upgrades table: 🔵 4K · 🟢 good · 🟠 wasteful · 🔴 unwanted."
     },
     {
       "id": 141,
@@ -3622,7 +3622,7 @@
           "range": false,
           "refId": "A",
           "expr": "topk(20, arr_media_size_bytes)",
-          "legendFormat": "{{title}}  \u00b7  {{quality}}"
+          "legendFormat": "{{title}}  ·  {{quality}}"
         }
       ],
       "description": "Largest titles in the library, with the quality that explains the size. Radarr is the source, so\neach imported file is counted once even when it is hardlinked to a torrent in downloads/."
@@ -3848,6 +3848,247 @@
       },
       "pluginVersion": "12.3.3",
       "description": "The same files as the panel above, with their full path, and filtered by the **Folder** dropdown.\n\nWritten periodically by `disk-usage-metrics.sh`, so a file deleted moments ago can still appear here\nuntil the next run.\n\nOne line per inode: the *arrs hardlink on import, so a grabbed file and its library copy are the same\nbytes under two paths. Counting both would double the footer total."
+    },
+    {
+      "type": "row",
+      "title": "Audio languages",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 74
+      },
+      "panels": []
+    },
+    {
+      "type": "table",
+      "title": "What audio each film has",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Every film in Radarr and the audio languages its file carries, straight from Radarr's own\nnaming (no translation table here).\n\nThe `Audio language` picker at the top filters the list: leave it on All to see the whole\nlibrary with every language each film has, or pick one to get only the films that have it.\nA film with several languages is one series per language underneath, which is what makes the\nfilter work; the grouping collapses it back to one row per film.",
+      "gridPos": {
+        "h": 13,
+        "w": 16,
+        "x": 0,
+        "y": 75
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left",
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Langs"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 70
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Channels"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 90
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Codec"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": ""
+        },
+        "sortBy": [
+          {
+            "displayName": "Film",
+            "desc": false
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": "__auto",
+          "expr": "arr_media_audio{language=~\"$language\"}"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "title": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "languages": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "language_count": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "codec": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "channels": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "quality": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              }
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "renameByName": {
+              "title": "Film",
+              "languages (lastNotNull)": "Audio languages",
+              "language_count (lastNotNull)": "Langs",
+              "codec (lastNotNull)": "Codec",
+              "channels (lastNotNull)": "Channels",
+              "quality (lastNotNull)": "Quality"
+            },
+            "indexByName": {
+              "title": 0,
+              "languages (lastNotNull)": 1,
+              "language_count (lastNotNull)": 2,
+              "codec (lastNotNull)": 3,
+              "channels (lastNotNull)": 4,
+              "quality (lastNotNull)": 5
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "bargauge",
+      "title": "Films per language",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "How many films carry each audio language. Counts every film that has the track, so a film\nwith five languages is counted under all five and the total is larger than the library.",
+      "gridPos": {
+        "h": 13,
+        "w": 8,
+        "x": 16,
+        "y": 75
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "color": {
+            "mode": "continuous-BlPu"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "minVizWidth": 8,
+        "minVizHeight": 12,
+        "maxVizHeight": 20,
+        "namePlacement": "left",
+        "sizing": "auto",
+        "legend": {
+          "showLegend": false
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "legendFormat": "{{language}}",
+          "expr": "sort_desc(count by (language) (arr_media_audio))"
+        }
+      ]
     }
   ],
   "preload": false,
@@ -3871,6 +4112,35 @@
         "definition": "label_values(disk_root_bytes, root)",
         "query": {
           "query": "label_values(disk_root_bytes, root)",
+          "refId": "StandardVariableQuery"
+        },
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "current": {
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "refresh": 2,
+        "sort": 1,
+        "hide": 0,
+        "options": []
+      },
+      {
+        "name": "language",
+        "label": "Audio language",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "definition": "label_values(arr_media_audio, language)",
+        "query": {
+          "query": "label_values(arr_media_audio, language)",
           "refId": "StandardVariableQuery"
         },
         "includeAll": true,

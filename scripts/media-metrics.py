@@ -7,6 +7,7 @@ Three things the existing exporters cannot answer:
   qbit_torrent_*         which torrents are in each state, not how many
   arr_indexer_grabs_90d  which indexers actually get used, so alerts can ignore the rest
   arr_media_size_bytes   where the disk went: size per title, tagged with its quality
+  arr_media_audio        which audio tracks each film actually has, one series per language
   arr_waiting            everything Radarr waits for: downloading, missing or below cutoff
   prowlarr_indexer_up    which indexers are failing right now, over time
 
@@ -181,6 +182,51 @@ def indexer_usage():
     push("arr_indexer_usage", lines)
 
 
+def audio_languages(movie_file):
+    """The audio languages Radarr reports for the file, as it names them.
+
+    Radarr already hands these over as names, so nothing is translated here. The raw per-stream
+    codes in `mediaInfo.audioLanguages` are the other candidate, but they arrive as ISO 639-2
+    ("jpn/eng"), which would need a lookup table to be readable, and they buy nothing: across the
+    library the two agree on every file that carries language tags at all, and the 7 that do not
+    have only this field to go on anyway.
+    """
+    names = sorted({l["name"] for l in (movie_file.get("languages") or []) if l.get("name")})
+    return names or ["Unknown"]
+
+
+def media_audio():
+    """One series per (film, audio language), so a dashboard can filter by language.
+
+    The full list travels along as the `languages` label on every one of a film's series, so the
+    table can show "English, Spanish" on a row that was matched by `language="Spanish"` alone.
+    Filtering and displaying want different shapes and this carries both.
+    """
+    lines = ["# HELP arr_media_audio 1 per film and audio language present in the file",
+             "# TYPE arr_media_audio gauge"]
+    try:
+        for movie in get("http://localhost:7878/api/v3/movie", api_key("radarr")):
+            f = movie.get("movieFile")
+            if not movie.get("hasFile") or not f:
+                continue
+            langs = audio_languages(f)
+            info = f.get("mediaInfo") or {}
+            codec = info.get("audioCodec") or "?"
+            channels = info.get("audioChannels")
+            q = ((f.get("quality") or {}).get("quality") or {}).get("name", "Unknown")
+            for lang in langs:
+                lines.append(
+                    f'arr_media_audio{{title="{escape(movie["title"])[:90]}",'
+                    f'language="{escape(lang)}",languages="{escape(", ".join(langs))[:120]}",'
+                    f'language_count="{len(langs)}",codec="{escape(codec)}",'
+                    f'channels="{escape(channels if channels is not None else "?")}",'
+                    f'quality="{escape(q)}"}} 1')
+    except Exception as exc:
+        failures.append(f"radarr audio: {exc}")
+
+    push("arr_media_audio", lines)
+
+
 def when_better(movie, today):
     """Best honest answer to "when will this improve?".
 
@@ -349,6 +395,7 @@ if __name__ == "__main__":
     qbit_torrents()
     indexer_usage()
     library_sizes()
+    media_audio()
     waiting_on()
     prowlarr_indexers()
     if failures:
