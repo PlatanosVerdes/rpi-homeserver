@@ -49,6 +49,12 @@
         server: my-docker
         container: grafana
 
+    - VictoriaLogs:
+        icon: grafana.png
+        href: https://logs.platanosverdes.com/select/vmui/
+        server: my-docker
+        container: victorialogs
+
     - Prometheus:
         icon: prometheus.png
         href: https://prometheus.platanosverdes.com
