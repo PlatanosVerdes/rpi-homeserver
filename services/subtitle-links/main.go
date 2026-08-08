@@ -15,6 +15,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -226,13 +227,21 @@ type itemsResponse struct {
 // visitor pay for it: ~0.7s for the movie list (Fields=MediaStreams costs 69x the same query
 // without it) plus ~2s for One Pace's episodes alone, on every load past the TTL. The page itself
 // has always rendered in 0.02s; this is what the browser was waiting on afterwards.
-const itemsRefreshEvery = 2 * time.Minute
+//
+// The tick is a floor, not the mechanism. This page gets opened rarely, so a short tick would
+// spend nearly all of its walks on nobody: hourly bounds how stale the snapshot can get, while a
+// visit is what actually triggers a refresh — in the background, so the visitor still waits 0s.
+const (
+	itemsRefreshEvery = time.Hour
+	itemsStaleAfter   = 2 * time.Minute
+)
 
 var (
-	itemsMu   sync.RWMutex
-	itemsData itemsResponse
-	itemsAt   time.Time
-	refreshMu sync.Mutex // one walk at a time, so a cold start cannot trigger two at once
+	itemsMu    sync.RWMutex
+	itemsData  itemsResponse
+	itemsAt    time.Time
+	refreshMu  sync.Mutex  // one walk at a time, so a cold start cannot trigger two at once
+	refreshing atomic.Bool // set while a background refresh is in flight
 )
 
 // refreshItems replaces the snapshot. Movies and series are independent calls, so they go at the
@@ -266,14 +275,31 @@ func refreshItems(cfg config) error {
 }
 
 // getItems answers from the snapshot, and only blocks on the very first call, before the
-// background refresher has produced one.
+// background refresher has produced one. A stale snapshot is still returned immediately and
+// refreshed behind the request, so what you see is at most an hour old and a reload a couple of
+// seconds later is current.
 func getItems(cfg config) (itemsResponse, error) {
 	itemsMu.RLock()
 	data, at := itemsData, itemsAt
 	itemsMu.RUnlock()
+
 	if !at.IsZero() {
+		if time.Since(at) > itemsStaleAfter {
+			go func() {
+				// One walk per burst. Checking refreshMu instead would race: releasing it before
+				// calling refreshItems leaves a gap for a second goroutine to pass the same check.
+				if !refreshing.CompareAndSwap(false, true) {
+					return
+				}
+				defer refreshing.Store(false)
+				if err := refreshItems(cfg); err != nil {
+					log.Printf("background refresh: %v (serving the previous snapshot)", err)
+				}
+			}()
+		}
 		return data, nil
 	}
+
 	if err := refreshItems(cfg); err != nil {
 		return itemsResponse{}, err
 	}
