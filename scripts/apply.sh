@@ -136,13 +136,27 @@ deploy_repo() {
     local before after
     before=$(git rev-parse HEAD 2>/dev/null || echo "none")
 
+    # --no-rebase, not bare `git pull`. With no strategy configured git refuses outright the
+    # moment the branches diverge ("Need to specify how to reconcile"), and a commit made on the
+    # Pi while another was pushed from a laptop is enough to do it. That aborts the pull, so the
+    # deploy silently stops applying anything until someone reconciles by hand. Merging is right
+    # here and rebasing is not: local commits may be someone else's work in flight, and rewriting
+    # their SHAs underneath them is worse than a merge commit.
     log "[$label] Pulling..."
-    if ! git pull origin main 2>&1 | while IFS= read -r line; do log "[$label] $line"; done; then
+    if ! git pull --no-rebase origin main 2>&1 | while IFS= read -r line; do log "[$label] $line"; done; then
         log "[$label] Git pull failed (repo may not be pushed yet), ensuring containers are running..."
         docker compose up -d --remove-orphans 2>/dev/null
         return 2
     fi
     after=$(git rev-parse HEAD 2>/dev/null || echo "none")
+
+    # Merging on its own would hide the real risk: the Pi keeps deploying happily while commits
+    # made here exist nowhere else. Say so, because an SD card is the one copy that dies.
+    local unpushed
+    unpushed=$(git rev-list --count origin/main..HEAD 2>/dev/null || echo 0)
+    if [[ "$unpushed" -gt 0 ]]; then
+        log "[$label] WARNING: $unpushed commit(s) exist only on this Pi, push them somewhere safe"
+    fi
 
     # Must happen after the pull and before compose can restart Grafana
     [[ "$label" == "homeserver" ]] && render_grafana_alerting
