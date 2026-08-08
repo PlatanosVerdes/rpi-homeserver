@@ -61,6 +61,18 @@
           url: http://prowlarr:9696
           key: "{{HOMEPAGE_VAR_PROWLARR_TOKEN}}"
 
+- Subtitles:
+    - SubDown:
+        icon: https://subs.platanosverdes.com/icon.svg
+        href: https://subs.platanosverdes.com
+        server: my-docker
+        container: subtitle-links
+    - Bazarr:
+        icon: bazarr.png
+        href: https://bazarr.platanosverdes.com
+        server: my-docker
+        container: bazarr
+
 - Monitoring:
     - Grafana:
         icon: grafana.png
@@ -103,18 +115,6 @@
           type: tautulli
           url: http://tautulli:8181
           key: "{{HOMEPAGE_VAR_TAUTULLI_TOKEN}}"
-
-- Subtitles:
-    - SubDown:
-        icon: https://subs.platanosverdes.com/icon.svg
-        href: https://subs.platanosverdes.com
-        server: my-docker
-        container: subtitle-links
-    - Bazarr:
-        icon: bazarr.png
-        href: https://bazarr.platanosverdes.com
-        server: my-docker
-        container: bazarr
 
 - Network:
     - Pi-hole:
