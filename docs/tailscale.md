@@ -1,20 +1,42 @@
-# Tailscale Setup — Exit Node & Pi-hole DNS
+# Tailscale — Remote Access, Exit Node & Pi-hole DNS
 
-## Overview
+## What this is for
 
-Tailscale provides a secure WireGuard-based VPN that lets you access your home server from anywhere. This guide configures the Raspberry Pi as:
-- An **Exit Node** (route all internet traffic through it)
-- A **DNS server** via Pi-hole (ad-blocking everywhere)
+The Raspberry Pi sits at home behind a router, and the internet cannot reach it. Tailscale solves
+that by building a small private network of your own devices, called a **tailnet**: your laptop,
+your phone and the Pi all get a permanent address in the `100.x.x.x` range and can talk to each
+other from anywhere, encrypted, without opening a single port on the router.
+
+This guide sets the Pi up as three things. They are related but separate, and mixing them up is the
+usual source of confusion:
+
+| Role | What it does | What it does **not** do |
+| :--- | :--- | :--- |
+| **Tailnet member** | The Pi is reachable at its `100.x.x.x` address from any of your devices | Nothing else is reachable through it |
+| **Exit node** | Your other devices can send their *internet* traffic out through your home connection, as if browsing from home | It does **not** give access to the other machines on the home network, not even to the Pi's own `192.168.x.x` address |
+| **Subnet router** | Makes specific addresses *on the home network* reachable through the tunnel | Only the addresses you explicitly advertise and approve |
+
+That third row is the one people miss. "I turned on the exit node, why can't I reach my NAS at
+192.168.1.50?" Because that is a subnet router's job, and it has to be turned on separately.
+
+On top of those, Pi-hole becomes the DNS server for the whole tailnet, so ad-blocking follows you
+everywhere and the `*.platanosverdes.com` names resolve from anywhere.
 
 ---
 
 ## Step 1 — Assign a Static IP
 
-Reserve a static IP for your Raspberry Pi in your router's DHCP settings (use the Pi's MAC address). Update `STATIC_IP` in your `.env`.
+Give the Pi an address on the home network that never changes, by reserving it in the router's DHCP
+settings against the Pi's MAC address. Everything else here points at that address, so it moving
+would quietly break the lot. Put it in `STATIC_IP` in `.env`.
 
 ---
 
 ## Step 2 — Enable IP Forwarding
+
+By default Linux only accepts traffic addressed to itself and drops anything meant to pass through.
+Both the exit node and the subnet router are exactly that: passing traffic through. This turns it
+on permanently.
 
 ```bash
 echo 'net.ipv4.ip_forward = 1' | sudo tee -a /etc/sysctl.d/99-tailscale.conf
@@ -36,7 +58,12 @@ sudo tailscale up --advertise-exit-node --accept-dns=false
 sudo tailscale up --advertise-exit-node --advertise-routes=192.168.1.0/24 --accept-lan=true --accept-dns=false
 ```
 
-> `--accept-dns=false` is **critical** — it prevents Tailscale from overwriting `/etc/resolv.conf`, ensuring Pi-hole and Docker DNS continue to work.
+> `--accept-dns=false` is **critical**, and specific to this machine. Tailscale normally rewrites
+> `/etc/resolv.conf` so a device uses the tailnet's DNS server. That server *is* this Pi, so letting
+> it happen here points Pi-hole at itself and takes DNS down for the house and for every container.
+>
+> This is also why the rest of these docs insist on `tailscale set` rather than `tailscale up`:
+> `up` resets everything you did not name on the command line, and this flag is the one that hurts.
 
 ---
 
