@@ -16,8 +16,9 @@ usual source of confusion:
 | **Exit node** | Your other devices can send their *internet* traffic out through your home connection, as if browsing from home | It does **not** give access to the other machines on the home network, not even to the Pi's own `192.168.x.x` address |
 | **Subnet router** | Makes specific addresses *on the home network* reachable through the tunnel | Only the addresses you explicitly advertise and approve |
 
-Enabling the exit node does not make the rest of the home network reachable. That is the subnet
-router's job and it is configured separately.
+That last distinction is the one that catches people out: "I turned on the exit node, why can't I
+reach my NAS at 192.168.1.50?" Because that is the subnet router's job, and it is configured
+separately.
 
 Pi-hole is then set as the DNS server for the whole tailnet, so ad-blocking applies on every device
 and the `*.platanosverdes.com` names resolve from anywhere.
