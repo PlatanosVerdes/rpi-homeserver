@@ -110,6 +110,9 @@ services:
     ports:
       - "3000:3000"
     environment:
+      # Without TZ, Go formats alert timestamps in UTC and every Telegram message reads two
+      # hours early. Alert bodies print .StartsAt, so this is not cosmetic.
+      - TZ=${TZ}
       - GF_INSTALL_PLUGINS=victoriametrics-logs-datasource
       - GF_SECURITY_ADMIN_USER=admin
       # Only applied when Grafana initialises its DB for the first time, so changing it here does
