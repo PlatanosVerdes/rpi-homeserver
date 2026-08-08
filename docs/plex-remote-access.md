@@ -7,7 +7,7 @@ is not automatic, and the exit node does not do it.
 
 ```
 browser ──► 192.168.1.180:32400   local=true   free
-        └─► 100.125.71.20:32400   local=false  Remote Watch Pass prompt
+        └─► 100.x.x.x:32400   local=false  Remote Watch Pass prompt
 ```
 
 ---
@@ -32,7 +32,7 @@ curl -s -H 'Accept: application/json' -H 'X-Plex-Client-Identifier: diag' \
 192.168.1.180  local=true      <- the client must use this one
 192.168.1.154  local=true
 172.19.0.1     local=true
-100.125.71.20  local=false     <- CGNAT range, never flagged local
+100.x.x.x  local=false     <- CGNAT range, never flagged local
 203.0.113.42   local=false
 ```
 
@@ -104,9 +104,9 @@ the paywall on their account.
 | **Invite the friend into the tailnet** as an external user | Free | Needs an ACL written **before** inviting, or they reach every machine in the house: step 7 of [tailscale.md](tailscale.md) has the policy. Only works on devices that can run Tailscale, so no TVs or Chromecasts. As "local" they escape the per-user bandwidth limits |
 | **Their own Remote Watch Pass** | One subscription per viewer | Covers only that account, does not extend to anyone else |
 
-Prefer the Plex Pass for more than a person or two. The `local` flag behaviour is not documented by
-Plex anywhere: it was measured against the plex.tv API, and Plex can change that detection without
-warning.
+Prefer the Plex Pass for more than a person or two. Plex documents none of this `local` flag
+behaviour, so treat it as something that can change without warning: the network route stops
+working the day Plex changes how it decides, and the subscription does not.
 
 ## Verifying
 

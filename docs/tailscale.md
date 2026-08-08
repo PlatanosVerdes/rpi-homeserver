@@ -101,13 +101,13 @@ Paste into Access controls, replacing the two placeholder addresses:
 
     {"action": "accept",
      "src": ["friend@example.com"],
-     "dst": ["100.125.71.20:*", "192.168.1.180:*", "192.168.1.154:*"]}
+     "dst": ["100.x.x.x:*", "192.168.1.180:*", "192.168.1.154:*"]}
   ],
 
   "tests": [
     {"src": "friend@example.com",
      "accept": ["192.168.1.180:32400"],
-     "deny":   ["100.120.107.32:22"]}
+     "deny":   ["100.y.y.y:22"]}
   ]
 }
 ```
@@ -116,7 +116,7 @@ Paste into Access controls, replacing the two placeholder addresses:
 | :--- | :--- |
 | Owner → `*:*` | Defining any ACL flips the tailnet to **deny by default**. Without this line you lock yourself out of your own machines |
 | Owner → `autogroup:internet:*` | **The exit node stops working without it.** Allowing the exit node device as a destination is not the same thing: *"That only permits connections to the exit node, such as SSH. It does not permit using the device as an internet gateway"* |
-| Friend → the Pi's three addresses | The tailnet address plus the two advertised `/32`s, so Plex resolves to a `local=true` connection. All ports, so they also get Grafana and the rest of the Pi. Narrow the ports if that is not wanted |
+| Friend → the Pi's three addresses (`100.x.x.x` is `TAILSCALE_IP`, `100.y.y.y` any other machine) | The tailnet address plus the two advertised `/32`s, so Plex resolves to a `local=true` connection. All ports, so they also get Grafana and the rest of the Pi. Narrow the ports if that is not wanted |
 | `tests` | Tailscale refuses to save a policy whose tests fail, so the guest being locked out of the other machines is enforced, not assumed |
 
 Press **Preview** before saving. A policy that denies your own account is recoverable only from

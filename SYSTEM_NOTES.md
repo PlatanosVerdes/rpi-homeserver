@@ -31,8 +31,8 @@ governs how far back `docker logs` reaches. See [docs/logging.md](docs/logging.m
 
 ### The systemd journal
 
-`journald.conf` shipped empty, so the default cap of 10% of the filesystem applied: on a 117 GB SD
-card, room for roughly 11 GB of journal. Capped explicitly.
+Debian ships `journald.conf` fully commented out, which leaves the default cap at 10% of the
+filesystem: on a 117 GB SD card, room for roughly 11 GB of journal. Set it explicitly.
 
 **File:** `/etc/systemd/journald.conf`
 
@@ -48,8 +48,8 @@ journalctl --disk-usage
 
 ### The repo's own log files
 
-The cron scripts append to `apply.log`, `backup.log` and friends in the repo root, and nothing was
-rotating them, so `apply.log` had grown to 2.9 MB one deploy line at a time. A host file, not in
+The cron scripts append to `apply.log`, `backup.log` and friends in the repo root, and nothing
+rotates them by default: `apply.log` gains a few lines every deploy, forever. A host file, not in
 git:
 
 **File:** `/etc/logrotate.d/rpi-homeserver`
