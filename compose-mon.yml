@@ -72,7 +72,13 @@ services:
       # disk-usage-metrics.sh, so cAdvisor's own per-container copy of that isn't needed.
       # "accelerator" doesn't exist as a metric kind in v0.60.5 (unlike newer cAdvisor releases)
       # and made the flag parse fail outright, crash-looping the whole container.
-      - --disable_metrics=advtcp,tcp,udp,percpu,sched,process,disk,diskIO
+      #
+      # referenced_memory is the reason cAdvisor was the loudest thing on the server: collecting it
+      # means reading /proc/<pid>/smaps for every process in every container, and each one that
+      # cannot be read logs a warning. That was 66 lines per 80 seconds against 1 for everything
+      # else, ~72k a day, all of it now kept for 30 days in VictoriaLogs. Nothing here graphs the
+      # metric. Measured A/B on this Pi before committing: 0 warnings with the flag, 66 without.
+      - --disable_metrics=advtcp,tcp,udp,percpu,sched,process,disk,diskIO,referenced_memory
     networks:
       - media-network
 
