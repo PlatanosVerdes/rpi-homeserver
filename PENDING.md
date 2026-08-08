@@ -168,3 +168,36 @@ that pushes metrics — do NOT use an external cron, overlapping runs compound t
 4. Rolling subset per sweep (e.g. 10 channels/cycle) so all channels are covered over ~1h without spikes.
 5. Push to a SEPARATE pushgateway job (`.../job/acestream_health`): `pushMetrics` uses PUT to
    `.../job/acestream_updater`, so mixing cadences would clobber it.
+
+---
+
+## Podman instead of Docker — considered, not worth it
+
+**Verdict: no.** The migration touches most of the repo and the thing it buys is one this server
+does not need.
+
+### What it would touch
+
+| Piece | Why it is not a drop-in |
+| :--- | :--- |
+| `docker-compose.yml` | The entry point is `include:` across four modules. `podman-compose` support for `include` is the first thing that would have to be proven, and the whole layout rests on it |
+| Homepage, cAdvisor, Vector | All three talk to `/var/run/docker.sock`. Podman's socket is Docker-API-compatible and lives elsewhere; Homepage and Vector would probably follow, cAdvisor is the doubtful one |
+| `restart: unless-stopped`, 30+ services | There is no daemon to restart anything. Podman does it through systemd units (quadlet) or `podman-restart.service`, so the semantics have to be rebuilt rather than translated |
+| `/etc/docker/daemon.json` | Ignored. Podman logs to journald, so the `10m x 3` cap described in SYSTEM_NOTES stops existing and the journal cap becomes the only thing standing between the logs and the SD card |
+| PUID/PGID on every linuxserver image | Rootless Podman maps UIDs into a subordinate range, which collides with the ownership of files on the external disk. Running Podman rootful avoids it and throws away the main reason to switch |
+| `network_mode: host` on 5 services, Caddy on 80/443 | Rootless cannot bind below 1024 without extra configuration |
+| 8 distinct `docker` subcommands across `scripts/`, plus `apply.sh` | Mostly an alias away, mostly |
+
+### What it would buy
+
+No root daemon, if run rootless. That is the real argument for Podman and it matters on a machine
+exposed to the internet. This one is not: there is no port forwarding, the only inbound path is the
+Cloudflare tunnel to the deploy webhook, and 30 days of logs show zero unsolicited connection
+attempts. The gain is close to theoretical here, and running rootful to dodge the UID problem would
+remove even that.
+
+### When to revisit
+
+If the Pi ever gets a service genuinely exposed to the internet, or if Docker's licensing or
+upstream direction becomes a problem. As a way to learn Podman it is a fine project; as an
+improvement to this server it is not.
