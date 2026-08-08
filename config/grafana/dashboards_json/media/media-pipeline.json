@@ -8,13 +8,220 @@
   "panels": [
     {
       "type": "row",
-      "title": "Quality changes",
+      "title": "Library",
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
         "y": 0
+      },
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "title": "Films",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Films with a file on disk. Radarr's list is longer than this by whatever it is still\nhunting for; those show up in \"Waiting on Radarr\" below rather than being counted here,\nso this number is what you can actually play tonight.",
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 0,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "legendFormat": "__auto",
+          "expr": "arr_library_titles{app=\"radarr\",kind=\"with_file\"}"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Series",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Series with at least one episode on disk. A series Sonarr is monitoring but has no file\nfor is not counted.",
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 8,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "legendFormat": "__auto",
+          "expr": "arr_library_titles{app=\"sonarr\",kind=\"with_file\"}"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Episodes",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Episode files across every series. The count Sonarr itself reports, so a season pack that\nlanded as twelve files counts twelve.",
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 16,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "legendFormat": "__auto",
+          "expr": "arr_library_titles{app=\"sonarr\",kind=\"episodes\"}"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "title": "Quality changes",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 5
       },
       "panels": []
     },
@@ -29,7 +236,7 @@
         "h": 9,
         "w": 18,
         "x": 0,
-        "y": 1
+        "y": 6
       },
       "fieldConfig": {
         "defaults": {
@@ -518,7 +725,7 @@
         "h": 5,
         "w": 6,
         "x": 18,
-        "y": 1
+        "y": 6
       },
       "fieldConfig": {
         "defaults": {
@@ -580,7 +787,7 @@
         "h": 4,
         "w": 6,
         "x": 18,
-        "y": 6
+        "y": 11
       },
       "fieldConfig": {
         "defaults": {
@@ -643,7 +850,7 @@
         "h": 7,
         "w": 10,
         "x": 0,
-        "y": 10
+        "y": 15
       },
       "fieldConfig": {
         "defaults": {
@@ -913,7 +1120,7 @@
         "h": 7,
         "w": 14,
         "x": 10,
-        "y": 10
+        "y": 15
       },
       "fieldConfig": {
         "defaults": {
@@ -1476,7 +1683,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 17
+        "y": 22
       },
       "panels": []
     },
@@ -1491,7 +1698,7 @@
         "h": 4,
         "w": 4,
         "x": 0,
-        "y": 18
+        "y": 23
       },
       "fieldConfig": {
         "defaults": {
@@ -1557,7 +1764,7 @@
         "h": 4,
         "w": 4,
         "x": 4,
-        "y": 18
+        "y": 23
       },
       "fieldConfig": {
         "defaults": {
@@ -1623,7 +1830,7 @@
         "h": 4,
         "w": 4,
         "x": 8,
-        "y": 18
+        "y": 23
       },
       "fieldConfig": {
         "defaults": {
@@ -1689,7 +1896,7 @@
         "h": 4,
         "w": 4,
         "x": 12,
-        "y": 18
+        "y": 23
       },
       "fieldConfig": {
         "defaults": {
@@ -1750,7 +1957,7 @@
         "h": 4,
         "w": 4,
         "x": 16,
-        "y": 18
+        "y": 23
       },
       "fieldConfig": {
         "defaults": {
@@ -1811,7 +2018,7 @@
         "h": 4,
         "w": 4,
         "x": 20,
-        "y": 18
+        "y": 23
       },
       "fieldConfig": {
         "defaults": {
@@ -1872,7 +2079,7 @@
         "h": 12,
         "w": 18,
         "x": 0,
-        "y": 22
+        "y": 27
       },
       "fieldConfig": {
         "defaults": {
@@ -2235,7 +2442,7 @@
         "h": 12,
         "w": 6,
         "x": 18,
-        "y": 22
+        "y": 27
       },
       "fieldConfig": {
         "defaults": {
@@ -2624,7 +2831,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 34
+        "y": 39
       },
       "fieldConfig": {
         "defaults": {
