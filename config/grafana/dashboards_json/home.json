@@ -42,7 +42,7 @@
   "panels": [
     {
       "type": "stat",
-      "title": "🔌 Services down",
+      "title": "Services down",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -111,7 +111,7 @@
     },
     {
       "type": "stat",
-      "title": "🌡️ SoC temperature",
+      "title": "SoC temperature",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -185,7 +185,7 @@
     },
     {
       "type": "stat",
-      "title": "📊 Load",
+      "title": "Load",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -259,7 +259,7 @@
     },
     {
       "type": "stat",
-      "title": "🧠 RAM free",
+      "title": "RAM free",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -335,7 +335,7 @@
     },
     {
       "type": "stat",
-      "title": "💽 Data disk free",
+      "title": "Data disk free",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -409,7 +409,7 @@
     },
     {
       "type": "stat",
-      "title": "⬇️ Downloading",
+      "title": "Downloading",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
