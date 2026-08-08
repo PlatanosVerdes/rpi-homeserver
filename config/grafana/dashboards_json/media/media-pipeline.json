@@ -4028,7 +4028,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "How many films carry each audio language. Counts every film that has the track, so a film\nwith five languages is counted under all five and the total is larger than the library.",
+      "description": "How many films carry each audio language. Counts every film that has the track, so a film\nwith five languages is counted under all five and the total is larger than the library.\n\nEight languages have a hue of their own; the rest share grey. Eighteen distinguishable hues\ndo not exist, and a palette that pretends otherwise is read as noise. The eight are pinned by\nname rather than by rank, so a language keeps its colour as the library grows.",
       "gridPos": {
         "h": 13,
         "w": 8,
@@ -4040,29 +4040,142 @@
           "unit": "short",
           "min": 0,
           "color": {
-            "mode": "continuous-BlPu"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
+            "mode": "fixed",
+            "fixedColor": "#8a8a85"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "English"
+            },
+            "properties": [
               {
-                "color": "text",
-                "value": null
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Spanish"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d95926"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Italian"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#199e70"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Hindi"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#c98500"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Korean"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d55181"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Russian"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#008300"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "French"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9085e9"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Japanese"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#e66767"
+                }
               }
             ]
           }
-        },
-        "overrides": []
+        ]
       },
       "options": {
-        "displayMode": "gradient",
+        "displayMode": "basic",
         "orientation": "horizontal",
         "showUnfilled": true,
-        "valueMode": "color",
+        "valueMode": "text",
+        "namePlacement": "left",
         "minVizWidth": 8,
         "minVizHeight": 12,
         "maxVizHeight": 20,
-        "namePlacement": "left",
         "sizing": "auto",
         "legend": {
           "showLegend": false
