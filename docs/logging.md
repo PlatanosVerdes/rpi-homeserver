@@ -10,13 +10,14 @@ containers ──► vector (docker socket, ro) ──► victorialogs ──►
                                               /mnt/data/db
 ```
 
-| Piece | What it does | Cost measured on the Pi |
+| Piece | What it does | Footprint |
 | :--- | :--- | :--- |
 | `victorialogs` | Stores and queries logs, 30 day retention | ~25 MB RAM |
 | `vector` | Follows every container's stdout/stderr and ships it | ~52 MB RAM |
 
-VictoriaLogs was picked over Grafana Loki for the memory footprint: on this hardware Loki is the
-component you notice, and its extra features (multi-tenancy, object storage) buy nothing here.
+Use VictoriaLogs rather than Grafana Loki here. On a Raspberry Pi, Loki is the component you
+notice, and what it adds over VictoriaLogs (multi-tenancy, object storage) is worth nothing on a
+single box.
 
 ## How to read the logs
 
@@ -30,14 +31,20 @@ The query language is LogsQL, not PromQL and not LogQL:
 
 ```logsql
 _time:1h caddy                          # everything from the caddy container in the last hour
-_time:24h container:plex error          # errors Plex logged today
+_time:24h container:plex error          # errors from Plex in the last day
 _time:5m | stats by (container) count() # who is noisy right now
 ```
 
 ## What is collected, and what is not
 
 Every container's stdout/stderr, tagged with `container` and `stream`. Nothing else: not the host's
-journal, not `auth.log`, not Caddy access logs (Caddy only writes error logs by default, see below).
+journal, not `auth.log`, and not Caddy access logs, which Caddy does not write unless a site is
+given a `log` directive.
+
+**Applications that log to a file rather than stdout will not appear here at all.** Plex and
+qBittorrent are the two that matter on this box: both keep their own log files inside their config
+directory, so `container:plex` stays empty no matter what Plex is doing. Read those with
+`docker exec`, or point Vector at the file if it is ever worth the mount.
 
 Stream fields are deliberately just `container` and `stream`. VictoriaLogs indexes by stream, so
 adding something high-cardinality like the image tag would create a new stream on every version
