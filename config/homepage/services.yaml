@@ -1,4 +1,18 @@
-- Media:
+# Groups are named after what you came here to do, not after a software category. The old
+# "Indexers" group held Radarr, Sonarr, Bazarr and FlareSolverr, none of which is an indexer,
+# so nobody looking for Radarr would have opened it. Order is by what actually gets used.
+
+- Watch:
+    - Jellyfin:
+        icon: jellyfin.png
+        href: https://jellyfin.platanosverdes.com
+        server: my-docker
+        container: jellyfin
+        widget:
+          type: jellyfin
+          url: http://jellyfin:8096
+          key: "{{HOMEPAGE_VAR_JELLYFIN_TOKEN}}"
+          enableNowPlaying: true
     - Plex:
         icon: plex.png
         href: http://{{HOMEPAGE_VAR_STATIC_IP}}:32400/web
@@ -17,21 +31,6 @@
           type: overseerr
           url: http://overseerr:5055
           key: "{{HOMEPAGE_VAR_OVERSEERR_TOKEN}}"
-    - Jellyfin:
-        icon: jellyfin.png
-        href: https://jellyfin.platanosverdes.com
-        server: my-docker
-        container: jellyfin
-        widget:
-          type: jellyfin
-          url: http://jellyfin:8096
-          key: "{{HOMEPAGE_VAR_JELLYFIN_TOKEN}}"
-          enableNowPlaying: true
-    - Maintainerr:
-        icon: maintainerr.png
-        href: https://maintainerr.platanosverdes.com
-        server: my-docker
-        container: maintainerr
     - Tautulli:
         icon: tautulli.png
         href: https://tautulli.platanosverdes.com
@@ -42,45 +41,7 @@
           url: http://tautulli:8181
           key: "{{HOMEPAGE_VAR_TAUTULLI_TOKEN}}"
 
-- Monitoring:
-    - Grafana:
-        icon: grafana.png
-        href: https://grafana.platanosverdes.com
-        server: my-docker
-        container: grafana
-
-    - VictoriaLogs:
-        icon: grafana.png
-        href: https://logs.platanosverdes.com/select/vmui/
-        server: my-docker
-        container: victorialogs
-
-    - Prometheus:
-        icon: prometheus.png
-        href: https://prometheus.platanosverdes.com
-        server: my-docker
-        container: prometheus
-        widget:
-            type: prometheus
-            url: http://prometheus:9090
-
-    - Pushgateway:
-        icon: https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/png/prometheus.png
-        href: https://push.platanosverdes.com
-        server: my-docker
-        container: pushgateway
-
-- Indexers:
-    - Prowlarr:
-        icon: prowlarr.png
-        href: https://prowlarr.platanosverdes.com
-        server: my-docker
-        container: prowlarr
-        widget:
-          type: prowlarr
-          url: http://prowlarr:9696
-          key: "{{HOMEPAGE_VAR_PROWLARR_TOKEN}}"
-
+- Library:
     - Radarr:
         icon: radarr.png
         href: https://radarr.platanosverdes.com
@@ -90,7 +51,6 @@
           type: radarr
           url: http://radarr:7878
           key: "{{HOMEPAGE_VAR_RADARR_TOKEN}}"
-
     - Sonarr:
         icon: sonarr.png
         href: https://sonarr.platanosverdes.com
@@ -100,18 +60,55 @@
           type: sonarr
           url: http://sonarr:8989
           key: "{{HOMEPAGE_VAR_SONARR_TOKEN}}"
-
     - Bazarr:
         icon: bazarr.png
         href: https://bazarr.platanosverdes.com
         server: my-docker
         container: bazarr
-
-    - FlareSolverr:
-        icon: flaresolverr.png
-        href: http://{{HOMEPAGE_VAR_TAILSCALE_IP}}:8191
+    - Prowlarr:
+        icon: prowlarr.png
+        href: https://prowlarr.platanosverdes.com
         server: my-docker
-        container: flaresolverr
+        container: prowlarr
+        widget:
+          type: prowlarr
+          url: http://prowlarr:9696
+          key: "{{HOMEPAGE_VAR_PROWLARR_TOKEN}}"
+    - Maintainerr:
+        icon: maintainerr.png
+        href: https://maintainerr.platanosverdes.com
+        server: my-docker
+        container: maintainerr
+    - SubDown:
+        icon: https://subs.platanosverdes.com/icon.svg
+        href: https://subs.platanosverdes.com
+        server: my-docker
+        container: subtitle-links
+
+- Monitoring:
+    - Grafana:
+        icon: grafana.png
+        href: https://grafana.platanosverdes.com
+        server: my-docker
+        container: grafana
+    - Prometheus:
+        icon: prometheus.png
+        href: https://prometheus.platanosverdes.com
+        server: my-docker
+        container: prometheus
+        widget:
+            type: prometheus
+            url: http://prometheus:9090
+    - VictoriaLogs:
+        icon: mdi-text-box-search
+        href: https://logs.platanosverdes.com/select/vmui/
+        server: my-docker
+        container: victorialogs
+    - Pushgateway:
+        icon: https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/png/prometheus.png
+        href: https://push.platanosverdes.com
+        server: my-docker
+        container: pushgateway
 
 - Downloads:
     - qBittorrent:
@@ -124,22 +121,13 @@
           url: http://qbittorrent:8080
           username: admin
           password: "{{HOMEPAGE_VAR_QBIT_PASSWORD}}"
-    - SubDown:
-        icon: https://subs.platanosverdes.com/icon.svg
-        href: https://subs.platanosverdes.com
+    - FlareSolverr:
+        icon: flaresolverr.png
+        href: http://{{HOMEPAGE_VAR_TAILSCALE_IP}}:8191
         server: my-docker
-        container: subtitle-links
+        container: flaresolverr
 
-- Management:
-    - Network:
-        icon: https://img.icons8.com/?size=100&id=12995&format=png&color=000000
-        href: https://speedtest.platanosverdes.com
-        widget:
-            type: speedtest
-            url: http://speedtest-tracker:80
-            key: "{{HOMEPAGE_VAR_SPEEDTEST_TOKEN}}"
-            bitratePrecision: 1
-
+- Network:
     - Pi-hole:
         icon: pi-hole.png
         href: https://pihole.platanosverdes.com/admin
@@ -150,6 +138,14 @@
           url: http://host.docker.internal:8081
           version: 6
           key: "{{HOMEPAGE_VAR_PIHOLE_TOKEN}}"
+    - Speedtest:
+        icon: https://img.icons8.com/?size=100&id=12995&format=png&color=000000
+        href: https://speedtest.platanosverdes.com
+        widget:
+            type: speedtest
+            url: http://speedtest-tracker:80
+            key: "{{HOMEPAGE_VAR_SPEEDTEST_TOKEN}}"
+            bitratePrecision: 1
 
 - Automation:
     - Offers Bot:
@@ -157,3 +153,16 @@
         description: Pol Academy Offers Hunter
         server: my-docker
         container: pol-academy-offers-bot
+
+# Routed in Caddy and reachable, but never finished being set up. Uncomment when they are.
+#- Personal:
+#    - AirTag:
+#        icon: mdi-map-marker
+#        href: https://airtag.platanosverdes.com
+#        server: my-docker
+#        container: air-tag
+#    - Calendar:
+#        icon: mdi-calendar
+#        href: https://cal.platanosverdes.com
+#        server: my-docker
+#        container: cal-bridge

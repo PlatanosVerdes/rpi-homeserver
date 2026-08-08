@@ -19,16 +19,27 @@ showStats: true
 hideVersion: true            
 disableUpdateCheck: false
 
+# Every group is listed, or the ones left out fall back to a different style and the columns
+# stop lining up between rows. Column counts follow how many services each group holds.
 layout:
-  Media:
+  Watch:
+    style: grid
+    columns: 4
+  Library:
     style: grid
     columns: 3
+  Monitoring:
+    style: grid
+    columns: 4
   Downloads:
     style: grid
-    columns: 3
-  Management:
+    columns: 2
+  Network:
     style: grid
-    columns: 3
+    columns: 2
+  Automation:
+    style: grid
+    columns: 2
 
 appearance:
   fontFamily: "Inter"
