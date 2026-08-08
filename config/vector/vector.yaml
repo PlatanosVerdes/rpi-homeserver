@@ -1,0 +1,45 @@
+# Ships every container's stdout/stderr to VictoriaLogs.
+#
+# The docker_logs source reads the Docker socket read-only, the same access cAdvisor and Homepage
+# already have, so it adds no new privilege to the host. It is used only to enumerate containers
+# and follow their logs; `docker logs` keeps working because the json-file driver is untouched.
+
+data_dir: /vector-data
+
+sources:
+  containers:
+    type: docker_logs
+    # Vector's own output would loop straight back into itself
+    exclude_containers:
+      - vector
+
+transforms:
+  # VictoriaLogs indexes by stream fields, so keep them low-cardinality: container name and stream
+  # (stdout/stderr) are enough to slice by. The image tag would churn a new stream on every bump.
+  shaped:
+    type: remap
+    inputs: [containers]
+    source: |
+      .container = del(.container_name)
+      del(.container_created_at)
+      del(.container_id)
+      del(.image)
+      del(.label)
+      del(.source_type)
+
+sinks:
+  victorialogs:
+    type: elasticsearch
+    inputs: [shaped]
+    endpoints:
+      - http://victorialogs:9428/insert/elasticsearch/
+    mode: bulk
+    api_version: v8
+    compression: gzip
+    healthcheck:
+      enabled: false
+    request:
+      headers:
+        VL-Time-Field: timestamp
+        VL-Msg-Field: message
+        VL-Stream-Fields: container,stream

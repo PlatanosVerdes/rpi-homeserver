@@ -110,6 +110,7 @@ services:
     ports:
       - "3000:3000"
     environment:
+      - GF_INSTALL_PLUGINS=victoriametrics-logs-datasource
       - GF_SECURITY_ADMIN_USER=admin
       # Only applied when Grafana initialises its DB for the first time, so changing it here does
       # not change an existing install's password. Keep it in .env so a rebuilt Pi does not
@@ -202,6 +203,43 @@ services:
   #     - "9736:9736"
   #   networks:
   #     - media-network
+
+  # --- VICTORIALOGS (Log storage) ---
+  victorialogs:
+    image: victoriametrics/victoria-logs:${VICTORIALOGS_VERSION}
+    container_name: victorialogs
+    restart: unless-stopped
+    mem_limit: 512m
+    memswap_limit: 512m
+    profiles: [moni, all]
+    command:
+      - -storageDataPath=/victoria-logs-data
+      - -retentionPeriod=30d
+      - -loggerFormat=json
+    volumes:
+      # On the data disk, never on the SD card: a log DB writes constantly and would wear it out
+      - ${DATA_DB_ROOT}/victorialogs:/victoria-logs-data
+    networks:
+      - media-network
+
+  # --- VECTOR (Ships container logs into VictoriaLogs) ---
+  vector:
+    image: timberio/vector:${VECTOR_VERSION}
+    container_name: vector
+    restart: unless-stopped
+    mem_limit: 256m
+    memswap_limit: 256m
+    profiles: [moni, all]
+    depends_on:
+      - victorialogs
+    volumes:
+      - ${CONFIG_ROOT}/vector/vector.yaml:/etc/vector/vector.yaml:ro
+      # Read-only, and only to enumerate containers and follow their logs. Same access cAdvisor
+      # and Homepage already have, so it grants nothing new on this host.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${APP_CONFIG_PATH}/vector:/vector-data
+    networks:
+      - media-network
 
 networks:
   media-network:
