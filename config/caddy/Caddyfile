@@ -22,8 +22,13 @@ https://raspi.platanosverdes.com {
     # Homepage polls its own API to keep the widgets live, which is 98% of every request Caddy
     # sees: 136 of 139 lines over three minutes, none of them a visit. Logging it would bury the
     # thing the access log exists to answer and cost ~67k lines a day to do it.
-    @homepage_polling path /api/widgets/* /api/services/* /api/frontend/*
-    log_skip @homepage_polling
+    #
+    # The whole /api tree, not a list of paths: naming them individually missed /api/hash,
+    # /api/validate, /api/bookmarks and a /api/docker/stats/<container> call per service, and the
+    # next widget added would have escaped too. Opening homepage is a page load, never an API call,
+    # so nothing worth counting lives under here.
+    @homepage_api path /api/*
+    log_skip @homepage_api
     import cf_tls
     reverse_proxy homepage:3000 {
         flush_interval -1
