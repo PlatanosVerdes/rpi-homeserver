@@ -79,6 +79,18 @@ literally "networks that will be considered local":
 > Not the same as **"List of IP addresses and networks that are allowed without auth"**
 > (`allowedNetworks`). That one only skips authentication and has no effect on the paywall.
 
+**Plex must not be proxied.** It classifies a client by the socket's peer address and ignores
+`X-Forwarded-For`, so a `reverse_proxy` makes every client arrive as Caddy's container IP on
+`media-network` and land back on the paywall. Both Plex routes are therefore `redir`, not
+`reverse_proxy`: `https://plex.platanosverdes.com` bounces to `{env.TAILSCALE_IP}:32400` and the
+LAN short name `http://plex` to `{env.STATIC_IP}:32400` (that one must not assume the client has
+Tailscale up). Both IPs are passed to the Caddy container in `compose-core.yml`. The redirects are
+302 on purpose: a 301 would sit in browser caches long after the route changed.
+
+Adding `172.16.0.0/12` to LAN Networks would also silence the paywall behind the proxy, but it
+makes *every* client behind Caddy look local: per-user bandwidth limits stop applying and the
+stats can no longer tell local and remote apart. The redirect keeps the distinction intact.
+
 This repo keeps the value in `.env` as `PLEX_LAN_NETWORKS` and pushes it on every deploy with
 `scripts/sync-plex-prefs.sh`. It has to be a script: neither `lscr.io/linuxserver/plex` nor the
 official `plexinc/pms-docker` can set this preference from the compose file. The official image
