@@ -41,129 +41,84 @@
   "version": 19,
   "panels": [
     {
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
+      "type": "text",
+      "title": "Media",
       "gridPos": {
         "h": 8,
         "w": 6,
         "x": 0,
         "y": 0
       },
-      "id": 1,
       "options": {
+        "mode": "markdown",
         "code": {
           "language": "plaintext",
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "## ⚙️ Acestream Monitor\n[Acestream Monitor · sync & errors](/d/acestream-monitor/acestream-monitor)",
-        "mode": "markdown"
+        "content": "🎬 [Media Pipeline](/d/media-pipeline/media-pipeline)\n🗣️ [Audio languages](/d/media-languages/audio-languages)\n💽 [Disk usage](/d/media-disk-usage/disk-usage)\n🔎 [Indexers](/d/indexers/indexers)\n🏴‍☠️ [One Pace](/d/onepace-dl/one-pace)\n📡 [Acestream Monitor](/d/acestream-monitor/acestream-monitor)"
       },
-      "pluginVersion": "12.3.3",
-      "title": "Acestream",
-      "type": "text"
+      "transparent": false
     },
     {
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
+      "type": "text",
+      "title": "Network",
       "gridPos": {
         "h": 8,
         "w": 6,
         "x": 6,
         "y": 0
       },
-      "id": 4,
       "options": {
+        "mode": "markdown",
         "code": {
           "language": "plaintext",
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "## 🍿 Media\n- 🏴‍☠️ [One Pace](/d/onepace-dl/one-pace)\n- 🎬 [Media Pipeline](/d/media-pipeline/media-pipeline)\n- 🔎 [Indexers](/d/indexers/indexers)\n- 🗣️ [Audio languages](/d/media-languages/audio-languages)\n- 💽 [Disk usage](/d/media-disk-usage/disk-usage)",
-        "mode": "markdown"
+        "content": "🌐 [Speedtest Tracker](/d/g7usvhZVk2/speedtest-tracker)\n🛡️ [Pi-hole](/d/edknpuskjzw1sc/pi-hole-ver6-stats)\n🔒 [Tailscale](/d/tailscale-bannet/tailscale-bannet)"
       },
-      "pluginVersion": "12.3.3",
-      "title": "Media",
-      "type": "text"
+      "transparent": false
     },
     {
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
+      "type": "text",
+      "title": "System",
       "gridPos": {
         "h": 8,
         "w": 6,
         "x": 12,
         "y": 0
       },
-      "id": 2,
       "options": {
+        "mode": "markdown",
         "code": {
           "language": "plaintext",
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "## 🌐 Speedtest\n[Speedtest Tracker · internet speed](/d/g7usvhZVk2/speedtest-tracker)\n\n## 🛡️ Pi-hole\n[Pi-hole Exporter · DNS & ad blocking](/d/edknpuskjzw1sc/pi-hole-ver6-stats)\n\n## 🔒 Tailscale\n[Tailscale · network devices](/d/tailscale-bannet/tailscale-bannet)",
-        "mode": "markdown"
+        "content": "🖥️ [Node Exporter](/d/rYdddlPWk/node-exporter-full-raspi)\n🐳 [Container Health](/d/container-health/container-health)\n📊 [Docker monitoring](/d/docker-monitoring/docker-monitoring)"
       },
-      "pluginVersion": "12.3.3",
-      "title": "Network",
-      "type": "text"
+      "transparent": false
     },
     {
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
+      "type": "text",
+      "title": "Automation",
       "gridPos": {
         "h": 8,
         "w": 6,
         "x": 18,
         "y": 0
       },
-      "id": 3,
       "options": {
+        "mode": "markdown",
         "code": {
           "language": "plaintext",
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "## 🖥️ Raspberry Pi\n- [Node Exporter · CPU, RAM, disk](/d/rYdddlPWk/node-exporter-full-raspi)\n\n## 🐳 Containers\n- [Container Health · host, per-container, storage](/d/container-health/container-health)\n- [Docker monitoring · same metrics, per-container graphs](/d/docker-monitoring/docker-monitoring)",
-        "mode": "markdown"
+        "content": "🚀 [Deploy Monitor](/d/deploy-monitor/deploy-monitor)\n💾 [Backup Monitor](/d/backup-monitor/backup-monitor)\n🔗 [Webhook & Tunnel](/d/webhook-tunnel/webhook-tunnel)\n📺 [Watch-next](/d/watch-next/watch-next)"
       },
-      "pluginVersion": "12.3.3",
-      "title": "System",
-      "type": "text"
-    },
-    {
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 12,
-        "w": 24,
-        "x": 0,
-        "y": 8
-      },
-      "id": 5,
-      "options": {
-        "code": {
-          "language": "plaintext",
-          "showLineNumbers": false,
-          "showMiniMap": false
-        },
-        "content": "## 🚀 Deploy Monitor\n[Deploy Monitor · deployments](/d/deploy-monitor/deploy-monitor)\n\n## 💾 Backup Monitor\n[Backup Monitor · backup health](/d/backup-monitor/backup-monitor)\n\n## 🔗 Webhook & Tunnel\n[Webhook & Tunnel · push deploys & Cloudflare tunnel](/d/webhook-tunnel/webhook-tunnel)\n\n## 📺 Watch-next\n[Watch-next · episodes monitored/searched on watch](/d/watch-next/watch-next)",
-        "mode": "markdown"
-      },
-      "pluginVersion": "12.3.3",
-      "title": "Scripts",
-      "type": "text"
+      "transparent": false
     },
     {
       "collapsed": true,
@@ -171,7 +126,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 20
+        "y": 8
       },
       "id": 10,
       "title": "Secrets",

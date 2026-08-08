@@ -230,20 +230,28 @@ PLEX_LAN_NETWORKS              # Networks Plex treats as local (see Networking)
 All dashboards are provisioned from JSON files in `config/grafana/dashboards_json/`. Changes to dashboards must be exported from Grafana and committed here — they are NOT persisted in the Grafana container's volume.
 
 **Every new dashboard must be linked from the Home dashboard** (`dashboards_json/home.json`), or it
-only exists for whoever remembers the URL. Home is a grid of text panels grouped by area
-(Acestream, Media, Network, System, Scripts), and its layout is the user's: keep it, do not
-"improve" the grid when adding a link. Add the link to the panel it belongs to, keeping the
-format:
+only exists for whoever remembers the URL. Home is one strip of four text panels — **Media,
+Network, System, Automation** — each 6 wide and 8 tall, holding nothing but links. One line per
+dashboard, one shape, no exceptions:
 
 ```markdown
-## <emoji> <Group>
-[Dashboard name · what it shows](/d/<uid>/<slug>)
+<emoji> [Dashboard title](/d/<uid>/<slug>)
 ```
 
-The `uid` must match the dashboard's own `uid` field, and `slug` is its title lowercased with
-dashes. Check the panel's `gridPos.h` still fits the content after adding a line: text panels do
-not grow, so bump the height and shift whatever sits below it (that is why the `Secrets` row moves
-down when the `Scripts` panel grows).
+Rules that keep it readable:
+
+- **The panel title is the group.** Never write a heading inside the content; that is what produced
+  the three competing styles this replaced (a `##` that sometimes named a group and sometimes
+  repeated the link directly below it).
+- **The link text is the dashboard's real title**, not a description of it. What you read is what
+  opens, and the two cannot drift apart. If the title is too vague to stand alone, rename the
+  dashboard rather than papering over it here.
+- **No descriptions.** If a group ever needs them to make sense, it has too many links and wants
+  splitting instead.
+- `uid` must match the dashboard's own `uid`; `slug` is its title lowercased with dashes.
+
+Check the panel's `gridPos.h` still fits after adding a line: text panels do not grow, and the four
+share a height, so bump all of them together and shift the `Secrets` row below.
 
 Dashboard folders come from the directory structure (`foldersFromFilesStructure`), so
 `dashboards_json/media/` is the Grafana folder "media". Put a dashboard where its subject lives, not
