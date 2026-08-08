@@ -33,7 +33,7 @@ curl -s -H 'Accept: application/json' -H 'X-Plex-Client-Identifier: diag' \
 192.168.1.154  local=true
 172.19.0.1     local=true
 100.125.71.20  local=false     <- CGNAT range, never flagged local
-79.117.174.139 local=false
+203.0.113.42   local=false
 ```
 
 ## Reaching the local address from the tailnet
