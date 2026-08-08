@@ -121,14 +121,12 @@ The cron stays as the self-heal net.
 - **Remote (Tailscale):** All HTTPS subdomains (`*.platanosverdes.com`) resolve to the Pi's Tailscale IP (`TAILSCALE_IP`). Certificates issued automatically via Cloudflare DNS challenge.
 - **Pi-hole:** DNS for the whole tailnet. All `*.platanosverdes.com` subdomains point to `TAILSCALE_IP` in Pi-hole's custom DNS.
 - **Docker network:** All services share `media-network` (bridge).
-- **Plex over Tailscale:** remote playback is paid since April 2025, and the client decides remote
-  vs local from the per-connection `local` flag Plex publishes to plex.tv. Only RFC1918 addresses
-  get that flag, never the `100.x` Tailscale one, so Plex has to be reached on `STATIC_IP` and the
-  Pi advertises `192.168.1.180/32,192.168.1.154/32` as subnet routes to make that address reachable
-  from the tailnet (an exit node does not route to its own LAN). Caddy therefore `redir`s the Plex
-  routes instead of proxying them, and `PLEX_LAN_NETWORKS` in `.env` covers the server-side half
-  since the tunnelled traffic keeps its `100.x` source. Full explanation, including why no Plex
-  Docker image can set this, in [docs/tailscale.md](docs/tailscale.md).
+- **Plex is never proxied.** Remote playback is paid since April 2025 and the client decides remote
+  vs local from the per-connection `local` flag Plex publishes to plex.tv, which only RFC1918
+  addresses ever get. So Plex must be reached on `STATIC_IP`: Caddy `redir`s its two routes instead
+  of proxying them, Homepage links to the same address, the Pi advertises its own LAN IPs as subnet
+  routes so the tailnet can reach it, and `PLEX_LAN_NETWORKS` covers the server side. Do not "fix"
+  any of this with a `reverse_proxy`. See [docs/plex-remote-access.md](docs/plex-remote-access.md).
 - **Caddy extension from a companion repo:** the Caddyfile imports two globs,
   `config/caddy/services/*.caddy` (extra routes kept in this repo) and
   `/etc/caddy/ext-services/*.caddy` (routes owned by another repo). The second one is a bind mount

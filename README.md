@@ -327,6 +327,8 @@ Step 2 makes Pi-hole the DNS server for every device in your tailnet, so `*.plat
 
 Reference: [Tailscale — Block ads on all devices using Raspberry Pi](https://tailscale.com/docs/solutions/block-ads-all-devices-anywhere-using-raspberry-pi)
 → See [docs/tailscale.md](docs/tailscale.md) for the full setup guide
+→ See [docs/plex-remote-access.md](docs/plex-remote-access.md) for why Plex needs subnet routes on
+top of the exit node, and why it must never be put behind the reverse proxy
 
 ### Reverse Proxy (Caddy)
 Caddy provides short HTTP names on LAN (`http://jellyfin`, `http://raspi`, etc.) and HTTPS via Cloudflare DNS challenge for remote access (`https://*.platanosverdes.com`).
