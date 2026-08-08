@@ -61,17 +61,17 @@
           url: http://prowlarr:9696
           key: "{{HOMEPAGE_VAR_PROWLARR_TOKEN}}"
 
-- Subtitles:
-    - SubDown:
-        icon: https://subs.platanosverdes.com/icon.svg
-        href: https://subs.platanosverdes.com
+- Monitoring:
+    - Grafana:
+        icon: grafana.png
+        href: https://grafana.platanosverdes.com
         server: my-docker
-        container: subtitle-links
-    - Bazarr:
-        icon: bazarr.png
-        href: https://bazarr.platanosverdes.com
+        container: grafana
+    - VictoriaLogs:
+        icon: mdi-text-box-search
+        href: https://logs.platanosverdes.com/select/vmui/
         server: my-docker
-        container: bazarr
+        container: victorialogs
 
 - Downloads:
     - qBittorrent:
@@ -104,17 +104,17 @@
           url: http://tautulli:8181
           key: "{{HOMEPAGE_VAR_TAUTULLI_TOKEN}}"
 
-- Monitoring:
-    - Grafana:
-        icon: grafana.png
-        href: https://grafana.platanosverdes.com
+- Subtitles:
+    - SubDown:
+        icon: https://subs.platanosverdes.com/icon.svg
+        href: https://subs.platanosverdes.com
         server: my-docker
-        container: grafana
-    - VictoriaLogs:
-        icon: mdi-text-box-search
-        href: https://logs.platanosverdes.com/select/vmui/
+        container: subtitle-links
+    - Bazarr:
+        icon: bazarr.png
+        href: https://bazarr.platanosverdes.com
         server: my-docker
-        container: victorialogs
+        container: bazarr
 
 - Network:
     - Pi-hole:
@@ -196,3 +196,5 @@
 #        href: https://cal.platanosverdes.com
 #        server: my-docker
 #        container: cal-bridge
+
+
