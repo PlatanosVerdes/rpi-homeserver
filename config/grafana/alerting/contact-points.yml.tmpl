@@ -8,6 +8,19 @@ apiVersion: 1
 # interpolated value, so an all-digits chat id comes back as a number while its Telegram
 # integration demands a string. Provisioning then fails, and a failed alerting provisioning takes
 # Grafana's whole startup down, not just the alert.
+#
+# On the message body:
+#   - Alerts arrive grouped by alertname (policies.yml), so the name is the title and the
+#     instances are the list underneath. One alert reads as a sentence, ten read as a list.
+#   - The description goes in an expandable blockquote (Bot API 10.1). Long text collapses to two
+#     lines and opens on tap, which keeps a chat of alerts scannable.
+#   - No .Values anywhere: every rule compares with PromQL's `bool` modifier, so the value is
+#     always 1 and printing it says nothing. The summary carries the threshold instead.
+#   - disable_web_page_preview stops Telegram from pasting a Grafana card under every message.
+#   - Times are the Pi's local time because the Grafana service now gets TZ. Without it, Go
+#     formats in UTC and every alert reads two hours early.
+#   - Interpolated text is not HTML-escaped by Grafana. Keep < & > out of summaries and labels,
+#     or Telegram rejects the whole message with a 400.
 contactPoints:
   - orgId: 1
     name: telegram-homelab
@@ -19,12 +32,22 @@ contactPoints:
           bottoken: "${TELEGRAM_ALERT_BOT_TOKEN}"
           chatid: "${TELEGRAM_ALERT_CHAT_ID}"
           parse_mode: HTML
+          disable_web_page_preview: true
           message: |
-            {{ if eq .Status "firing" }}🔴{{ else }}✅{{ end }} <b>{{ .Status | toUpper }}</b>
-            {{ range .Alerts }}
-            <b>{{ .Labels.alertname }}</b>
+            {{- $n := len .Alerts -}}
+            {{- if eq .Status "firing" -}}
+            {{ if eq .CommonLabels.severity "critical" }}🚨{{ else }}⚠️{{ end }} <b>{{ .CommonLabels.alertname }}</b>
+            <i>{{ .CommonLabels.severity }}{{ if gt $n 1 }} · {{ $n }} instances{{ end }}{{ with (index .Alerts 0) }} · since {{ .StartsAt.Format "15:04" }}{{ end }}</i>
+            {{- else -}}
+            ✅ <b>{{ .CommonLabels.alertname }}</b>
+            <i>resolved{{ with (index .Alerts 0) }} after {{ .EndsAt.Sub .StartsAt }}{{ end }}</i>
+            {{- end }}
             {{ if eq .Status "firing" }}
-            {{ .Annotations.summary }}
-            {{ if .Annotations.description }}{{ .Annotations.description }}{{ end }}
+            {{ range .Alerts }}
+            {{- if gt $n 1 }}• {{ end }}{{ .Annotations.summary }}
+            {{ if .Annotations.description }}<blockquote class="tg-quote">{{ .Annotations.description }}</blockquote>
             {{ end }}
-            {{ end }}
+            {{- end }}
+            {{- with (index .Alerts 0) }}{{ if .SilenceURL }}
+            <a href="{{ .SilenceURL }}">Silence this</a>{{ end }}{{ end }}
+            {{- end }}
