@@ -235,6 +235,10 @@ bash "$PROJECT_DIR/scripts/sync-pihole-dns.sh" 2>&1 | while IFS= read -r line; d
 # by hand through each app's UI and otherwise lost with appdata).
 bash "$PROJECT_DIR/scripts/sync-arr-links.sh" 2>&1 | while IFS= read -r line; do log "[arr-links] $line"; done
 
+# Converge qBittorrent's rate cap and queue limits to config/qbittorrent/preferences.json. Same
+# reason as the others: they live only in appdata and an unlimited qBittorrent will flatten this Pi.
+bash "$PROJECT_DIR/scripts/sync-qbit-config.sh" 2>&1 | while IFS= read -r line; do log "[qbit-config] $line"; done
+
 # Aggregate status: error(1)>changed(0)>no-change(2)
 if [ $RESULT_HOME -eq 1 ] || [ $RESULT_SERVICES -eq 1 ]; then
     DEPLOY_ERRORS=$((DEPLOY_ERRORS + 1))
