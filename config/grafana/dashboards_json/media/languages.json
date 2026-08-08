@@ -1,0 +1,758 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "graphTooltip": 0,
+  "links": [],
+  "preload": false,
+  "refresh": "1m",
+  "schemaVersion": 42,
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "uid": "media-languages",
+  "title": "Audio languages",
+  "tags": [
+    "media",
+    "arrs",
+    "languages"
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "language",
+        "label": "Audio language",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "definition": "label_values(arr_media_audio, language)",
+        "query": {
+          "query": "label_values(arr_media_audio, language)",
+          "refId": "StandardVariableQuery"
+        },
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "current": {
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "refresh": 2,
+        "sort": 1,
+        "hide": 0,
+        "options": []
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "table",
+      "title": "Audio languages per title — ${language:text}",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Every film in Radarr and the audio languages its file carries, straight from Radarr's own\nnaming (no translation table here).\n\nFILTERING BY LANGUAGE: use the `Audio language` picker at the top of the dashboard, which is\nnamed in this panel's title. Pick Spanish and you get every film whose file has a Spanish\ntrack, whatever else it also has — \"English, Spanish\" included — and nothing that lacks it.\nThat works because underneath, a film is one series per language; the grouping folds it back\ninto one row.\n\nThe column funnel deliberately does NOT appear on the language column: it can only offer whole\ncell values, so it would list \"Italian, Spanish\" and never a plain \"Spanish\".\n\nThree tiers elsewhere, in the blue/green/orange the quality columns above already use.\nCodec: blue is lossless or object-based, green is lossy at a high bitrate, orange is basic.\nLangs: blue is a real choice of audio, green is a couple, plain text is take it or leave it.\nQuality keeps the exact mapping from \"Stuck on a bad quality\".",
+      "gridPos": {
+        "h": 13,
+        "w": 16,
+        "x": 0,
+        "y": 0
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left",
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Channels"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 90
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Quality"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "Bluray-2160p": {
+                        "color": "blue",
+                        "index": 0,
+                        "text": "Bluray-2160p"
+                      },
+                      "WEBDL-2160p": {
+                        "color": "blue",
+                        "index": 1,
+                        "text": "WEBDL-2160p"
+                      },
+                      "WEBRip-2160p": {
+                        "color": "blue",
+                        "index": 2,
+                        "text": "WEBRip-2160p"
+                      },
+                      "HDTV-2160p": {
+                        "color": "blue",
+                        "index": 3,
+                        "text": "HDTV-2160p"
+                      },
+                      "Remux-2160p": {
+                        "color": "blue",
+                        "index": 4,
+                        "text": "Remux-2160p"
+                      },
+                      "Bluray-1080p": {
+                        "color": "green",
+                        "index": 5,
+                        "text": "Bluray-1080p"
+                      },
+                      "WEBDL-1080p": {
+                        "color": "green",
+                        "index": 6,
+                        "text": "WEBDL-1080p"
+                      },
+                      "WEBRip-1080p": {
+                        "color": "green",
+                        "index": 7,
+                        "text": "WEBRip-1080p"
+                      },
+                      "Remux-1080p": {
+                        "color": "orange",
+                        "index": 8,
+                        "text": "Remux-1080p"
+                      },
+                      "HDTV-1080p": {
+                        "color": "orange",
+                        "index": 9,
+                        "text": "HDTV-1080p"
+                      },
+                      "Bluray-720p": {
+                        "color": "orange",
+                        "index": 10,
+                        "text": "Bluray-720p"
+                      },
+                      "WEBDL-720p": {
+                        "color": "orange",
+                        "index": 11,
+                        "text": "WEBDL-720p"
+                      },
+                      "WEBRip-720p": {
+                        "color": "orange",
+                        "index": 12,
+                        "text": "WEBRip-720p"
+                      },
+                      "HDTV-720p": {
+                        "color": "orange",
+                        "index": 13,
+                        "text": "HDTV-720p"
+                      },
+                      "BR-DISK": {
+                        "color": "red",
+                        "index": 14,
+                        "text": "BR-DISK"
+                      },
+                      "Raw-HD": {
+                        "color": "red",
+                        "index": 15,
+                        "text": "Raw-HD"
+                      },
+                      "SDTV": {
+                        "color": "red",
+                        "index": 16,
+                        "text": "SDTV"
+                      },
+                      "DVD": {
+                        "color": "red",
+                        "index": 17,
+                        "text": "DVD"
+                      },
+                      "DVD-R": {
+                        "color": "red",
+                        "index": 18,
+                        "text": "DVD-R"
+                      },
+                      "Bluray-576p": {
+                        "color": "red",
+                        "index": 19,
+                        "text": "Bluray-576p"
+                      },
+                      "Bluray-480p": {
+                        "color": "red",
+                        "index": 20,
+                        "text": "Bluray-480p"
+                      },
+                      "WEBDL-480p": {
+                        "color": "red",
+                        "index": 21,
+                        "text": "WEBDL-480p"
+                      },
+                      "WEBRip-480p": {
+                        "color": "red",
+                        "index": 22,
+                        "text": "WEBRip-480p"
+                      },
+                      "TELESYNC": {
+                        "color": "red",
+                        "index": 23,
+                        "text": "TELESYNC"
+                      },
+                      "TELECINE": {
+                        "color": "red",
+                        "index": 24,
+                        "text": "TELECINE"
+                      },
+                      "CAM": {
+                        "color": "red",
+                        "index": 25,
+                        "text": "CAM"
+                      },
+                      "WORKPRINT": {
+                        "color": "red",
+                        "index": 26,
+                        "text": "WORKPRINT"
+                      },
+                      "DVDSCR": {
+                        "color": "red",
+                        "index": 27,
+                        "text": "DVDSCR"
+                      },
+                      "REGIONAL": {
+                        "color": "red",
+                        "index": 28,
+                        "text": "REGIONAL"
+                      },
+                      "Unknown": {
+                        "color": "red",
+                        "index": 29,
+                        "text": "Unknown"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 140
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Codec"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "TrueHD Atmos": {
+                        "color": "blue",
+                        "index": 0,
+                        "text": "TrueHD Atmos"
+                      },
+                      "TrueHD": {
+                        "color": "blue",
+                        "index": 1,
+                        "text": "TrueHD"
+                      },
+                      "DTS-X": {
+                        "color": "blue",
+                        "index": 2,
+                        "text": "DTS-X"
+                      },
+                      "DTS-HD MA": {
+                        "color": "blue",
+                        "index": 3,
+                        "text": "DTS-HD MA"
+                      },
+                      "DTS-HD HRA": {
+                        "color": "blue",
+                        "index": 4,
+                        "text": "DTS-HD HRA"
+                      },
+                      "FLAC": {
+                        "color": "blue",
+                        "index": 5,
+                        "text": "FLAC"
+                      },
+                      "PCM": {
+                        "color": "blue",
+                        "index": 6,
+                        "text": "PCM"
+                      },
+                      "LPCM": {
+                        "color": "blue",
+                        "index": 7,
+                        "text": "LPCM"
+                      },
+                      "EAC3 Atmos": {
+                        "color": "green",
+                        "index": 8,
+                        "text": "EAC3 Atmos"
+                      },
+                      "EAC3": {
+                        "color": "green",
+                        "index": 9,
+                        "text": "EAC3"
+                      },
+                      "DTS": {
+                        "color": "green",
+                        "index": 10,
+                        "text": "DTS"
+                      },
+                      "AC3": {
+                        "color": "green",
+                        "index": 11,
+                        "text": "AC3"
+                      },
+                      "DTS-ES": {
+                        "color": "green",
+                        "index": 12,
+                        "text": "DTS-ES"
+                      },
+                      "AAC": {
+                        "color": "orange",
+                        "index": 13,
+                        "text": "AAC"
+                      },
+                      "Opus": {
+                        "color": "orange",
+                        "index": 14,
+                        "text": "Opus"
+                      },
+                      "MP3": {
+                        "color": "orange",
+                        "index": 15,
+                        "text": "MP3"
+                      },
+                      "Vorbis": {
+                        "color": "orange",
+                        "index": 16,
+                        "text": "Vorbis"
+                      },
+                      "WMA": {
+                        "color": "orange",
+                        "index": 17,
+                        "text": "WMA"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 130
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Langs"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "1": {
+                        "color": "text",
+                        "index": 0,
+                        "text": "1"
+                      },
+                      "2": {
+                        "color": "green",
+                        "index": 1,
+                        "text": "2"
+                      },
+                      "3": {
+                        "color": "green",
+                        "index": 2,
+                        "text": "3"
+                      },
+                      "4": {
+                        "color": "blue",
+                        "index": 3,
+                        "text": "4"
+                      },
+                      "5": {
+                        "color": "blue",
+                        "index": 4,
+                        "text": "5"
+                      },
+                      "6": {
+                        "color": "blue",
+                        "index": 5,
+                        "text": "6"
+                      },
+                      "7": {
+                        "color": "blue",
+                        "index": 6,
+                        "text": "7"
+                      },
+                      "8": {
+                        "color": "blue",
+                        "index": 7,
+                        "text": "8"
+                      },
+                      "9": {
+                        "color": "blue",
+                        "index": 8,
+                        "text": "9"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 70
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Audio languages"
+            },
+            "properties": [
+              {
+                "id": "custom.filterable",
+                "value": false
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": ""
+        },
+        "sortBy": [
+          {
+            "displayName": "Film",
+            "desc": false
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": "__auto",
+          "expr": "arr_media_audio{language=~\"$language\"}"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "title": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "languages": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "language_count": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "codec": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "channels": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "quality": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              }
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "renameByName": {
+              "title": "Film",
+              "languages (lastNotNull)": "Audio languages",
+              "language_count (lastNotNull)": "Langs",
+              "codec (lastNotNull)": "Codec",
+              "channels (lastNotNull)": "Channels",
+              "quality (lastNotNull)": "Quality"
+            },
+            "indexByName": {
+              "title": 0,
+              "languages (lastNotNull)": 1,
+              "language_count (lastNotNull)": 2,
+              "codec (lastNotNull)": 3,
+              "channels (lastNotNull)": 4,
+              "quality (lastNotNull)": 5
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "bargauge",
+      "title": "Films per language",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "How many films carry each audio language. Counts every film that has the track, so a film\nwith five languages is counted under all five and the total is larger than the library.\n\nEight languages have a hue of their own; the rest share grey. Eighteen distinguishable hues\ndo not exist, and a palette that pretends otherwise is read as noise. The eight are pinned by\nname rather than by rank, so a language keeps its colour as the library grows.",
+      "gridPos": {
+        "h": 13,
+        "w": 8,
+        "x": 16,
+        "y": 0
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#8a8a85"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "English"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Spanish"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d95926"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Italian"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#199e70"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Hindi"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#c98500"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Korean"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d55181"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Russian"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#008300"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "French"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9085e9"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Japanese"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#e66767"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "displayMode": "basic",
+        "orientation": "horizontal",
+        "showUnfilled": true,
+        "valueMode": "text",
+        "namePlacement": "left",
+        "minVizWidth": 8,
+        "minVizHeight": 12,
+        "maxVizHeight": 20,
+        "sizing": "auto",
+        "legend": {
+          "showLegend": false
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "legendFormat": "{{language}}",
+          "expr": "sort_desc(count by (language) (arr_media_audio))"
+        }
+      ]
+    }
+  ]
+}
