@@ -98,6 +98,9 @@ const indexPage = `<!doctype html>
     border: 1px solid transparent; transition: border-color 0.15s;
   }
   a.chip:active { border-color: var(--accent); }
+  /* The flag is the whole label on a language chip, and at the chip's own 0.82rem it read as a
+     smudge rather than a country. line-height keeps the chip from growing with it. */
+  .flag { font-size: 1.5rem; line-height: 1; }
   a.chip.all { color: var(--text); background: var(--accent-dim); text-transform: none; letter-spacing: 0; }
   .series .row { cursor: pointer; }
   .chevron { color: var(--text-dim); transition: transform 0.2s; flex: none; }
@@ -122,7 +125,7 @@ const indexPage = `<!doctype html>
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
       </svg>
-      <input id="q" type="search" placeholder="Buscar pelicula o serie..." autocomplete="off">
+      <input id="q" type="search" placeholder="Buscar pelicula o serie..." autocomplete="off" autofocus>
     </div>
     <div class="tabs">
       <button class="tab active" data-filter="all">Todo</button>
@@ -154,7 +157,10 @@ var FLAGS = {
 };
 
 function langLabel(lang) {
-  return FLAGS[lang] || lang.toUpperCase();
+  // The flag carries its own span so it can be sized on its own: a.chip also draws the
+  // "Descargar todos" button, and growing that one too would throw the header off.
+  var flag = FLAGS[lang];
+  return flag ? '<span class="flag">' + flag + '</span>' : lang.toUpperCase();
 }
 
 function chip(href, label, extra, stop) {
@@ -218,6 +224,17 @@ function render() {
 }
 
 document.getElementById('q').addEventListener('input', render);
+
+// Type anywhere and the search box takes it. autofocus only covers the moment the page loads, and
+// the first thing you do here is always search, so a click on the field should never be required.
+// Modifier combos are left alone so browser shortcuts still work.
+document.addEventListener('keydown', function (e) {
+  var q = document.getElementById('q');
+  if (e.target === q || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.key === 'Escape') { q.value = ''; render(); q.blur(); return; }
+  if (e.key.length !== 1) return;   // ignore Tab, arrows, F-keys and friends
+  q.focus();
+});
 document.querySelectorAll('.tab').forEach(function (btn) {
   btn.addEventListener('click', function () {
     document.querySelectorAll('.tab').forEach(function (b) { b.classList.remove('active'); });
