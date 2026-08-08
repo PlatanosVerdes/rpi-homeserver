@@ -3863,12 +3863,12 @@
     },
     {
       "type": "table",
-      "title": "What audio each film has",
+      "title": "Audio languages per title",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Every film in Radarr and the audio languages its file carries, straight from Radarr's own\nnaming (no translation table here).\n\nThe `Audio language` picker at the top filters the list: leave it on All to see the whole\nlibrary with every language each film has, or pick one to get only the films that have it.\nA film with several languages is one series per language underneath, which is what makes the\nfilter work; the grouping collapses it back to one row per film.",
+      "description": "Every film in Radarr and the audio languages its file carries, straight from Radarr's own\nnaming (no translation table here).\n\nThe `Audio language` picker at the top filters the list: leave it on All to see the whole\nlibrary with every language each film has, or pick one to get only the films that have it.\nA film with several languages is one series per language underneath, which is what makes the\nfilter work; the grouping collapses it back to one row per film.\n\nQuality wears the same colours as \"Stuck on a bad quality\" above, so a 2160p reads blue in\nboth places. That mapping is copied from that panel, not reinvented here.",
       "gridPos": {
         "h": 13,
         "w": 16,
@@ -3916,6 +3916,178 @@
               {
                 "id": "custom.width",
                 "value": 120
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Quality"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "Bluray-2160p": {
+                        "color": "blue",
+                        "index": 0,
+                        "text": "Bluray-2160p"
+                      },
+                      "WEBDL-2160p": {
+                        "color": "blue",
+                        "index": 1,
+                        "text": "WEBDL-2160p"
+                      },
+                      "WEBRip-2160p": {
+                        "color": "blue",
+                        "index": 2,
+                        "text": "WEBRip-2160p"
+                      },
+                      "HDTV-2160p": {
+                        "color": "blue",
+                        "index": 3,
+                        "text": "HDTV-2160p"
+                      },
+                      "Remux-2160p": {
+                        "color": "blue",
+                        "index": 4,
+                        "text": "Remux-2160p"
+                      },
+                      "Bluray-1080p": {
+                        "color": "green",
+                        "index": 5,
+                        "text": "Bluray-1080p"
+                      },
+                      "WEBDL-1080p": {
+                        "color": "green",
+                        "index": 6,
+                        "text": "WEBDL-1080p"
+                      },
+                      "WEBRip-1080p": {
+                        "color": "green",
+                        "index": 7,
+                        "text": "WEBRip-1080p"
+                      },
+                      "Remux-1080p": {
+                        "color": "orange",
+                        "index": 8,
+                        "text": "Remux-1080p"
+                      },
+                      "HDTV-1080p": {
+                        "color": "orange",
+                        "index": 9,
+                        "text": "HDTV-1080p"
+                      },
+                      "Bluray-720p": {
+                        "color": "orange",
+                        "index": 10,
+                        "text": "Bluray-720p"
+                      },
+                      "WEBDL-720p": {
+                        "color": "orange",
+                        "index": 11,
+                        "text": "WEBDL-720p"
+                      },
+                      "WEBRip-720p": {
+                        "color": "orange",
+                        "index": 12,
+                        "text": "WEBRip-720p"
+                      },
+                      "HDTV-720p": {
+                        "color": "orange",
+                        "index": 13,
+                        "text": "HDTV-720p"
+                      },
+                      "BR-DISK": {
+                        "color": "red",
+                        "index": 14,
+                        "text": "BR-DISK"
+                      },
+                      "Raw-HD": {
+                        "color": "red",
+                        "index": 15,
+                        "text": "Raw-HD"
+                      },
+                      "SDTV": {
+                        "color": "red",
+                        "index": 16,
+                        "text": "SDTV"
+                      },
+                      "DVD": {
+                        "color": "red",
+                        "index": 17,
+                        "text": "DVD"
+                      },
+                      "DVD-R": {
+                        "color": "red",
+                        "index": 18,
+                        "text": "DVD-R"
+                      },
+                      "Bluray-576p": {
+                        "color": "red",
+                        "index": 19,
+                        "text": "Bluray-576p"
+                      },
+                      "Bluray-480p": {
+                        "color": "red",
+                        "index": 20,
+                        "text": "Bluray-480p"
+                      },
+                      "WEBDL-480p": {
+                        "color": "red",
+                        "index": 21,
+                        "text": "WEBDL-480p"
+                      },
+                      "WEBRip-480p": {
+                        "color": "red",
+                        "index": 22,
+                        "text": "WEBRip-480p"
+                      },
+                      "TELESYNC": {
+                        "color": "red",
+                        "index": 23,
+                        "text": "TELESYNC"
+                      },
+                      "TELECINE": {
+                        "color": "red",
+                        "index": 24,
+                        "text": "TELECINE"
+                      },
+                      "CAM": {
+                        "color": "red",
+                        "index": 25,
+                        "text": "CAM"
+                      },
+                      "WORKPRINT": {
+                        "color": "red",
+                        "index": 26,
+                        "text": "WORKPRINT"
+                      },
+                      "DVDSCR": {
+                        "color": "red",
+                        "index": 27,
+                        "text": "DVDSCR"
+                      },
+                      "REGIONAL": {
+                        "color": "red",
+                        "index": 28,
+                        "text": "REGIONAL"
+                      },
+                      "Unknown": {
+                        "color": "red",
+                        "index": 29,
+                        "text": "Unknown"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.width",
+                "value": 140
               }
             ]
           }
