@@ -14,11 +14,11 @@ browser ──► 192.168.1.180:32400   Plex says "local"   free
         └─► 100.x.x.x:32400       Plex says "remote"  Remote Watch Pass prompt
 ```
 
-Both addresses are the same Raspberry Pi. Plex treats them differently, and that is the whole story.
+Both addresses are the same Raspberry Pi. Plex treats them differently.
 
-## Words you need first
+## Terminology
 
-These four terms appear everywhere below. Skip if you already know them.
+Four terms used throughout this page.
 
 | Term | What it means here |
 | :--- | :--- |
@@ -53,8 +53,8 @@ curl -s -H 'Accept: application/json' -H 'X-Plex-Client-Identifier: diag' \
 203.0.113.42   local=false     <- the home public address
 ```
 
-So the goal is not "convince Plex the tunnel is local". It is **make the address Plex already calls
-local reachable through the tunnel**.
+The goal is therefore not to change how Plex classifies the Tailscale address, which is fixed, but
+to make the address it already classifies as local reachable through the tunnel.
 
 ## Step 1 — Make the home address reachable from the tailnet
 
@@ -108,8 +108,8 @@ from the compose file**:
 
 ## Step 3 — Never put Plex behind the reverse proxy
 
-Every other service here is reached through Caddy. Plex must not be, and it is worth knowing why so
-nobody "tidies it up" later.
+Every other service here is reached through Caddy. Plex is the exception, for a reason that is not
+obvious from the Caddyfile.
 
 Plex decides who you are from the address of the network socket, and ignores the `X-Forwarded-For`
 header that proxies use to pass the real client along. Behind a `reverse_proxy`, every single client
@@ -125,8 +125,7 @@ bandwidth limits stop applying to anyone, and the statistics can no longer tell 
 
 ## Letting other people watch
 
-The intuitive move is to share the Pi as a Tailscale machine. It does not work, and Tailscale says
-why in as many words: *"Shared machines do not advertise subnets to the tailnets they're shared
+Sharing the Pi as a Tailscale machine does not work. Tailscale states why: *"Shared machines do not advertise subnets to the tailnets they're shared
 into, while inviting external users into your tailnet will give them access to subnet routers."*
 
 Without the subnet routes the guest can only reach the `100.x` address, which is the one that
