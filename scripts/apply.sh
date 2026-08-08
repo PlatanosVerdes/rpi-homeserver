@@ -239,6 +239,10 @@ bash "$PROJECT_DIR/scripts/sync-arr-links.sh" 2>&1 | while IFS= read -r line; do
 # Remote Watch Pass. No Docker image exposes this preference, and it only exists in appdata.
 bash "$PROJECT_DIR/scripts/sync-plex-prefs.sh" 2>&1 | while IFS= read -r line; do log "[plex-prefs] $line"; done
 
+# Converge qBittorrent's rate cap and queue limits to config/qbittorrent/preferences.json. Same
+# reason as the others: they live only in appdata and an unlimited qBittorrent will flatten this Pi.
+bash "$PROJECT_DIR/scripts/sync-qbit-config.sh" 2>&1 | while IFS= read -r line; do log "[qbit-config] $line"; done
+
 # Aggregate status: error(1)>changed(0)>no-change(2)
 if [ $RESULT_HOME -eq 1 ] || [ $RESULT_SERVICES -eq 1 ]; then
     DEPLOY_ERRORS=$((DEPLOY_ERRORS + 1))

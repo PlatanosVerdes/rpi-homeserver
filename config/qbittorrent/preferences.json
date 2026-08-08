@@ -1,0 +1,23 @@
+{
+  "dl_limit": 10485760,
+  "up_limit": 0,
+
+  "async_io_threads": 4,
+
+  "queueing_enabled": true,
+  "max_active_downloads": 3,
+  "max_active_torrents": 40,
+  "max_active_uploads": 40,
+
+  "dont_count_slow_torrents": true,
+  "slow_torrent_dl_rate_threshold": 2,
+  "slow_torrent_ul_rate_threshold": 2,
+  "slow_torrent_inactive_timer": 60,
+
+  "max_connec": 500,
+  "max_connec_per_torrent": 100,
+
+  "save_path": "/data/downloads",
+  "temp_path": "/data/downloads/incomplete",
+  "temp_path_enabled": true
+}

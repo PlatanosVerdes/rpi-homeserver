@@ -154,8 +154,57 @@ roughly twice as long to reach, so torrents took twice as long to retire themsel
 change the queue went from 18 waiting to 0.
 
 The limit is 40 rather than unlimited so a much larger library cannot open hundreds of connections on
-a Pi. This setting lives in `appdata/qbittorrent/` and is therefore **not** reproducible from git:
-if the Pi is rebuilt, set it again.
+a Pi.
+
+> Everything in this section and the next now lives in `config/qbittorrent/preferences.json` and is
+> reapplied on every deploy by `scripts/sync-qbit-config.sh`. It used to be appdata-only, which is
+> why these notes existed at all. **Change the values there, not in the WebUI:** the next deploy
+> converges the app back to whatever is committed. What is written below is the reasoning, which the
+> JSON cannot hold.
+
+## qBittorrent global download limit
+
+`dl_limit` set to **10 MiB/s** (10485760 B/s) on 2026-08-08. It was unlimited.
+
+Why: that night the 02:00 `cutoff-search.sh` run found upgrades for 7 films at once and handed
+qBittorrent ~226 GB. Load average hit **16** on a 4-core Pi and stayed there for 100 minutes, with 8
+processes blocked on I/O. Nothing actually failed — no blackbox probe missed, latency went from 0.03s
+to 0.25s — but everything was sluggish for an hour and a half.
+
+**The line is not the constraint and never was.** Speedtest gives a steady 770 Mbps (96 MB/s, 30-day
+minimum 716), so even the burst that caused this was using 40% of the fibre. What cannot keep up is
+the storage: `/mnt/data` is mergerfs over two USB spinning disks, and mergerfs is FUSE, so every
+written byte crosses userspace and costs CPU. That is where the 1.0-1.5 cores of kernel time came
+from, alongside the seeking of three torrents writing to platters at once.
+
+Where 10 comes from, correlating download rate against load over 14 days:
+
+| MB/s | cores busy (of 4) | load5 median |
+| ---: | ---: | ---: |
+| 5-8 | 1.39 | 2.43 |
+| 8-12 | 1.82 | 3.39 |
+| 12-16 | 2.10 | 5.24 |
+| 25-40 | 3.03 | 12.08 |
+
+Load crosses the core count somewhere around 10 MB/s, so that is the ceiling worth holding: it keeps
+the run queue under 4 while still clearing a 50 GB release in about 85 minutes. Since the fibre is
+nowhere near the limiting factor, buying speed above this point costs responsiveness and saves
+nothing that matters.
+
+The knob is the rate, not the concurrency. `max_active_downloads` stays at 3: with a global cap in
+force, three torrents share the same 10 MiB/s that one would have had, so lowering it changes how
+scattered the writes are but not how many bytes get written.
+
+`async_io_threads` lowered from 10 to **4** at the same time. It is how many disk requests libtorrent
+keeps in flight. Ten is a sensible default for an SSD, which has no moving parts and gets faster the
+deeper its queue; on platters every concurrent request is a different place on the surface, so ten
+threads across three torrents leaves the head travelling instead of writing. This one is reasoning
+from how the hardware works, **not** something measured on this Pi — worth a look at the load graph
+after a busy night, and putting it back is a one-line edit to the JSON.
+
+`alt_dl_limit` (also 10 MiB/s) is unrelated and deliberately left alone: it only applies while
+`scheduler_enabled` is true, and it is false, so it is dead config — mentioned here only so it is not
+mistaken for the limit in force.
 
 ## Prowlarr indexers
 
