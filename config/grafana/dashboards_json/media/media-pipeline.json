@@ -3863,12 +3863,12 @@
     },
     {
       "type": "table",
-      "title": "Audio languages per title",
+      "title": "Audio languages per title — ${language:text}",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Every film in Radarr and the audio languages its file carries, straight from Radarr's own\nnaming (no translation table here).\n\nThe `Audio language` picker at the top filters the list: leave it on All to see the whole\nlibrary with every language each film has, or pick one to get only the films that have it.\nA film with several languages is one series per language underneath, which is what makes the\nfilter work; the grouping collapses it back to one row per film.\n\nThree tiers everywhere, in the blue/green/orange the quality columns above already use.\nCodec: blue is lossless or object-based, green is lossy at a high bitrate, orange is basic.\nLangs: blue is a real choice of audio, green is a couple, plain text is take it or leave it.\nQuality keeps the exact mapping from \"Stuck on a bad quality\".\n\nThe language list itself stays uncoloured on purpose: a cell reading \"English, French,\nGerman\" cannot honestly wear one colour. Per-language hues live in the panel beside this one,\nwhere each language is its own bar.",
+      "description": "Every film in Radarr and the audio languages its file carries, straight from Radarr's own\nnaming (no translation table here).\n\nFILTERING BY LANGUAGE: use the `Audio language` picker at the top of the dashboard, which is\nnamed in this panel's title. Pick Spanish and you get every film whose file has a Spanish\ntrack, whatever else it also has — \"English, Spanish\" included — and nothing that lacks it.\nThat works because underneath, a film is one series per language; the grouping folds it back\ninto one row.\n\nThe column funnel deliberately does NOT appear on the language column: it can only offer whole\ncell values, so it would list \"Italian, Spanish\" and never a plain \"Spanish\".\n\nThree tiers elsewhere, in the blue/green/orange the quality columns above already use.\nCodec: blue is lossless or object-based, green is lossy at a high bitrate, orange is basic.\nLangs: blue is a real choice of audio, green is a couple, plain text is take it or leave it.\nQuality keeps the exact mapping from \"Stuck on a bad quality\".",
       "gridPos": {
         "h": 13,
         "w": 16,
@@ -4261,6 +4261,18 @@
               {
                 "id": "custom.width",
                 "value": 70
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Audio languages"
+            },
+            "properties": [
+              {
+                "id": "custom.filterable",
+                "value": false
               }
             ]
           }
