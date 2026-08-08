@@ -22,8 +22,7 @@ services:
     environment:
       - CF_API_TOKEN=${CF_API_TOKEN}
       - CADDY_EMAIL=${CADDY_EMAIL}
-      # Targets for the Plex redirects, see the Caddyfile
-      - TAILSCALE_IP=${TAILSCALE_IP}
+      # Target for the Plex redirects, see the Caddyfile
       - STATIC_IP=${STATIC_IP}
     volumes:
       - ${CONFIG_ROOT}/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
@@ -53,6 +52,7 @@ services:
     environment:
       - HOMEPAGE_ALLOWED_HOSTS=*
       - HOMEPAGE_VAR_TAILSCALE_IP=${TAILSCALE_IP}
+      - HOMEPAGE_VAR_STATIC_IP=${STATIC_IP}
       - HOMEPAGE_VAR_PLEX_TOKEN=${PLEX_API_TOKEN}
       - HOMEPAGE_VAR_PIHOLE_TOKEN=${PIHOLE_TOKEN}
       - HOMEPAGE_VAR_QBIT_PASSWORD=${QBIT_PASSWORD}

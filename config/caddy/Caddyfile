@@ -23,12 +23,13 @@ https://overseerr.platanosverdes.com {
     import cf_tls
     reverse_proxy overseerr:5055
 }
-# Plex classifies a client by the socket's peer address and ignores X-Forwarded-For, so anything
-# proxied through here arrives as Caddy's container IP and is billed as remote playback. Bounce the
-# browser straight at the server instead: same URL to remember, direct connection underneath.
+# Plex must be reached on the address it publishes as local=true, or the client shows the Remote
+# Watch Pass paywall. Proxying breaks that twice over, so bounce the browser at the server instead:
+# same URL to remember, direct connection underneath. Reachable from the tailnet via the subnet
+# routes the Pi advertises, see docs/tailscale.md.
 https://plex.platanosverdes.com {
     import cf_tls
-    redir http://{env.TAILSCALE_IP}:32400{uri}
+    redir http://{env.STATIC_IP}:32400{uri}
 }
 https://grafana.platanosverdes.com {
     import cf_tls
@@ -93,8 +94,7 @@ http://overseerr {
     reverse_proxy overseerr:5055
 }
 http://plex {
-    # Same reason as the HTTPS route above, but this one is reached from the LAN, so it must not
-    # depend on the client having Tailscale up.
+    # Same target as the HTTPS route above: local from the LAN, and local over the tailnet too.
     redir http://{env.STATIC_IP}:32400{uri}
 }
 http://grafana {
