@@ -21,10 +21,17 @@ Two repos are involved — pick the right one before starting:
 
 **For rpi-services**, add it directly to `docker-compose.yml`.
 
+Versions never go inline and are never `latest`: they live in `versions.env`, which is committed,
+so a rebuild cannot silently pull a different image. Add the line there first:
+
+```bash
+FILEBROWSER_VERSION=v2.32.0
+```
+
 ```yaml
 # Example entry
   filebrowser:
-    image: filebrowser/filebrowser:latest
+    image: filebrowser/filebrowser:${FILEBROWSER_VERSION}
     container_name: filebrowser
     restart: unless-stopped
     profiles: [all]
@@ -65,14 +72,18 @@ The port is the container's **internal** port, not a host port.
 
 ---
 
-## Step 3 — Add a DNS record in Pi-hole
+## Step 3 — DNS (automatic)
 
-Pi-hole is the DNS server for the Tailscale network. Every subdomain must resolve to the Pi's Tailscale IP.
+Pi-hole is the DNS server for the tailnet, so every subdomain has to resolve to the Pi's Tailscale
+address. Nothing to do by hand: `scripts/sync-pihole-dns.sh` runs on every deploy, reads the
+hostnames out of the Caddy config from step 2, and writes the missing records into Pi-hole.
 
-1. Open Pi-hole: `https://pihole.platanosverdes.com` → Settings → Local DNS → DNS Records
-2. Add:
-   - Domain: `filebrowser.platanosverdes.com`
-   - IP: `TAILSCALE_IP` (e.g. `100.322.71.20`)
+It only ever touches records it derived from Caddy, so anything added by hand stays. To check what
+it did, look for the `[pihole-dns]` line in `apply.log`:
+
+```
+pihole DNS: 1 added, 0 re-pointed, 19 unchanged, 4 unrelated entries left untouched
+```
 
 ---
 
@@ -122,7 +133,7 @@ docker exec caddy caddy reload --config /etc/caddy/Caddyfile
 
 - [ ] Service added to correct compose file with `networks: media-network`
 - [ ] HTTPS route added (Caddyfile or rpi-services `*.caddy`)
-- [ ] DNS record added in Pi-hole → Local DNS
+- [ ] Version pinned in `versions.env`, image referenced as `${SERVICE_VERSION}`
 - [ ] Secrets added to `.env` and `.env.example`
 - [ ] Homepage entry added (optional)
 - [ ] Deployed and tested
