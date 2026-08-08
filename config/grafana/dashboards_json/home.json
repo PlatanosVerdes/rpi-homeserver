@@ -83,7 +83,7 @@
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "## 🍿 Media\n- 🏴‍☠️ [One Pace](/d/onepace-dl/one-pace)\n- 🎬 [Media Pipeline](/d/media-pipeline/media-pipeline)\n- 🔎 [Indexers](/d/indexers/indexers)",
+        "content": "## 🍿 Media\n- 🏴‍☠️ [One Pace](/d/onepace-dl/one-pace)\n- 🎬 [Media Pipeline](/d/media-pipeline/media-pipeline)\n- 🔎 [Indexers](/d/indexers/indexers)\n- 🗣️ [Audio languages](/d/media-languages/audio-languages)\n- 💽 [Disk usage](/d/media-disk-usage/disk-usage)",
         "mode": "markdown"
       },
       "pluginVersion": "12.3.3",
