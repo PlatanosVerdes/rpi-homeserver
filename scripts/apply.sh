@@ -235,6 +235,10 @@ bash "$PROJECT_DIR/scripts/sync-pihole-dns.sh" 2>&1 | while IFS= read -r line; d
 # by hand through each app's UI and otherwise lost with appdata).
 bash "$PROJECT_DIR/scripts/sync-arr-links.sh" 2>&1 | while IFS= read -r line; do log "[arr-links] $line"; done
 
+# Push PLEX_LAN_NETWORKS into Plex, so tailnet clients count as local and are not charged the
+# Remote Watch Pass. No Docker image exposes this preference, and it only exists in appdata.
+bash "$PROJECT_DIR/scripts/sync-plex-prefs.sh" 2>&1 | while IFS= read -r line; do log "[plex-prefs] $line"; done
+
 # Aggregate status: error(1)>changed(0)>no-change(2)
 if [ $RESULT_HOME -eq 1 ] || [ $RESULT_SERVICES -eq 1 ]; then
     DEPLOY_ERRORS=$((DEPLOY_ERRORS + 1))
