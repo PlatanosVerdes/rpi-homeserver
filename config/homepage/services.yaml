@@ -31,15 +31,6 @@
           type: overseerr
           url: http://overseerr:5055
           key: "{{HOMEPAGE_VAR_OVERSEERR_TOKEN}}"
-    - Tautulli:
-        icon: tautulli.png
-        href: https://tautulli.platanosverdes.com
-        server: my-docker
-        container: tautulli
-        widget:
-          type: tautulli
-          url: http://tautulli:8181
-          key: "{{HOMEPAGE_VAR_TAUTULLI_TOKEN}}"
 
 - Library:
     - Radarr:
@@ -60,11 +51,6 @@
           type: sonarr
           url: http://sonarr:8989
           key: "{{HOMEPAGE_VAR_SONARR_TOKEN}}"
-    - Bazarr:
-        icon: bazarr.png
-        href: https://bazarr.platanosverdes.com
-        server: my-docker
-        container: bazarr
     - Prowlarr:
         icon: prowlarr.png
         href: https://prowlarr.platanosverdes.com
@@ -74,16 +60,16 @@
           type: prowlarr
           url: http://prowlarr:9696
           key: "{{HOMEPAGE_VAR_PROWLARR_TOKEN}}"
-    - Maintainerr:
-        icon: maintainerr.png
-        href: https://maintainerr.platanosverdes.com
-        server: my-docker
-        container: maintainerr
     - SubDown:
         icon: https://subs.platanosverdes.com/icon.svg
         href: https://subs.platanosverdes.com
         server: my-docker
         container: subtitle-links
+    - Bazarr:
+        icon: bazarr.png
+        href: https://bazarr.platanosverdes.com
+        server: my-docker
+        container: bazarr
 
 - Monitoring:
     - Grafana:
@@ -126,6 +112,20 @@
         href: http://{{HOMEPAGE_VAR_TAILSCALE_IP}}:8191
         server: my-docker
         container: flaresolverr
+    - Maintainerr:
+        icon: maintainerr.png
+        href: https://maintainerr.platanosverdes.com
+        server: my-docker
+        container: maintainerr
+    - Tautulli:
+        icon: tautulli.png
+        href: https://tautulli.platanosverdes.com
+        server: my-docker
+        container: tautulli
+        widget:
+          type: tautulli
+          url: http://tautulli:8181
+          key: "{{HOMEPAGE_VAR_TAUTULLI_TOKEN}}"
 
 - Network:
     - Pi-hole:
@@ -153,6 +153,19 @@
         description: Pol Academy Offers Hunter
         server: my-docker
         container: pol-academy-offers-bot
+
+# Routed in Caddy and reachable, but never finished being set up. Uncomment when they are.
+#- Personal:
+#    - AirTag:
+#        icon: mdi-map-marker
+#        href: https://airtag.platanosverdes.com
+#        server: my-docker
+#        container: air-tag
+#    - Calendar:
+#        icon: mdi-calendar
+#        href: https://cal.platanosverdes.com
+#        server: my-docker
+#        container: cal-bridge
 
 # Routed in Caddy and reachable, but never finished being set up. Uncomment when they are.
 #- Personal:
