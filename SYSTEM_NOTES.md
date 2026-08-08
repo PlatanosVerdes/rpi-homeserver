@@ -154,13 +154,17 @@ roughly twice as long to reach, so torrents took twice as long to retire themsel
 change the queue went from 18 waiting to 0.
 
 The limit is 40 rather than unlimited so a much larger library cannot open hundreds of connections on
-a Pi. This setting lives in `appdata/qbittorrent/` and is therefore **not** reproducible from git:
-if the Pi is rebuilt, set it again.
+a Pi.
+
+> Everything in this section and the next now lives in `config/qbittorrent/preferences.json` and is
+> reapplied on every deploy by `scripts/sync-qbit-config.sh`. It used to be appdata-only, which is
+> why these notes existed at all. **Change the values there, not in the WebUI:** the next deploy
+> converges the app back to whatever is committed. What is written below is the reasoning, which the
+> JSON cannot hold.
 
 ## qBittorrent global download limit
 
-`dl_limit` set to **10 MiB/s** (10485760 B/s) on 2026-08-08, live through the WebUI API. It was
-unlimited. Same caveat as above: `appdata/` only, set it again if the Pi is rebuilt.
+`dl_limit` set to **10 MiB/s** (10485760 B/s) on 2026-08-08. It was unlimited.
 
 Why: that night the 02:00 `cutoff-search.sh` run found upgrades for 7 films at once and handed
 qBittorrent ~226 GB. Load average hit **16** on a 4-core Pi and stayed there for 100 minutes, with 8
@@ -191,12 +195,12 @@ The knob is the rate, not the concurrency. `max_active_downloads` stays at 3: wi
 force, three torrents share the same 10 MiB/s that one would have had, so lowering it changes how
 scattered the writes are but not how many bytes get written.
 
-`async_io_threads` lowered from 10 to **4** at the same time, same caveat about living in `appdata/`.
-It is how many disk requests libtorrent keeps in flight. Ten is a sensible default for an SSD, which
-has no moving parts and gets faster the deeper its queue; on platters every concurrent request is a
-different place on the surface, so ten threads across three torrents leaves the head travelling
-instead of writing. This one is reasoning from how the hardware works, **not** something measured on
-this Pi — worth a look at the load graph after a busy night, and it reverts with one API call.
+`async_io_threads` lowered from 10 to **4** at the same time. It is how many disk requests libtorrent
+keeps in flight. Ten is a sensible default for an SSD, which has no moving parts and gets faster the
+deeper its queue; on platters every concurrent request is a different place on the surface, so ten
+threads across three torrents leaves the head travelling instead of writing. This one is reasoning
+from how the hardware works, **not** something measured on this Pi — worth a look at the load graph
+after a busy night, and putting it back is a one-line edit to the JSON.
 
 `alt_dl_limit` (also 10 MiB/s) is unrelated and deliberately left alone: it only applies while
 `scheduler_enabled` is true, and it is false, so it is dead config — mentioned here only so it is not
