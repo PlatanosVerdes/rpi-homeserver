@@ -3868,7 +3868,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Every film in Radarr and the audio languages its file carries, straight from Radarr's own\nnaming (no translation table here).\n\nThe `Audio language` picker at the top filters the list: leave it on All to see the whole\nlibrary with every language each film has, or pick one to get only the films that have it.\nA film with several languages is one series per language underneath, which is what makes the\nfilter work; the grouping collapses it back to one row per film.\n\nQuality wears the same colours as \"Stuck on a bad quality\" above, so a 2160p reads blue in\nboth places. That mapping is copied from that panel, not reinvented here.",
+      "description": "Every film in Radarr and the audio languages its file carries, straight from Radarr's own\nnaming (no translation table here).\n\nThe `Audio language` picker at the top filters the list: leave it on All to see the whole\nlibrary with every language each film has, or pick one to get only the films that have it.\nA film with several languages is one series per language underneath, which is what makes the\nfilter work; the grouping collapses it back to one row per film.\n\nThree tiers everywhere, in the blue/green/orange the quality columns above already use.\nCodec: blue is lossless or object-based, green is lossy at a high bitrate, orange is basic.\nLangs: blue is a real choice of audio, green is a couple, plain text is take it or leave it.\nQuality keeps the exact mapping from \"Stuck on a bad quality\".\n\nThe language list itself stays uncoloured on purpose: a cell reading \"English, French,\nGerman\" cannot honestly wear one colour. Per-language hues live in the panel beside this one,\nwhere each language is its own bar.",
       "gridPos": {
         "h": 13,
         "w": 16,
@@ -3886,36 +3886,12 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Langs"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 70
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
               "options": "Channels"
             },
             "properties": [
               {
                 "id": "custom.width",
                 "value": 90
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Codec"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 120
               }
             ]
           },
@@ -4094,6 +4070,197 @@
               {
                 "id": "custom.width",
                 "value": 140
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Codec"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "TrueHD Atmos": {
+                        "color": "blue",
+                        "index": 0,
+                        "text": "TrueHD Atmos"
+                      },
+                      "TrueHD": {
+                        "color": "blue",
+                        "index": 1,
+                        "text": "TrueHD"
+                      },
+                      "DTS-X": {
+                        "color": "blue",
+                        "index": 2,
+                        "text": "DTS-X"
+                      },
+                      "DTS-HD MA": {
+                        "color": "blue",
+                        "index": 3,
+                        "text": "DTS-HD MA"
+                      },
+                      "DTS-HD HRA": {
+                        "color": "blue",
+                        "index": 4,
+                        "text": "DTS-HD HRA"
+                      },
+                      "FLAC": {
+                        "color": "blue",
+                        "index": 5,
+                        "text": "FLAC"
+                      },
+                      "PCM": {
+                        "color": "blue",
+                        "index": 6,
+                        "text": "PCM"
+                      },
+                      "LPCM": {
+                        "color": "blue",
+                        "index": 7,
+                        "text": "LPCM"
+                      },
+                      "EAC3 Atmos": {
+                        "color": "green",
+                        "index": 8,
+                        "text": "EAC3 Atmos"
+                      },
+                      "EAC3": {
+                        "color": "green",
+                        "index": 9,
+                        "text": "EAC3"
+                      },
+                      "DTS": {
+                        "color": "green",
+                        "index": 10,
+                        "text": "DTS"
+                      },
+                      "AC3": {
+                        "color": "green",
+                        "index": 11,
+                        "text": "AC3"
+                      },
+                      "DTS-ES": {
+                        "color": "green",
+                        "index": 12,
+                        "text": "DTS-ES"
+                      },
+                      "AAC": {
+                        "color": "orange",
+                        "index": 13,
+                        "text": "AAC"
+                      },
+                      "Opus": {
+                        "color": "orange",
+                        "index": 14,
+                        "text": "Opus"
+                      },
+                      "MP3": {
+                        "color": "orange",
+                        "index": 15,
+                        "text": "MP3"
+                      },
+                      "Vorbis": {
+                        "color": "orange",
+                        "index": 16,
+                        "text": "Vorbis"
+                      },
+                      "WMA": {
+                        "color": "orange",
+                        "index": 17,
+                        "text": "WMA"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 130
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Langs"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "1": {
+                        "color": "text",
+                        "index": 0,
+                        "text": "1"
+                      },
+                      "2": {
+                        "color": "green",
+                        "index": 1,
+                        "text": "2"
+                      },
+                      "3": {
+                        "color": "green",
+                        "index": 2,
+                        "text": "3"
+                      },
+                      "4": {
+                        "color": "blue",
+                        "index": 3,
+                        "text": "4"
+                      },
+                      "5": {
+                        "color": "blue",
+                        "index": 4,
+                        "text": "5"
+                      },
+                      "6": {
+                        "color": "blue",
+                        "index": 5,
+                        "text": "6"
+                      },
+                      "7": {
+                        "color": "blue",
+                        "index": 6,
+                        "text": "7"
+                      },
+                      "8": {
+                        "color": "blue",
+                        "index": 7,
+                        "text": "8"
+                      },
+                      "9": {
+                        "color": "blue",
+                        "index": 8,
+                        "text": "9"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 70
               }
             ]
           }
