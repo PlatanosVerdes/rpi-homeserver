@@ -641,7 +641,12 @@ groups:
       - uid: homelab-used-indexer-down
         title: 'An indexer you actually use is down'
         condition: C
-        for: 5m
+        # 6h, not minutes. An indexer being down is not something you can fix from here: it either
+        # comes back on its own or it does not, and Prowlarr keeps retrying either way. The only
+        # version of this worth a message is "it has been gone long enough that you should pick a
+        # different one", so nothing under most of a day gets to interrupt. Combined with the 1h
+        # average in the expression, this needs ~7h of being mostly down before it says anything.
+        for: 6h
         labels:
           severity: warning
         annotations:
