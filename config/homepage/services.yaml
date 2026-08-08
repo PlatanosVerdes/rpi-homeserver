@@ -1,3 +1,6 @@
+# The order of the groups BELOW IS IGNORED: homepage lays the page out in the order the
+# `layout:` block of settings.yaml lists them. Change that file to move a group.
+#
 # Groups are named after what you came here to do, not after a software category. The old
 # "Indexers" group held Radarr, Sonarr, Bazarr and FlareSolverr, none of which is an indexer,
 # so nobody looking for Radarr would have opened it. Order is by what actually gets used.
