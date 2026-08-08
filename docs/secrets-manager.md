@@ -1,6 +1,15 @@
 # Secrets Manager — Bitwarden SM
 
-All sensitive credentials are stored in [Bitwarden Secrets Manager](https://bitwarden.com/products/secrets-manager/) (BWS). Only `BWS_ACCESS_TOKEN` stays in `.env`.
+> **This is not how this server works. Do not follow it as a setup guide.**
+>
+> Bitwarden Secrets Manager was evaluated and **dropped**: it did not fit the workflow. Secrets
+> live in each repo's `.env`, gitignored and mirrored in `.env.example`, and the deploy runs plain
+> `docker compose`. `scripts/bws-run.py` is kept alongside this page as a reference for a possible
+> future attempt and is **not wired into anything**.
+
+Everything below describes the design as it was evaluated, not as it runs.
+
+All sensitive credentials would be stored in [Bitwarden Secrets Manager](https://bitwarden.com/products/secrets-manager/) (BWS). Only `BWS_ACCESS_TOKEN` would stay in `.env`.
 
 ## How it works
 

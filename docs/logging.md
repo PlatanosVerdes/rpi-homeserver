@@ -17,7 +17,8 @@ this:
 | Answers | *how much*, *is it up* | *what did it say, and why* |
 | Good for | Dashboards and alerts | Working out what happened after the fact |
 
-Prometheus tells you the disk filled at 3am. VictoriaLogs tells you what was writing to it.
+Prometheus reports that the disk filled at 3am. VictoriaLogs holds the lines showing what was
+writing to it.
 
 ## How it fits together
 
@@ -44,12 +45,11 @@ component you notice; what it adds (multi-tenancy, object storage) is worth noth
 
 ## Reading the logs
 
-Two doors to the same data:
+Two interfaces onto the same data:
 
-- **Grafana** → Explore → pick the **VictoriaLogs** datasource. Best when you already have a
-  dashboard open.
-- **Its own web UI** at `https://logs.platanosverdes.com/select/vmui/`. Better for digging around,
-  because it shows the fields as they really are.
+- **Grafana** → Explore → **VictoriaLogs** datasource.
+- **VictoriaLogs' own web UI** at `https://logs.platanosverdes.com/select/vmui/`, which shows the
+  raw fields and is the better one for exploratory queries.
 
 Queries use a language called **LogsQL**. It is not PromQL (Prometheus) and not LogQL (Loki), so
 examples found online for those will not work here. Start from these:
@@ -101,19 +101,19 @@ sudo du -sh /mnt/data/db/victorialogs     # how much it is actually using
 
 ## About the Docker socket
 
-Vector mounts `/var/run/docker.sock` read-only. That socket is how you talk to the Docker daemon,
-and access to it is effectively root on the host, so it deserves a sentence rather than silence:
-Vector uses it only to list containers and follow their output, and cAdvisor and Homepage on this
-same server already mount it, so it grants nothing that was not already granted. The `json-file`
-driver is untouched, so `docker logs <name>` still behaves exactly as before.
+Vector mounts `/var/run/docker.sock` read-only. Access to that socket is effectively root on the
+host, so it is worth stating explicitly: Vector uses it only to list containers and follow their
+output, and cAdvisor and Homepage on this same server already mount it, so it grants nothing that
+was not already granted. The `json-file` driver is untouched, so `docker logs <name>` behaves as
+before.
 
 ## If something looks wrong
 
 - **No logs at all.** `docker logs vector` shows what it decided to watch. It only captures from
   the moment it starts, so it never backfills anything written before that.
 - **One container is missing.** First check it is actually printing anything:
-  `docker logs --since 15m <name>`. Most of the quiet ones are quiet, not broken. Vector filters
-  only itself, to avoid it reporting on its own reporting.
+  `docker logs --since 15m <name>`. Several containers here are simply silent. The only exclusion
+  Vector applies is itself, which would otherwise feed its own output back in.
 - **`Error in communication with Docker daemon ... container which is dead or marked for removal`.**
   Vector was following a container while a deploy replaced it. It reattaches on its own.
 - **Grafana says the datasource type is unknown.** The plugin downloads when Grafana starts, so
