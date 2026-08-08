@@ -26,6 +26,52 @@ sudo systemctl restart docker
 
 After applying this, no individual `compose-*.yml` file needs a `logging:` block.
 
+Container logs are also shipped to VictoriaLogs and kept there for 30 days, so this cap only
+governs how far back `docker logs` reaches. See [docs/logging.md](docs/logging.md).
+
+### The systemd journal
+
+`journald.conf` shipped empty, so the default cap of 10% of the filesystem applied: on a 117 GB SD
+card, room for roughly 11 GB of journal. Capped explicitly.
+
+**File:** `/etc/systemd/journald.conf`
+
+```
+SystemMaxUse=200M
+SystemMaxFileSize=50M
+```
+
+```bash
+sudo systemctl restart systemd-journald
+journalctl --disk-usage
+```
+
+### The repo's own log files
+
+The cron scripts append to `apply.log`, `backup.log` and friends in the repo root, and nothing was
+rotating them, so `apply.log` had grown to 2.9 MB one deploy line at a time. A host file, not in
+git:
+
+**File:** `/etc/logrotate.d/rpi-homeserver`
+
+```
+/home/raspi/rpi-homeserver/*.log {
+    weekly
+    rotate 4
+    maxsize 20M
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+    su raspi raspi
+}
+```
+
+`copytruncate` is not optional: the cron jobs hold these files open with `>>`, so rotating by
+rename would leave them writing into a deleted inode and the new file would stay empty forever.
+Dry run with `sudo logrotate -d /etc/logrotate.d/rpi-homeserver`.
+
 ---
 
 ## 2. External Disk Mount
