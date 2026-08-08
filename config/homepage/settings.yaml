@@ -24,16 +24,16 @@ disableUpdateCheck: false
 layout:
   Watch:
     style: grid
-    columns: 4
+    columns: 3
   Library:
     style: grid
-    columns: 3
+    columns: 5
   Monitoring:
     style: grid
     columns: 4
   Downloads:
     style: grid
-    columns: 2
+    columns: 4
   Network:
     style: grid
     columns: 2
