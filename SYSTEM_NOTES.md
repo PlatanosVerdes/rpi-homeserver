@@ -187,9 +187,16 @@ the run queue under 4 while still clearing a 50 GB release in about 85 minutes. 
 nowhere near the limiting factor, buying speed above this point costs responsiveness and saves
 nothing that matters.
 
-The knob is the rate, not the concurrency. `max_active_downloads` was already 3; three 4K torrents
-pulling at line speed saturate this box on their own, so capping how many run in parallel would not
-have helped.
+The knob is the rate, not the concurrency. `max_active_downloads` stays at 3: with a global cap in
+force, three torrents share the same 10 MiB/s that one would have had, so lowering it changes how
+scattered the writes are but not how many bytes get written.
+
+`async_io_threads` lowered from 10 to **4** at the same time, same caveat about living in `appdata/`.
+It is how many disk requests libtorrent keeps in flight. Ten is a sensible default for an SSD, which
+has no moving parts and gets faster the deeper its queue; on platters every concurrent request is a
+different place on the surface, so ten threads across three torrents leaves the head travelling
+instead of writing. This one is reasoning from how the hardware works, **not** something measured on
+this Pi — worth a look at the load graph after a busy night, and it reverts with one API call.
 
 `alt_dl_limit` (also 10 MiB/s) is unrelated and deliberately left alone: it only applies while
 `scheduler_enabled` is true, and it is false, so it is dead config — mentioned here only so it is not
