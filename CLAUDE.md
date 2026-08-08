@@ -24,7 +24,8 @@ versions.env                Single source of truth for all image versions (commi
 compose-core.yml            Caddy, Homepage, Pi-hole, Speedtest-tracker
 compose-media.yml           Plex, Jellyfin, Overseerr, Acestream, Tautulli, watch-next
 compose-arrs.yml            Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr
-compose-mon.yml             Prometheus, Grafana, Pushgateway, node-exporter, cAdvisor
+compose-mon.yml             Prometheus, Grafana, Pushgateway, node-exporter, cAdvisor,
+                            VictoriaLogs + Vector (container logs, see docs/logging.md)
 
 config/                     Static config files committed to git
   caddy/Caddyfile           Reverse proxy rules (HTTPS + HTTP short names)
@@ -35,6 +36,7 @@ config/                     Static config files committed to git
   grafana/                  Provisioned datasources + dashboard JSONs
   grafana/alerting/         Alert rules, policy, contact-point template (rendered on deploy)
   homepage/                 Dashboard YAML configs
+  vector/vector.yaml        What Vector collects and where it ships it
   arr/radarr, arr/sonarr    Custom formats + quality profiles, pushed into each app on deploy
                             (sync-arr-config.sh) — otherwise they only exist in appdata
 
@@ -265,6 +267,44 @@ in [docs/alerting.md](docs/alerting.md).
 Community dashboards to import manually:
 - `1860` — Node Exporter Full
 - `193` — cAdvisor
+
+---
+
+## Documentation
+
+`docs/` holds one topic per file, written as guides someone can follow without having been here
+when it was built.
+
+**A doc change is rarely only a doc change.** Before calling it done, check what else points at it:
+
+| If you | Also check |
+| :--- | :--- |
+| Add a file to `docs/` | It is linked from `README.md`, in the section it belongs to. An unlinked doc is one nobody finds |
+| Rename or delete a doc | `grep -rn '<old-name>.md' README.md CLAUDE.md docs/` — cross-links between docs break silently |
+| Add a service | The repository layout above, its compose module line, `versions.env`, and the checklist in [docs/add-service.md](docs/add-service.md) |
+| Automate something that used to be manual | Every doc still walking the reader through it by hand. A guide describing a step the deploy now performs is worse than no guide, because it gets followed |
+| Abandon an approach | Say so in the **title**, not in a note further down. A file list is read without opening anything |
+
+Nothing enforces any of this; markdown has no tags or dependencies. The check is a loop:
+
+```bash
+for f in docs/*.md; do
+    n=$(basename "$f")
+    [ "$(grep -c "$n" README.md)" -eq 0 ] && echo "orphan: $n"
+done
+```
+
+**Tone**, same as the rest of the repo:
+
+- Write a guide, not a changelog. "Debian ships this commented out, so set it explicitly" rather
+  than "this was empty and had grown to 2.9 MB".
+- Define a term the first time it carries weight. RFC1918, CGNAT, tailnet, subnet router: a reader
+  who does not already know them will not stop to look them up.
+- Give the reason whenever a choice looks wrong from the outside: `/32` instead of a subnet,
+  `redir` instead of `reverse_proxy`. Without it, the next person "fixes" it.
+- No tutorial voice and no filler enthusiasm. A concrete question someone genuinely arrives with is
+  useful; building up to a reveal is not.
+- Say what a thing does **not** do. That is where the wasted debugging starts.
 
 ---
 

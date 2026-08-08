@@ -435,6 +435,12 @@ Metrics are pushed to Pushgateway and visible in the **Deploy Monitor** dashboar
   bash /home/raspi/rpi-homeserver/scripts/apply.sh
   ```
 
+### Logs (VictoriaLogs)
+Prometheus stores numbers, not text. `vector` forwards what every container prints into
+`victorialogs`, which keeps 30 days of it on the data disk and answers queries from Grafana
+(Explore → VictoriaLogs) or its own UI at `https://logs.platanosverdes.com/select/vmui/`.
+Full guide, including what is deliberately not collected: [docs/logging.md](docs/logging.md).
+
 ### Backups & Recovery
 `scripts/backup.sh` (daily cron at 04:00) snapshots `appdata/` to a compressed, rotated
 archive and pushes health metrics to the **Backup Monitor** Grafana dashboard. Full guide:
