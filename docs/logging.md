@@ -1,71 +1,125 @@
 # Logging
 
-Prometheus answers "how much" and "is it up". It cannot answer "what did this container say at
-03:14", which is what you need when something broke an hour ago and the container has since
-restarted. This adds a searchable log store next to it, on the same Grafana.
+## What this is for
 
-```
-containers ──► vector (docker socket, ro) ──► victorialogs ──► Grafana
-                                                   │
-                                              /mnt/data/db
-```
+Every container on this server writes text as it works: what it did, what it failed to do, what it
+is waiting for. That text is called a **log**. Docker keeps a bit of it and throws the rest away,
+which is fine until the day something breaks and the evidence is already gone.
 
-| Piece | What it does | Footprint |
+This adds two pieces so that text is kept for 30 days and can be searched from one place.
+
+It is not the same job as Prometheus, which is already on this server and is easy to confuse with
+this:
+
+| | Prometheus | VictoriaLogs |
 | :--- | :--- | :--- |
-| `victorialogs` | Stores and queries logs, 30 day retention | ~25 MB RAM |
-| `vector` | Follows every container's stdout/stderr and ships it | ~52 MB RAM |
+| Stores | **Numbers** over time: CPU 42%, disk 35%, "is it alive: yes" | **Text**: `connection refused`, `attest failed` |
+| Answers | *how much*, *is it up* | *what did it say, and why* |
+| Good for | Dashboards and alerts | Working out what happened after the fact |
 
-Use VictoriaLogs rather than Grafana Loki here. On a Raspberry Pi, Loki is the component you
-notice, and what it adds over VictoriaLogs (multi-tenancy, object storage) is worth nothing on a
-single box.
+Prometheus tells you the disk filled at 3am. VictoriaLogs tells you what was writing to it.
 
-## How to read the logs
+## How it fits together
 
-- **Grafana** → Explore → **VictoriaLogs** datasource. Provisioned from
-  `config/grafana/provisioning/datasources/victorialogs.yml`, using the
-  `victoriametrics-logs-datasource` plugin installed via `GF_INSTALL_PLUGINS` on the Grafana service.
-- **Its own UI** at `https://logs.platanosverdes.com/select/vmui/`, which is better for ad-hoc
-  digging than Explore.
+```
+each container prints text
+        │
+        ▼
+   vector          reads the text as it appears and forwards it
+        │
+        ▼
+  victorialogs     stores it for 30 days and answers searches
+        │
+        ▼
+    Grafana        where you read it
+```
 
-The query language is LogsQL, not PromQL and not LogQL:
+| Piece | Its one job | Footprint |
+| :--- | :--- | :--- |
+| `vector` | Watches every container and forwards whatever they print | ~52 MB RAM |
+| `victorialogs` | Keeps 30 days of it, answers queries | ~25 MB RAM |
+
+Use VictoriaLogs rather than the better-known Grafana Loki. On a Raspberry Pi, Loki is the
+component you notice; what it adds (multi-tenancy, object storage) is worth nothing on one box.
+
+## Reading the logs
+
+Two doors to the same data:
+
+- **Grafana** → Explore → pick the **VictoriaLogs** datasource. Best when you already have a
+  dashboard open.
+- **Its own web UI** at `https://logs.platanosverdes.com/select/vmui/`. Better for digging around,
+  because it shows the fields as they really are.
+
+Queries use a language called **LogsQL**. It is not PromQL (Prometheus) and not LogQL (Loki), so
+examples found online for those will not work here. Start from these:
 
 ```logsql
-_time:1h caddy                          # everything from the caddy container in the last hour
-_time:24h container:plex error          # errors from Plex in the last day
-_time:5m | stats by (container) count() # who is noisy right now
+_time:1h caddy                            # anything from the caddy container, last hour
+_time:24h container:plex error            # lines containing "error" from plex, last day
+_time:5m | stats by (container) count()   # who is talking right now
 ```
 
-## What is collected, and what is not
+The parts, in plain terms:
 
-Every container's stdout/stderr, tagged with `container` and `stream`. Nothing else: not the host's
-journal, not `auth.log`, and not Caddy access logs, which Caddy does not write unless a site is
-given a `log` directive.
+| Piece | What it means |
+| :--- | :--- |
+| `_time:1h` | How far back to look. Almost always the first thing you write |
+| `caddy` | A bare word is a full-text search across the line |
+| `container:plex` | Match a specific field instead of the whole line |
+| `\| stats by (x) count()` | Group and count, like a `GROUP BY` |
 
-**Applications that log to a file rather than stdout will not appear here at all.** Plex and
-qBittorrent are the two that matter on this box: both keep their own log files inside their config
-directory, so `container:plex` stays empty no matter what Plex is doing. Read those with
-`docker exec`, or point Vector at the file if it is ever worth the mount.
+Two fields exist on every line: `container` (which one printed it) and `stream` (`stdout` or
+`stderr`). The line itself is `_msg`.
 
-Stream fields are deliberately just `container` and `stream`. VictoriaLogs indexes by stream, so
-adding something high-cardinality like the image tag would create a new stream on every version
-bump and blow up the index.
+Those two are the only fields VictoriaLogs indexes by, and that is deliberate. It organises data
+into **streams**, one per distinct combination of those fields, and a field with many possible
+values (an image tag, a request id) would create a new stream every time it changed and make the
+index enormous. Keep new stream fields few and boring.
 
-## Storage
+## What is not collected
 
-The database lives on `${DATA_DB_ROOT}/victorialogs`, i.e. the data disk, **never the SD card**: a
-log store writes constantly and would wear the card out. Retention is 30 days
-(`-retentionPeriod=30d` in `compose-mon.yml`). Check what it is actually using:
+Worth knowing before you go looking for something that was never there:
+
+- **Applications that write to a file instead of the screen.** Plex and qBittorrent both keep their
+  own log files inside their config directory, so `container:plex` stays empty no matter what Plex
+  is doing. Read those with `docker exec`, or point Vector at the file if it earns the mount.
+- **The host itself.** The Raspberry Pi's own system log, SSH logins and `auth.log` are not here.
+  Use `journalctl` on the Pi for those.
+- **Caddy's access log.** Caddy records errors, but not every request, unless a site is given a
+  `log` directive. Nothing here turns that on.
+
+## Where it is stored
+
+On the external data disk, at `${DATA_DB_ROOT}/victorialogs`, and **never on the SD card**. A log
+store writes constantly, and constant writes are what kill SD cards. Retention is 30 days, set by
+`-retentionPeriod=30d` in `compose-mon.yml`.
 
 ```bash
-sudo du -sh /mnt/data/db/victorialogs
+sudo du -sh /mnt/data/db/victorialogs     # how much it is actually using
 ```
 
-## The Docker socket
+## About the Docker socket
 
-Vector mounts `/var/run/docker.sock` read-only to enumerate containers and follow their logs. That
-is root-equivalent access to the host, so it is worth stating plainly: it grants nothing new here,
-because cAdvisor and Homepage already mount it. The `json-file` driver is untouched, so
-`docker logs <name>` keeps working exactly as before.
+Vector mounts `/var/run/docker.sock` read-only. That socket is how you talk to the Docker daemon,
+and access to it is effectively root on the host, so it deserves a sentence rather than silence:
+Vector uses it only to list containers and follow their output, and cAdvisor and Homepage on this
+same server already mount it, so it grants nothing that was not already granted. The `json-file`
+driver is untouched, so `docker logs <name>` still behaves exactly as before.
+
+## If something looks wrong
+
+- **No logs at all.** `docker logs vector` shows what it decided to watch. It only captures from
+  the moment it starts, so it never backfills anything written before that.
+- **One container is missing.** First check it is actually printing anything:
+  `docker logs --since 15m <name>`. Most of the quiet ones are quiet, not broken. Vector filters
+  only itself, to avoid it reporting on its own reporting.
+- **`Error in communication with Docker daemon ... container which is dead or marked for removal`.**
+  Vector was following a container while a deploy replaced it. It reattaches on its own.
+- **Grafana says the datasource type is unknown.** The plugin downloads when Grafana starts, so
+  Grafana needs DNS and internet at boot. Check with
+  `docker exec grafana ls /var/lib/grafana/plugins/`.
+- **The disk is filling.** Lower `-retentionPeriod` and restart the container.
 
 ## Removing it
 
@@ -79,17 +133,6 @@ sudo rm -rf /mnt/data/db/victorialogs
 Then drop the two services from `compose-mon.yml`, their two lines from `versions.env`,
 `config/vector/`, `config/grafana/provisioning/datasources/victorialogs.yml`, the
 `GF_INSTALL_PLUGINS` line on Grafana, and the two `logs` routes from the Caddyfile.
-
-## Troubleshooting
-
-- **No logs at all.** `docker logs vector` shows what it is watching. It captures "from now on", so
-  it never backfills anything written before it started.
-- **A container is missing.** Vector excludes itself by name to avoid a feedback loop
-  (`exclude_containers` in `config/vector/vector.yaml`); nothing else is filtered.
-- **Grafana says the datasource type is unknown.** The plugin is downloaded at container start, so
-  Grafana needs working DNS and internet on boot. `docker exec grafana ls /var/lib/grafana/plugins/`
-  should list `victoriametrics-logs-datasource`.
-- **The disk is filling.** Lower `-retentionPeriod` and restart the container.
 
 ## References
 
