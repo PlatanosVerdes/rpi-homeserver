@@ -1,11 +1,9 @@
-# Secrets Manager — Bitwarden SM
+# Secrets Manager — Bitwarden SM (DISCONTINUED)
 
-> **This is not how this server works. Do not follow it as a setup guide.**
->
-> Bitwarden Secrets Manager was evaluated and **dropped**: it did not fit the workflow. Secrets
-> live in each repo's `.env`, gitignored and mirrored in `.env.example`, and the deploy runs plain
-> `docker compose`. `scripts/bws-run.py` is kept alongside this page as a reference for a possible
-> future attempt and is **not wired into anything**.
+> Evaluated and dropped, it did not fit the workflow. Secrets live in each repo's `.env`,
+> gitignored and mirrored in `.env.example`, and the deploy runs plain `docker compose`.
+> `scripts/bws-run.py` is kept as a reference for a possible future attempt and is wired into
+> nothing. Do not follow this as a setup guide.
 
 Everything below describes the design as it was evaluated, not as it runs.
 
