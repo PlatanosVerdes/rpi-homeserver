@@ -7,6 +7,7 @@ Three things the existing exporters cannot answer:
   qbit_torrent_*         which torrents are in each state, not how many
   arr_indexer_grabs_90d  which indexers actually get used, so alerts can ignore the rest
   arr_media_size_bytes   where the disk went: size per title, tagged with its quality
+  arr_library_titles     how many films and series there are, on disk and in total
   arr_media_audio        which audio tracks each film actually has, one series per language
   arr_waiting            everything Radarr waits for: downloading, missing or below cutoff
   prowlarr_indexer_up    which indexers are failing right now, over time
@@ -205,7 +206,8 @@ def media_audio():
     lines = ["# HELP arr_media_audio 1 per film and audio language present in the file",
              "# TYPE arr_media_audio gauge"]
     try:
-        for movie in get("http://localhost:7878/api/v3/movie", api_key("radarr")):
+        movies = get("http://localhost:7878/api/v3/movie", api_key("radarr"))
+        for movie in movies:
             f = movie.get("movieFile")
             if not movie.get("hasFile") or not f:
                 continue
@@ -335,11 +337,17 @@ def library_sizes():
     Radarr knows both the size and the quality of every file; the disk_file_bytes metric from
     disk-usage-metrics.sh only knows paths, and guessing quality from a filename is a losing game.
     Sonarr series get quality "mixed" (a season is many files, often several qualities).
+
+    The plain "how many do I have" counts ride along here rather than being derived from the size
+    series: counting those would silently answer "titles that happen to have a file", so a movie
+    Radarr is still hunting for would go missing from the total without anything looking wrong.
     """
     lines = ["# HELP arr_media_size_bytes Size on disk per title, with its quality",
              "# TYPE arr_media_size_bytes gauge"]
+    counts = {}
     try:
-        for movie in get("http://localhost:7878/api/v3/movie", api_key("radarr")):
+        movies = get("http://localhost:7878/api/v3/movie", api_key("radarr"))
+        for movie in movies:
             f = movie.get("movieFile")
             if not movie.get("hasFile") or not f:
                 continue
@@ -347,18 +355,31 @@ def library_sizes():
             lines.append(f'arr_media_size_bytes{{app="radarr",'
                          f'title="{escape(movie["title"])[:90]}",quality="{escape(q)}"}} '
                          f'{f.get("size", 0)}')
+        counts[("radarr", "total")] = len(movies)
+        counts[("radarr", "with_file")] = sum(1 for m in movies if m.get("hasFile"))
     except Exception as exc:
         failures.append(f"radarr library: {exc}")
 
     try:
-        for series in get("http://localhost:8989/api/v3/series", api_key("sonarr")):
+        shows = get("http://localhost:8989/api/v3/series", api_key("sonarr"))
+        for series in shows:
             size = (series.get("statistics") or {}).get("sizeOnDisk", 0)
             if not size:
                 continue
             lines.append(f'arr_media_size_bytes{{app="sonarr",'
                          f'title="{escape(series["title"])[:90]}",quality="mixed"}} {size}')
+        counts[("sonarr", "total")] = len(shows)
+        counts[("sonarr", "with_file")] = sum(
+            1 for x in shows if (x.get("statistics") or {}).get("episodeFileCount", 0))
+        counts[("sonarr", "episodes")] = sum(
+            (x.get("statistics") or {}).get("episodeFileCount", 0) for x in shows)
     except Exception as exc:
         failures.append(f"sonarr library: {exc}")
+
+    lines += ["# HELP arr_library_titles Titles in each app; kind separates the whole list from what is on disk",
+              "# TYPE arr_library_titles gauge"]
+    for (app, kind), n in sorted(counts.items()):
+        lines.append(f'arr_library_titles{{app="{app}",kind="{kind}"}} {n}')
 
     push("arr_library", lines)
 
