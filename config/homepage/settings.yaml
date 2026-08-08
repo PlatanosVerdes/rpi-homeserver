@@ -27,17 +27,23 @@ layout:
     columns: 3
   Library:
     style: grid
-    columns: 5
-  Monitoring:
+    columns: 3
+  Subtitles:
     style: grid
-    columns: 4
+    columns: 2
   Downloads:
     style: grid
     columns: 4
+  Monitoring:
+    style: grid
+    columns: 2
   Network:
     style: grid
     columns: 2
   Automation:
+    style: grid
+    columns: 2
+  Internals:
     style: grid
     columns: 2
 

@@ -55,6 +55,11 @@ https://logs.platanosverdes.com {
 }
 https://grafana.platanosverdes.com {
     log
+    # Same reason as homepage above: an open Grafana tab holds a websocket and pings /api/login
+    # constantly, which was 47 of 47 requests over 90 seconds with nobody touching it. That is a
+    # tab being open, not a visit, and it would drown out every service that is one.
+    @grafana_keepalive path /api/live/ws /api/login/ping
+    log_skip @grafana_keepalive
     import cf_tls
     reverse_proxy grafana:3000
 }
