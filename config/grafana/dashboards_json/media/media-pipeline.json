@@ -4086,6 +4086,12 @@
                 ]
               },
               {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
                 "id": "custom.width",
                 "value": 140
               }
