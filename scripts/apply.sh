@@ -223,6 +223,20 @@ deploy_repo() {
         fi
     fi
 
+    # Fourth of the same, and the one that hid best. Vector reads its config once at startup, and
+    # the file is a bind mount, so compose never recreates the container for it. Worse, git replaces
+    # the file rather than editing it, so the running container keeps the old inode: host and
+    # container had different checksums for the same path. A plain restart re-resolves the mount.
+    if [[ "$label" == "homeserver" && "$before" != "$after" ]] &&
+        git diff --name-only "$before" "$after" | grep -q '^config/vector/' &&
+        docker ps --format '{{.Names}}' | grep -qx vector; then
+        if docker restart vector >/dev/null 2>&1; then
+            log "[$label] vector config changed, restarted to load it"
+        else
+            log "[$label] WARNING: vector config changed but it would not restart"
+        fi
+    fi
+
     if [ "$before" != "$after" ]; then
         # Docs-only commits (e.g. PENDING.md, README.md) touch nothing Docker reads, so skip the
         # rebuild — a `.md`-only diff would otherwise still trigger a full `--build` pass.
