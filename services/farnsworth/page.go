@@ -56,11 +56,11 @@ var pageTmpl = template.Must(template.New("page").Parse(`<!doctype html>
   .ch img { width:40px; height:40px; object-fit:contain; border-radius:.35rem; flex:none; background:#0d0814; }
   .meta { min-width:0; flex:1; }
   .name { font-weight:600; font-size:.92rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .alt { font-size:.75rem; color:var(--dim); }
-  .alt a { color:var(--dim); }
   .btn { background:var(--accent); color:#1a1024; border:0; border-radius:.5rem; font-weight:700;
          padding:.55rem .85rem; font-size:.85rem; cursor:pointer; flex:none; text-decoration:none; }
   .btn:active { transform:scale(.97); }
+  .btn.ghost { background:transparent; color:var(--accent); border:1px solid var(--accent); }
+  .actions { display:flex; gap:.4rem; flex:none; }
   .setup { max-width:64rem; margin:0 auto 1.25rem; background:var(--card); border:1px solid var(--line);
            border-radius:.7rem; padding:.9rem 1rem; font-size:.85rem; color:var(--dim); }
   .setup b { color:var(--ink); }
@@ -110,9 +110,11 @@ var pageTmpl = template.Must(template.New("page").Parse(`<!doctype html>
       {{if .Logo}}<img src="{{.Logo}}" alt="" loading="lazy">{{end}}
       <div class="meta">
         <div class="name" title="{{.Name}}">{{.Name}}</div>
-        <div class="alt"><a href="#" onclick="return vlc('{{.ID}}')">probar VLC directo</a></div>
       </div>
-      <a class="btn" href="/m3u/{{.ID}}">Abrir</a>
+      <div class="actions">
+        <a class="btn" href="/m3u/{{.ID}}">Abrir</a>
+        <a class="btn ghost" href="#" onclick="return vlc('{{.ID}}')">VLC</a>
+      </div>
     </div>
   {{end}}
   </div>
@@ -123,6 +125,7 @@ var pageTmpl = template.Must(template.New("page").Parse(`<!doctype html>
 
 <footer>
   <b>Abrir</b> descarga un .m3u de ese canal y tu dispositivo lo manda a su reproductor.
+  <b>VLC</b> intenta abrirlo directamente, y no funciona en todos los dispositivos.
   Un canal tarda unos segundos en arrancar mientras el reproductor encuentra el swarm. Si no arranca en un
   minuto, ese canal no tiene a nadie compartiéndolo ahora mismo: prueba otra fuente del mismo canal.
   Los streams salen de <code>{{.StreamBase}}</code>, así que hace falta estar en casa o con Tailscale.
