@@ -14,6 +14,11 @@
 # died and covers pushes that arrived while the Pi or the tunnel was down.
 */30 * * * * /home/raspi/rpi-homeserver/scripts/apply.sh >> /home/raspi/rpi-homeserver/apply.log 2>&1
 
+# zram cost -> node-exporter textfile collector, every minute. node_exporter cannot tell swap on a
+# disk from swap in compressed RAM, so its SWAP gauge sits red at 87% while nothing is wrong. This
+# exports the number it is missing: the real RAM those pages occupy. One sysfs read.
+* * * * * /home/raspi/rpi-homeserver/scripts/zram-metrics.sh
+
 # Tailscale peer metrics -> node-exporter textfile collector, every minute
 * * * * * /home/raspi/rpi-homeserver/services/tailscale-metrics/tailscale-metrics
 
@@ -22,10 +27,16 @@
 # only thing 6h bought was a panel showing files that had already been deleted.
 0 * * * * /home/raspi/rpi-homeserver/scripts/disk-usage-metrics.sh >> /home/raspi/rpi-homeserver/disk-usage-metrics.log 2>&1
 
-# Radarr: search for anything missing or below its quality cutoff, nightly at 02:00.
+# Radarr: search for anything missing or below its quality cutoff, nightly at 05:00.
 # RSS already catches new releases within 30 min; this is for releases that scrolled out of the
 # feed, which is why it needs an actual search. Add `sonarr` to cover series too.
-0 2 * * * /home/raspi/rpi-homeserver/scripts/cutoff-search.sh >> /home/raspi/rpi-homeserver/cutoff-search.log 2>&1
+#
+# 05:00 and not 02:00, which is where it used to be: Plex runs its own nightly maintenance from
+# 02:00 to 05:00 (its default window, and Preferences.xml does not override it). Measured on
+# 2026-08-09, that costs 0.4 cores and 52 MB/s of *reads* with almost no writes. Downloads are the
+# opposite shape, sustained writes, and both land on the same two USB platters. Starting the search
+# as Plex finishes keeps the head doing one job at a time instead of seeking between two.
+0 5 * * * /home/raspi/rpi-homeserver/scripts/cutoff-search.sh >> /home/raspi/rpi-homeserver/cutoff-search.log 2>&1
 
 # Daily appdata backup at 04:00
 0 4 * * * /home/raspi/rpi-homeserver/scripts/backup.sh >> /home/raspi/rpi-homeserver/backup.log 2>&1

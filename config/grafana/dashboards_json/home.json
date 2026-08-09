@@ -50,7 +50,7 @@
       "description": "Blackbox probes that got no valid answer. Zero and green is the normal state; anything\nelse names itself in the alert that fires alongside.",
       "gridPos": {
         "h": 5,
-        "w": 4,
+        "w": 3,
         "x": 0,
         "y": 0
       },
@@ -119,8 +119,8 @@
       "description": "Red at 75 C, the same threshold as the \"Pi running hot\" alert. Sustained throttling\nterritory rather than a brief spike.",
       "gridPos": {
         "h": 5,
-        "w": 4,
-        "x": 4,
+        "w": 3,
+        "x": 3,
         "y": 0
       },
       "fieldConfig": {
@@ -193,8 +193,8 @@
       "description": "Five-minute load average. This Pi has 4 cores, so 4 is the line where work starts queuing\nrather than running; the night qBittorrent was uncapped this sat at 16.",
       "gridPos": {
         "h": 5,
-        "w": 4,
-        "x": 8,
+        "w": 3,
+        "x": 6,
         "y": 0
       },
       "fieldConfig": {
@@ -267,8 +267,8 @@
       "description": "Available, not unused: cache that can be reclaimed counts as free. Red under 10% would\nmean swapping to the SD card, which is where the \"Memory almost exhausted\" alert sits.",
       "gridPos": {
         "h": 5,
-        "w": 4,
-        "x": 12,
+        "w": 3,
+        "x": 9,
         "y": 0
       },
       "fieldConfig": {
@@ -335,6 +335,154 @@
     },
     {
       "type": "stat",
+      "title": "Swap in RAM",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "What the swap actually costs. Swap here is /dev/zram0, compressed RAM rather than the SD card,\nso node_exporter's own SWAP gauge reads ~87% and turns red while nothing is wrong: a full zram\nis zram doing its job. This is the number that gauge cannot show — the real RAM those\ncompressed pages occupy. Today: 0.55 GB holding 1.64 GB, so it is handing back about a gig.",
+      "gridPos": {
+        "h": 5,
+        "w": 3,
+        "x": 12,
+        "y": 0
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1000000000.0
+              },
+              {
+                "color": "red",
+                "value": 1500000000.0
+              }
+            ]
+          },
+          "mappings": [],
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "legendFormat": "__auto",
+          "expr": "zram_memory_used_bytes{device=\"zram0\"}"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Swap ratio",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Bytes of swapped data per byte of real RAM. Higher is better and green starts at 2x. If this\never fell towards 1x the pages would have stopped compressing, and zram would be costing RAM\nrather than saving it — the only condition under which a full swap here is worth reacting to.",
+      "gridPos": {
+        "h": 5,
+        "w": 3,
+        "x": 15,
+        "y": 0
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1.5
+              },
+              {
+                "color": "green",
+                "value": 2
+              }
+            ]
+          },
+          "mappings": [],
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "legendFormat": "__auto",
+          "expr": "zram_compression_ratio{device=\"zram0\"}"
+        }
+      ]
+    },
+    {
+      "type": "stat",
       "title": "Data disk free",
       "datasource": {
         "type": "prometheus",
@@ -343,8 +491,8 @@
       "description": "Free space across the mergerfs pool. The alert fires under 10% of 2.7 TB, roughly 270 GB,\nwhich is why orange starts near there.",
       "gridPos": {
         "h": 5,
-        "w": 4,
-        "x": 16,
+        "w": 3,
+        "x": 18,
         "y": 0
       },
       "fieldConfig": {
@@ -417,8 +565,8 @@
       "description": "Inbound on eth0 right now. qBittorrent is capped at 10 MiB/s, so this should not go far\npast that; see SYSTEM_NOTES.md for why the cap exists.",
       "gridPos": {
         "h": 5,
-        "w": 4,
-        "x": 20,
+        "w": 3,
+        "x": 21,
         "y": 0
       },
       "fieldConfig": {
