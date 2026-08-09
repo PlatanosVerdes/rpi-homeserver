@@ -484,7 +484,7 @@
       "id": 5,
       "type": "timeseries",
       "title": "Activity Timeline (runs by outcome)",
-      "description": "Buckets follow the panel's own resolution, so zooming in splits the bars instead of resampling a fixed five minute window. Errors keep the right axis: stacked against a few hundred quiet runs a single one is a pixel.",
+      "description": "Buckets grow with the panel but never drop below five minutes: the updater runs every few minutes, and a shorter window leaves increase() without two samples and empties the panel. Errors keep the right axis, since stacked against a few hundred quiet runs a single one is a pixel.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -502,7 +502,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "round(increase(acestream_updates_no_changes[$__interval]))",
+          "expr": "round(increase(acestream_updates_no_changes[$__rate_interval]))",
           "refId": "A",
           "legendFormat": "OK · no change",
           "instant": false,
@@ -514,7 +514,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "round(increase(acestream_updates_with_changes[$__interval]))",
+          "expr": "round(increase(acestream_updates_with_changes[$__rate_interval]))",
           "refId": "B",
           "legendFormat": "OK · updated",
           "instant": false,
@@ -526,7 +526,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "round(increase(acestream_update_errors[$__interval]))",
+          "expr": "round(increase(acestream_update_errors[$__rate_interval]))",
           "refId": "C",
           "legendFormat": "Error",
           "instant": false,
@@ -649,7 +649,8 @@
           "mode": "multi",
           "sort": "desc"
         }
-      }
+      },
+      "interval": "5m"
     },
     {
       "id": 8,
