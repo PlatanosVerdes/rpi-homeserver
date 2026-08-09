@@ -6,13 +6,6 @@
 # so nobody looking for Radarr would have opened it. Order is by what actually gets used.
 
 - Watch:
-    - Farnsworth:
-        icon: /icon.svg
-        href: https://farnsworth.platanosverdes.com
-        description: Abrir un canal de Acestream en VLC
-        server: my-docker
-        container: farnsworth
-
     - Jellyfin:
         icon: jellyfin.png
         href: https://jellyfin.platanosverdes.com
@@ -71,17 +64,19 @@
           url: http://prowlarr:9696
           key: "{{HOMEPAGE_VAR_PROWLARR_TOKEN}}"
 
-- Subtitles:
+- Homegrown:
     - SubDown:
         icon: https://subs.platanosverdes.com/icon.svg
         href: https://subs.platanosverdes.com
+        description: Películas con subtítulo externo descargable
         server: my-docker
         container: subtitle-links
-    - Bazarr:
-        icon: bazarr.png
-        href: https://bazarr.platanosverdes.com
+    - Farnsworth:
+        icon: https://farnsworth.platanosverdes.com/icon.svg
+        href: https://farnsworth.platanosverdes.com
+        description: Canales de Acestream en tu reproductor
         server: my-docker
-        container: bazarr
+        container: farnsworth
 
 - Monitoring:
     - Grafana:
@@ -96,6 +91,12 @@
         container: victorialogs
 
 - Downloads:
+    - Bazarr:
+        icon: bazarr.png
+        href: https://bazarr.platanosverdes.com
+        description: Descarga de subtítulos
+        server: my-docker
+        container: bazarr
     - qBittorrent:
         icon: qbittorrent.png
         href: https://torrent.platanosverdes.com
