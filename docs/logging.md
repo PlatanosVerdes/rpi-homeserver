@@ -85,10 +85,29 @@ Worth knowing before you go looking for something that was never there:
   own log files inside their config directory, so `container:plex` stays empty no matter what Plex
   is doing. Read those with `docker exec`, or point Vector at the file if it earns the mount.
 - **The host itself.** The Raspberry Pi's own system log, SSH logins and `auth.log` are not here.
-  Use `journalctl` on the Pi for those.
+  Use `journalctl` on the Pi for those. The repo's own `*.log` files are, though — see below.
 - **Requests that never reach Caddy.** Plex is deliberately not proxied and Jellyfin apps often talk
   to the Pi directly by IP, so neither shows up in the access log below. It records what went
   through the reverse proxy, which is not the same as everything you watched.
+
+## The cron scripts' logs
+
+`apply.sh`, `backup.sh`, `cutoff-search.sh` and friends run from cron and append to files in the
+repo root rather than printing to a container, so the `docker_logs` source cannot see them. A
+`file` source collects those too, which is how the deploy and backup history got in here at all.
+
+They are keyed by file name, so the same field works for both kinds:
+
+```logsql
+container:apply AND "Caddy config changed"    # deploys that reloaded Caddy
+container:backup                              # nightly backup history
+stream:file                                   # everything that came from a file rather than a container
+```
+
+Two things worth knowing. `one-pace.log` lives in the *rpi-services* repo and is **not** collected;
+only this repo's root is mounted. And Vector reads the repo root because the `.log` files sit loose
+in it and a bind mount cannot take a glob, which means the container can see `.env` — a smaller
+exposure than the docker socket it already mounts, but worth knowing rather than discovering.
 
 ## The Caddy access log
 
