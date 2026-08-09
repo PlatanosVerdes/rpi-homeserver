@@ -455,6 +455,11 @@ Prometheus stores numbers, not text. `vector` forwards what every container prin
 (Explore → VictoriaLogs) or its own UI at `https://logs.platanosverdes.com/select/vmui/`.
 Full guide, including what is deliberately not collected: [docs/logging.md](docs/logging.md).
 
+### Acestream in VLC (Farnsworth)
+Browsers cannot play the MPEG-TS these channels arrive as, and the Pi cannot re-encode 20 Mbps of
+1080p in real time (measured at 0.32x). Farnsworth lists the channels and hands one to VLC, which
+plays them natively. Full guide: [docs/farnsworth.md](docs/farnsworth.md).
+
 ### Backups & Recovery
 `scripts/backup.sh` (daily cron at 04:00) snapshots `appdata/` to a compressed, rotated
 archive and pushes health metrics to the **Backup Monitor** Grafana dashboard. Full guide:

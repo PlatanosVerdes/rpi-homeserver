@@ -6,6 +6,13 @@
 # so nobody looking for Radarr would have opened it. Order is by what actually gets used.
 
 - Watch:
+    - Farnsworth:
+        icon: /icon.svg
+        href: https://farnsworth.platanosverdes.com
+        description: Abrir un canal de Acestream en VLC
+        server: my-docker
+        container: farnsworth
+
     - Jellyfin:
         icon: jellyfin.png
         href: https://jellyfin.platanosverdes.com
