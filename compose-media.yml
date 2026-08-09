@@ -34,6 +34,14 @@ services:
       - "8096:8096"
     devices:
       - /dev/dri:/dev/dri
+      # The Pi's H.264 encoder and decoder. /dev/dri alone is not enough: Jellyfin is set to
+      # v4l2m2m, and without these it silently falls back to libx264, which a Pi 4 cannot sustain
+      # for 1080p live and which shows up as a stream that keeps restarting.
+      - /dev/video10:/dev/video10
+      - /dev/video11:/dev/video11
+      - /dev/video12:/dev/video12
+    group_add:
+      - video
     networks:
       - media-network
 
