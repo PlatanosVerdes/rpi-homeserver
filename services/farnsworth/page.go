@@ -89,14 +89,12 @@ var pageTmpl = template.Must(template.New("page").Parse(`<!doctype html>
   <img src="/icon.svg" alt="">
   <div>
     <h1>Farnsworth</h1>
-    <p>Abre un canal en VLC. El vídeo va directo del motor al reproductor.</p>
+    <p>36 canales, directos a tu reproductor.</p>
   </div>
 </header>
 
 <div class="setup">
-  <b>Añade la lista entera una vez</b> en VLC, Kodi o el reproductor que ya uses, y elige los canales
-  desde ahí. Es lo que funciona igual en todos los dispositivos. En VLC: Red → abrir lista de
-  reproducción con esta dirección.
+  <b>La lista entera</b>, para añadirla una vez en VLC, Kodi o el reproductor que uses.
   <div class="row">
     <input id="url" readonly value="">
     <a class="btn" href="/all.m3u">Descargar</a>
@@ -117,8 +115,8 @@ var pageTmpl = template.Must(template.New("page").Parse(`<!doctype html>
         <div class="name" title="{{.Name}}">{{.Name}}</div>
       </div>
       <div class="actions">
-        <a class="btn" href="/m3u/{{.ID}}">Abrir</a>
-        <a class="btn ghost" href="#" onclick="return vlc('{{.ID}}')">VLC</a>
+        <a class="btn" href="#" onclick="return vlc('{{.ID}}')">VLC</a>
+        <a class="btn ghost" href="/m3u/{{.ID}}">Descargar</a>
       </div>
     </div>
   {{end}}
@@ -136,11 +134,8 @@ var pageTmpl = template.Must(template.New("page").Parse(`<!doctype html>
 </div>
 
 <footer>
-  <b>Abrir</b> descarga un .m3u de ese canal y tu dispositivo lo manda a su reproductor.
-  <b>VLC</b> intenta abrirlo directamente, y no funciona en todos los dispositivos.
-  Un canal tarda unos segundos en arrancar mientras el reproductor encuentra el swarm. Si no arranca en un
-  minuto, ese canal no tiene a nadie compartiéndolo ahora mismo: prueba otra fuente del mismo canal.
-  Los streams salen de <code>{{.StreamBase}}</code>, así que hace falta estar en casa o con Tailscale.
+  Si un canal no arranca en un minuto, nadie lo está compartiendo: prueba la otra fuente del mismo
+  canal. Los streams salen de <code>{{.StreamBase}}</code>, con Tailscale o desde casa.
 </footer>
 
 <script>

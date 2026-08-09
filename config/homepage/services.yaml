@@ -68,13 +68,13 @@
     - SubDown:
         icon: https://subs.platanosverdes.com/icon.svg
         href: https://subs.platanosverdes.com
-        description: Películas con subtítulo externo descargable
+        description: External subtitles, movie by movie
         server: my-docker
         container: subtitle-links
     - Farnsworth:
         icon: https://farnsworth.platanosverdes.com/icon.svg
         href: https://farnsworth.platanosverdes.com
-        description: Canales de Acestream en tu reproductor
+        description: Acestream channels in your player
         server: my-docker
         container: farnsworth
 
@@ -94,7 +94,7 @@
     - Bazarr:
         icon: bazarr.png
         href: https://bazarr.platanosverdes.com
-        description: Descarga de subtítulos
+        description: Subtitle downloader
         server: my-docker
         container: bazarr
     - qBittorrent:
