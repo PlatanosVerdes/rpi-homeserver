@@ -64,6 +64,13 @@ var pageTmpl = template.Must(template.New("page").Parse(`<!doctype html>
   footer { max-width:64rem; margin:2.5rem auto 0; color:var(--dim); font-size:.78rem;
            border-top:1px solid var(--line); padding-top:1rem; }
   code { background:#0d0814; padding:.1rem .35rem; border-radius:.25rem; font-size:.75rem; }
+  #q { width:100%; max-width:64rem; margin:0 auto 0; display:block; background:var(--card);
+       border:1px solid var(--line); border-radius:.6rem; color:var(--ink); padding:.7rem .9rem;
+       font-size:1rem; }
+  #q::placeholder { color:var(--dim); }
+  #q:focus { outline:none; border-color:var(--accent); }
+  .hidden { display:none; }
+  #empty { color:var(--dim); text-align:center; padding:2rem 0; }
 </style>
 </head>
 <body>
@@ -75,12 +82,15 @@ var pageTmpl = template.Must(template.New("page").Parse(`<!doctype html>
   </div>
 </header>
 
+<input id="q" type="search" placeholder="Buscar canal…" autocomplete="off" autocapitalize="off" spellcheck="false">
+
 <main>
 {{range .Groups}}
+  <section data-group="{{.Name}}">
   <h2>{{.Name}}</h2>
   <div class="grid">
   {{range .Channels}}
-    <div class="ch">
+    <div class="ch" data-name="{{.Name}}">
       {{if .Logo}}<img src="{{.Logo}}" alt="" loading="lazy">{{end}}
       <div class="meta">
         <div class="name" title="{{.Name}}">{{.Name}}</div>
@@ -90,7 +100,9 @@ var pageTmpl = template.Must(template.New("page").Parse(`<!doctype html>
     </div>
   {{end}}
   </div>
+  </section>
 {{end}}
+<p id="empty" class="hidden">Ningún canal coincide.</p>
 </main>
 
 <footer>
@@ -107,6 +119,27 @@ function play(id) {
   var url = {{.StreamBase}} + '/ace/getstream?id=' + id;
   window.location.href = 'vlc-x-callback://x-callback-url/stream?url=' + encodeURIComponent(url);
 }
+
+// Matches the group as well as the name, so "motogp" finds the group and "eurosport 2" the channel.
+// Accents are stripped both sides: nobody types them on a phone while a race is starting.
+var q = document.getElementById('q'), empty = document.getElementById('empty');
+var norm = function (s) {
+  return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+};
+q.addEventListener('input', function () {
+  var needle = norm(q.value.trim()), any = false;
+  document.querySelectorAll('section[data-group]').forEach(function (sec) {
+    var group = norm(sec.dataset.group), shown = 0;
+    sec.querySelectorAll('.ch').forEach(function (ch) {
+      var hit = !needle || group.indexOf(needle) >= 0 || norm(ch.dataset.name).indexOf(needle) >= 0;
+      ch.classList.toggle('hidden', !hit);
+      if (hit) shown++;
+    });
+    sec.classList.toggle('hidden', shown === 0);
+    any = any || shown > 0;
+  });
+  empty.classList.toggle('hidden', any);
+});
 </script>
 </body>
 </html>`))
