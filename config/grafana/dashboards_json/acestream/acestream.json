@@ -484,7 +484,7 @@
       "id": 5,
       "type": "timeseries",
       "title": "Activity Timeline (runs by outcome)",
-      "description": "Each run stacks as OK (no change) / OK (updated) / Error, so you see success vs failure per interval.",
+      "description": "Buckets follow the panel's own resolution, so zooming in splits the bars instead of resampling a fixed five minute window. Errors keep the right axis: stacked against a few hundred quiet runs a single one is a pixel.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -502,9 +502,9 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "increase(acestream_updates_no_changes[5m])",
+          "expr": "round(increase(acestream_updates_no_changes[$__interval]))",
           "refId": "A",
-          "legendFormat": "OK \u00b7 no change",
+          "legendFormat": "OK · no change",
           "instant": false,
           "range": true
         },
@@ -514,9 +514,9 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "increase(acestream_updates_with_changes[5m])",
+          "expr": "round(increase(acestream_updates_with_changes[$__interval]))",
           "refId": "B",
-          "legendFormat": "OK \u00b7 updated",
+          "legendFormat": "OK · updated",
           "instant": false,
           "range": true
         },
@@ -526,7 +526,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "increase(acestream_update_errors[5m])",
+          "expr": "round(increase(acestream_update_errors[$__interval]))",
           "refId": "C",
           "legendFormat": "Error",
           "instant": false,
@@ -548,7 +548,8 @@
             "stacking": {
               "group": "A",
               "mode": "normal"
-            }
+            },
+            "axisLabel": "runs"
           },
           "thresholds": {
             "mode": "absolute",
@@ -558,13 +559,14 @@
                 "value": null
               }
             ]
-          }
+          },
+          "min": 0
         },
         "overrides": [
           {
             "matcher": {
               "id": "byName",
-              "options": "OK \u00b7 no change"
+              "options": "OK · no change"
             },
             "properties": [
               {
@@ -579,7 +581,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "OK \u00b7 updated"
+              "options": "OK · updated"
             },
             "properties": [
               {
@@ -603,6 +605,32 @@
                   "mode": "fixed",
                   "fixedColor": "red"
                 }
+              },
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "mode": "none"
+                }
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              },
+              {
+                "id": "custom.axisLabel",
+                "value": "errors"
+              },
+              {
+                "id": "custom.axisSoftMax",
+                "value": 1
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 100
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 1
               }
             ]
           }

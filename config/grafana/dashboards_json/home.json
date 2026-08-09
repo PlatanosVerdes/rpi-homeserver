@@ -565,7 +565,7 @@
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "- 🎬 [Media Pipeline](/d/media-pipeline/media-pipeline)\n- 🗣️ [Audio languages](/d/media-languages/audio-languages)\n- 💽 [Disk usage](/d/media-disk-usage/disk-usage)\n- 🔎 [Indexers](/d/indexers/indexers)\n- 🏴‍☠️ [One Pace](/d/onepace-dl/one-pace)\n- 📡 [Acestream Monitor](/d/acestream-monitor/acestream-monitor)\n- 📺 [Acestream channels](/d/acestream-channels/acestream-channels)"
+        "content": "- 🎬 [Media Pipeline](/d/media-pipeline/media-pipeline)\n- 🗣️ [Audio languages](/d/media-languages/audio-languages)\n- 💽 [Disk usage](/d/media-disk-usage/disk-usage)\n- 🔎 [Indexers](/d/indexers/indexers)\n- 🏴‍☠️ [One Pace](/d/onepace-dl/one-pace)\n- 📡 [Acestream Monitor](/d/acestream-monitor/acestream-monitor)\n- 📺 [Acestream playback](/d/acestream-channels/acestream-playback)"
       },
       "transparent": false
     },

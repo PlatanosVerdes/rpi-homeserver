@@ -1,7 +1,7 @@
 {
   "uid": "acestream-channels",
-  "title": "Acestream channels",
-  "description": "Qué canales arrancan y cuáles no, a partir de lo que registran acestream-proxy y Farnsworth.",
+  "title": "Acestream playback",
+  "description": "Which channels start, which do not, from acestream-proxy and Farnsworth logs.",
   "tags": [
     "media",
     "acestream"
@@ -18,8 +18,8 @@
   "panels": [
     {
       "type": "table",
-      "title": "Canales que arrancaron",
-      "description": "Cada vez que un canal empezó a dar vídeo. Solo cuenta lo que pasa por Jellyfin: VLC va directo al motor y no aparece aquí.",
+      "title": "Streams started",
+      "description": "Counted when the proxy sees the first video byte. Jellyfin only: VLC goes straight to the engine and never reaches the proxy.",
       "datasource": {
         "type": "victoriametrics-logs-datasource",
         "uid": "victorialogs"
@@ -37,7 +37,7 @@
             "type": "victoriametrics-logs-datasource",
             "uid": "victorialogs"
           },
-          "expr": "_time:$__range container:acestream-proxy \"playing after\" | extract \"[proxy] <channel> playing after\" | stats by (channel) count() as veces | sort by (veces desc) | limit 25",
+          "expr": "_time:$__range container:acestream-proxy \"playing after\" | extract \"[proxy] <channel> playing after\" | stats by (channel) count() as starts | sort by (starts desc) | limit 25",
           "queryType": "instant"
         }
       ],
@@ -45,7 +45,7 @@
         "showHeader": true,
         "sortBy": [
           {
-            "displayName": "veces",
+            "displayName": "starts",
             "desc": true
           }
         ]
@@ -63,7 +63,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "veces"
+              "options": "starts"
             },
             "properties": [
               {
@@ -83,8 +83,8 @@
     },
     {
       "type": "table",
-      "title": "Canales que no arrancaron",
-      "description": "El proxy esperó 45 segundos y no llegó vídeo: nadie estaba compartiendo ese canal en ese momento. Vacío es buena señal.",
+      "title": "Streams that never started",
+      "description": "Waited the full deadline without a byte, meaning no seeders at that moment. Empty is the healthy state.",
       "datasource": {
         "type": "victoriametrics-logs-datasource",
         "uid": "victorialogs"
@@ -102,7 +102,7 @@
             "type": "victoriametrics-logs-datasource",
             "uid": "victorialogs"
           },
-          "expr": "_time:$__range container:acestream-proxy \"gave up\" | extract \"[proxy] <channel> gave up\" | stats by (channel) count() as fallos | sort by (fallos desc) | limit 25",
+          "expr": "_time:$__range container:acestream-proxy \"gave up\" | extract \"[proxy] <channel> gave up\" | stats by (channel) count() as failures | sort by (failures desc) | limit 25",
           "queryType": "instant"
         }
       ],
@@ -110,7 +110,7 @@
         "showHeader": true,
         "sortBy": [
           {
-            "displayName": "fallos",
+            "displayName": "failures",
             "desc": true
           }
         ]
@@ -128,7 +128,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "fallos"
+              "options": "failures"
             },
             "properties": [
               {
@@ -148,8 +148,8 @@
     },
     {
       "type": "table",
-      "title": "Cómo se abren desde Farnsworth",
-      "description": "m3u es la descarga de la lista, vlc es el botón que llama a la app. La IP no sirve: Docker la sustituye por la de su puerta de enlace antes de que llegue aquí.",
+      "title": "Handoff method",
+      "description": "m3u is the playlist download, vlc the URL scheme. No client column: Docker's userland proxy rewrites the source address at the published port, so every request arrives as the bridge gateway.",
       "datasource": {
         "type": "victoriametrics-logs-datasource",
         "uid": "victorialogs"
@@ -167,7 +167,7 @@
             "type": "victoriametrics-logs-datasource",
             "uid": "victorialogs"
           },
-          "expr": "_time:$__range container:farnsworth \"[play]\" | extract \"[play] <channel> via <como> from <ip>\" | stats by (como) count() as veces | sort by (veces desc)",
+          "expr": "_time:$__range container:farnsworth \"[play]\" | extract \"[play] <channel> via <method> from <ip>\" | stats by (method) count() as starts | sort by (starts desc)",
           "queryType": "instant"
         }
       ],
@@ -175,7 +175,7 @@
         "showHeader": true,
         "sortBy": [
           {
-            "displayName": "veces",
+            "displayName": "starts",
             "desc": true
           }
         ]
@@ -193,7 +193,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "veces"
+              "options": "starts"
             },
             "properties": [
               {
@@ -213,8 +213,8 @@
     },
     {
       "type": "logs",
-      "title": "Actividad reciente",
-      "description": "Todo lo que dijeron el proxy y Farnsworth, lo más nuevo arriba.",
+      "title": "Recent activity",
+      "description": "Raw proxy and Farnsworth lines, newest first.",
       "datasource": {
         "type": "victoriametrics-logs-datasource",
         "uid": "victorialogs"
