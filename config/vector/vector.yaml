@@ -17,10 +17,14 @@ sources:
   # docker_logs never saw them and deploys, backups and the nightly search stayed out of the log
   # store entirely. read_from: beginning imports the existing history once; Vector checkpoints in
   # /vector-data, so a restart resumes rather than re-reading.
+  #
+  # One directory per repo under /host-logs (see compose-mon.yml), so the companion repo's logs
+  # arrive without this repo knowing where it lives. The stream name is the file's basename, so two
+  # repos must not both own a log with the same name or they would merge into one stream.
   cron_logs:
     type: file
     include:
-      - /host-logs/*.log
+      - /host-logs/*/*.log
     read_from: beginning
 
 transforms:
