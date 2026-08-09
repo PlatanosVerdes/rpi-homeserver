@@ -13,9 +13,31 @@ sources:
     exclude_containers:
       - vector
 
+  # The cron scripts append to files in the repo root rather than printing to a container, so
+  # docker_logs never saw them and deploys, backups and the nightly search stayed out of the log
+  # store entirely. read_from: beginning imports the existing history once; Vector checkpoints in
+  # /vector-data, so a restart resumes rather than re-reading.
+  cron_logs:
+    type: file
+    include:
+      - /host-logs/*.log
+    read_from: beginning
+
 transforms:
   # VictoriaLogs indexes by stream fields, so keep them low-cardinality: container name and stream
   # (stdout/stderr) are enough to slice by. The image tag would churn a new stream on every bump.
+  # File events carry no container, so they would land with an empty stream field and clump into
+  # one unqueryable stream. Naming them after the log file lets `container:apply` work exactly like
+  # `container:caddy`, and stream:file separates the two kinds when that matters.
+  shaped_files:
+    type: remap
+    inputs: [cron_logs]
+    source: |
+      .container = replace(string!(.file), r'^.*/(.+)\.log$', "$$1")
+      .stream = "file"
+      del(.host)
+      del(.source_type)
+
   shaped:
     type: remap
     inputs: [containers]
@@ -30,7 +52,7 @@ transforms:
 sinks:
   victorialogs:
     type: elasticsearch
-    inputs: [shaped]
+    inputs: [shaped, shaped_files]
     endpoints:
       - http://victorialogs:9428/insert/elasticsearch/
     mode: bulk

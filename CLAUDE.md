@@ -55,11 +55,16 @@ scripts/                    Operational scripts
   heartbeat.sh              Dead man's switch ping to an external check (cron, every minute)
   cutoff-search.sh          Nightly *arr search for missing and below-cutoff items (cron)
   media-metrics.py          Upgrades, torrents, indexer status/usage -> Pushgateway (cron)
+  disk-usage-metrics.sh     Biggest files/dirs on the data disk -> node_exporter (cron)
+  zram-metrics.sh           What the compressed swap really costs in RAM -> node_exporter (cron)
   sync-arr-config.sh        Pushes config/arr/*/*.json into Radarr/Sonarr (on deploy)
   sync-pihole-dns.sh        Pushes Caddy's *.platanosverdes.com hosts into Pi-hole (on deploy)
+  sync-arr-links.sh         Wires Overseerr and Bazarr to Radarr/Sonarr (on deploy)
+  sync-qbit-config.sh       Pushes config/qbittorrent/preferences.json into qBittorrent (on deploy)
   sync-plex-prefs.sh        Pushes PLEX_LAN_NETWORKS into Plex's LAN Networks (on deploy)
   mount_setup.sh            One-time external disk mount setup
   rebuild-service.sh        Manual single-service rebuild helper
+  recovery-status.sh        After a rebuild: what still needs a human (run by hand, see README)
   bws-run.py                Bitwarden SM wrapper (dropped, kept for reference only)
 
 appdata/                    Persistent container data (NOT in git, lives on disk)

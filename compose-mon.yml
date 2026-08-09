@@ -247,6 +247,16 @@ services:
       # and Homepage already have, so it grants nothing new on this host.
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ${APP_CONFIG_PATH}/vector:/vector-data
+      # The cron scripts write to files on the host, not to a container's stdout, so the docker
+      # source above cannot see them: deploys, backups and the nightly search were the one part of
+      # this server's history that stayed out of the log store.
+      #
+      # The repo root, because the .log files sit loose in it and a bind mount cannot take a glob.
+      # Read-only, and vector.yaml only ever opens *.log — but it does mean this container can see
+      # .env. That is a smaller exposure than the docker socket it already mounts, which is
+      # root-equivalent on this host; moving the logs into their own directory would remove it, at
+      # the cost of touching every cron line and the logrotate rule.
+      - ./:/host-logs:ro
     networks:
       - media-network
 

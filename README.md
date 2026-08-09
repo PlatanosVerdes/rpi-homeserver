@@ -251,6 +251,20 @@ For HTTP short names to work on your laptop/desktop:
 <TAILSCALE_IP> raspi homepage jellyfin overseerr plex grafana prometheus push prowlarr radarr sonarr flare torrent speedtest pihole
 ```
 
+### 12. Check what still needs a human
+
+```bash
+bash scripts/recovery-status.sh
+```
+
+The deploy converges everything derivable from `.env`: Radarr and Sonarr's custom formats and
+quality profiles, Pi-hole's DNS records, qBittorrent's limits, the Overseerr and Bazarr links. A
+few things it cannot, because each is a one-time interactive step with an outside provider — a Plex
+claim token, a setup wizard, an Apple 2FA code.
+
+This prints which of those are still outstanding, so they get found now rather than the evening
+something does not work.
+
 ---
 
 ## Profiles — selecting which services to run
