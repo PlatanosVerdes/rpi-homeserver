@@ -24,6 +24,7 @@ func main() {
 	s := &server{playlist: playlist, streamBase: streamBase}
 	http.HandleFunc("/", s.index)
 	http.HandleFunc("/m3u/", s.m3u)
+	http.HandleFunc("/all.m3u", s.all)
 	http.HandleFunc("/click/", s.click)
 	http.HandleFunc("/icon.svg", icon)
 
@@ -63,6 +64,28 @@ func (s *server) m3u(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "audio/x-mpegurl")
 	w.Header().Set("Content-Disposition", "attachment; filename=\""+safeFilename(ch.Name)+".m3u\"")
 	w.Write([]byte("#EXTM3U\n#EXTINF:-1," + ch.Name + "\n" + s.streamURL(ch.ID) + "\n"))
+}
+
+// The whole list, to be added once in whatever player the device already has. VLC's URL scheme is
+// unreliable on iOS (their own tracker has "vlc-x-callback not works" and "working at most twice"),
+// so the dependable path is handing the player a playlist and letting it own the experience.
+func (s *server) all(w http.ResponseWriter, r *http.Request) {
+	chans := s.playlist.channels()
+	log.Printf("[playlist] %d channels served to %s", len(chans), clientIP(r))
+
+	w.Header().Set("Content-Type", "audio/x-mpegurl")
+	w.Header().Set("Content-Disposition", "attachment; filename=\"farnsworth.m3u\"")
+	w.Write([]byte("#EXTM3U\n"))
+	for _, c := range chans {
+		line := "#EXTINF:-1"
+		if c.Logo != "" {
+			line += " tvg-logo=\"" + c.Logo + "\""
+		}
+		if c.Group != "" {
+			line += " group-title=\"" + c.Group + "\""
+		}
+		w.Write([]byte(line + "," + c.Name + "\n" + s.streamURL(c.ID) + "\n"))
+	}
 }
 
 // The button jumps straight to VLC's own URL scheme, which never reaches a server, so the page
