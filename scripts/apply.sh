@@ -209,6 +209,20 @@ deploy_repo() {
         fi
     fi
 
+    # Third instance of the same trap, and the most misleading one. Homepage watches services.yaml
+    # and bookmarks.yaml and picks those up live, so config changes appear to apply — but
+    # settings.yaml is read once at startup, and that is where `layout:` lives, which is what
+    # actually orders the groups on the page. Reordering therefore looked like it did nothing.
+    if [[ "$label" == "homeserver" && "$before" != "$after" ]] &&
+        git diff --name-only "$before" "$after" | grep -qE '^config/homepage/settings\.ya?ml$' &&
+        docker ps --format '{{.Names}}' | grep -qx homepage; then
+        if docker restart homepage >/dev/null 2>&1; then
+            log "[$label] homepage settings changed, restarted to load them"
+        else
+            log "[$label] WARNING: homepage settings changed but it would not restart"
+        fi
+    fi
+
     if [ "$before" != "$after" ]; then
         # Docs-only commits (e.g. PENDING.md, README.md) touch nothing Docker reads, so skip the
         # rebuild — a `.md`-only diff would otherwise still trigger a full `--build` pass.
