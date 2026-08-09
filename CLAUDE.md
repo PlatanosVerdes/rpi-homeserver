@@ -32,6 +32,7 @@ config/                     Static config files committed to git
   caddy/Dockerfile          Custom Caddy image with Cloudflare DNS plugin
   caddy/services/           Extra route files for this repo (auto-imported by Caddy)
   caddy/ext-services/       Mount point for a companion repo's routes (see EXT_CADDY_PATH)
+  vector/ext-logs/          Mount point for a companion repo's cron logs (see EXT_LOGS_PATH)
   prometheus/prometheus.yml Scrape targets
   grafana/                  Provisioned datasources + dashboard JSONs
   grafana/alerting/         Alert rules, policy, contact-point template (rendered on deploy)
@@ -143,6 +144,11 @@ The cron stays as the self-heal net.
   ```
   Unset it and Caddy mounts an empty dir instead. This way rpi-services adds HTTPS routes without
   touching this repo, and the wiring lives in git rather than in a local override file.
+
+  `EXT_LOGS_PATH` works the same way for logs: the companion repo's cron scripts append to `.log`
+  files in its own root, and Vector collects them from `/host-logs/services` so they end up in
+  VictoriaLogs alongside this repo's. Unset, it mounts `config/vector/ext-logs`, which is empty.
+  Both repos' logs are keyed by file basename, so the two must not own a log with the same name.
 
   > A `ln -s ... config/caddy/services/rpi-services` symlink is documented in older notes and does
   > **not** work: the import glob is `*.caddy`, so a directory named `rpi-services` never matches.

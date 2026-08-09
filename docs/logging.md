@@ -104,10 +104,15 @@ container:backup                              # nightly backup history
 stream:file                                   # everything that came from a file rather than a container
 ```
 
-Two things worth knowing. `one-pace.log` lives in the *rpi-services* repo and is **not** collected;
-only this repo's root is mounted. And Vector reads the repo root because the `.log` files sit loose
-in it and a bind mount cannot take a glob, which means the container can see `.env` — a smaller
-exposure than the docker socket it already mounts, but worth knowing rather than discovering.
+The companion repo's logs come too, `one-pace.log` among them, through `EXT_LOGS_PATH` in `.env` —
+the same mechanism that brings its Caddy routes in through `EXT_CADDY_PATH`. This repo never learns
+where the other one lives, and mounts an empty directory when there is no companion.
+
+One thing worth knowing: Vector reads each repo root because the `.log` files sit loose in them and
+a bind mount cannot take a glob, which means the container can see each `.env`. That is a smaller
+exposure than the docker socket it already mounts, but worth stating rather than leaving to be
+discovered. And since the stream name is the file's basename, two repos must not both own a log
+with the same name or they would merge into one stream.
 
 ## The Caddy access log
 

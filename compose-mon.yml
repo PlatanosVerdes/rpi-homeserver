@@ -251,12 +251,17 @@ services:
       # source above cannot see them: deploys, backups and the nightly search were the one part of
       # this server's history that stayed out of the log store.
       #
-      # The repo root, because the .log files sit loose in it and a bind mount cannot take a glob.
-      # Read-only, and vector.yaml only ever opens *.log — but it does mean this container can see
-      # .env. That is a smaller exposure than the docker socket it already mounts, which is
-      # root-equivalent on this host; moving the logs into their own directory would remove it, at
-      # the cost of touching every cron line and the logrotate rule.
-      - ./:/host-logs:ro
+      # Each repo root, because the .log files sit loose in them and a bind mount cannot take a
+      # glob. Read-only, and vector.yaml only ever opens *.log — but it does mean this container
+      # can see each .env. That is a smaller exposure than the docker socket it already mounts,
+      # which is root-equivalent on this host; moving the logs into their own directory would
+      # remove it, at the cost of touching every cron line and the logrotate rule.
+      #
+      # The companion repo arrives by EXT_LOGS_PATH, the same way its Caddy routes arrive by
+      # EXT_CADDY_PATH: this repo never learns where the other one lives, and mounts an empty
+      # tracked directory when there is no companion at all.
+      - ./:/host-logs/homeserver:ro
+      - ${EXT_LOGS_PATH:-./config/vector/ext-logs}:/host-logs/services:ro
     networks:
       - media-network
 
