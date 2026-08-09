@@ -77,6 +77,11 @@ var pageTmpl = template.Must(template.New("page").Parse(`<!doctype html>
   #q:focus { outline:none; border-color:var(--accent); }
   .hidden { display:none; }
   #empty { color:var(--dim); text-align:center; padding:2rem 0; }
+  #toast { position:fixed; left:1rem; right:1rem; bottom:1rem; max-width:34rem; margin:0 auto;
+           background:var(--card); border:1px solid var(--accent); border-radius:.7rem;
+           padding:.9rem 1rem; font-size:.88rem; box-shadow:0 8px 30px #0009; }
+  #toast a { color:var(--accent); }
+  #toast .x { float:right; color:var(--dim); text-decoration:none; padding-left:.75rem; }
 </style>
 </head>
 <body>
@@ -123,6 +128,13 @@ var pageTmpl = template.Must(template.New("page").Parse(`<!doctype html>
 <p id="empty" class="hidden">Ningún canal coincide.</p>
 </main>
 
+<div id="toast" class="hidden">
+  <a class="x" href="#" onclick="return hideToast()">✕</a>
+  VLC no se ha abierto. Si no lo tienes instalado,
+  <a href="https://apps.apple.com/app/vlc-media-player/id650377962" target="_blank" rel="noopener">descárgalo aquí</a>
+  o usa <b>Abrir</b>, que funciona con el reproductor que ya tengas.
+</div>
+
 <footer>
   <b>Abrir</b> descarga un .m3u de ese canal y tu dispositivo lo manda a su reproductor.
   <b>VLC</b> intenta abrirlo directamente, y no funciona en todos los dispositivos.
@@ -139,11 +151,27 @@ document.getElementById('url').addEventListener('focus', function () { this.sele
 
 // Kept as a secondary link only: VLC's iOS scheme is unreliable, so the button people press is the
 // playlist download, which every device knows how to route.
+var toast = document.getElementById('toast');
+function hideToast() { toast.classList.add('hidden'); return false; }
+
+// A URL scheme for an app that is not installed fails silently: the browser simply stays put. So
+// note the time, and if we are still here and still visible a moment later, say so instead of
+// leaving someone tapping a button that appears to do nothing.
 function vlc(id) {
   try { navigator.sendBeacon('/click/' + id); } catch (e) {}
   var url = {{.StreamBase}} + '/ace/getstream?id=' + id;
+  var left = false;
+  var onHide = function () { left = true; };
+  document.addEventListener('visibilitychange', onHide, { once: true });
+  window.addEventListener('pagehide', onHide, { once: true });
+
   window.location.href = 'vlc-x-callback://x-callback-url/stream?url=' + encodeURIComponent(url)
     + '&x-success=' + encodeURIComponent(location.href);
+
+  setTimeout(function () {
+    if (!left && document.visibilityState === 'visible') { toast.classList.remove('hidden'); }
+    document.removeEventListener('visibilitychange', onHide);
+  }, 1500);
   return false;
 }
 
@@ -153,6 +181,17 @@ var q = document.getElementById('q'), empty = document.getElementById('empty');
 var norm = function (s) {
   return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 };
+// Start typing anywhere and the box takes over, so finding a channel is one action rather than
+// aim-then-type. Deliberately not autofocus: on a tablet that throws the keyboard up every visit.
+document.addEventListener('keydown', function (e) {
+  if (e.target === q) {
+    if (e.key === 'Escape') { q.value = ''; q.dispatchEvent(new Event('input')); q.blur(); }
+    return;
+  }
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.key.length === 1) { q.focus(); }
+});
+
 q.addEventListener('input', function () {
   var needle = norm(q.value.trim()), any = false;
   document.querySelectorAll('section[data-group]').forEach(function (sec) {

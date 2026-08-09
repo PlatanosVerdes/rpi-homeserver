@@ -21,6 +21,7 @@ disableUpdateCheck: false
 
 # Every group is listed, or the ones left out fall back to a different style and the columns
 # stop lining up between rows. Column counts follow how many services each group holds.
+# Order is the layout: the first four land on the top row, everything after on the second.
 # THIS is what orders the page. Homepage reads the group order from here, not from
 # services.yaml, so reordering that file alone changes nothing on screen. Both still have to
 # list the same groups; only this one decides where they land.
@@ -31,7 +32,7 @@ layout:
   Library:
     style: grid
     columns: 3
-  Subtitles:
+  Homegrown:
     style: grid
     columns: 2
   Monitoring:
@@ -39,7 +40,7 @@ layout:
     columns: 2
   Downloads:
     style: grid
-    columns: 4
+    columns: 5
   Network:
     style: grid
     columns: 2
