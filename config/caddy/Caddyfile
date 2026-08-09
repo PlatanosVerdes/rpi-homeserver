@@ -58,6 +58,10 @@ https://logs.platanosverdes.com {
     import cf_tls
     reverse_proxy victorialogs:9428
 }
+https://farnsworth.platanosverdes.com {
+    import cf_tls
+    reverse_proxy farnsworth:8086
+}
 https://grafana.platanosverdes.com {
     log
     # Same reason as homepage above: an open Grafana tab holds a websocket and pings /api/login
@@ -149,6 +153,9 @@ http://plex {
 http://logs {
     log
     reverse_proxy victorialogs:9428
+}
+http://farnsworth {
+    reverse_proxy farnsworth:8086
 }
 http://grafana {
     log

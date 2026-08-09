@@ -200,6 +200,25 @@ services:
     networks:
       - media-network
 
+  # --- farnsworth: a page that hands an Acestream channel to VLC ---
+  # Named for Philo Farnsworth, who built the first working electronic television.
+  farnsworth:
+    build: ./services/farnsworth
+    container_name: farnsworth
+    restart: unless-stopped
+    mem_limit: 64m
+    memswap_limit: 64m
+    profiles: [acestream, all]
+    environment:
+      # The address VLC will dial, so it must be one the phone or laptop can reach, never a
+      # container name. The video goes straight from the engine to the player.
+      - STREAM_BASE=http://${STATIC_IP}:6878
+      - PLAYLIST_PATH=/playlists/channels_ace.m3u
+    volumes:
+      - ${APP_CONFIG_PATH}/jellyfin/acestream:/playlists:ro
+    networks:
+      - media-network
+
 networks:
   media-network:
     external: true

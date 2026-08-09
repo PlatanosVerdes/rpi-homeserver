@@ -1,0 +1,112 @@
+package main
+
+import (
+	"html/template"
+	"log"
+	"net/http"
+)
+
+func render(w http.ResponseWriter, groups []group, streamBase string) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	data := struct {
+		Groups     []group
+		StreamBase string
+	}{groups, streamBase}
+	if err := pageTmpl.Execute(w, data); err != nil {
+		log.Printf("farnsworth: render failed: %v", err)
+	}
+}
+
+func icon(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "image/svg+xml")
+	w.Header().Set("Cache-Control", "public, max-age=86400")
+	w.Write([]byte(iconSVG))
+}
+
+// A cathode ray tube with an antenna, for the man who built the first one that worked.
+const iconSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#1a1024"/>
+  <path d="M22 16 L32 26 L42 16" stroke="#c084fc" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <rect x="12" y="26" width="40" height="26" rx="5" fill="none" stroke="#c084fc" stroke-width="3"/>
+  <path d="M28 34 L38 39 L28 44 Z" fill="#c084fc"/>
+</svg>`
+
+var pageTmpl = template.Must(template.New("page").Parse(`<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Farnsworth</title>
+<link rel="icon" href="/icon.svg">
+<style>
+  :root { color-scheme: dark; --bg:#140d1c; --card:#1f1630; --line:#332748; --ink:#ede9fe; --dim:#a99cc4; --accent:#c084fc; }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:1.5rem 1rem 3rem; background:var(--bg); color:var(--ink);
+         font:16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  header { max-width:64rem; margin:0 auto 1.5rem; display:flex; align-items:center; gap:.75rem; }
+  header img { width:34px; height:34px; }
+  h1 { font-size:1.35rem; margin:0; letter-spacing:-.02em; }
+  header p { margin:.15rem 0 0; color:var(--dim); font-size:.85rem; }
+  main { max-width:64rem; margin:0 auto; }
+  h2 { font-size:.78rem; text-transform:uppercase; letter-spacing:.09em; color:var(--dim);
+       margin:2rem 0 .75rem; font-weight:600; }
+  .grid { display:grid; gap:.7rem; grid-template-columns:repeat(auto-fill, minmax(15rem, 1fr)); }
+  .ch { background:var(--card); border:1px solid var(--line); border-radius:.7rem; padding:.8rem;
+        display:flex; gap:.7rem; align-items:center; }
+  .ch img { width:40px; height:40px; object-fit:contain; border-radius:.35rem; flex:none; background:#0d0814; }
+  .meta { min-width:0; flex:1; }
+  .name { font-weight:600; font-size:.92rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .alt { font-size:.75rem; color:var(--dim); }
+  .alt a { color:var(--dim); }
+  button { background:var(--accent); color:#1a1024; border:0; border-radius:.5rem; font-weight:700;
+           padding:.55rem .85rem; font-size:.85rem; cursor:pointer; flex:none; }
+  button:active { transform:scale(.97); }
+  footer { max-width:64rem; margin:2.5rem auto 0; color:var(--dim); font-size:.78rem;
+           border-top:1px solid var(--line); padding-top:1rem; }
+  code { background:#0d0814; padding:.1rem .35rem; border-radius:.25rem; font-size:.75rem; }
+</style>
+</head>
+<body>
+<header>
+  <img src="/icon.svg" alt="">
+  <div>
+    <h1>Farnsworth</h1>
+    <p>Abre un canal en VLC. El vídeo va directo del motor al reproductor.</p>
+  </div>
+</header>
+
+<main>
+{{range .Groups}}
+  <h2>{{.Name}}</h2>
+  <div class="grid">
+  {{range .Channels}}
+    <div class="ch">
+      {{if .Logo}}<img src="{{.Logo}}" alt="" loading="lazy">{{end}}
+      <div class="meta">
+        <div class="name" title="{{.Name}}">{{.Name}}</div>
+        <div class="alt"><a href="/m3u/{{.ID}}">o descargar .m3u</a></div>
+      </div>
+      <button onclick="play('{{.ID}}')">VLC</button>
+    </div>
+  {{end}}
+  </div>
+{{end}}
+</main>
+
+<footer>
+  Un canal tarda unos segundos en arrancar mientras VLC encuentra el swarm. Si no arranca en un
+  minuto, ese canal no tiene a nadie compartiéndolo ahora mismo: prueba otra fuente del mismo canal.
+  Los streams salen de <code>{{.StreamBase}}</code>, así que hace falta estar en casa o con Tailscale.
+</footer>
+
+<script>
+// The scheme jump never reaches the server, so the play is reported first. Ignore beacon failures:
+// not being able to log is no reason to stop someone watching television.
+function play(id) {
+  try { navigator.sendBeacon('/click/' + id); } catch (e) {}
+  var url = {{.StreamBase}} + '/ace/getstream?id=' + id;
+  window.location.href = 'vlc-x-callback://x-callback-url/stream?url=' + encodeURIComponent(url);
+}
+</script>
+</body>
+</html>`))
