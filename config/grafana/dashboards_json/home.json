@@ -553,7 +553,7 @@
       "type": "text",
       "title": "Media",
       "gridPos": {
-        "h": 9,
+        "h": 8,
         "w": 6,
         "x": 0,
         "y": 5
@@ -565,7 +565,7 @@
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "- 🎬 [Media Pipeline](/d/media-pipeline/media-pipeline)\n- 🗣️ [Audio languages](/d/media-languages/audio-languages)\n- 💽 [Disk usage](/d/media-disk-usage/disk-usage)\n- 🔎 [Indexers](/d/indexers/indexers)\n- 🏴‍☠️ [One Pace](/d/onepace-dl/one-pace)\n- 📡 [Acestream Monitor](/d/acestream-monitor/acestream-monitor)\n- 📺 [Acestream playback](/d/acestream-channels/acestream-playback)"
+        "content": "- 🎬 [Media Pipeline](/d/media-pipeline/media-pipeline)\n- 🗣️ [Audio languages](/d/media-languages/audio-languages)\n- 💽 [Disk usage](/d/media-disk-usage/disk-usage)\n- 🔎 [Indexers](/d/indexers/indexers)\n- 🏴‍☠️ [One Pace](/d/onepace-dl/one-pace)\n- 📡 [Acestream Monitor](/d/acestream-monitor/acestream-monitor)"
       },
       "transparent": false
     },
@@ -635,7 +635,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 14
+        "y": 13
       },
       "id": 10,
       "title": "Secrets",
