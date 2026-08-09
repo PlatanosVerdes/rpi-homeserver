@@ -201,3 +201,32 @@ remove even that.
 If the Pi ever gets a service genuinely exposed to the internet, or if Docker's licensing or
 upstream direction becomes a problem. As a way to learn Podman it is a fine project; as an
 improvement to this server it is not.
+
+---
+
+## Hardware transcoding on the Pi (v4l2m2m) — tried, reverted
+
+Jellyfin transcodes with `libx264` because `EnableHardwareEncoding` is off, and a Pi 4 cannot
+software-encode 1080p sport in real time: measured at **1.39x on 1080p25 synthetic video with the
+machine near idle**, which halves on a 50fps stream, and the player then restarts every few
+seconds. This is the "the stream keeps cutting" symptom, and it only affects clients that cannot
+direct play. A TV app playing the same channel, even at 4K, copies bytes and is unaffected.
+
+Mapping `/dev/video10-12` into the container and turning the setting on did not work:
+
+```
+[h264_v4l2m2m] VIDIOC_STREAMON failed on output context
+[vost#0:0/h264_v4l2m2m] Error encoding a frame: No such process
+Conversion failed!
+```
+
+The encoder itself is fine in isolation, `h264_v4l2m2m` encodes synthetic 1080p at **2.45x against
+libx264's 1.39x**, so the fault is in the real transcode rather than the hardware. Untested
+suspects, in the order worth trying: `gpu_mem` too low for the codec firmware, several ffmpeg
+processes contending for the single encoder at `/dev/video11` (the player retried four times in
+ninety seconds, and each retry starts another), and the `high` profile at `level 42` the transcode
+asks for.
+
+**The better fix is upstream of all this: stop transcoding.** The source is H.264, which browsers
+play natively, so the work is finding why Jellyfin will not direct play or remux it. Transcoding
+efficiently is a worse answer than not transcoding.
