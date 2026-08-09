@@ -83,6 +83,10 @@ services:
     environment:
       - ACESERVE_BASE_URL=http://172.19.0.1:6878
       - LISTEN_ADDR=:6879
+      - PLAYLIST_PATH=/playlists/channels_ace.m3u
+    volumes:
+      # Read-only, only to turn the 40-hex content id into the channel name in the logs
+      - ${APP_CONFIG_PATH}/jellyfin/acestream:/playlists:ro
     networks:
       - media-network
 
