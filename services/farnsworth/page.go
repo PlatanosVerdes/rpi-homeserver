@@ -58,9 +58,15 @@ var pageTmpl = template.Must(template.New("page").Parse(`<!doctype html>
   .name { font-weight:600; font-size:.92rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .alt { font-size:.75rem; color:var(--dim); }
   .alt a { color:var(--dim); }
-  button { background:var(--accent); color:#1a1024; border:0; border-radius:.5rem; font-weight:700;
-           padding:.55rem .85rem; font-size:.85rem; cursor:pointer; flex:none; }
-  button:active { transform:scale(.97); }
+  .btn { background:var(--accent); color:#1a1024; border:0; border-radius:.5rem; font-weight:700;
+         padding:.55rem .85rem; font-size:.85rem; cursor:pointer; flex:none; text-decoration:none; }
+  .btn:active { transform:scale(.97); }
+  .setup { max-width:64rem; margin:0 auto 1.25rem; background:var(--card); border:1px solid var(--line);
+           border-radius:.7rem; padding:.9rem 1rem; font-size:.85rem; color:var(--dim); }
+  .setup b { color:var(--ink); }
+  .setup .row { display:flex; gap:.5rem; margin-top:.55rem; align-items:center; }
+  .setup input { flex:1; min-width:0; background:#0d0814; border:1px solid var(--line); color:var(--ink);
+                 border-radius:.4rem; padding:.45rem .6rem; font-size:.8rem; }
   footer { max-width:64rem; margin:2.5rem auto 0; color:var(--dim); font-size:.78rem;
            border-top:1px solid var(--line); padding-top:1rem; }
   code { background:#0d0814; padding:.1rem .35rem; border-radius:.25rem; font-size:.75rem; }
@@ -82,6 +88,16 @@ var pageTmpl = template.Must(template.New("page").Parse(`<!doctype html>
   </div>
 </header>
 
+<div class="setup">
+  <b>Añade la lista entera una vez</b> en VLC, Kodi o el reproductor que ya uses, y elige los canales
+  desde ahí. Es lo que funciona igual en todos los dispositivos. En VLC: Red → abrir lista de
+  reproducción con esta dirección.
+  <div class="row">
+    <input id="url" readonly value="">
+    <a class="btn" href="/all.m3u">Descargar</a>
+  </div>
+</div>
+
 <input id="q" type="search" placeholder="Buscar canal…" autocomplete="off" autocapitalize="off" spellcheck="false">
 
 <main>
@@ -94,9 +110,9 @@ var pageTmpl = template.Must(template.New("page").Parse(`<!doctype html>
       {{if .Logo}}<img src="{{.Logo}}" alt="" loading="lazy">{{end}}
       <div class="meta">
         <div class="name" title="{{.Name}}">{{.Name}}</div>
-        <div class="alt"><a href="/m3u/{{.ID}}">o descargar .m3u</a></div>
+        <div class="alt"><a href="#" onclick="return vlc('{{.ID}}')">probar VLC directo</a></div>
       </div>
-      <button onclick="play('{{.ID}}')">VLC</button>
+      <a class="btn" href="/m3u/{{.ID}}">Abrir</a>
     </div>
   {{end}}
   </div>
@@ -106,7 +122,8 @@ var pageTmpl = template.Must(template.New("page").Parse(`<!doctype html>
 </main>
 
 <footer>
-  Un canal tarda unos segundos en arrancar mientras VLC encuentra el swarm. Si no arranca en un
+  <b>Abrir</b> descarga un .m3u de ese canal y tu dispositivo lo manda a su reproductor.
+  Un canal tarda unos segundos en arrancar mientras el reproductor encuentra el swarm. Si no arranca en un
   minuto, ese canal no tiene a nadie compartiéndolo ahora mismo: prueba otra fuente del mismo canal.
   Los streams salen de <code>{{.StreamBase}}</code>, así que hace falta estar en casa o con Tailscale.
 </footer>
@@ -114,10 +131,17 @@ var pageTmpl = template.Must(template.New("page").Parse(`<!doctype html>
 <script>
 // The scheme jump never reaches the server, so the play is reported first. Ignore beacon failures:
 // not being able to log is no reason to stop someone watching television.
-function play(id) {
+document.getElementById('url').value = location.origin + '/all.m3u';
+document.getElementById('url').addEventListener('focus', function () { this.select(); });
+
+// Kept as a secondary link only: VLC's iOS scheme is unreliable, so the button people press is the
+// playlist download, which every device knows how to route.
+function vlc(id) {
   try { navigator.sendBeacon('/click/' + id); } catch (e) {}
   var url = {{.StreamBase}} + '/ace/getstream?id=' + id;
-  window.location.href = 'vlc-x-callback://x-callback-url/stream?url=' + encodeURIComponent(url);
+  window.location.href = 'vlc-x-callback://x-callback-url/stream?url=' + encodeURIComponent(url)
+    + '&x-success=' + encodeURIComponent(location.href);
+  return false;
 }
 
 // Matches the group as well as the name, so "motogp" finds the group and "eurosport 2" the channel.
