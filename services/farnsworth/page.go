@@ -149,11 +149,18 @@ document.getElementById('url').addEventListener('focus', function () { this.sele
 var toast = document.getElementById('toast');
 function hideToast() { toast.classList.add('hidden'); return false; }
 
-// A URL scheme for an app that is not installed fails silently: the browser simply stays put. So
-// note the time, and if we are still here and still visible a moment later, say so instead of
-// leaving someone tapping a button that appears to do nothing.
+// The vlc-x-callback scheme only exists on iOS. macOS VLC registers protocol schemes (http, rtsp,
+// smb) and no app scheme at all, so calling it there does nothing however well VLC is installed.
+// Everywhere else the playlist file is the mechanism: VLC claims public.m3u-playlist and the OS
+// routes it. Checked against VLC.app's own Info.plist rather than assumed.
+var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+            (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
 function vlc(id) {
   try { navigator.sendBeacon('/click/' + id); } catch (e) {}
+
+  if (!isIOS) { window.location.href = '/m3u/' + id; return false; }
+
   var url = {{.StreamBase}} + '/ace/getstream?id=' + id;
   var left = false;
   var onHide = function () { left = true; };
