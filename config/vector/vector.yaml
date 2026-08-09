@@ -47,6 +47,20 @@ transforms:
     inputs: [containers]
     source: |
       .container = del(.container_name)
+
+      # `docker compose run --rm` names its container <project>-<service>-run-<random hex>, a
+      # different one every invocation, so the nightly One Pace job was opening a new stream each
+      # night and container:one-pace-downloader matched none of them. Strip the suffix and every
+      # run lands in one stream.
+      .container = replace(string!(.container), r'-run-[0-9a-f]{12}$', "")
+
+      # A bare `docker run` with no --name gets docker's adjective_surname generator, which is a
+      # new stream per throwaway container: 100 of the 135 streams here came from those, carrying
+      # 1% of the lines between them. The lines are worth keeping, the streams are not, so they
+      # share one. No service on this host has an underscore in its name, so nothing real collides.
+      if match(string!(.container), r'^[a-z]+_[a-z]+$') {
+        .container = "adhoc"
+      }
       del(.container_created_at)
       del(.container_id)
       del(.image)
