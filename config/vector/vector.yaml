@@ -67,6 +67,23 @@ transforms:
       del(.label)
       del(.source_type)
 
+      # A service that already logs JSON (laliga-fantasy does) arrives as one escaped string,
+      # so its own fields are invisible to LogsQL: you can grep the line but you cannot ask
+      # for level:ERROR or msg:"world moved". Parsing it here lifts those fields to the top
+      # level, and leaves the human sentence in .message so a plain-text reader still works.
+      # Containers that log text fail the parse and are untouched.
+      parsed, parse_error = parse_json(.message)
+      if parse_error == null && is_object(parsed) {
+        fields = object!(parsed)
+        if exists(fields.msg) {
+          .message = string!(fields.msg)
+          del(fields.msg)
+        }
+        # The sink stamps _time itself; a second timestamp field only adds noise.
+        del(fields.time)
+        . = merge(., fields)
+      }
+
 sinks:
   victorialogs:
     type: elasticsearch
