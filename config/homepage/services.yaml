@@ -147,7 +147,7 @@
             key: "{{HOMEPAGE_VAR_SPEEDTEST_TOKEN}}"
             bitratePrecision: 1
 
-- Automation:
+- Services:
     - Offers Bot:
         icon: telegram.png
         description: Pol Academy Offers Hunter
@@ -162,8 +162,6 @@
         # /healthz answers 503 when the last refresh failed or the session is dying, so the
         # dot on the card is the real state and not just "the container is up".
         siteMonitor: http://laliga-fantasy:8000/healthz
-
-
 
 - Internals:
     - Prometheus:
@@ -192,5 +190,4 @@
 #        href: https://cal.platanosverdes.com
 #        server: my-docker
 #        container: cal-bridge
-
 
