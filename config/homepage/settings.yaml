@@ -44,7 +44,7 @@ layout:
   Network:
     style: grid
     columns: 2
-  Automation:
+  Services:
     style: grid
     columns: 2
   Internals:
