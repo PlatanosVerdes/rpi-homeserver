@@ -23,7 +23,7 @@ docker-compose.yml          Entry point — uses `include` to load all modules
 versions.env                Single source of truth for all image versions (committed)
 compose-core.yml            Caddy, Homepage, Pi-hole, Speedtest-tracker
 compose-media.yml           Plex, Jellyfin, Overseerr, Acestream, Tautulli, watch-next
-compose-arrs.yml            Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr
+compose-arrs.yml            Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr, Unpackerr
 compose-mon.yml             Prometheus, Grafana, Pushgateway, node-exporter, cAdvisor,
                             VictoriaLogs + Vector (container logs, see docs/logging.md)
 
@@ -164,7 +164,7 @@ Controlled via `COMPOSE_PROFILES` in `.env`. No need to touch compose files.
 | `essential` | Caddy, Homepage, Pi-hole, Speedtest-tracker |
 | `moni` | Prometheus, Grafana, Pushgateway, node-exporter, cAdvisor, Pihole-exporter, Speedtest-tracker |
 | `acestream` | Aceserve, Acestream-updater, Jellyfin + Grafana/Prometheus/Pushgateway |
-| `media` | Plex, Overseerr, Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr, Bazarr, Maintainerr, Tautulli, watch-next |
+| `media` | Plex, Overseerr, Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr, Unpackerr, Bazarr, Maintainerr, Tautulli, watch-next |
 | `bot` | Pol Academy Offers Bot |
 | `cal` | Google Calendar Bridge (cal-bridge) |
 | `tunnel` | Cloudflared (publishes only the GitHub deploy webhook — see docs/deploy-webhook.md) |

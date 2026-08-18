@@ -12,7 +12,7 @@ A modular, Docker-based home server for Raspberry Pi. Uses Docker Compose's `inc
 | :--- | :--- | :--- |
 | **Core** | Entry point & Networking | Caddy, Homepage, Pi-hole, Speedtest-tracker |
 | **Media** | Streaming & Live TV | Plex, Jellyfin, Overseerr, Bazarr, Maintainerr, Acestream |
-| **Arrs** | Automation & Downloads | Radarr, Sonarr, Prowlarr, qBittorrent, FlareSolverr |
+| **Arrs** | Automation & Downloads | Radarr, Sonarr, Prowlarr, qBittorrent, FlareSolverr, Unpackerr |
 | **Monitoring** | System Health | Prometheus, Grafana, Pushgateway, node-exporter, cAdvisor |
 
 ---
@@ -111,6 +111,10 @@ Plex runs on the Pi, which is weak at video transcoding, so files should
 **Supporting automation:**
 - **Bazarr** auto-downloads Spanish subtitles for the whole library.
 - **Maintainerr** auto-cleans watched movies (movies library only) to keep the data pool from filling up.
+- **Unpackerr** unrars scene releases. Radarr and Sonarr cannot read a `.rar` set, so those
+  releases sit in the queue as `importPending` forever and the disk fills up with parts that
+  never become a movie. The original archives are left alone so the torrent keeps seeding;
+  only the extracted copy is removed once the *arr has imported it.
 
 ### Indexers / trackers
 
@@ -276,7 +280,7 @@ Every service belongs to one or more profiles. Set `COMPOSE_PROFILES` in `.env` 
 | `essential` | Caddy, Homepage, Pi-hole, Speedtest-tracker |
 | `moni` | Prometheus, Grafana, Pushgateway, node-exporter, cAdvisor, Pihole-exporter, Speedtest-tracker |
 | `acestream` | Aceserve, Acestream-updater, Jellyfin + Grafana/Prometheus/Pushgateway |
-| `media` | Plex, Overseerr, Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr |
+| `media` | Plex, Overseerr, Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr, Unpackerr |
 | `bot` | Pol Academy Offers Bot |
 | `all` | Everything |
 

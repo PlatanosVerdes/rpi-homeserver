@@ -107,6 +107,31 @@ services:
     networks:
       - media-network
 
+  # --- UNPACKERR (unrars scene releases so Radarr/Sonarr can import them) ---
+  unpackerr:
+    image: ghcr.io/unpackerr/unpackerr:${UNPACKERR_VERSION}
+    container_name: unpackerr
+    restart: unless-stopped
+    mem_limit: 256m
+    memswap_limit: 256m
+    profiles: [media, all]
+    user: "${PUID}:${PGID}"
+    environment:
+      - TZ=${TZ}
+      - UN_INTERVAL=2m
+      - UN_START_DELAY=1m
+      # UN_*_PATHS_0 must be the path the *arr itself reports, so the /data mount is the same as theirs
+      - UN_RADARR_0_URL=http://radarr:7878
+      - UN_RADARR_0_API_KEY=${RADARR_API_KEY}
+      - UN_RADARR_0_PATHS_0=/data/downloads
+      - UN_SONARR_0_URL=http://sonarr:8989
+      - UN_SONARR_0_API_KEY=${SONARR_API_KEY}
+      - UN_SONARR_0_PATHS_0=/data/downloads
+    volumes:
+      - ${DATA_ROOT}:/data
+    networks:
+      - media-network
+
 networks:
   media-network:
     external: true
