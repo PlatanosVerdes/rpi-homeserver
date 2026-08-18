@@ -154,9 +154,8 @@
         server: my-docker
         container: pol-academy-offers-bot
     - Fantasy:
-        icon: mdi-soccer
+        icon: https://fantasy.platanosverdes.com/assets/favicon.png
         href: https://fantasy.platanosverdes.com
-        description: LaLiga Fantasy · panel de decisiones
         server: my-docker
         container: laliga-fantasy
         # /healthz answers 503 when the last refresh failed or the session is dying, so the
