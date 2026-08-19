@@ -322,4 +322,22 @@ collection from it, visible on the Plex home, holding whatever is queued for del
   as part of the delete is what takes it off the missing list for good.
 - **`cleanupLeftoverFolders` is on.** Deleting through Radarr removes the file and leaves the movie
   folder behind, so `films/` was collecting empty shells.
+- **The rule needs two conditions, not one.** Plex writes `lastViewedAt` the moment playback
+  *starts*, and `viewCount` only when it finishes, so a rule on the view date alone treats "pressed
+  play for ten seconds and left" as watched. On 2026-08-19 that had queued two films nobody had seen:
+  `Spider-Man: Brand New Day` and `Las ovejas detectives`, both touched on 08/08 one minute apart,
+  `viewCount=0`, 0% progress. Somebody browsing, not watching. The rule group is now:
+
+  | # | Condition | Meaning |
+  | :--- | :--- | :--- |
+  | 1 | Plex `lastViewedAt` BEFORE now-172800 | last viewed more than two days ago |
+  | 2 | AND Plex `viewCount` BIGGER than 0 | and actually finished at least once |
+
+  In the `rules` table, `firstVal` is `[application, property]` — `[0,7]` is Plex/`lastViewedAt`,
+  `[0,5]` is Plex/`viewCount` — `action` is the `RulePossibility` enum (5 `BEFORE`, 0 `BIGGER`) and
+  `operator` is `RuleOperators` (0 `AND`). `GET /api/rules/constants` lists every property with its id.
+
+  A finer version is possible and not wired: with `tautulli_url` set, the collection's
+  `tautulliWatchedPercentOverride` counts a film as watched at N% played, which also catches the
+  person who stops before the credits. Tautulli is running, Maintainerr just does not know about it.
 - media server is Plex (`media_server_type=plex`); it is not wired to Jellyfin/Emby.
