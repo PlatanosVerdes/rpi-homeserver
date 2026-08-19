@@ -30,11 +30,38 @@ if [[ -f "$LOG_FILE" ]] && [[ "$(stat -c%s "$LOG_FILE" 2>/dev/null || echo 0)" -
 fi
 
 # Cron and the webhook receiver can both fire this; never let two deploys overlap.
+#
+# The skipped run used to be dropped, and that lost real deploys: a Go build on ARM holds the
+# lock for minutes, and two pushes in that window (a tag in one repo, its version bump in the
+# other) meant the second change waited for the next cron sweep half an hour later. So the one
+# that cannot get in leaves a note, and whoever holds the lock takes one more pass before
+# leaving. Coalescing, not a queue: ten pushes during a build still cost exactly one extra run.
+PENDING_MARKER="$PROJECT_DIR/.deploy.pending"
 exec 9>"$PROJECT_DIR/.deploy.lock"
 if ! flock -n 9; then
-    log "Another deploy is already running, skipping."
+    touch "$PENDING_MARKER"
+    log "Another deploy is already running; left a note for it to run again."
     exit 0
 fi
+# Claimed: anything asked for before now is about to be applied anyway.
+rm -f "$PENDING_MARKER"
+
+# RERUNS bounds the chain. Two extra passes absorb a burst of pushes; beyond that the cron
+# sweep can have it, because something is pushing faster than the Pi can build.
+RERUNS=${DEPLOY_RERUNS:-0}
+# Kept in an array because inside a function "$@" would be the function's arguments, not the
+# script's, and the re-run has to be the same invocation.
+SCRIPT_ARGS=("$@")
+rerun_if_pending() {
+    if [[ -f "$PENDING_MARKER" ]] && (( RERUNS < 2 )); then
+        rm -f "$PENDING_MARKER"
+        log "A push landed while deploying; running once more."
+        flock -u 9
+        exec 9>&-
+        DEPLOY_RERUNS=$((RERUNS + 1)) exec "$0" "${SCRIPT_ARGS[@]}"
+    fi
+}
+trap rerun_if_pending EXIT
 
 push_metrics() {
     local status=$1
@@ -323,6 +350,8 @@ fi
 
 push_metrics $DEPLOY_STATUS
 log "Done."
+# The trap fires here: if a push landed while this was building, apply it now rather than
+# leaving it for the cron sweep.
 
 # crontab -e
 # */15 * * * * /home/raspi/rpi-homeserver/scripts/apply.sh >> /home/raspi/rpi-homeserver/apply.log 2>&1
