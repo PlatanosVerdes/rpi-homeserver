@@ -100,7 +100,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "maintainerr_pending_media or vector(0)",
+          "expr": "sum(maintainerr_pending_media) or vector(0)",
           "refId": "A",
           "instant": true,
           "range": false,
@@ -164,7 +164,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "seed_cleanup_waiting_torrents or vector(0)",
+          "expr": "sum(seed_cleanup_waiting_torrents) or vector(0)",
           "refId": "A",
           "instant": true,
           "range": false,
@@ -229,7 +229,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "seed_cleanup_waiting_bytes or vector(0)",
+          "expr": "sum(seed_cleanup_waiting_bytes) or vector(0)",
           "refId": "A",
           "instant": true,
           "range": false,
@@ -293,7 +293,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "seed_cleanup_library_torrents or vector(0)",
+          "expr": "sum(seed_cleanup_library_torrents) or vector(0)",
           "refId": "A",
           "instant": true,
           "range": false,
@@ -357,7 +357,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "seed_cleanup_removed_total or vector(0)",
+          "expr": "sum(seed_cleanup_removed_total) or vector(0)",
           "refId": "A",
           "instant": true,
           "range": false,
@@ -422,7 +422,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "seed_cleanup_freed_bytes_total or vector(0)",
+          "expr": "sum(seed_cleanup_freed_bytes_total) or vector(0)",
           "refId": "A",
           "instant": true,
           "range": false,
@@ -556,6 +556,36 @@
                     }
                   }
                 ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Goal (h)"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "suffix:h"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "—",
+                        "index": 0
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.width",
+                "value": 110
               }
             ]
           }
@@ -722,7 +752,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "h",
+          "unit": "suffix:h",
           "decimals": 0,
           "min": 0,
           "mappings": [],
@@ -834,7 +864,7 @@
             "properties": [
               {
                 "id": "unit",
-                "value": "h"
+                "value": "suffix:h"
               },
               {
                 "id": "decimals",
@@ -850,7 +880,7 @@
             "properties": [
               {
                 "id": "unit",
-                "value": "h"
+                "value": "suffix:h"
               },
               {
                 "id": "decimals",
@@ -976,7 +1006,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "seed_cleanup_waiting_since_timestamp",
+          "expr": "seed_cleanup_waiting_since_timestamp * 1000",
           "refId": "E",
           "instant": true,
           "range": false,
@@ -1287,5 +1317,5 @@
   "timezone": "browser",
   "title": "Retention policy",
   "uid": "media-retention",
-  "version": 1
+  "version": 3
 }
