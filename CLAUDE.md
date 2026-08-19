@@ -56,6 +56,7 @@ scripts/                    Operational scripts
   heartbeat.sh              Dead man's switch ping to an external check (cron, every minute)
   cutoff-search.sh          Nightly *arr search for missing and below-cutoff items (cron)
   media-metrics.py          Upgrades, torrents, indexer status/usage -> Pushgateway (cron)
+  seed-cleanup.py           Drops a torrent once its film left the library and the tracker is paid (cron)
   disk-usage-metrics.sh     Biggest files/dirs on the data disk -> node_exporter (cron)
   zram-metrics.sh           What the compressed swap really costs in RAM -> node_exporter (cron)
   sync-arr-config.sh        Pushes config/arr/*/*.json into Radarr/Sonarr (on deploy)
