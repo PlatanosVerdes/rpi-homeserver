@@ -390,30 +390,29 @@ def maintainerr_pending():
 
     This is the first stage of the retention policy, and the only one nothing else can see. Radarr
     still has the film, the torrent is still hardlinked, and seed-cleanup.py will not look at it
-    until Maintainerr deletes the library copy. Titles come from Radarr by tmdbId, because the
-    collection payload carries ids and no names.
+    until Maintainerr deletes the library copy.
+
+    The list comes from the paginated media endpoint rather than the `media` array on /api/collections,
+    which is capped: with three films queued it returned two, so the count was wrong and one title was
+    missing. Each row carries its own `mediaData`, so titles need no lookup anywhere else.
 
     Its port is not published, so the call goes through the container, and its own server listens on
     IPv4 only: localhost inside there resolves to ::1 and is refused.
     """
-    try:
+    def api(path):
         result = subprocess.run(
             ["docker", "exec", "maintainerr", "wget", "-qO-",
-             "http://127.0.0.1:6246/api/collections"],
+             f"http://127.0.0.1:6246/api/{path}"],
             capture_output=True, text=True, timeout=30)
         if result.returncode != 0:
             raise RuntimeError(result.stderr.strip()[:120] or "wget failed")
-        collections = json.loads(result.stdout)
+        return json.loads(result.stdout)
+
+    try:
+        collections = api("collections")
     except Exception as exc:
         failures.append(f"maintainerr: {exc}")
         return
-
-    titles = {}
-    try:
-        titles = {m.get("tmdbId"): m.get("title", "?")
-                  for m in get("http://localhost:7878/api/v3/movie", api_key("radarr"))}
-    except Exception as exc:
-        failures.append(f"maintainerr titles: {exc}")
 
     counts = ["# HELP maintainerr_pending_media Films queued for deletion, per collection",
               "# TYPE maintainerr_pending_media gauge"]
@@ -421,21 +420,35 @@ def maintainerr_pending():
              "# TYPE maintainerr_pending_bytes gauge"]
     since = ["# HELP maintainerr_pending_since_timestamp When each film entered the queue",
              "# TYPE maintainerr_pending_since_timestamp gauge"]
+    per_film = ["# HELP maintainerr_pending_film_bytes Disk each queued film would give back",
+                "# TYPE maintainerr_pending_film_bytes gauge"]
+
     for collection in collections:
         label = f'collection="{escape(collection.get("title", "?"))}"'
-        media = collection.get("media") or []
-        counts.append(f"maintainerr_pending_media{{{label}}} {len(media)}")
-        sizes.append(f"maintainerr_pending_bytes{{{label}}} {collection.get('totalSizeBytes') or 0}")
-        for item in media:
-            title = titles.get(item.get("tmdbId"), f"tmdb {item.get('tmdbId')}")
-            added = item.get("addDate")
-            if not added:
-                continue
-            stamp = parse_time(added.replace(" ", "T")).replace(tzinfo=timezone.utc).timestamp()
-            since.append(f'maintainerr_pending_since_timestamp{{{label},'
-                         f'title="{escape(title)[:90]}"}} {int(stamp)}')
+        items = []
+        for page in range(1, 21):
+            try:
+                batch = (api(f"collections/media/{collection['id']}/content/{page}") or {}).get("items")
+            except Exception as exc:
+                failures.append(f"maintainerr media page {page}: {exc}")
+                break
+            if not batch:
+                break
+            items += batch
 
-    push("maintainerr_pending", counts + sizes + since)
+        counts.append(f"maintainerr_pending_media{{{label}}} {len(items)}")
+        sizes.append(f"maintainerr_pending_bytes{{{label}}} {collection.get('totalSizeBytes') or 0}")
+        for item in items:
+            data = item.get("mediaData") or {}
+            title = data.get("title") or f"plex {item.get('mediaServerId')}"
+            labels = f'{label},title="{escape(title)[:90]}"'
+            added = item.get("addDate")
+            if added:
+                stamp = parse_time(added.replace(" ", "T")).timestamp()
+                since.append(f"maintainerr_pending_since_timestamp{{{labels}}} {int(stamp)}")
+            per_film.append(f"maintainerr_pending_film_bytes{{{labels}}} {item.get('sizeBytes') or 0}")
+
+    push("maintainerr_pending", counts + sizes + since + per_film)
 
 
 def prowlarr_indexers():
