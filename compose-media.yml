@@ -121,6 +121,11 @@ services:
     image: lscr.io/linuxserver/bazarr:${BAZARR_VERSION}
     container_name: bazarr
     restart: unless-stopped
+    # Capped after 2026-08-19: a SignalR reconnect loop against Radarr leaked 979 threads and ate a
+    # whole core for an hour. One core is more than it ever needs for subtitles.
+    cpus: 1.0
+    mem_limit: 512m
+    memswap_limit: 512m
     profiles: [media, all]
     environment:
       - PUID=${PUID}

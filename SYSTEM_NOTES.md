@@ -286,15 +286,28 @@ Prowlarr logs the rejection and moves on.
 Also `appdata`-only state, not reproducible from git. Set up on 2026-08-05 to delete a movie 7 days
 after it was watched.
 
+The collection is called **`Pending deletion`** (`Películas` until 2026-08-19, which read as a copy
+of the Plex library of the same name). The name is not cosmetic: Maintainerr creates a real Plex
+collection from it, visible on the Plex home, holding whatever is queued for deletion.
+
 - **Download client wired to qBittorrent** (`download_client_url=http://qbittorrent:8080`, user
   `admin`, `delete_data=true`). Without this, Maintainerr only removed the file from Radarr; the
   torrent kept seeding untouched. Deleting now also removes the torrent, respecting its own seed-time
   limit (Maintainerr's fallback ratio only kicks in when the client enforces no limit of its own,
   which is not our case).
-- **Fixed a double grace period on the `Películas` collection.** The rule means "last viewed more
-  than N days ago" (an unwatched title has no `lastViewedAt`, so it never matches). The collection
+- **Fixed a double grace period on the collection.** The rule means "last viewed more than N days
+  ago" (an unwatched title has no `lastViewedAt`, so it never matches). The collection
   used to wait a *second* 7 days after the item entered it before deleting, doubling the real delay.
   `deleteAfterDays` is now `0`: the rule's own threshold is the only wait. That threshold is
   `customVal.value` in `rules[0].ruleJson` (seconds) — currently **1209600 = 14 days**, changed from
   the original 7 on 2026-08-05.
+- **The collection now deletes through Radarr, not through Plex** (`arrAction=1`
+  `UNMONITOR_DELETE_ALL`, `radarrSettingsId=1`, both in the `collection` table of
+  `appdata/maintainerr/maintainerr.sqlite`). It used to be `arrAction=0` with `radarrSettingsId`
+  unset, so Maintainerr had no Radarr instance to act on and fell back to deleting the item through
+  Plex: the file left the disk, but the movie stayed **monitored** in Radarr. `cutoff-search.sh`
+  then found it in `wanted/missing` at 05:00 and grabbed it again. Cars 3 rode that loop from
+  2026-08-11 to 2026-08-19 — deleted around noon, re-downloaded at 05:00, a 5-20 GB Ultra-HD
+  release every night, and it left one seeding copy per round in `/mnt/data/downloads`. Unmonitoring
+  as part of the delete is what takes it off the missing list for good.
 - media server is Plex (`media_server_type=plex`); it is not wired to Jellyfin/Emby.
