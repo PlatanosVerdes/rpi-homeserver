@@ -1,29 +1,37 @@
 #!/usr/bin/env python3
 """Remove a torrent and its data once the film has left the library and the tracker is paid.
 
-Radarr imports by hardlink, so a downloaded file lives under two names: the one qBittorrent seeds
-and the one Plex plays. That link count is the whole state machine:
+The question per torrent is "does the library still hold what this download produced", and it gets
+asked twice, because one answer is free and the other is certain:
 
-  nlink >= 2   still in the library                  -> leave it, whatever the tracker says
-  nlink == 1   watched, Maintainerr deleted its copy
-                 public tracker                      -> remove torrent and data now
-                 private, seed goal met              -> remove torrent and data now
-                 private, seed goal pending          -> keep seeding, tag it, look again next hour
+  hard link count >= 2     the library shares the file, so it is still there. One stat() call.
+  otherwise, ask the *arr  by download id: what did it import, and is that path still on disk?
 
-Neither half can do this alone: qBittorrent cannot know what was watched, and Maintainerr looks at a
-torrent once, at the moment it deletes the film, and never comes back. So the disk carries the state
-and this reads it.
+The second question is not redundant. Radarr imports by hardlink when it can, but `/mnt/data` is
+mergerfs over two disks and a hardlink across branches fails with EXDEV, so Radarr falls back to a
+plain copy: 19 of 71 files in the library are copies rather than links. Those have a link count of 1
+from the moment they land, and trusting the count alone read them as "watched and deleted" while the
+film sat in the library untouched.
+
+Once the library really has let go:
+
+  public tracker           -> remove torrent and data now
+  private, seed goal met   -> remove torrent and data now
+  private, goal pending    -> keep seeding, tag it, look again next hour
+
+Neither half of the stack can do this alone: qBittorrent cannot know what was watched, and
+Maintainerr looks at a torrent once, at the moment it deletes the film, and never comes back.
 
 Goals come from config/qbittorrent/seed-rules.json. Whether a tracker is private comes from
 qBittorrent itself, so there is no list to keep up to date. Seeding time is qBittorrent's counter,
 which only advances while the torrent really seeds: stricter than a tracker's calendar clock, which
 is the safe direction to be wrong in.
 
-Guards, because this deletes files: never with nlink > 1, never below 100% progress, never while
-checking or moving, never when a second torrent shares the same files, and never within
-min_age_hours of finishing. That last one matters: a torrent that just completed also has nlink 1,
-because Radarr has not imported it yet. Without the floor, this would delete a download while
-unpackerr was still extracting it.
+Guards, because this deletes files: never while the library still holds the file, never when the
+*arrs cannot be reached to ask, never below 100% progress, never while checking or moving, never when
+a second torrent shares the same files, and never within min_age_hours of finishing. That last one
+matters: a torrent that just completed looks exactly like one whose film was deleted, because Radarr
+has not imported it yet, and unpackerr may still be extracting it.
 
 DRY_RUN=1 reports and touches nothing. Metrics go to Pushgateway. Run from cron (scripts/crontab).
 """
@@ -116,6 +124,45 @@ def host_path(content_path, data_root):
     return content_path.replace(CONTAINER_DATA_ROOT, f"{data_root.rstrip('/')}/", 1)
 
 
+ARRS = (("radarr", 7878), ("sonarr", 8989))
+_api_keys = {}
+
+
+def arr_key(app):
+    if app not in _api_keys:
+        text = (PROJECT_DIR / "appdata" / app / "config.xml").read_text(errors="ignore")
+        start = text.index("<ApiKey>") + len("<ApiKey>")
+        _api_keys[app] = text[start:text.index("</ApiKey>", start)]
+    return _api_keys[app]
+
+
+def imported_paths(torrent_hash):
+    """What the *arrs imported out of this download.
+
+    Returns the list of library paths, `[]` when nothing ever imported it (junk, a failed grab), or
+    None when neither app could be asked, which is never a reason to delete anything. The download id
+    the *arrs store is the torrent hash in upper case.
+    """
+    unreachable = 0
+    for app, port in ARRS:
+        try:
+            request = urllib.request.Request(
+                f"http://localhost:{port}/api/v3/history?page=1&pageSize=50"
+                f"&downloadId={torrent_hash.upper()}",
+                headers={"X-Api-Key": arr_key(app)})
+            with urllib.request.urlopen(request, timeout=15) as response:
+                records = json.loads(response.read()).get("records", [])
+        except Exception:
+            unreachable += 1
+            continue
+        paths = [(r.get("data") or {}).get("importedPath") for r in records
+                 if r.get("eventType") == "downloadFolderImported"]
+        paths = [p for p in paths if p]
+        if paths:
+            return paths
+    return None if unreachable else []
+
+
 def link_counts(path):
     """Every link count under the torrent's content path, or None when it cannot be read: an
     unreadable path is never a reason to delete."""
@@ -184,9 +231,9 @@ def too_young(torrent, min_age_hours):
 def classify(torrents, rules, data_root):
     """Split into (remove, waiting, in_library, keep) with the reason each one landed there.
 
-    in_library is decided by the link count alone, not by the guards, so a film that was imported an
-    hour ago still counts as being in the library. Ordering it after the guards made the funnel on
-    the dashboard not add up: a fresh import belonged to no stage at all.
+    Being in the library is decided before the guards, so a film imported an hour ago still counts as
+    being there. Ordering it after them made the funnel on the dashboard not add up: a fresh import
+    belonged to no stage at all.
     """
     shared = collections.Counter(t["content_path"] for t in torrents)
     min_age_hours = rules.get("min_age_hours", 24)
@@ -201,7 +248,18 @@ def classify(torrents, rules, data_root):
 
         counts = link_counts(host_path(t["content_path"], data_root))
         if counts is not None and max(counts) > 1:
-            in_library.append({**entry, "why": "still in the library"})
+            in_library.append({**entry, "why": "still in the library, sharing the file"})
+            keep.append(in_library[-1])
+            continue
+
+        # No shared link is not the same as no library copy: a cross-branch import on mergerfs is a
+        # plain copy. Only the *arr that grabbed it knows what it produced.
+        imported = imported_paths(t["hash"])
+        if imported is None:
+            keep.append({**entry, "why": "could not ask radarr or sonarr"})
+            continue
+        if any(os.path.exists(host_path(p, data_root)) for p in imported):
+            in_library.append({**entry, "why": "still in the library, imported as a copy"})
             keep.append(in_library[-1])
             continue
 
