@@ -11,6 +11,10 @@
 # The value lives only in Plex's appdata (Preferences.xml), which the container rewrites on
 # shutdown, so it cannot be committed as a file. This pushes PLEX_LAN_NETWORKS through Plex's own
 # API instead, and only when the running value differs.
+#
+# It also sets the played threshold, for the same appdata-only reason. Plex marks a film as watched
+# at 90% by default, which is inside the credits, and Maintainerr deletes what Plex says is watched:
+# at 90% a film abandoned before the end counts as seen and gets queued. 95% is the whole film.
 set -uo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -18,6 +22,8 @@ set -a; source "$PROJECT_DIR/.env"; set +a
 
 PLEX_BASE="http://localhost:32400"
 PREFS_FILE="$PROJECT_DIR/appdata/plex/Library/Application Support/Plex Media Server/Preferences.xml"
+# Percentage of a film that counts as watched. Policy rather than host config, so it is not in .env.
+PLAYED_THRESHOLD=95
 
 if [[ -z "${PLEX_LAN_NETWORKS:-}" || -z "${PLEX_API_TOKEN:-}" ]]; then
     echo "sync-plex-prefs: PLEX_LAN_NETWORKS or PLEX_API_TOKEN not set in .env, skipping" >&2
@@ -27,6 +33,21 @@ fi
 if ! curl -sf -m 10 -o /dev/null -H "X-Plex-Token: $PLEX_API_TOKEN" "$PLEX_BASE/identity"; then
     echo "sync-plex-prefs: could not reach Plex's API, skipping" >&2
     exit 0
+fi
+
+# Unlike LanNetworksBandwidth, this one is a normal preference and readable from the API.
+played=$(curl -sf -m 10 -H "X-Plex-Token: $PLEX_API_TOKEN" "$PLEX_BASE/:/prefs" \
+    | grep -oP 'id="LibraryVideoPlayedThreshold"[^>]*value="\K[0-9]+' || true)
+
+if [[ "$played" != "$PLAYED_THRESHOLD" ]]; then
+    status=$(curl -s -o /dev/null -w '%{http_code}' -m 10 -X PUT \
+        -H "X-Plex-Token: $PLEX_API_TOKEN" \
+        "$PLEX_BASE/:/prefs?LibraryVideoPlayedThreshold=$PLAYED_THRESHOLD")
+    if [[ "$status" == 2* ]]; then
+        echo "plex prefs: played threshold set to ${PLAYED_THRESHOLD}% (was '${played:-unknown}')"
+    else
+        echo "sync-plex-prefs: failed to write the played threshold (HTTP $status)" >&2
+    fi
 fi
 
 # LanNetworksBandwidth is a hidden preference: it is absent from /:/prefs until it has a value,

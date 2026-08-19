@@ -337,7 +337,17 @@ collection from it, visible on the Plex home, holding whatever is queued for del
   `[0,5]` is Plex/`viewCount` — `action` is the `RulePossibility` enum (5 `BEFORE`, 0 `BIGGER`) and
   `operator` is `RuleOperators` (0 `AND`). `GET /api/rules/constants` lists every property with its id.
 
-  A finer version is possible and not wired: with `tautulli_url` set, the collection's
-  `tautulliWatchedPercentOverride` counts a film as watched at N% played, which also catches the
-  person who stops before the credits. Tautulli is running, Maintainerr just does not know about it.
+- **Watched means 95% of the film, and Plex is the one that decides it.**
+  `LibraryVideoPlayedThreshold` is `95`, converged by `sync-plex-prefs.sh` because it lives in
+  Plex's appdata like the LAN networks. Plex's default is 90%, which is inside the credits, so a
+  film abandoned before the end counted as seen and got queued for deletion.
+- **Tautulli is wired (`tautulli_url`, `tautulli_api_key`) with `tautulliWatchedPercentOverride=95`,
+  and the rules deliberately do not use it.** Its properties (application 4) return only plays with
+  `percent_complete >= 95`, which sounds like exactly what is wanted, but Tautulli only records what
+  **streams through this server**, and this library's watch state does not all come from here: Plex's
+  `ViewStateSync` pulls it from `scrobbles.plex.tv`, so a film watched on a phone or another server
+  on the same Plex account arrives already marked. Measured on 2026-08-19: Tautulli, running since
+  2026-08-07, holds two rows, both of the same film, while Plex had four films marked as viewed in
+  that window. A Tautulli-based rule would quietly never delete anything watched elsewhere. It stays
+  configured because its history is worth having and the option is one field away.
 - media server is Plex (`media_server_type=plex`); it is not wired to Jellyfin/Emby.
