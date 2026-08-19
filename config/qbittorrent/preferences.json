@@ -6,8 +6,8 @@
 
   "queueing_enabled": true,
   "max_active_downloads": 3,
-  "max_active_torrents": 40,
-  "max_active_uploads": 40,
+  "max_active_torrents": 100,
+  "max_active_uploads": 100,
 
   "dont_count_slow_torrents": true,
   "slow_torrent_dl_rate_threshold": 2,

@@ -1,0 +1,16 @@
+{
+  "min_age_hours": 24,
+
+  "public": {
+    "min_seed_hours": 0,
+    "min_ratio": 0
+  },
+
+  "private": {
+    "min_seed_hours": 240,
+    "min_ratio": 1.0
+  },
+
+  "trackers": {
+  }
+}
