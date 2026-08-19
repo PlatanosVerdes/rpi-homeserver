@@ -125,10 +125,11 @@ Plex runs on the Pi, which is weak at video transcoding, so files should
   | film gone from the library | private, goal met | torrent and data removed on the next pass |
   | film gone from the library | private, goal pending | keeps seeding, tagged `waiting-seed`, rechecked hourly |
 
-  Whether the library still holds a film is asked of the hard link count first and of the *arr second:
-  `/mnt/data` is mergerfs over two disks, and an import across branches cannot hardlink, so Radarr
-  copies. Those copies are the reason the second question exists, and the reason a copy gets dropped
-  as soon as its tracker is paid: seeding one costs a full second copy of the film.
+  Whether the library still holds a film is asked of the hard link count first and of the *arr second.
+  The second question exists because of RAR releases: a hardlink needs the same bytes at both ends,
+  and the `.mkv` unpackerr extracts out of 96 `.rNN` archives is a new file, so it shares nothing with
+  what qBittorrent seeds. That is also why such an import is dropped as soon as its tracker is paid:
+  the film sits on disk twice, and one of the two copies is only there to honour the tracker.
 
   Goals live in `config/qbittorrent/seed-rules.json` (240 h seeding or ratio 1.0 for private, nothing
   for public). Whether a tracker is private comes from qBittorrent, so there is no list to maintain.
