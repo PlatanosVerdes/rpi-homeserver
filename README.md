@@ -116,12 +116,19 @@ Plex runs on the Pi, which is weak at video transcoding, so files should
   every download has two names: the one qBittorrent seeds and the one Plex plays. Maintainerr removes
   the second, and this removes the first once the tracker is paid:
 
-  | Link count | Tracker | What happens |
+  | State | Tracker | What happens |
   | :--- | :--- | :--- |
-  | 2 (still in the library) | any | nothing, it keeps seeding |
-  | 1 (watched, gone from Plex) | public | torrent and data removed on the next pass |
-  | 1 | private, seed goal met | torrent and data removed on the next pass |
-  | 1 | private, goal pending | keeps seeding, tagged `waiting-seed`, checked again next hour |
+  | library shares the file | any | nothing, it keeps seeding: it costs no extra disk |
+  | library has its own copy | goal met | download copy removed, film untouched, duplicate reclaimed |
+  | library has its own copy | goal pending | keeps seeding until the debt is paid, then as above |
+  | film gone from the library | public | torrent and data removed on the next pass |
+  | film gone from the library | private, goal met | torrent and data removed on the next pass |
+  | film gone from the library | private, goal pending | keeps seeding, tagged `waiting-seed`, rechecked hourly |
+
+  Whether the library still holds a film is asked of the hard link count first and of the *arr second:
+  `/mnt/data` is mergerfs over two disks, and an import across branches cannot hardlink, so Radarr
+  copies. Those copies are the reason the second question exists, and the reason a copy gets dropped
+  as soon as its tracker is paid: seeding one costs a full second copy of the film.
 
   Goals live in `config/qbittorrent/seed-rules.json` (240 h seeding or ratio 1.0 for private, nothing
   for public). Whether a tracker is private comes from qBittorrent, so there is no list to maintain.
