@@ -105,6 +105,12 @@ Plex runs on the Pi, which is weak at video transcoding, so files should
   copy of the disc, but that extra quality is imperceptible on a 55-inch TV or an iPad and
   only wastes disk, whereas a Bluray-1080p encode is roughly 99% of the quality at 5-15 GB.
 - **Penalize** Remux and heavy lossless audio (DTS-HD): quality the devices cannot benefit from.
+- **Prefer a single file over a RAR pack** (`RAR pack (prefer not)`, -300). A packed release is
+  seeded as its `.rNN` archives while Plex plays the `.mkv` unpackerr extracts, so the film sits
+  on disk twice until the tracker is paid. There is nothing in a release title that says "this
+  is packed", so the format matches the groups that actually did it here (GAZPROM, CEBRAY,
+  GAZER) and the list grows as more turn up. -300 is a nudge, not a veto: `minFormatScore` is
+  -6000, so a packed release still wins when it is the only copy of a film.
 - **Language preference:** Castilian Spanish > VOSE (original audio with Spanish subtitles) > English > Latin-American Spanish (avoided).
 - **Rule of thumb for smooth playback:** 1080p, x264/H.264, AAC or EAC3/AC3, text subtitles (SRT / mov_text).
 
