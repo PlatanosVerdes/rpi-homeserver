@@ -171,10 +171,15 @@ def too_young(torrent, min_age_hours):
 
 
 def classify(torrents, rules, data_root):
-    """Split into (remove, waiting, keep) with the reason each one landed there."""
+    """Split into (remove, waiting, in_library, keep) with the reason each one landed there.
+
+    in_library is decided by the link count alone, not by the guards, so a film that was imported an
+    hour ago still counts as being in the library. Ordering it after the guards made the funnel on
+    the dashboard not add up: a fresh import belonged to no stage at all.
+    """
     shared = collections.Counter(t["content_path"] for t in torrents)
     min_age_hours = rules.get("min_age_hours", 24)
-    remove, waiting, keep = [], [], []
+    remove, waiting, in_library, keep = [], [], [], []
 
     for t in torrents:
         entry = dict(t)
@@ -182,6 +187,12 @@ def classify(torrents, rules, data_root):
         name, goal = goal_for(t, rules)
         entry["goal_name"] = name
         entry["goal"] = goal
+
+        counts = link_counts(host_path(t["content_path"], data_root))
+        if counts is not None and max(counts) > 1:
+            in_library.append({**entry, "why": "still in the library"})
+            keep.append(in_library[-1])
+            continue
 
         if t["progress"] < 1 or t["state"] in BUSY_STATES:
             keep.append({**entry, "why": "not finished seeding-ready"})
@@ -192,13 +203,8 @@ def classify(torrents, rules, data_root):
         if shared[t["content_path"]] > 1:
             keep.append({**entry, "why": "another torrent shares these files"})
             continue
-
-        counts = link_counts(host_path(t["content_path"], data_root))
         if counts is None:
             keep.append({**entry, "why": "files not readable from the host"})
-            continue
-        if max(counts) > 1:
-            keep.append({**entry, "why": "still in the library"})
             continue
 
         if goal_met(t, goal):
@@ -206,7 +212,7 @@ def classify(torrents, rules, data_root):
         else:
             waiting.append({**entry, "why": "watched, seed goal pending"})
 
-    return remove, waiting, keep
+    return remove, waiting, in_library, keep
 
 
 def apply_tag(torrents, tag, add):
@@ -338,8 +344,7 @@ def main():
         metrics([], [], [], 0, 1, state, [], rules)
         sys.exit(f"qbittorrent: {exc}")
 
-    remove, waiting, keep = classify(torrents, rules, env("DATA_ROOT", "/mnt/data"))
-    in_library = [t for t in keep if t["why"] == "still in the library"]
+    remove, waiting, in_library, _ = classify(torrents, rules, env("DATA_ROOT", "/mnt/data"))
 
     report("would remove" if DRY_RUN else "removing", remove)
     report("waiting on seed", waiting)
