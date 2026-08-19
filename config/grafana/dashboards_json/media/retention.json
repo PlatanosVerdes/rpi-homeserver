@@ -575,6 +575,26 @@
                 "value": 200
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Frees"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              },
+              {
+                "id": "custom.width",
+                "value": 130
+              }
+            ]
           }
         ]
       },
@@ -582,7 +602,14 @@
         "showHeader": true,
         "cellHeight": "sm",
         "footer": {
-          "show": false
+          "show": true,
+          "reducer": [
+            "sum"
+          ],
+          "fields": [
+            "Frees"
+          ],
+          "countRows": false
         },
         "sortBy": [
           {
@@ -604,26 +631,58 @@
           "format": "table",
           "legendFormat": "__auto",
           "expr": "maintainerr_pending_since_timestamp * 1000"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "refId": "B",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": "__auto",
+          "expr": "maintainerr_pending_film_bytes"
         }
       ],
       "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "title",
+            "mode": "outer"
+          }
+        },
         {
           "id": "organize",
           "options": {
             "excludeByName": {
               "Time": true,
+              "Time 1": true,
+              "Time 2": true,
               "job": true,
+              "job 1": true,
+              "job 2": true,
               "instance": true,
-              "__name__": true
+              "instance 1": true,
+              "instance 2": true,
+              "__name__": true,
+              "__name__ 1": true,
+              "__name__ 2": true,
+              "collection 2": true
             },
             "indexByName": {
               "title": 0,
-              "Value": 1,
-              "collection": 2
+              "Value #A": 1,
+              "Value #B": 2,
+              "collection 1": 3
             },
             "renameByName": {
               "title": "Film",
-              "Value": "In the queue since",
+              "Value #A": "In the queue since",
+              "Value #B": "Frees",
+              "collection 1": "Collection",
               "collection": "Collection"
             }
           }
@@ -1847,5 +1906,5 @@
   "timezone": "browser",
   "title": "Retention policy",
   "uid": "media-retention",
-  "version": 9
+  "version": 10
 }
