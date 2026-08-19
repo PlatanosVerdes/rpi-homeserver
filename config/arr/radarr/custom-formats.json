@@ -232,5 +232,23 @@
         ]
       }
     ]
+  },
+  {
+    "name": "RAR pack (prefer not)",
+    "includeCustomFormatWhenRenaming": false,
+    "specifications": [
+      {
+        "name": "Groups that ship RAR parts",
+        "implementation": "ReleaseGroupSpecification",
+        "negate": false,
+        "required": true,
+        "fields": [
+          {
+            "name": "value",
+            "value": "^(GAZPROM|CEBRAY|GAZER)$"
+          }
+        ]
+      }
+    ]
   }
 ]
