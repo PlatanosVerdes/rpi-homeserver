@@ -473,7 +473,7 @@ Metrics are pushed to Pushgateway and visible in the **Deploy Monitor** dashboar
 - **Auto-provisioned dashboards** (in `config/grafana/dashboards_json/`):
   - Container Health — host stats (CPU temp, load, RAM, disk), per-container CPU/mem/network, and a Storage section (usage-by-folder pie, folder filter, largest-files table)
   - Service probes — which service the Home dashboard's "Services down" number is about: per-service status, availability history and probe times. Every stat on Home is clickable and lands on the dashboard that answers it.
-  - Retention policy — the film lifecycle end to end: how many are watched and in the grace period, how many are gone from Plex but still paying a private tracker, how far along its goal each one is and the hours it still owes, what each tracker asks for, and the movements both halves have made, from the cleanup's own log and Maintainerr's
+  - Retention policy — the film lifecycle end to end: which films are queued for deletion right now and since when, how many are watched and in the grace period, how many are gone from Plex but still paying a private tracker, how far along its goal each one is and the hours it still owes, what each tracker asks for, and the movements both halves have made, from the cleanup's own log and Maintainerr's
   - Deploy Monitor — deploy runs, changes, errors, per-repo status
   - Backup Monitor — last backup status/age/size and appdata growth over time
   - Acestream Monitor — channel sync, changes, errors, source URL status, per-channel health
