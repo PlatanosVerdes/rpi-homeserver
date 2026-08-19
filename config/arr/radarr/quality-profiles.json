@@ -409,6 +409,10 @@
       {
         "formatName": "ENES",
         "score": 3000
+      },
+      {
+        "formatName": "RAR pack (prefer not)",
+        "score": -300
       }
     ],
     "minUpgradeFormatScore": 1,
@@ -827,6 +831,10 @@
       {
         "formatName": "ENES",
         "score": 3000
+      },
+      {
+        "formatName": "RAR pack (prefer not)",
+        "score": -300
       }
     ],
     "minUpgradeFormatScore": 1,
@@ -1245,6 +1253,10 @@
       {
         "formatName": "ENES",
         "score": 3000
+      },
+      {
+        "formatName": "RAR pack (prefer not)",
+        "score": -300
       }
     ],
     "minUpgradeFormatScore": 1,
