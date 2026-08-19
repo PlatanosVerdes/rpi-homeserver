@@ -245,7 +245,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Torrents whose film is still in the library, so the file has two names and the cleanup will not touch it whatever the tracker says.",
+      "description": "Torrents whose film is still in the library, so the file has two names and the cleanup will not touch it whatever the tracker says.\n\nThese three counts plus whatever is still downloading are every torrent in qBittorrent, so they add up: a film is in exactly one stage.",
       "gridPos": {
         "h": 5,
         "w": 4,
