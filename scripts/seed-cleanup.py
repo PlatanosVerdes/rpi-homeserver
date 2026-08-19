@@ -7,11 +7,11 @@ asked twice, because one answer is free and the other is certain:
   hard link count >= 2     the library shares the file, so it is still there. One stat() call.
   otherwise, ask the *arr  by download id: what did it import, and is that path still on disk?
 
-The second question is not redundant. Radarr imports by hardlink when it can, but `/mnt/data` is
-mergerfs over two disks and a hardlink across branches fails with EXDEV, so Radarr falls back to a
-plain copy: 19 of 71 files in the library are copies rather than links. Those have a link count of 1
-from the moment they land, and trusting the count alone read them as "watched and deleted" while the
-film sat in the library untouched.
+The second question is not redundant. Radarr imports by hardlink, but a hardlink needs the same
+bytes at both ends, and a scene release packed in RAR does not have them: unpackerr extracts an
+`.mkv` out of 96 `.rNN` archives, and that extracted file is new. 19 of the 71 files in the library
+arrived that way, with a link count of 1 from the moment they landed, and trusting the count alone
+read them as "watched and deleted" while the film sat in the library untouched.
 
 Once the library really has let go:
 
@@ -19,11 +19,12 @@ Once the library really has let go:
   private, seed goal met   -> remove torrent and data now
   private, goal pending    -> keep seeding, tag it, look again next hour
 
-A copied import gets one extra rule, because it is not free: the film is on disk twice, so seeding it
-costs a full second copy of the file for as long as the film stays in the library. Sharing a link
-costs nothing, and those are left alone forever. A copy is dropped the moment its tracker is paid,
-film still in the library or not: the debt is settled, the library keeps its own inode, and the
-duplicate goes back to the pool. Currently 129 GB across three films.
+An extracted import gets one extra rule, because it is not free: the film is on disk twice, once as
+the archives being seeded and once as the file Plex plays, for as long as the film stays in the
+library. Sharing a link costs nothing, and those are left alone forever. A duplicate is dropped the
+moment its tracker is paid, film still in the library or not: the debt is settled, the library keeps
+its own copy, and the archives go back to the pool. Currently 129 GB across three films, the largest
+being 81.7 GB of RAR parts next to the 81.2 GB they unpack into.
 
 Neither half of the stack can do this alone: qBittorrent cannot know what was watched, and
 Maintainerr looks at a torrent once, at the moment it deletes the film, and never comes back.
@@ -274,8 +275,8 @@ def classify(torrents, rules, data_root):
             keep.append(in_library[-1])
             continue
 
-        # No shared link is not the same as no library copy: a cross-branch import on mergerfs is a
-        # plain copy. Only the *arr that grabbed it knows what it produced.
+        # No shared link is not the same as no library copy: a RAR release unpacks into a new file,
+        # which can never share an inode with its archives. Only the *arr knows what it produced.
         imported = imported_paths(t["hash"])
         if imported is None:
             keep.append({**entry, "why": "could not ask radarr or sonarr"})
