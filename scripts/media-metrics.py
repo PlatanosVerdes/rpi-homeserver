@@ -11,6 +11,7 @@ Three things the existing exporters cannot answer:
   arr_media_audio        which audio tracks each film actually has, one series per language
   arr_waiting            everything Radarr waits for: downloading, missing or below cutoff
   prowlarr_indexer_up    which indexers are failing right now, over time
+  maintainerr_pending_*  which films are watched and waiting out the grace period before deletion
 
 All three use labels to carry identity, which is not what Prometheus is for. It is a deliberate
 trade: the alternative is the Infinity datasource querying each API live, which means a Grafana
@@ -384,6 +385,59 @@ def library_sizes():
     push("arr_library", lines)
 
 
+def maintainerr_pending():
+    """Films Maintainerr has queued for deletion: watched, waiting out the grace period.
+
+    This is the first stage of the retention policy, and the only one nothing else can see. Radarr
+    still has the film, the torrent is still hardlinked, and seed-cleanup.py will not look at it
+    until Maintainerr deletes the library copy. Titles come from Radarr by tmdbId, because the
+    collection payload carries ids and no names.
+
+    Its port is not published, so the call goes through the container, and its own server listens on
+    IPv4 only: localhost inside there resolves to ::1 and is refused.
+    """
+    try:
+        result = subprocess.run(
+            ["docker", "exec", "maintainerr", "wget", "-qO-",
+             "http://127.0.0.1:6246/api/collections"],
+            capture_output=True, text=True, timeout=30)
+        if result.returncode != 0:
+            raise RuntimeError(result.stderr.strip()[:120] or "wget failed")
+        collections = json.loads(result.stdout)
+    except Exception as exc:
+        failures.append(f"maintainerr: {exc}")
+        return
+
+    titles = {}
+    try:
+        titles = {m.get("tmdbId"): m.get("title", "?")
+                  for m in get("http://localhost:7878/api/v3/movie", api_key("radarr"))}
+    except Exception as exc:
+        failures.append(f"maintainerr titles: {exc}")
+
+    counts = ["# HELP maintainerr_pending_media Films queued for deletion, per collection",
+              "# TYPE maintainerr_pending_media gauge"]
+    sizes = ["# HELP maintainerr_pending_bytes Disk held by films queued for deletion",
+             "# TYPE maintainerr_pending_bytes gauge"]
+    since = ["# HELP maintainerr_pending_since_timestamp When each film entered the queue",
+             "# TYPE maintainerr_pending_since_timestamp gauge"]
+    for collection in collections:
+        label = f'collection="{escape(collection.get("title", "?"))}"'
+        media = collection.get("media") or []
+        counts.append(f"maintainerr_pending_media{{{label}}} {len(media)}")
+        sizes.append(f"maintainerr_pending_bytes{{{label}}} {collection.get('totalSizeBytes') or 0}")
+        for item in media:
+            title = titles.get(item.get("tmdbId"), f"tmdb {item.get('tmdbId')}")
+            added = item.get("addDate")
+            if not added:
+                continue
+            stamp = parse_time(added.replace(" ", "T")).replace(tzinfo=timezone.utc).timestamp()
+            since.append(f'maintainerr_pending_since_timestamp{{{label},'
+                         f'title="{escape(title)[:90]}"}} {int(stamp)}')
+
+    push("maintainerr_pending", counts + sizes + since)
+
+
 def prowlarr_indexers():
     """1 when working, 0 while Prowlarr has it disabled after failures. One series per indexer, so a
     state timeline shows them dropping out and coming back."""
@@ -419,5 +473,6 @@ if __name__ == "__main__":
     media_audio()
     waiting_on()
     prowlarr_indexers()
+    maintainerr_pending()
     if failures:
         sys.exit("; ".join(failures))

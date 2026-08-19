@@ -41,6 +41,9 @@ from pathlib import Path
 PROJECT_DIR = Path(os.path.expanduser("~/rpi-homeserver"))
 PUSHGATEWAY = "http://localhost:9091"
 RULES_FILE = Path(os.environ.get("SEED_RULES", PROJECT_DIR / "config/qbittorrent/seed-rules.json"))
+# Cumulative totals and "waiting since" live here: Pushgateway is replaced on every push, so it
+# cannot be the thing that remembers. In appdata, so the daily backup carries it.
+STATE_FILE = Path(os.environ.get("SEED_STATE", PROJECT_DIR / "appdata/seed-cleanup/state.json"))
 DRY_RUN = os.environ.get("DRY_RUN") == "1"
 WAITING_TAG = "waiting-seed"
 CONTAINER_DATA_ROOT = "/data/"
@@ -76,6 +79,10 @@ def qbit(endpoint, data=None):
 
 
 def push(job, lines):
+    # A dry run is an inspection, so it must not move the numbers the panels and the staleness
+    # alert read: it would report zero removals and a fresh run that never happened.
+    if DRY_RUN:
+        return
     request = urllib.request.Request(f"{PUSHGATEWAY}/metrics/job/{job}",
                                      data=("\n".join(lines) + "\n").encode(), method="PUT")
     try:
@@ -86,6 +93,23 @@ def push(job, lines):
 
 def escape(value):
     return str(value).replace("\\", "\\\\").replace('"', '\\"').replace("\n", " ")
+
+
+def read_state():
+    try:
+        return json.loads(STATE_FILE.read_text())
+    except (OSError, ValueError):
+        return {"removed_total": 0, "freed_bytes_total": 0, "waiting_since": {}}
+
+
+def write_state(state):
+    if DRY_RUN:
+        return
+    try:
+        STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        STATE_FILE.write_text(json.dumps(state, indent=1))
+    except OSError as exc:
+        failures.append(f"state file: {exc}")
 
 
 def host_path(content_path, data_root):
@@ -218,39 +242,85 @@ def report(label, torrents):
               f"seed={hours:6.1f}h ratio={t['ratio']:.2f} {t['size'] / 1e9:5.1f}GB")
 
 
-def metrics(remove, waiting, freed, status):
-    lines = [
-        "# HELP seed_cleanup_last_run_timestamp When the cleanup last ran",
-        "# TYPE seed_cleanup_last_run_timestamp gauge",
-        f"seed_cleanup_last_run_timestamp {int(time.time())}",
-        "# HELP seed_cleanup_last_status Last run status (0=ok, 1=error)",
-        "# TYPE seed_cleanup_last_status gauge",
-        f"seed_cleanup_last_status {status}",
-        "# HELP seed_cleanup_removed_torrents Torrents removed on the last run",
-        "# TYPE seed_cleanup_removed_torrents gauge",
-        f"seed_cleanup_removed_torrents {len(remove)}",
-        "# HELP seed_cleanup_freed_bytes Bytes freed on the last run",
-        "# TYPE seed_cleanup_freed_bytes gauge",
-        f"seed_cleanup_freed_bytes {freed}",
-        "# HELP seed_cleanup_waiting_torrents Watched torrents still owing seed time",
-        "# TYPE seed_cleanup_waiting_torrents gauge",
-        f"seed_cleanup_waiting_torrents {len(waiting)}",
-        "# HELP seed_cleanup_waiting_bytes Bytes held by torrents still owing seed time",
-        "# TYPE seed_cleanup_waiting_bytes gauge",
-        f"seed_cleanup_waiting_bytes {sum(t['size'] for t in waiting)}",
-        "# HELP seed_cleanup_waiting_seed_hours Seeding hours done, per waiting torrent",
-        "# TYPE seed_cleanup_waiting_seed_hours gauge",
-    ]
+def gauge(name, help_text, samples):
+    """samples is a list of (labels-or-None, value)."""
+    lines = [f"# HELP {name} {help_text}", f"# TYPE {name} gauge"]
+    for labels, value in samples:
+        lines.append(f"{name}{{{labels}}} {value}" if labels else f"{name} {value}")
+    return lines
+
+
+def metrics(remove, waiting, in_library, freed, status, state, torrents, rules):
+    def per_torrent(items, value):
+        out = []
+        for t in items:
+            labels = f'name="{escape(t["name"])[:90]}",tracker="{escape(t["tracker_host"])}"'
+            out.append((labels, value(t)))
+        return out
+
+    lines = []
+    lines += gauge("seed_cleanup_last_run_timestamp", "When the cleanup last ran",
+                   [(None, int(time.time()))])
+    lines += gauge("seed_cleanup_last_status", "Last run status (0=ok, 1=error)",
+                   [(None, status)])
+    lines += gauge("seed_cleanup_removed_torrents", "Torrents removed on the last run",
+                   [(None, len(remove))])
+    lines += gauge("seed_cleanup_freed_bytes", "Bytes freed on the last run", [(None, freed)])
+    lines += gauge("seed_cleanup_removed_total", "Torrents removed since this started counting",
+                   [(None, state["removed_total"])])
+    lines += gauge("seed_cleanup_freed_bytes_total", "Bytes freed since this started counting",
+                   [(None, state["freed_bytes_total"])])
+    lines += gauge("seed_cleanup_waiting_torrents", "Watched torrents still owing seed time",
+                   [(None, len(waiting))])
+    lines += gauge("seed_cleanup_waiting_bytes", "Bytes held by torrents still owing seed time",
+                   [(None, sum(t["size"] for t in waiting))])
+    lines += gauge("seed_cleanup_library_torrents", "Torrents whose film is still in the library",
+                   [(None, len(in_library))])
+    lines += gauge("seed_cleanup_library_bytes", "Bytes shared with the library",
+                   [(None, sum(t["size"] for t in in_library))])
+
+    lines += gauge("seed_cleanup_waiting_seed_hours", "Seeding hours done, per waiting torrent",
+                   [(f'name="{escape(t["name"])[:90]}",tracker="{escape(t["tracker_host"])}",'
+                     f'goal_hours="{t["goal"].get("min_seed_hours", 0)}"',
+                     round(t["seeding_time"] / 3600, 2)) for t in waiting])
+    lines += gauge("seed_cleanup_waiting_size_bytes", "Size per waiting torrent",
+                   per_torrent(waiting, lambda t: t["size"]))
+    lines += gauge("seed_cleanup_waiting_hours_remaining",
+                   "Seeding hours still owed, per waiting torrent",
+                   per_torrent(waiting, lambda t: round(
+                       max(0.0, t["goal"].get("min_seed_hours", 0) - t["seeding_time"] / 3600), 2)))
+    lines += gauge("seed_cleanup_waiting_ratio", "Share ratio per waiting torrent",
+                   per_torrent(waiting, lambda t: round(t["ratio"], 3)))
+    lines += gauge("seed_cleanup_waiting_since_timestamp",
+                   "When the film left the library, per waiting torrent",
+                   per_torrent(waiting, lambda t: state["waiting_since"].get(t["hash"], 0)))
+
+    trackers = {}
+    for t in torrents:
+        host = tracker_host(t)
+        name, goal = goal_for(t, rules)
+        entry = trackers.setdefault(host, {"private": bool(t.get("private")), "goal": goal,
+                                           "count": 0, "bytes": 0, "waiting": 0})
+        entry["count"] += 1
+        entry["bytes"] += t["size"]
     for t in waiting:
-        labels = (f'name="{escape(t["name"])[:90]}",tracker="{escape(t["tracker_host"])}",'
-                  f'goal_hours="{t["goal"].get("min_seed_hours", 0)}"')
-        lines.append(f"seed_cleanup_waiting_seed_hours{{{labels}}} "
-                     f"{round(t['seeding_time'] / 3600, 2)}")
-    lines += ["# HELP seed_cleanup_waiting_size_bytes Size per waiting torrent",
-              "# TYPE seed_cleanup_waiting_size_bytes gauge"]
-    for t in waiting:
-        labels = (f'name="{escape(t["name"])[:90]}",tracker="{escape(t["tracker_host"])}"')
-        lines.append(f"seed_cleanup_waiting_size_bytes{{{labels}}} {t['size']}")
+        if t["tracker_host"] in trackers:
+            trackers[t["tracker_host"]]["waiting"] += 1
+
+    def per_tracker(value):
+        return [(f'tracker="{escape(host)}",private="{str(e["private"]).lower()}"', value(e))
+                for host, e in sorted(trackers.items())]
+
+    lines += gauge("seed_cleanup_goal_hours", "Seeding hours this tracker's torrents must do",
+                   per_tracker(lambda e: e["goal"].get("min_seed_hours", 0)))
+    lines += gauge("seed_cleanup_goal_ratio", "Ratio that also clears the goal, 0 if none",
+                   per_tracker(lambda e: e["goal"].get("min_ratio", 0)))
+    lines += gauge("seed_cleanup_tracker_torrents", "Torrents per tracker",
+                   per_tracker(lambda e: e["count"]))
+    lines += gauge("seed_cleanup_tracker_bytes", "Bytes per tracker",
+                   per_tracker(lambda e: e["bytes"]))
+    lines += gauge("seed_cleanup_tracker_waiting", "Torrents owing seed time, per tracker",
+                   per_tracker(lambda e: e["waiting"]))
     push("seed_cleanup", lines)
 
 
@@ -260,13 +330,16 @@ def main():
     except (OSError, ValueError) as exc:
         sys.exit(f"cannot read {RULES_FILE}: {exc}")
 
+    state = read_state()
+
     try:
         torrents = json.loads(qbit("torrents/info"))
     except Exception as exc:
-        metrics([], [], 0, 1)
+        metrics([], [], [], 0, 1, state, [], rules)
         sys.exit(f"qbittorrent: {exc}")
 
-    remove, waiting, _ = classify(torrents, rules, env("DATA_ROOT", "/mnt/data"))
+    remove, waiting, keep = classify(torrents, rules, env("DATA_ROOT", "/mnt/data"))
+    in_library = [t for t in keep if t["why"] == "still in the library"]
 
     report("would remove" if DRY_RUN else "removing", remove)
     report("waiting on seed", waiting)
@@ -276,7 +349,17 @@ def main():
     apply_tag([t for t in torrents if WAITING_TAG in (t.get("tags") or "")
                and t["hash"] not in {w["hash"] for w in waiting}], WAITING_TAG, add=False)
 
-    metrics(remove, waiting, freed, 1 if failures else 0)
+    # First time each one is seen owing seed time, so the dashboard can say how long it has been
+    # stuck. Hashes that stopped waiting are dropped rather than kept forever.
+    now = int(time.time())
+    state["waiting_since"] = {t["hash"]: state["waiting_since"].get(t["hash"], now)
+                              for t in waiting}
+    if freed:
+        state["removed_total"] += len(remove)
+        state["freed_bytes_total"] += freed
+    write_state(state)
+
+    metrics(remove, waiting, in_library, freed, 1 if failures else 0, state, torrents, rules)
     if failures:
         sys.exit("; ".join(failures))
     if remove and not DRY_RUN:
