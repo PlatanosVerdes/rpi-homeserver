@@ -283,24 +283,34 @@ Prowlarr logs the rejection and moves on.
 
 ## Maintainerr
 
-Also `appdata`-only state, not reproducible from git. Set up on 2026-08-05 to delete a movie 7 days
-after it was watched.
+Also `appdata`-only state, not reproducible from git. Set up on 2026-08-05, and now deletes a movie
+two days after it was watched.
 
 The collection is called **`Pending deletion`** (`Películas` until 2026-08-19, which read as a copy
 of the Plex library of the same name). The name is not cosmetic: Maintainerr creates a real Plex
 collection from it, visible on the Plex home, holding whatever is queued for deletion.
 
-- **Download client wired to qBittorrent** (`download_client_url=http://qbittorrent:8080`, user
-  `admin`, `delete_data=true`). Without this, Maintainerr only removed the file from Radarr; the
-  torrent kept seeding untouched. Deleting now also removes the torrent, respecting its own seed-time
-  limit (Maintainerr's fallback ratio only kicks in when the client enforces no limit of its own,
-  which is not our case).
+- **The download client is deliberately NOT wired** (`download_client_url` is `NULL` since
+  2026-08-19; it used to point at `http://qbittorrent:8080`). Two reasons, and the note that used to
+  live here had both backwards:
+  - It never worked. Maintainerr 3.21.1 reads the session cookie as `SID=`, and qBittorrent 5.x
+    names it `QBT_SID_8080`, so every call after the login got a 403 and each delete logged
+    `Failed to remove download with hash ...`. That is why `downloads/` had collected 293 GB of
+    torrents whose film was long gone.
+  - If it ever starts working, its criterion is wrong for us. `shouldRemove` trusts the client's own
+    seeding goal, and falls back to `ratio >= 0.5` when the torrent has no limit of its own. Ours
+    have none (`max_ratio=-1, max_seeding_time=-1` on all of them), so the fallback *is* the rule,
+    and 0.5 with two hours of seeding is a hit-and-run on TorrentLeech.
+
+  `scripts/seed-cleanup.py` owns torrent deletion instead, per tracker. See the README.
 - **Fixed a double grace period on the collection.** The rule means "last viewed more than N days
   ago" (an unwatched title has no `lastViewedAt`, so it never matches). The collection
   used to wait a *second* 7 days after the item entered it before deleting, doubling the real delay.
   `deleteAfterDays` is now `0`: the rule's own threshold is the only wait. That threshold is
-  `customVal.value` in `rules[0].ruleJson` (seconds) — currently **1209600 = 14 days**, changed from
-  the original 7 on 2026-08-05.
+  `customVal.value` in `rules[0].ruleJson` (seconds) — **172800 = 2 days** since 2026-08-19, after
+  1209600 = 14 days, after the original 7. Two days is a deliberate floor rather than zero: it
+  leaves room to rewatch, for someone else in the house to watch it, or to notice that Plex marked
+  something watched by accident. The delete is not reversible.
 - **The collection now deletes through Radarr, not through Plex** (`arrAction=1`
   `UNMONITOR_DELETE_ALL`, `radarrSettingsId=1`, both in the `collection` table of
   `appdata/maintainerr/maintainerr.sqlite`). It used to be `arrAction=0` with `radarrSettingsId`
@@ -312,9 +322,4 @@ collection from it, visible on the Plex home, holding whatever is queued for del
   as part of the delete is what takes it off the missing list for good.
 - **`cleanupLeftoverFolders` is on.** Deleting through Radarr removes the file and leaves the movie
   folder behind, so `films/` was collecting empty shells.
-- **The download client cleanup only reaches downloads Radarr still knows about.** Maintainerr asks
-  Radarr for the download ids of the movie before deleting, and a torrent that finished days ago is
-  no longer in Radarr's queue, so nothing gets removed and the copy keeps seeding. Cars 3 left four
-  of them, 27 GB, over its re-download loop. Check `/mnt/data/downloads` by hand after a cleanup of
-  something old; on a private tracker, mind its H&R rules before deleting.
 - media server is Plex (`media_server_type=plex`); it is not wired to Jellyfin/Emby.
