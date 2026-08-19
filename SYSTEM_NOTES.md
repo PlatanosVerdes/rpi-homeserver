@@ -297,4 +297,13 @@ after it was watched.
   `deleteAfterDays` is now `0`: the rule's own threshold is the only wait. That threshold is
   `customVal.value` in `rules[0].ruleJson` (seconds) — currently **1209600 = 14 days**, changed from
   the original 7 on 2026-08-05.
+- **The collection now deletes through Radarr, not through Plex** (`arrAction=1`
+  `UNMONITOR_DELETE_ALL`, `radarrSettingsId=1`, both in the `collection` table of
+  `appdata/maintainerr/maintainerr.sqlite`). It used to be `arrAction=0` with `radarrSettingsId`
+  unset, so Maintainerr had no Radarr instance to act on and fell back to deleting the item through
+  Plex: the file left the disk, but the movie stayed **monitored** in Radarr. `cutoff-search.sh`
+  then found it in `wanted/missing` at 05:00 and grabbed it again. Cars 3 rode that loop from
+  2026-08-11 to 2026-08-19 — deleted around noon, re-downloaded at 05:00, a 5-20 GB Ultra-HD
+  release every night, and it left one seeding copy per round in `/mnt/data/downloads`. Unmonitoring
+  as part of the delete is what takes it off the missing list for good.
 - media server is Plex (`media_server_type=plex`); it is not wired to Jellyfin/Emby.
