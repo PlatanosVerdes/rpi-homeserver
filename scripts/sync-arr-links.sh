@@ -14,6 +14,9 @@ set -uo pipefail
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APPDATA_ROOT="/home/raspi/rpi-homeserver/appdata"
 LINKS_FILE="$PROJECT_DIR/config/overseerr-links.json"
+# A service that accepts the connection and then never answers (Bazarr wedged on 2026-08-19) used
+# to hang this script, and with it the deploy lock, forever.
+CURL_LIMITS="--connect-timeout 5 --max-time 30"
 
 failures=0
 
@@ -25,7 +28,7 @@ arr_key() {
 
 arr_profile_id() {
     # arr_profile_id PORT KEY NAME
-    curl -sf "http://localhost:$1/api/v3/qualityprofile" -H "X-Api-Key: $2" \
+    curl -sf $CURL_LIMITS "http://localhost:$1/api/v3/qualityprofile" -H "X-Api-Key: $2" \
         | jq -r --arg n "$3" '.[] | select(.name==$n) | .id' | head -1
 }
 
@@ -42,18 +45,18 @@ sync_one_overseerr_app() {
     body=$(jq --arg key "$arr_key_val" --argjson pid "${profile_id:-0}" \
         '. + {apiKey: $key, activeProfileId: $pid}' <<< "$cfg")
 
-    existing=$(curl -sf "http://localhost:5055/api/v1/settings/$app" -H "X-Api-Key: $overseerr_key") || {
+    existing=$(curl -sf $CURL_LIMITS "http://localhost:5055/api/v1/settings/$app" -H "X-Api-Key: $overseerr_key") || {
         failures=$((failures + 1)); return
     }
     existing_id=$(jq -r --arg h "$(jq -r '.hostname' <<< "$cfg")" \
         '[.[] | select(.hostname==$h)][0].id // empty' <<< "$existing")
 
     if [[ -n "$existing_id" ]]; then
-        curl -sf -X PUT "http://localhost:5055/api/v1/settings/$app/$existing_id" \
+        curl -sf $CURL_LIMITS -X PUT "http://localhost:5055/api/v1/settings/$app/$existing_id" \
             -H "X-Api-Key: $overseerr_key" -H "Content-Type: application/json" \
             --data "$body" > /dev/null || failures=$((failures + 1))
     else
-        curl -sf -X POST "http://localhost:5055/api/v1/settings/$app" \
+        curl -sf $CURL_LIMITS -X POST "http://localhost:5055/api/v1/settings/$app" \
             -H "X-Api-Key: $overseerr_key" -H "Content-Type: application/json" \
             --data "$body" > /dev/null || failures=$((failures + 1))
     fi
@@ -91,7 +94,9 @@ print(yaml.safe_load(open('$conf'))['auth']['apikey'])" 2>/dev/null)
     [[ -n "$data" ]] || return 0
 
     # Bazarr has no host-published port; reach it through a container on media-network.
-    docker exec maintainerr curl -sf -X POST "http://bazarr:6767/api/system/settings" \
+    # timeout sobre el exec, no solo sobre el curl: hoy este docker exec se quedo colgado 53
+    # minutos con el lock del despliegue cogido, y --max-time de curl no acota el exec.
+    timeout 45 docker exec maintainerr curl -sf $CURL_LIMITS -X POST "http://bazarr:6767/api/system/settings" \
         -H "X-API-KEY: $bazarr_key" --data "${data%&}" > /dev/null || {
         failures=$((failures + 1)); return
     }

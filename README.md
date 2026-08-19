@@ -440,6 +440,7 @@ Metrics are pushed to Pushgateway and visible in the **Deploy Monitor** dashboar
 - **Grafana:** `http://<IP>:3000` — default credentials: `admin / admin`
 - **Auto-provisioned dashboards** (in `config/grafana/dashboards_json/`):
   - Container Health — host stats (CPU temp, load, RAM, disk), per-container CPU/mem/network, and a Storage section (usage-by-folder pie, folder filter, largest-files table)
+  - Service probes — which service the Home dashboard's "Services down" number is about: per-service status, availability history and probe times. Every stat on Home is clickable and lands on the dashboard that answers it.
   - Deploy Monitor — deploy runs, changes, errors, per-repo status
   - Backup Monitor — last backup status/age/size and appdata growth over time
   - Acestream Monitor — channel sync, changes, errors, source URL status, per-channel health
