@@ -63,7 +63,7 @@ scripts/                    Operational scripts
   sync-pihole-dns.sh        Pushes Caddy's *.platanosverdes.com hosts into Pi-hole (on deploy)
   sync-arr-links.sh         Wires Overseerr and Bazarr to Radarr/Sonarr (on deploy)
   sync-qbit-config.sh       Pushes config/qbittorrent/preferences.json into qBittorrent (on deploy)
-  sync-plex-prefs.sh        Pushes PLEX_LAN_NETWORKS into Plex's LAN Networks (on deploy)
+  sync-plex-prefs.sh        Plex's LAN Networks and its 95% played threshold (on deploy)
   mount_setup.sh            One-time external disk mount setup
   rebuild-service.sh        Manual single-service rebuild helper
   recovery-status.sh        After a rebuild: what still needs a human (run by hand, see README)
