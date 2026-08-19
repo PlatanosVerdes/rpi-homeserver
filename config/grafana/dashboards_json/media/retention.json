@@ -309,7 +309,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Films that live on disk twice: mergerfs put the download and the film's folder on different disks, so Radarr could not hardlink and copied instead. Seeding one of these costs a full second copy of the file.\n\nEvery byte here comes back on its own: a duplicate is dropped the moment its tracker is paid, whether or not the film is still in the library. The film is a separate file and is never touched.",
+      "description": "Films that live on disk twice, because the release came packed in RAR: what qBittorrent seeds is 96 `.rNN` archives, and what Plex plays is the `.mkv` unpackerr extracted out of them. Two separate sets of bytes, and a hardlink cannot bridge them.\n\nEvery byte here comes back on its own: the archives are dropped the moment their tracker is paid, whether or not the film is still in the library. The extracted film is a different file and is never touched.",
       "gridPos": {
         "h": 5,
         "w": 3,
@@ -1716,5 +1716,5 @@
   "timezone": "browser",
   "title": "Retention policy",
   "uid": "media-retention",
-  "version": 7
+  "version": 8
 }
