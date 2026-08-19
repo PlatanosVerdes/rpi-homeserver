@@ -451,7 +451,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Every tracker with a torrent here, and the goal the cleanup applies to it. Public ones ask nothing: their torrents go as soon as the film leaves the library. Private goals come from config/qbittorrent/seed-rules.json, and either the hours or the ratio clears the debt, whichever lands first.",
+      "description": "Every tracker with a torrent here, and the goal the cleanup applies to it. Public ones ask nothing: their torrents go as soon as the film leaves the library. Private goals come from config/qbittorrent/seed-rules.json, and either the hours or the ratio clears the debt, whichever lands first.\n\nSorted by what it asks for, so private trackers come first: those are the ones whose rules you can actually break. Biggest first within each group.",
       "gridPos": {
         "h": 9,
         "w": 12,
@@ -599,6 +599,10 @@
         },
         "sortBy": [
           {
+            "displayName": "Goal (h)",
+            "desc": true
+          },
+          {
             "displayName": "Disk",
             "desc": true
           }
@@ -731,6 +735,22 @@
               "Value #D": "Disk",
               "Value #E": "Owing"
             }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "field": "Disk",
+                "desc": true
+              },
+              {
+                "field": "Goal (h)",
+                "desc": true
+              }
+            ]
           }
         }
       ]
@@ -1418,5 +1438,5 @@
   "timezone": "browser",
   "title": "Retention policy",
   "uid": "media-retention",
-  "version": 4
+  "version": 6
 }
