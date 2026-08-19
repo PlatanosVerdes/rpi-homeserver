@@ -38,7 +38,7 @@
   "timezone": "",
   "title": "Home",
   "uid": "home-overview",
-  "version": 21,
+  "version": 22,
   "panels": [
     {
       "type": "stat",
@@ -614,7 +614,7 @@
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "- 🎬 [Media Pipeline](/d/media-pipeline/media-pipeline)\n- 🗣️ [Audio languages](/d/media-languages/audio-languages)\n- 💽 [Disk usage](/d/media-disk-usage/disk-usage)\n- 🔎 [Indexers](/d/indexers/indexers)\n- 🏴‍☠️ [One Pace](/d/onepace-dl/one-pace)\n- 📡 [Acestream Monitor](/d/acestream-monitor/acestream-monitor)"
+        "content": "- 🎬 [Media Pipeline](/d/media-pipeline/media-pipeline)\n- 🗣️ [Audio languages](/d/media-languages/audio-languages)\n- 💽 [Disk usage](/d/media-disk-usage/disk-usage)\n- 🔎 [Indexers](/d/indexers/indexers)\n- 🏴‍☠️ [One Pace](/d/onepace-dl/one-pace)\n- 📡 [Acestream Monitor](/d/acestream-monitor/acestream-monitor)\n- ♻️ [Retention policy](/d/media-retention/retention-policy)"
       },
       "transparent": false
     },
