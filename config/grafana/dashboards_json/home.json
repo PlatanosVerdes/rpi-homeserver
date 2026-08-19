@@ -38,7 +38,7 @@
   "timezone": "",
   "title": "Home",
   "uid": "home-overview",
-  "version": 19,
+  "version": 20,
   "panels": [
     {
       "type": "stat",
@@ -47,7 +47,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Blackbox probes that got no valid answer. Zero and green is the normal state; anything\nelse names itself in the alert that fires alongside.",
+      "description": "Blackbox probes that got no valid answer. Zero and green is the normal state; click the\nnumber to see which service is failing.",
       "gridPos": {
         "h": 5,
         "w": 3,
@@ -73,7 +73,14 @@
               }
             ]
           },
-          "mappings": []
+          "mappings": [],
+          "links": [
+            {
+              "title": "Which service is down",
+              "url": "/d/service-probes?${__url_time_range}",
+              "targetBlank": false
+            }
+          ]
         },
         "overrides": []
       },
@@ -147,7 +154,14 @@
             ]
           },
           "mappings": [],
-          "decimals": 0
+          "decimals": 0,
+          "links": [
+            {
+              "title": "Host detail",
+              "url": "/d/container-health?${__url_time_range}",
+              "targetBlank": false
+            }
+          ]
         },
         "overrides": []
       },
@@ -221,7 +235,14 @@
             ]
           },
           "mappings": [],
-          "decimals": 1
+          "decimals": 1,
+          "links": [
+            {
+              "title": "What is using the CPU",
+              "url": "/d/container-health?${__url_time_range}",
+              "targetBlank": false
+            }
+          ]
         },
         "overrides": []
       },
@@ -297,7 +318,14 @@
           "mappings": [],
           "decimals": 0,
           "max": 100,
-          "min": 0
+          "min": 0,
+          "links": [
+            {
+              "title": "What is using the RAM",
+              "url": "/d/container-health?${__url_time_range}",
+              "targetBlank": false
+            }
+          ]
         },
         "overrides": []
       },
@@ -373,7 +401,14 @@
           "mappings": [],
           "decimals": 0,
           "min": 0,
-          "max": 100
+          "max": 100,
+          "links": [
+            {
+              "title": "Host detail",
+              "url": "/d/container-health?${__url_time_range}",
+              "targetBlank": false
+            }
+          ]
         },
         "overrides": []
       },
@@ -447,7 +482,14 @@
             ]
           },
           "mappings": [],
-          "decimals": 2
+          "decimals": 2,
+          "links": [
+            {
+              "title": "What is filling the disk",
+              "url": "/d/media-disk-usage?${__url_time_range}",
+              "targetBlank": false
+            }
+          ]
         },
         "overrides": []
       },
@@ -513,7 +555,14 @@
             ]
           },
           "mappings": [],
-          "decimals": 1
+          "decimals": 1,
+          "links": [
+            {
+              "title": "What is downloading",
+              "url": "/d/media-pipeline?${__url_time_range}",
+              "targetBlank": false
+            }
+          ]
         },
         "overrides": []
       },
