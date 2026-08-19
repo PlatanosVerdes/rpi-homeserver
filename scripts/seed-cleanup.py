@@ -19,6 +19,12 @@ Once the library really has let go:
   private, seed goal met   -> remove torrent and data now
   private, goal pending    -> keep seeding, tag it, look again next hour
 
+A copied import gets one extra rule, because it is not free: the film is on disk twice, so seeding it
+costs a full second copy of the file for as long as the film stays in the library. Sharing a link
+costs nothing, and those are left alone forever. A copy is dropped the moment its tracker is paid,
+film still in the library or not: the debt is settled, the library keeps its own inode, and the
+duplicate goes back to the pool. Currently 129 GB across three films.
+
 Neither half of the stack can do this alone: qBittorrent cannot know what was watched, and
 Maintainerr looks at a torrent once, at the moment it deletes the film, and never comes back.
 
@@ -27,11 +33,12 @@ qBittorrent itself, so there is no list to keep up to date. Seeding time is qBit
 which only advances while the torrent really seeds: stricter than a tracker's calendar clock, which
 is the safe direction to be wrong in.
 
-Guards, because this deletes files: never while the library still holds the file, never when the
-*arrs cannot be reached to ask, never below 100% progress, never while checking or moving, never when
-a second torrent shares the same files, and never within min_age_hours of finishing. That last one
-matters: a torrent that just completed looks exactly like one whose film was deleted, because Radarr
-has not imported it yet, and unpackerr may still be extracting it.
+Guards, because this deletes files: never outside qBittorrent's own download folder, never while the
+library shares the file, never when the *arrs cannot be reached to ask, never below 100% progress,
+never while checking or moving, never when a second torrent shares the same files, and never within
+min_age_hours of finishing. That last one matters: a torrent that just completed looks exactly like
+one whose film was deleted, because Radarr has not imported it yet, and unpackerr may still be
+extracting it.
 
 DRY_RUN=1 reports and touches nothing. Metrics go to Pushgateway. Run from cron (scripts/crontab).
 """
@@ -163,6 +170,15 @@ def imported_paths(torrent_hash):
     return None if unreachable else []
 
 
+def qbit_download_root():
+    """qBittorrent's own save path, so the guard is what the client really uses rather than a
+    constant that can drift. None if it cannot be read, which only disables that one guard."""
+    try:
+        return json.loads(qbit("app/preferences")).get("save_path") or None
+    except Exception:
+        return None
+
+
 def link_counts(path):
     """Every link count under the torrent's content path, or None when it cannot be read: an
     unreadable path is never a reason to delete."""
@@ -229,7 +245,7 @@ def too_young(torrent, min_age_hours):
 
 
 def classify(torrents, rules, data_root):
-    """Split into (remove, waiting, in_library, keep) with the reason each one landed there.
+    """Split into (remove, waiting, duplicates, in_library, keep), with the reason for each.
 
     Being in the library is decided before the guards, so a film imported an hour ago still counts as
     being there. Ordering it after them made the funnel on the dashboard not add up: a fresh import
@@ -237,7 +253,8 @@ def classify(torrents, rules, data_root):
     """
     shared = collections.Counter(t["content_path"] for t in torrents)
     min_age_hours = rules.get("min_age_hours", 24)
-    remove, waiting, in_library, keep = [], [], [], []
+    download_root = qbit_download_root()
+    remove, waiting, duplicates, in_library, keep = [], [], [], [], []
 
     for t in torrents:
         entry = dict(t)
@@ -245,6 +262,11 @@ def classify(torrents, rules, data_root):
         name, goal = goal_for(t, rules)
         entry["goal_name"] = name
         entry["goal"] = goal
+
+        # Nothing outside qBittorrent's own download folder is ever deletable, whatever else says so.
+        if download_root and not t["content_path"].startswith(download_root):
+            keep.append({**entry, "why": "outside the download folder"})
+            continue
 
         counts = link_counts(host_path(t["content_path"], data_root))
         if counts is not None and max(counts) > 1:
@@ -259,8 +281,12 @@ def classify(torrents, rules, data_root):
             keep.append({**entry, "why": "could not ask radarr or sonarr"})
             continue
         if any(os.path.exists(host_path(p, data_root)) for p in imported):
-            in_library.append({**entry, "why": "still in the library, imported as a copy"})
-            keep.append(in_library[-1])
+            entry["duplicate"] = True
+            if t["progress"] >= 1 and t["state"] not in BUSY_STATES and goal_met(t, goal):
+                remove.append({**entry, "why": "duplicate copy, tracker paid"})
+            else:
+                duplicates.append({**entry, "why": "duplicate copy, seed goal pending"})
+                keep.append(duplicates[-1])
             continue
 
         if t["progress"] < 1 or t["state"] in BUSY_STATES:
@@ -281,7 +307,7 @@ def classify(torrents, rules, data_root):
         else:
             waiting.append({**entry, "why": "watched, seed goal pending"})
 
-    return remove, waiting, in_library, keep
+    return remove, waiting, duplicates, in_library, keep
 
 
 def apply_tag(torrents, tag, add):
@@ -325,7 +351,8 @@ def gauge(name, help_text, samples):
     return lines
 
 
-def metrics(remove, waiting, in_library, freed, status, state, torrents, rules):
+def metrics(remove, waiting, duplicates, in_library, freed, status, state, torrents,
+            rules):
     def per_torrent(items, value):
         out = []
         for t in items:
@@ -349,10 +376,16 @@ def metrics(remove, waiting, in_library, freed, status, state, torrents, rules):
                    [(None, len(waiting))])
     lines += gauge("seed_cleanup_waiting_bytes", "Bytes held by torrents still owing seed time",
                    [(None, sum(t["size"] for t in waiting))])
-    lines += gauge("seed_cleanup_library_torrents", "Torrents whose film is still in the library",
+    lines += gauge("seed_cleanup_library_torrents", "Torrents sharing their file with the library",
                    [(None, len(in_library))])
-    lines += gauge("seed_cleanup_library_bytes", "Bytes shared with the library",
+    lines += gauge("seed_cleanup_library_bytes", "Bytes shared with the library, which cost nothing",
                    [(None, sum(t["size"] for t in in_library))])
+    lines += gauge("seed_cleanup_duplicate_torrents",
+                   "Copied imports: the film is on disk twice while this seeds",
+                   [(None, len(duplicates))])
+    lines += gauge("seed_cleanup_duplicate_bytes",
+                   "Disk the duplicates hold, all of which comes back when their trackers are paid",
+                   [(None, sum(t["size"] for t in duplicates))])
 
     lines += gauge("seed_cleanup_waiting_seed_hours", "Seeding hours done, per waiting torrent",
                    [(f'name="{escape(t["name"])[:90]}",tracker="{escape(t["tracker_host"])}",'
@@ -372,6 +405,16 @@ def metrics(remove, waiting, in_library, freed, status, state, torrents, rules):
     lines += gauge("seed_cleanup_waiting_since_timestamp",
                    "When the film left the library, per waiting torrent",
                    per_torrent(waiting, lambda t: state["waiting_since"].get(t["hash"], 0)))
+
+    def per_duplicate(value):
+        return [(f'name="{escape(t["name"])[:90]}",tracker="{escape(t["tracker_host"])}"', value(t))
+                for t in duplicates]
+
+    lines += gauge("seed_cleanup_duplicate_percent",
+                   "How far along its goal each duplicate is, before it can be dropped",
+                   per_duplicate(lambda t: round(goal_progress(t, t["goal"]), 1)))
+    lines += gauge("seed_cleanup_duplicate_size_bytes", "Size per duplicate",
+                   per_duplicate(lambda t: t["size"]))
 
     trackers = {}
     for t in torrents:
@@ -413,13 +456,15 @@ def main():
     try:
         torrents = json.loads(qbit("torrents/info"))
     except Exception as exc:
-        metrics([], [], [], 0, 1, state, [], rules)
+        metrics([], [], [], [], 0, 1, state, [], rules)
         sys.exit(f"qbittorrent: {exc}")
 
-    remove, waiting, in_library, _ = classify(torrents, rules, env("DATA_ROOT", "/mnt/data"))
+    remove, waiting, duplicates, in_library, _ = classify(
+        torrents, rules, env("DATA_ROOT", "/mnt/data"))
 
     report("would remove" if DRY_RUN else "removing", remove)
     report("waiting on seed", waiting)
+    report("duplicate copies, film still in the library", duplicates)
 
     freed = delete(remove)
     apply_tag(waiting, WAITING_TAG, add=True)
@@ -436,7 +481,8 @@ def main():
         state["freed_bytes_total"] += freed
     write_state(state)
 
-    metrics(remove, waiting, in_library, freed, 1 if failures else 0, state, torrents, rules)
+    metrics(remove, waiting, duplicates, in_library, freed, 1 if failures else 0, state,
+            torrents, rules)
     if failures:
         sys.exit("; ".join(failures))
     if remove and not DRY_RUN:
