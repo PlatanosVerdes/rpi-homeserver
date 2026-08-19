@@ -110,7 +110,25 @@ Plex runs on the Pi, which is weak at video transcoding, so files should
 
 **Supporting automation:**
 - **Bazarr** auto-downloads Spanish subtitles for the whole library.
-- **Maintainerr** auto-cleans watched movies (movies library only) to keep the data pool from filling up.
+- **Maintainerr** auto-cleans watched movies (movies library only) to keep the data pool from filling
+  up: two days after you watch one it unmonitors it in Radarr and deletes the library copy.
+- **seed-cleanup.py** finishes that job on the torrent side, hourly. Radarr imports by hardlink, so
+  every download has two names: the one qBittorrent seeds and the one Plex plays. Maintainerr removes
+  the second, and this removes the first once the tracker is paid:
+
+  | Link count | Tracker | What happens |
+  | :--- | :--- | :--- |
+  | 2 (still in the library) | any | nothing, it keeps seeding |
+  | 1 (watched, gone from Plex) | public | torrent and data removed on the next pass |
+  | 1 | private, seed goal met | torrent and data removed on the next pass |
+  | 1 | private, goal pending | keeps seeding, tagged `waiting-seed`, checked again next hour |
+
+  Goals live in `config/qbittorrent/seed-rules.json` (240 h seeding or ratio 1.0 for private, nothing
+  for public). Whether a tracker is private comes from qBittorrent, so there is no list to maintain.
+  qBittorrent's own share limits stay **off on purpose**: they cannot see the library, so they would
+  delete torrents for films you have not watched yet. One deleter, one policy. `DRY_RUN=1` prints
+  what it would remove and touches nothing; the "Seed cleanup" row of the Disk usage dashboard shows
+  the queue.
 - **Unpackerr** unrars scene releases. Radarr and Sonarr cannot read a `.rar` set, so those
   releases sit in the queue as `importPending` forever and the disk fills up with parts that
   never become a movie. The original archives are left alone so the torrent keeps seeding;
