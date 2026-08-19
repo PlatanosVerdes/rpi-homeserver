@@ -738,12 +738,12 @@
     {
       "id": 112,
       "type": "bargauge",
-      "title": "Hours still owed",
+      "title": "Seed progress",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "How much seeding each waiting torrent has left before it can go. Bear in mind qBittorrent only counts time spent actually seeding, so a queued torrent stands still.",
+      "description": "How far each waiting film is along its tracker's goal. Either the hours or the ratio clears the debt, so this is whichever is further along: a torrent at 20% of the hours and 80% of the ratio is 80% done.\n\nAt 100% the next hourly pass deletes it. Remember qBittorrent only counts time spent actually seeding, so a queued torrent stands still.",
       "gridPos": {
         "h": 9,
         "w": 12,
@@ -752,18 +752,40 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "suffix:h",
+          "unit": "percent",
           "decimals": 0,
           "min": 0,
+          "max": 100,
           "mappings": [],
           "color": {
-            "mode": "continuous-BlYlRd"
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 33
+              },
+              {
+                "color": "yellow",
+                "value": 66
+              },
+              {
+                "color": "green",
+                "value": 95
+              }
+            ]
           }
         },
         "overrides": []
       },
       "options": {
-        "displayMode": "gradient",
+        "displayMode": "basic",
         "orientation": "horizontal",
         "showUnfilled": true,
         "valueMode": "color",
@@ -787,7 +809,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "seed_cleanup_waiting_hours_remaining",
+          "expr": "seed_cleanup_waiting_percent",
           "refId": "A",
           "instant": true,
           "range": false,
@@ -931,6 +953,65 @@
                 "value": "dateTimeAsIso"
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Done"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "max",
+                "value": 100
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "gradient"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 150
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 33
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 66
+                    },
+                    {
+                      "color": "green",
+                      "value": 95
+                    }
+                  ]
+                }
+              }
+            ]
           }
         ]
       },
@@ -942,8 +1023,8 @@
         },
         "sortBy": [
           {
-            "displayName": "Left (h)",
-            "desc": false
+            "displayName": "Done",
+            "desc": true
           }
         ]
       },
@@ -1012,6 +1093,19 @@
           "range": false,
           "legendFormat": "__auto",
           "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "refId": "F",
+          "expr": "seed_cleanup_waiting_percent",
+          "instant": true,
+          "range": false,
+          "legendFormat": "__auto",
+          "format": "table"
         }
       ],
       "transformations": [
@@ -1053,7 +1147,12 @@
               "tracker 2": true,
               "tracker 3": true,
               "tracker 4": true,
-              "tracker 5": true
+              "tracker 5": true,
+              "tracker 6": true,
+              "Time 6": true,
+              "job 6": true,
+              "instance 6": true,
+              "__name__ 6": true
             },
             "indexByName": {
               "name": 0,
@@ -1063,7 +1162,8 @@
               "Value #B": 4,
               "Value #C": 5,
               "Value #D": 6,
-              "Value #E": 7
+              "Value #E": 7,
+              "Value #F": 8
             },
             "renameByName": {
               "name": "Film",
@@ -1074,7 +1174,8 @@
               "Value #B": "Left (h)",
               "Value #C": "Ratio",
               "Value #D": "Size",
-              "Value #E": "Pending since"
+              "Value #E": "Pending since",
+              "Value #F": "Done"
             }
           }
         }
@@ -1317,5 +1418,5 @@
   "timezone": "browser",
   "title": "Retention policy",
   "uid": "media-retention",
-  "version": 3
+  "version": 4
 }

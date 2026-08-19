@@ -151,12 +151,23 @@ def tracker_host(torrent):
 
 
 def goal_met(torrent, goal):
-    hours = torrent["seeding_time"] / 3600
+    return goal_progress(torrent, goal) >= 100
+
+
+def goal_progress(torrent, goal):
+    """How far along the goal a torrent is, 0-100.
+
+    Either hours or ratio clears the debt, so the progress is whichever is further along: a torrent
+    at 20% of the hours and 80% of the ratio is 80% done, not 50%. Reporting the hours alone would
+    say "199 h to go" about something a busy evening of upload could finish tonight.
+    """
     min_hours = goal.get("min_seed_hours", 0)
     min_ratio = goal.get("min_ratio", 0)
     if min_hours <= 0 and min_ratio <= 0:
-        return True
-    return (min_hours > 0 and hours >= min_hours) or (min_ratio > 0 and torrent["ratio"] >= min_ratio)
+        return 100.0
+    by_hours = (torrent["seeding_time"] / 3600) / min_hours * 100 if min_hours > 0 else 0
+    by_ratio = torrent["ratio"] / min_ratio * 100 if min_ratio > 0 else 0
+    return min(100.0, max(by_hours, by_ratio))
 
 
 def too_young(torrent, min_age_hours):
@@ -297,6 +308,9 @@ def metrics(remove, waiting, in_library, freed, status, state, torrents, rules):
                        max(0.0, t["goal"].get("min_seed_hours", 0) - t["seeding_time"] / 3600), 2)))
     lines += gauge("seed_cleanup_waiting_ratio", "Share ratio per waiting torrent",
                    per_torrent(waiting, lambda t: round(t["ratio"], 3)))
+    lines += gauge("seed_cleanup_waiting_percent",
+                   "How far along its goal each waiting torrent is, by hours or by ratio",
+                   per_torrent(waiting, lambda t: round(goal_progress(t, t["goal"]), 1)))
     lines += gauge("seed_cleanup_waiting_since_timestamp",
                    "When the film left the library, per waiting torrent",
                    per_torrent(waiting, lambda t: state["waiting_since"].get(t["hash"], 0)))
