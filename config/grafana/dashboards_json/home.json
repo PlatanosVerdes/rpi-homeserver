@@ -38,7 +38,7 @@
   "timezone": "",
   "title": "Home",
   "uid": "home-overview",
-  "version": 20,
+  "version": 21,
   "panels": [
     {
       "type": "stat",
@@ -654,7 +654,7 @@
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "- 🖥️ [Node Exporter](/d/rYdddlPWk/node-exporter-full-raspi)\n- 🐳 [Container Health](/d/container-health/container-health)\n- 📊 [Docker monitoring](/d/docker-monitoring/docker-monitoring)"
+        "content": "- 🖥️ [Node Exporter](/d/rYdddlPWk/node-exporter-full-raspi)\n- 🐳 [Container Health](/d/container-health/container-health)\n- 📊 [Docker monitoring](/d/docker-monitoring/docker-monitoring)\n- 🚦 [Service probes](/d/service-probes/service-probes)"
       },
       "transparent": false
     },
