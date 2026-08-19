@@ -310,4 +310,11 @@ collection from it, visible on the Plex home, holding whatever is queued for del
   2026-08-11 to 2026-08-19 — deleted around noon, re-downloaded at 05:00, a 5-20 GB Ultra-HD
   release every night, and it left one seeding copy per round in `/mnt/data/downloads`. Unmonitoring
   as part of the delete is what takes it off the missing list for good.
+- **`cleanupLeftoverFolders` is on.** Deleting through Radarr removes the file and leaves the movie
+  folder behind, so `films/` was collecting empty shells.
+- **The download client cleanup only reaches downloads Radarr still knows about.** Maintainerr asks
+  Radarr for the download ids of the movie before deleting, and a torrent that finished days ago is
+  no longer in Radarr's queue, so nothing gets removed and the copy keeps seeding. Cars 3 left four
+  of them, 27 GB, over its re-download loop. Check `/mnt/data/downloads` by hand after a cleanup of
+  something old; on a private tracker, mind its H&R rules before deleting.
 - media server is Plex (`media_server_type=plex`); it is not wired to Jellyfin/Emby.
