@@ -500,6 +500,137 @@
       ]
     },
     {
+      "id": 140,
+      "type": "row",
+      "title": "Queued for deletion",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 6
+      },
+      "panels": []
+    },
+    {
+      "id": 141,
+      "type": "table",
+      "title": "These films go next",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Every film Maintainerr has queued: watched to at least 95% of its runtime, and more than two days ago. This is the same list as the `Pending deletion` collection in Plex.\n\nThey are deleted on the next handler run, which is 00:00 and 12:00. The library copy goes and the film is unmonitored in Radarr; the torrent stays seeding until its tracker is paid.\n\nTo save one, exclude it in Maintainerr (`https://maintainerr.platanosverdes.com`) or postpone it there. Marking a film as watched by hand puts it here too: Plex writes the same flags whether you watched it or clicked the button.",
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left",
+            "filterable": false
+          },
+          "mappings": []
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Film"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 420
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "In the queue since"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dateTimeAsIso"
+              },
+              {
+                "id": "custom.width",
+                "value": 220
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Collection"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 200
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "sortBy": [
+          {
+            "displayName": "In the queue since",
+            "desc": false
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": "__auto",
+          "expr": "maintainerr_pending_since_timestamp * 1000"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "job": true,
+              "instance": true,
+              "__name__": true
+            },
+            "indexByName": {
+              "title": 0,
+              "Value": 1,
+              "collection": 2
+            },
+            "renameByName": {
+              "title": "Film",
+              "Value": "In the queue since",
+              "collection": "Collection"
+            }
+          }
+        }
+      ]
+    },
+    {
       "id": 110,
       "type": "row",
       "title": "What each tracker asks for",
@@ -508,7 +639,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 6
+        "y": 13
       },
       "panels": []
     },
@@ -525,7 +656,7 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 7
+        "y": 14
       },
       "fieldConfig": {
         "defaults": {
@@ -837,7 +968,7 @@
         "h": 9,
         "w": 12,
         "x": 12,
-        "y": 7
+        "y": 14
       },
       "fieldConfig": {
         "defaults": {
@@ -915,7 +1046,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 16
+        "y": 23
       },
       "panels": []
     },
@@ -932,7 +1063,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 17
+        "y": 24
       },
       "fieldConfig": {
         "defaults": {
@@ -1283,7 +1414,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 26
+        "y": 33
       },
       "fieldConfig": {
         "defaults": {
@@ -1488,7 +1619,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 33
+        "y": 40
       },
       "panels": []
     },
@@ -1505,7 +1636,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 34
+        "y": 41
       },
       "fieldConfig": {
         "defaults": {
@@ -1565,7 +1696,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 34
+        "y": 41
       },
       "fieldConfig": {
         "defaults": {
@@ -1625,7 +1756,7 @@
         "h": 10,
         "w": 12,
         "x": 0,
-        "y": 42
+        "y": 49
       },
       "fieldConfig": {
         "defaults": {},
@@ -1667,7 +1798,7 @@
         "h": 10,
         "w": 12,
         "x": 12,
-        "y": 42
+        "y": 49
       },
       "fieldConfig": {
         "defaults": {},
@@ -1716,5 +1847,5 @@
   "timezone": "browser",
   "title": "Retention policy",
   "uid": "media-retention",
-  "version": 8
+  "version": 9
 }
