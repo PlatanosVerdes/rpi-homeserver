@@ -230,3 +230,27 @@ asks for.
 **The better fix is upstream of all this: stop transcoding.** The source is H.264, which browsers
 play natively, so the work is finding why Jellyfin will not direct play or remux it. Transcoding
 efficiently is a worse answer than not transcoding.
+
+---
+
+## The retention policy does not cover series (not implemented)
+
+Films have the full cycle: Maintainerr deletes the library copy two days after you watch one, and
+`scripts/seed-cleanup.py` drops the torrent once its tracker is paid. Series have neither half.
+
+Maintainerr's only collection is `type: movie` on library `1` (Películas), so **nothing ever deletes
+a watched episode**. And the cleanup only ever acts once the library has let go of a file, which for
+an episode never happens, so those torrents stay hardlinked forever. `series/` grows without a
+ceiling: 144 GB today against 972 GB of films, slow rather than harmless.
+
+**What it needs:** a second Maintainerr collection over the Series library, same rule shape ("last
+viewed more than N days ago"), `arrAction=1` (`UNMONITOR_DELETE_ALL`) and `sonarrSettingsId` pointing
+at the Sonarr instance — the movie collection had `radarrSettingsId` unset and silently deleted
+through Plex instead, which is what caused the Cars 3 re-download loop (see SYSTEM_NOTES.md). The
+cleanup script needs no changes: it already asks Sonarr as well as Radarr what a download produced.
+
+**The decision that is actually open** is `N`, and it is not the same question as for films. A series
+watched week to week is "finished" only after the last episode, and deleting episode 3 while you are
+on episode 5 loses the option of rewatching a season. Two days, the film threshold, is clearly wrong
+here. Worth considering instead: keep whole seasons until the season is fully watched, which
+Maintainerr can express, and give it a longer threshold than a film gets.
