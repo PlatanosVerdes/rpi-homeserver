@@ -22,7 +22,7 @@ API="http://localhost:8080/api/v2"
 docker ps --format '{{.Names}}' | grep -qx qbittorrent || exit 0
 
 read_prefs() {
-    docker exec qbittorrent curl -sf --max-time 15 "$API/app/preferences"
+    timeout 30 docker exec qbittorrent curl -sf --max-time 15 "$API/app/preferences"
 }
 
 # The tracked keys whose live value differs from what is committed.
@@ -36,7 +36,7 @@ current=$(read_prefs) || { echo "WebUI did not answer, skipping" >&2; exit 1; }
 drift=$(drift_from "$current")
 [[ "$(jq -r 'length' <<< "$drift")" -eq 0 ]] && exit 0
 
-docker exec qbittorrent curl -sf --max-time 15 -X POST "$API/app/setPreferences" \
+timeout 30 docker exec qbittorrent curl -sf --max-time 15 -X POST "$API/app/setPreferences" \
     --data-urlencode "json=$drift" > /dev/null || {
     echo "setPreferences rejected $(jq -c 'keys' <<< "$drift")" >&2
     exit 1

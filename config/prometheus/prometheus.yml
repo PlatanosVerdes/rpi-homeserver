@@ -62,5 +62,15 @@ scrape_configs:
         target_label: __param_target
       - source_labels: [__param_target]
         target_label: instance
+      # Short name for dashboards and alerts: the host part of the probed URL
+      - source_labels: [__param_target]
+        regex: 'https?://([^:/]+).*'
+        target_label: service
+        replacement: '${1}'
+      # Plex is probed through the host gateway, so the host part is not its name
+      - source_labels: [__param_target]
+        regex: '.*:32400.*'
+        target_label: service
+        replacement: 'plex'
       - target_label: __address__
         replacement: blackbox-exporter:9115

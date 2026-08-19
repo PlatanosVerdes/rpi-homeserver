@@ -37,12 +37,46 @@ fi
 # that cannot get in leaves a note, and whoever holds the lock takes one more pass before
 # leaving. Coalescing, not a queue: ten pushes during a build still cost exactly one extra run.
 PENDING_MARKER="$PROJECT_DIR/.deploy.pending"
-exec 9>"$PROJECT_DIR/.deploy.lock"
+LOCK_FILE="$PROJECT_DIR/.deploy.lock"
+# A normal run takes about a minute and a Go build on ARM about five, so anything past this is
+# not slow, it is stuck. It happened: a `docker exec` into an unresponsive container hung for
+# an hour holding the lock, and every deploy after it was skipped -- the log said "already
+# running" forty times and nobody deployed anything.
+STUCK_AFTER=${DEPLOY_STUCK_AFTER:-2700}
+
+# Append, not truncate: `9>` empties the file on open, so the one arriving would wipe the pid
+# of the one working and then read it back empty. flock does not care which mode it is.
+exec 9>>"$LOCK_FILE"
 if ! flock -n 9; then
-    touch "$PENDING_MARKER"
-    log "Another deploy is already running; left a note for it to run again."
-    exit 0
+    holder=$(head -1 "$LOCK_FILE" 2>/dev/null || true)
+    age=""
+    [[ "$holder" =~ ^[0-9]+$ ]] && age=$(ps -o etimes= -p "$holder" 2>/dev/null | tr -d " ")
+    if [[ -n "$age" ]] && (( age > STUCK_AFTER )); then
+        log "Deploy $holder has been running ${age}s and is stuck; taking over."
+        # Let go of our own descriptor first: the sweep below kills by open file, and that
+        # would otherwise include us.
+        exec 9>&-
+        kill -TERM "$holder" 2>/dev/null || true
+        sleep 5
+        kill -KILL "$holder" 2>/dev/null || true
+        # Killing the script is not enough. Its children inherited the lock descriptor, and
+        # once the parent dies they are orphans, so no -P sweep finds them: the lock stays held
+        # by a `sleep` or a hung `docker exec` with no visible owner. Kill by who holds the
+        # file, which is the only thing that is actually true.
+        fuser -k -KILL "$LOCK_FILE" 2>/dev/null || true
+        sleep 1
+        exec 9>>"$LOCK_FILE"
+    fi
+    if ! flock -n 9; then
+        touch "$PENDING_MARKER"
+        log "Another deploy is already running; left a note for it to run again."
+        exit 0
+    fi
 fi
+# Whoever holds the lock says so, so the next one can tell "busy" from "stuck". Written through
+# its own descriptor to replace the previous holder's pid; truncating the file does not drop the
+# lock, which lives on the open descriptor.
+printf '%s\n' "$$" > "$LOCK_FILE"
 # Claimed: anything asked for before now is about to be applied anyway.
 rm -f "$PENDING_MARKER"
 
@@ -229,7 +263,7 @@ deploy_repo() {
     if [[ "$label" == "homeserver" && "$before" != "$after" ]] &&
         git diff --name-only "$before" "$after" | grep -q '^config/caddy/' &&
         docker ps --format '{{.Names}}' | grep -qx caddy; then
-        if docker exec caddy caddy reload --config /etc/caddy/Caddyfile >/dev/null 2>&1; then
+        if timeout 60 docker exec caddy caddy reload --config /etc/caddy/Caddyfile >/dev/null 2>&1; then
             log "[$label] Caddy config changed, reloaded"
         else
             log "[$label] WARNING: Caddy config changed but the reload was rejected, still on the old routes"
