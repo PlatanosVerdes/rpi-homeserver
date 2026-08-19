@@ -676,3 +676,69 @@ groups:
               datasource: { type: __expr__, uid: __expr__ }
               conditions:
                 - evaluator: { type: gt, params: [0] }
+
+      - uid: homelab-seed-cleanup-failed
+        title: Seed cleanup failed
+        condition: C
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: The seed-aware torrent cleanup reported an error
+          description: >-
+            Nothing is lost when this fails, it just stops giving disk back: watched films keep
+            seeding and pile up. Check `container:seed-cleanup` in VictoriaLogs, or run
+            `DRY_RUN=1 scripts/seed-cleanup.py` on the Pi to see what it would do.
+        noDataState: OK
+        execErrState: KeepLast
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: 'seed_cleanup_last_status != bool 0'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+
+      - uid: homelab-seed-cleanup-stale
+        title: Seed cleanup not running
+        condition: C
+        # It runs hourly, so three hours means two missed passes: cron, the script, or qBittorrent.
+        # A silent stop is the failure mode that matters here, because the symptom is a disk that
+        # fills over weeks with nothing in the logs to explain it.
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: No seed cleanup pass in more than 3 hours
+          description: The hourly cron either did not run or never finished.
+        noDataState: OK
+        execErrState: KeepLast
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: '(time() - seed_cleanup_last_run_timestamp) > bool 10800'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }

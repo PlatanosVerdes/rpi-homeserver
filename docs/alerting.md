@@ -29,6 +29,8 @@ this repo is the source of truth.
 | Deploy failing | last deploy ended in error | 5m |
 | Prometheus target down | any scrape target unreachable | 5m |
 | Pi running hot | SoC above 75 C | 10m |
+| Seed cleanup failed | `seed_cleanup_last_status != 0` | 5m |
+| Seed cleanup not running | no pass in more than 3h | 15m |
 
 Every expression uses PromQL's `bool` modifier so it returns 1 when it fires, which keeps all the
 rules on the same `threshold > 0` condition instead of seven different reduce/threshold shapes.
