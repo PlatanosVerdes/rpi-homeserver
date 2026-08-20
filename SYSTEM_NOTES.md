@@ -189,6 +189,41 @@ Ensure the user owns all `appdata/` and `config/` directories:
 sudo chown -R $USER:$USER ~/rpi-homeserver/appdata ~/rpi-homeserver/config
 ```
 
+## 9. Persistent Journal
+
+Raspberry Pi OS keeps the journal in RAM, so every reboot erases the evidence of why it rebooted.
+After two watchdog resets on 2026-08-20 whose cause was unrecoverable, it now lands on disk with a
+3-day window.
+
+**File:** `/etc/systemd/journald.conf.d/99-persistent-3d.conf`
+
+```ini
+[Journal]
+Storage=persistent
+MaxRetentionSec=3day
+MaxFileSec=1day
+SystemMaxUse=200M
+SystemMaxFileSize=25M
+Compress=yes
+```
+
+```bash
+sudo systemctl restart systemd-journald
+sudo journalctl --flush        # journald keeps writing to RAM until it is told to migrate
+```
+
+Two things make this fail silently:
+
+- **The `99-` prefix is load-bearing.** The OS ships `/usr/lib/systemd/journald.conf.d/40-rpi-volatile-storage.conf`
+  with `Storage=volatile`, and drop-ins are applied in filename order across every directory, so
+  anything numbered below `40` is overridden. `/etc` only beats `/usr` for the *same* filename.
+- **`MaxFileSec=1day` is what makes the 3 days real.** `MaxRetentionSec` only drops *rotated*
+  files, so without daily rotation the active file keeps entries well past the window.
+
+Verify with `systemd-analyze cat-config systemd/journald.conf | grep Storage` (last value wins) and
+`sudo ls /var/log/journal/*/`. Once it works, `journalctl --list-boots` starts listing more than the
+current boot, and `journalctl -b -1` reaches the log that ends at the crash.
+
 ## qBittorrent queue limits
 
 `MaxActiveTorrents` and `MaxActiveUploads` raised from 18/15 to **40/40** on 2026-08-05, applied
@@ -351,3 +386,11 @@ collection from it, visible on the Plex home, holding whatever is queued for del
   that window. A Tautulli-based rule would quietly never delete anything watched elsewhere. It stays
   configured because its history is worth having and the option is one field away.
 - media server is Plex (`media_server_type=plex`); it is not wired to Jellyfin/Emby.
+- **An unmatched Plex item can never be deleted, and it fails per-item, not per-run.** Deletion goes
+  through Radarr/Sonarr, so Maintainerr needs a TMDB/IMDB id off the Plex item; a film Plex matched
+  locally has `guid="local://<id>"` and no `<Guid>` children, and the run logs
+  `Couldn't resolve any supported external IDs for movie with media server ID <id>` followed by
+  `the configured action could not be completed`, while every correctly matched film in the same
+  collection is deleted normally. Fix the match in Plex (Fix Match, or
+  `PUT /library/metadata/<id>/match?guid=plex://movie/...`) and check the ids come back matching
+  Radarr's. Seen on 2026-08-20 with media server ID 677.
