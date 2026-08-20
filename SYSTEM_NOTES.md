@@ -224,30 +224,41 @@ Verify with `systemd-analyze cat-config systemd/journald.conf | grep Storage` (l
 `sudo ls /var/log/journal/*/`. Once it works, `journalctl --list-boots` starts listing more than the
 current boot, and `journalctl -b -1` reaches the log that ends at the crash.
 
-## 10. Port Forward for BitTorrent
+## 10. BitTorrent Port
 
-`compose-arrs.yml` publishes **6881 TCP and UDP** for qBittorrent, and the router must forward both
-to the Pi. Without the forward there are no incoming connections at all, and qBittorrent does not
-complain: it still reports `connection_status: connected`, because outgoing connections work fine.
+The listen port is deliberately **not** in the 6881-6889 range: that is the obvious range for an ISP
+to throttle. It lives in `.env` as `QBIT_BT_PORT` rather than in git, because this repo is public and
+a port whose value is published is only half moved.
 
-Verify from the peer flags, not from the status field. Incoming peers carry an `I`:
+Three places have to agree on that number, and nothing warns when they do not:
+
+| Where | How it gets there |
+| :--- | :--- |
+| qBittorrent's own setting | pushed by `scripts/sync-qbit-config.sh` from `.env` |
+| the published container port | `compose-arrs.yml`, `${QBIT_BT_PORT}` tcp **and** udp |
+| the router forward | by hand, to the Pi's static IP, tcp and udp |
+
+**The failure this is written for.** The port was moved off the default in qBittorrent, but
+`compose-arrs.yml` kept publishing 6881, so inbound traffic arrived at a port nothing listened on
+while every announce advertised a port the world could not reach. There were **zero incoming
+connections** and qBittorrent reported `connection_status: connected` throughout, because outgoing
+connections were never affected.
+
+Public swarms hid it: DHT and PEX hand out hundreds of peers and the box dials out to them, so it
+seeded fine. Private trackers do not have that fallback, since the private flag disables DHT, PEX
+and LSD and the tracker's peer list is all there is. Measured on 2026-08-20: ratio **2.38** across
+the public trackers and **0.001** on TorrentLeech, whose account was disabled for exactly that.
+
+Verify with the peer flags, never with the status field. An incoming peer carries an `I`:
 
 ```bash
+HASH=...   # any torrent with leechers
 docker exec qbittorrent curl -s \
-  "http://localhost:8080/api/v2/sync/torrentPeers?hash=<hash>&rid=0" | grep -o '"flags":"[^"]*"'
+  "http://localhost:8080/api/v2/sync/torrentPeers?hash=$HASH&rid=0" | grep -o '"flags":"[^"]*"'
 ```
 
-Why it matters more than it looks: on public swarms DHT and PEX hand out hundreds of peers and the
-box dials out to them, so it seeds fine either way. A private tracker's torrents have the private
-flag, which disables DHT, PEX and LSD, so the only peers are the ones the tracker hands back and the
-ones that reach in. With no inbound, seeding on a private tracker is next to impossible. Measured on
-2026-08-20, before the fix below: ratio 2.38 on the public trackers and **0.001 on TorrentLeech**,
-which is what got that account disabled.
-
-**The failure that hid all of this**: qBittorrent kept its random first-run port, 57429, while the
-container only published 6881, so inbound traffic arrived at a port nothing listened on and every
-announce advertised a port the world could not reach. `listen_port` and `random_port` are now
-tracked in `config/qbittorrent/preferences.json`, which is what keeps the two ends agreeing.
+All flags without an `I` after a few minutes of seeding means the chain is broken somewhere, and the
+router forward is the end of it that git cannot fix.
 
 ## qBittorrent queue limits
 
