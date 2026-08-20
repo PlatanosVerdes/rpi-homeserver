@@ -55,6 +55,27 @@ re-explaining the technical cause once they push back, use **their** numbers rat
 ("I need about 45 GB of upload to reach 1.0"), and bring a control already applied rather than a
 promise.
 
+### State after the 2026-08-20 reinstatement
+
+The account was re-enabled by staff on 2026-08-20 with two conditions, and one deadline that is
+easy to forget:
+
+| | |
+| :--- | :--- |
+| **Deadline** | **14 days to fix the ratio, i.e. 2026-09-03** |
+| Condition | freeleech only until the ratio is healthy, their words: otherwise "you'd be disabled again, also quickly" |
+| Condition | one torrent at a time, since a partially downloaded one occupies the single slot |
+
+The arithmetic that matters, because the threshold is **0.4 and not 1.0**: at 15.25 GB up against
+59.84 GB down (0.255), reaching 0.4 needs `0.4 x 59.84 = 23.94` GB uploaded, so **+8.7 GB**. Reaching
+1.0 would need +44.6 GB, and nobody asked for that. Freeleech downloads never move the denominator,
+so grabbing more freeleech cannot make this worse.
+
+Both conditions are enforced here rather than remembered: the freeleech required-flag on the
+indexer covers the automation, and the single slot takes care of itself as long as nothing else is
+grabbed by hand. **A manual download from the site is the one path with no safety net: check the
+FREELEECH tag before clicking.**
+
 ### Links given by staff
 
 - Common mistakes: <https://wiki.torrentleech.org/doku.php/common_mistakes>
