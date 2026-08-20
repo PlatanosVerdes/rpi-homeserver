@@ -14,9 +14,17 @@ services:
     dns:
       - 8.8.8.8
       - 1.1.1.1
+    # Hardening, because this is the one container the internet can reach directly once the
+    # BitTorrent port is forwarded. It only ever writes to downloads (all 64 torrents have
+    # save_path /data/downloads), so the library is not mounted here at all: whatever comes
+    # through that port lands somewhere that cannot see films/ or series/. The *arrs keep the
+    # full /data, which is what their hardlinks need.
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 3g
     volumes:
       - ${APP_CONFIG_PATH}/qbittorrent:/config
-      - ${DATA_ROOT}:/data
+      - ${DATA_ROOT}/downloads:/data/downloads
     ports:
       - "${QBIT_WEBUI_PORT}:${QBIT_WEBUI_PORT}"
       # Deliberately not 6881: that range is the obvious one to throttle. The value lives in .env
