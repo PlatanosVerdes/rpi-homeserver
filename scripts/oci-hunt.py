@@ -53,9 +53,17 @@ IDENTITY = f"https://identity.{REGION}.oraclecloud.com"
 CAPACITY_MARKERS = ("out of host capacity", "out of capacity")
 
 # And it rate-limits the asking, not just the capacity: too many launch attempts return 429 for the
-# whole user, so a tighter cron would spend its runs being throttled instead of trying. When that
-# happens, stop the round and stay quiet for this long.
-BACKOFF_MINUTES = 20
+# whole user. That is the real budget here, not the cron interval: a throttled run is a wasted turn,
+# so asking twice as often can win fewer windows. Measured on the first round, one launch call went
+# through ("out of host capacity") and the second in the same run got the 429, which is where these
+# numbers come from: one call per run, the ARM shape every run because it is the one worth having,
+# and the micro only every Nth run as a fallback.
+MICRO_EVERY = 5
+
+# Backoff doubles while Oracle keeps saying 429 and resets as soon as a call goes through, so the
+# schedule finds its own ceiling instead of needing one guessed here.
+BACKOFF_MINUTES = 10
+BACKOFF_MAX = 60
 
 
 def private_key():
@@ -224,9 +232,31 @@ def backing_off():
 
 def start_backoff():
     data = state()
-    until = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=BACKOFF_MINUTES)
+    throttles = data.get("throttles", 0) + 1
+    minutes = min(BACKOFF_MINUTES * (2 ** (throttles - 1)), BACKOFF_MAX)
+    until = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=minutes)
+    data["throttles"] = throttles
     data["backoff_until"] = until.isoformat()
     save_state(data)
+    return minutes
+
+
+def clear_throttles():
+    data = state()
+    if data.get("throttles"):
+        data["throttles"] = 0
+        save_state(data)
+
+
+def shapes_for_this_run():
+    """The ARM every run, the micro one run in five. One launch call per run is the budget."""
+    runs = state().get("runs", 0) + 1
+    data = state()
+    data["runs"] = runs
+    save_state(data)
+    if runs % MICRO_EVERY == 0:
+        return [SHAPES[1]]
+    return [SHAPES[0]]
 
 
 def main():
@@ -245,7 +275,7 @@ def main():
         return
 
     attempts = state().get("attempts", 0)
-    for entry in SHAPES:
+    for entry in shapes_for_this_run():
         instance, error = launch(config, entry)
         attempts += 1
         if instance:
@@ -263,12 +293,13 @@ def main():
             return
         low = (error or "").lower()
         if any(marker in low for marker in CAPACITY_MARKERS):
+            # The call went through, which is what resets the throttle ladder.
+            clear_throttles()
             print(f"{entry['shape']}: sin capacidad")
             continue
         if "429" in low or "too many requests" in low:
-            # User-wide, so the next shape in this round would get the same answer.
-            start_backoff()
-            print(f"{entry['shape']}: 429, esperando {BACKOFF_MINUTES} min")
+            minutes = start_backoff()
+            print(f"{entry['shape']}: 429, esperando {minutes} min")
             break
         print(f"{entry['shape']}: {error}", file=sys.stderr)
 
