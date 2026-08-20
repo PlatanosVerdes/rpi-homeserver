@@ -15,7 +15,7 @@ read them as "watched and deleted" while the film sat in the library untouched.
 
 Once the library really has let go:
 
-  public tracker           -> remove torrent and data now
+  public tracker           -> remove torrent and data now, library copy or not (see drop_when_imported)
   private, seed goal met   -> remove torrent and data now
   private, goal pending    -> keep seeding, tag it, look again next hour
 
@@ -254,6 +254,7 @@ def classify(torrents, rules, data_root):
     """
     shared = collections.Counter(t["content_path"] for t in torrents)
     min_age_hours = rules.get("min_age_hours", 24)
+    drop_public = rules.get("public", {}).get("drop_when_imported", False)
     download_root = qbit_download_root()
     remove, waiting, duplicates, in_library, keep = [], [], [], [], []
 
@@ -271,8 +272,17 @@ def classify(torrents, rules, data_root):
 
         counts = link_counts(host_path(t["content_path"], data_root))
         if counts is not None and max(counts) > 1:
-            in_library.append({**entry, "why": "still in the library, sharing the file"})
-            keep.append(in_library[-1])
+            # Sharing the link costs no disk, so the default is to seed on forever. That is worth it
+            # on a private tracker, where seeding is the currency. On a public one it buys literally
+            # nothing (no account, no ratio requirement) and the only thing it produces is this
+            # address sitting in a public swarm for weeks. So: drop it as soon as the library has it.
+            # Deleting the download-side name is safe precisely because the link count is above one.
+            if (drop_public and not t.get("private") and t["progress"] >= 1
+                    and t["state"] not in BUSY_STATES and shared[t["content_path"]] == 1):
+                remove.append({**entry, "why": "public tracker, imported, nothing to pay"})
+            else:
+                in_library.append({**entry, "why": "still in the library, sharing the file"})
+                keep.append(in_library[-1])
             continue
 
         # No shared link is not the same as no library copy: a RAR release unpacks into a new file,
