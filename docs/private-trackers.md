@@ -92,6 +92,90 @@ FREELEECH tag before clicking.**
 - Optimising upload speed and building ratio:
   <https://seedit4.me/kb/articles/optimizing-seedbox-upload-speeds-and-building-your-ratio/146>
 
+## How this world actually works
+
+The mechanics are the same on almost every private tracker, and they are not obvious from the
+outside. Worth understanding once rather than learning by getting disabled.
+
+### Ratio, and the buffer that really governs your life
+
+Ratio is `uploaded / downloaded` **as counted by the tracker**, and the number to watch is not the
+ratio itself but the **buffer**: how many GB you can still download before dropping under the
+threshold.
+
+```
+buffer at a threshold T = uploaded - (T x downloaded)
+buffer at 1.0           = uploaded - downloaded
+```
+
+A buffer of 40 GB means you can grab a 40 GB non-freeleech release and land exactly on the
+threshold. That is the number to look at before clicking anything, not the ratio.
+
+Two things bend the arithmetic in your favour, and both are the tracker's gift rather than yours:
+
+- **Freeleech** torrents do not add to `downloaded`. The denominator never moves, so freeleech can
+  only ever help. This is why "freeleech only" is the standard remedy for a broken ratio.
+- **Upload multipliers** (double upload, x2 events) credit more than you actually sent.
+
+### Where upload actually comes from
+
+You only upload when somebody else is downloading the same torrent **and picks you**. That gives
+exactly two viable strategies:
+
+1. **Be early.** A release minutes old has hundreds of leechers and a handful of seeders, so
+   everyone asks you. This is the reliable way, and it is why tools exist purely to grab new
+   releases the second they are announced.
+2. **Be the only one.** A large, niche torrent nobody else seeds means every single person who ever
+   wants it takes the whole thing from you. Fewer customers, but each pays a lot. Measured here on
+   2026-08-20: a 73.8 GB freeleech disc set with 1 seeder and 33 leechers is worth more than a
+   popular 5 GB release with 50 seeders competing for the same demand.
+
+What does **not** work is seeding an old catalogue. Measured the same day: 16 torrents with 20 to 259
+seeders each and 18 leechers between all of them produced 0 KB/s. Being reachable is necessary and
+not sufficient; somebody has to actually want the file.
+
+### Hit and run, which is a separate account killer
+
+Ratio and hit & run are two independent ways to lose an account. H&R is per torrent: download it and
+fail to seed it back for the required time or ratio and you collect a warning, whatever your overall
+ratio looks like. **Three uncleared warnings disable the account on TorrentLeech.** They clear by
+seeding the offending torrents, which is why deleting data to free space is the most expensive
+cleanup available.
+
+The practical rule: **never delete a torrent that still owes seeding time**, and that is exactly what
+`seed-cleanup.py` enforces here (240 h or ratio 1.0 for private trackers before anything is removed).
+
+### Bonus points, the passive income
+
+Most trackers pay bonus points per GB held per hour of seeding, redeemable for upload credit,
+freeleech tokens or class upgrades. This is the one lever that works even when nobody downloads from
+you: keep data seeded and the points accumulate. Worth checking each site's shop before grinding for
+ratio the hard way. Balances on 2026-08-20: DigitalCore 543.5p, TorrentLeech 130.37 TL points.
+
+### Slots and classes
+
+Download slots are limited by user class, and classes are earned with upload and time.
+TorrentLeech starts at **one slot**, and a partially downloaded torrent occupies it, so a single
+stalled grab blocks everything. Build ratio and the limit rises.
+
+### The stable regime, once the ratio is at 1.0
+
+The rules change once there is a buffer, and this is the policy to keep:
+
+| Buffer | What you can do |
+| :--- | :--- |
+| comfortable, say 50 GB+ | grab non-freeleech freely, but always seed each torrent past its H&R requirement |
+| thin, under ~20 GB | back to freeleech only until it recovers |
+| negative | you are below the threshold and on a clock, freeleech only, no exceptions |
+
+Two habits keep it there: **seed everything you take for longer than required** (that is what builds
+the buffer while you sleep), and **prefer new releases over catalogue** when you have a choice, since
+they are the only ones anybody is waiting for.
+
+And the automation-specific one, which is what broke this account in the first place: an *arr stack
+grabs whatever matches its profile, so **the buffer rule has to live in the indexer configuration,
+not in your head**. The freeleech required-flag is that rule expressed as a filter.
+
 ## DigitalCore
 
 - Freeleech periods and **upload multipliers** are generous enough to make the on-site ratio look
@@ -114,6 +198,49 @@ FREELEECH tag before clicking.**
 - Automation is the reason this happened at all: the *arr stack grabbed whatever matched, nobody
   read the site notices, and warnings sat unseen for six days. **If a tracker's rules need a human
   to remember something, encode it as a filter instead.**
+
+## Two things worth building, and how
+
+Both were asked for on 2026-08-20 and neither is built yet. Written down so the design does not have
+to be reinvented.
+
+### Watching the trackers from Grafana, with Telegram alerts
+
+The stack for this already exists here: `media-metrics.py` pushes to Pushgateway, Prometheus scrapes
+it, Grafana alerts to Telegram. The only new part is getting the numbers out of each site.
+
+- **Where the numbers live.** Ratio, uploaded, downloaded, hit & run count, bonus points and class
+  are on each site's own profile page. There is no public API on TorrentLeech, so it means fetching
+  the page with a stored session cookie and parsing it. DigitalCore has an API (Prowlarr already
+  uses it) and may expose stats without scraping, worth checking first.
+- **Metrics to export**, one series per site: `tracker_ratio`, `tracker_uploaded_bytes`,
+  `tracker_downloaded_bytes`, `tracker_buffer_bytes` (the derived one that matters),
+  `tracker_hit_and_run`, `tracker_bonus_points`.
+- **The three alerts worth having**, all of which are the ones that would have caught this incident
+  weeks earlier:
+  1. **buffer below a floor** (say 20 GB), which is the early warning;
+  2. **hit & run count increased** since the last scrape, which is the "you are collecting warnings
+     and not reading the site" alarm;
+  3. **ratio under the site minimum**, which is the last-chance one.
+- **The fragile part, stated honestly**: cookie-based scraping breaks whenever a site redesigns, and
+  a session cookie expires. Expect to re-paste a cookie into `.env` every few months, and make the
+  script log loudly rather than silently exporting zeros, since a zero looks like a catastrophic
+  ratio and would page you at 3am.
+
+### Not having to watch the freeleech feed by hand
+
+The link staff gave is a search filtered to freeleech added in the last ten minutes. Refreshing it
+manually works but misses the whole point, which is being early. Two ways out:
+
+- **autobrr** (their own wiki recommends it, and links a qBittorrent guide). It joins the tracker's
+  IRC announce channel and reacts the instant a release is announced, which is seconds rather than
+  the minutes an RSS poll costs. Filters on freeleech, size and category, and hands the torrent
+  straight to qBittorrent. With one download slot, the filter must cap concurrency at one.
+- **qBittorrent's own RSS** pointed at that freeleech URL, with a matching rule. Zero new
+  components, but polls on a timer, so it arrives after the autobrr crowd.
+
+Either way the shape is the same as everything else here: **the rule lives in the tool, not in a
+human remembering to check a bookmark.**
 
 ## Verifying inbound, the only measurement that matters
 
