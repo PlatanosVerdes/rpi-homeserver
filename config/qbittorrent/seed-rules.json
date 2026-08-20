@@ -3,7 +3,8 @@
 
   "public": {
     "min_seed_hours": 0,
-    "min_ratio": 0
+    "min_ratio": 0,
+    "drop_when_imported": true
   },
 
   "private": {
