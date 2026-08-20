@@ -742,3 +742,76 @@ groups:
               datasource: { type: __expr__, uid: __expr__ }
               conditions:
                 - evaluator: { type: gt, params: [0] }
+
+      - uid: homelab-arr-orphan-queue
+        title: 'Download nothing can import'
+        condition: C
+        # Two hours, because a download that just finished can legitimately sit in the queue for a
+        # few minutes while the *arr decides what to do with it.
+        for: 2h
+        labels:
+          severity: warning
+        annotations:
+          summary: '{{ $labels.app }} cannot import {{ $labels.title }}'
+          description: >-
+            Reason given: {{ $labels.reason }}. This usually means the movie or series was deleted
+            from the *arr while its download was still running, so the finished file has nothing to
+            import into and waits for a human. Radarr only re-announces it when it restarts, which
+            is why this rule exists. The torrent may still owe its tracker, so clear the queue entry
+            without removing the torrent.
+        noDataState: OK
+        execErrState: KeepLast
+        data:
+          # No aggregation on purpose, same reason as the stalled download above: arr_orphan_queue_bytes
+          # carries title and app labels, so each stuck item gets its own alert and its own timer.
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: 'arr_orphan_queue_bytes'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [-1] }
+
+      - uid: homelab-orphan-data
+        title: 'Data in downloads that nothing owns'
+        condition: C
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: Bytes in downloads that no torrent claims and the library does not share
+          description: >-
+            seed-cleanup.py only ever looks at torrents that exist, so data left behind by a torrent
+            that was removed without its files is reclaimed by nobody. While the library still
+            shares the file this stays quiet on purpose (it wastes nothing); it starts firing the
+            day the retention policy deletes the film and those bytes become unreachable.
+        noDataState: OK
+        execErrState: KeepLast
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: 'arr_orphan_data_total_bytes{linked="no"} > bool 0'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
