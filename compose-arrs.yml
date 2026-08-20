@@ -19,8 +19,11 @@ services:
       - ${DATA_ROOT}:/data
     ports:
       - "${QBIT_WEBUI_PORT}:${QBIT_WEBUI_PORT}"
-      - "6881:6881"
-      - "6881:6881/udp"
+      # Deliberately not 6881: that range is the obvious one to throttle. The value lives in .env
+      # so a public repo does not advertise it, and sync-qbit-config.sh pushes the same number into
+      # qBittorrent, because a listen port the container does not publish means zero inbound peers.
+      - "${QBIT_BT_PORT}:${QBIT_BT_PORT}"
+      - "${QBIT_BT_PORT}:${QBIT_BT_PORT}/udp"
     networks:
       - media-network
 
