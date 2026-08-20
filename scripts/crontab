@@ -54,3 +54,10 @@
 # Media stack "which one" metrics -> Pushgateway (quality upgrades, torrents by name, indexer
 # status and usage) for the Media Pipeline dashboard. Read-only. See scripts/media-metrics.py.
 */5 * * * * /home/raspi/rpi-homeserver/scripts/media-metrics.py >> /home/raspi/rpi-homeserver/media-metrics.log 2>&1
+
+# Oracle's Always Free shapes in Madrid are permanently full, and a free tenancy cannot query
+# capacity in advance, so the only way in is to keep asking. Tries both free shapes, stops the day
+# one lands, and announces it on Telegram with the IP. Backs off 20 min on Oracle's own 429, and
+# exits immediately once the instance exists, so this is safe to leave in forever.
+# See scripts/oci-hunt.py.
+*/5 * * * * /home/raspi/rpi-homeserver/scripts/oci-hunt.py >> /home/raspi/rpi-homeserver/oci-hunt.log 2>&1
