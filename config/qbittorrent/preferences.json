@@ -17,6 +17,9 @@
   "max_connec": 500,
   "max_connec_per_torrent": 100,
 
+  "listen_port": 6881,
+  "random_port": false,
+
   "save_path": "/data/downloads",
   "temp_path": "/data/downloads/incomplete",
   "temp_path_enabled": true
