@@ -757,8 +757,9 @@ groups:
             Reason given: {{ $labels.reason }}. This usually means the movie or series was deleted
             from the *arr while its download was still running, so the finished file has nothing to
             import into and waits for a human. Radarr only re-announces it when it restarts, which
-            is why this rule exists. The torrent may still owe its tracker, so clear the queue entry
-            without removing the torrent.
+            is why this rule exists. The torrent may still owe its tracker, so do not delete
+            anything: take it out of the *arr's category in qBittorrent. Deleting the queue entry
+            alone does not stick, the *arr rebuilds its queue from the download client.
         noDataState: OK
         execErrState: KeepLast
         data:
