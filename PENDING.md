@@ -254,3 +254,53 @@ watched week to week is "finished" only after the last episode, and deleting epi
 on episode 5 loses the option of rewatching a season. Two days, the film threshold, is clearly wrong
 here. Worth considering instead: keep whole seasons until the season is fully watched, which
 Maintainerr can express, and give it a longer threshold than a film gets.
+
+---
+
+## Private trackers: know the rules, encode them, and watch the numbers
+
+Opened on 2026-08-20, the day a TorrentLeech account was disabled and reinstated with **14 days to
+fix the ratio (until 2026-09-03)**. What was learned that day is in
+[docs/private-trackers.md](docs/private-trackers.md); these three are what is still missing.
+
+### 1. Learn how each private tracker actually works
+
+Only TorrentLeech is properly documented, and only because staff spelled it out: minimum ratio 0.4,
+three uncleared hit & runs, one download slot, freeleech excluded from the ratio denominator.
+DigitalCore is half known (freeleech periods, upload multipliers, bonus points, the per-torrent
+`Connectable` column). **C411, BTSCHOOL and retrotoon.world are unknown**, and being unknown is
+exactly how the last account was lost.
+
+Per site, the six answers that matter: minimum ratio, what triggers a hit & run and how it clears,
+any minimum seed time per torrent, how many download slots the current class allows, whether
+freeleech exists and how it is flagged, and what the bonus-point shop sells.
+
+### 2. Put the right setup on each tracker
+
+The rules from (1) belong in the configuration, not in anyone's memory. Two places already exist and
+are mostly empty:
+
+- **`requiredFlags` per indexer in Radarr and Sonarr.** TorrentLeech is now `[1]` (freeleech only)
+  and that is the only one set. Each other private tracker needs a deliberate answer, and Cardigann
+  definitions like DigitalCore's also carry their own `freeleech` toggle.
+- **`config/qbittorrent/seed-rules.json` has a `trackers` map that is completely empty**, so every
+  private tracker currently shares the generic 240 h / ratio 1.0 goal. Once (1) is known, each
+  tracker's real requirement goes there, which is the difference between "probably seeded enough"
+  and "seeded exactly what this site demands".
+
+Also worth deciding: whether the freeleech-only flag on TorrentLeech comes off once the ratio is
+healthy, or stays forever as a cheap insurance policy.
+
+### 3. Alerts and a Grafana row for the tracker numbers
+
+Design is written up in [docs/private-trackers.md](docs/private-trackers.md). Short version: one
+script fetching each site with a stored session cookie, exporting `tracker_ratio`,
+`tracker_buffer_bytes`, `tracker_hit_and_run` and `tracker_bonus_points` to the Pushgateway that is
+already running, plus three alerts (buffer under a floor, hit-and-run counter rising, ratio under the
+site minimum) through the existing Telegram contact point.
+
+**Blocked on credentials, and this is the only blocker:** there is no API for this. DigitalCore's API
+key, the one Prowlarr already uses for searching, returns **403 on every user endpoint** (`/api/v1/user`,
+`/users/current`, `/account`, `/user/stats`, `/me`), so even the site with an API needs a browser
+session cookie. The numbers themselves are easy once authenticated: every one of them is rendered in
+the page header, so any page will do.
