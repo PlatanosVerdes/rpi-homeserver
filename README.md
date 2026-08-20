@@ -175,8 +175,12 @@ Two consequences that read like bugs and are not:
   `Movie title mismatch, automatic import is not possible`, and Radarr re-sends its
   `onManualInteractionRequired` Telegram alert **on every restart**: one deletion on 2026-08-09 was
   still raising alerts eleven days later, after a reboot. That file never reaches Plex. Its torrent
-  still owes the tracker, so it stays until the goal is met, and the queue entry is the only thing
-  worth removing. Remove it without removing the torrent. Both this and data a removed torrent left
+  still owes the tracker, so it stays until the goal is met. Deleting the queue entry does not stick:
+  the *arr rebuilds its queue from the download client, so the item is back on the next refresh
+  (measured, not assumed). What clears it is **taking the torrent out of the *arr's category** in
+  qBittorrent, which is safe while `auto_tmm` is off (it is: nothing moves on disk), stops the *arr
+  from ever seeing it again, and leaves `seed-cleanup.py` finishing the job, because that one asks
+  about hard links and trackers and never about categories. Both this and data a removed torrent left
   behind are exported by `media-metrics.py` as `arr_orphan_*` every five minutes, and alerted on
   ("Download nothing can import", "Data in downloads that nothing owns"), because the *arr's own
   notification only fires when it restarts and is easy to lose among the reboot alerts.
