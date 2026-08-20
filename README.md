@@ -148,6 +148,36 @@ Plex runs on the Pi, which is weak at video transcoding, so files should
   never become a movie. The original archives are left alone so the torrent keeps seeding;
   only the extracted copy is removed once the *arr has imported it.
 
+### Deletion policy
+
+The rule of record. Everything above is its implementation, and any doubt is settled here:
+
+1. **Nothing is deleted before it has been watched.** Watched is Plex's verdict, at 95% of the
+   runtime, so a film abandoned in the credits does not count.
+2. **A watched film is deleted two days later**, library copy gone and unmonitored in Radarr. The
+   delay leaves room to rewatch it, for someone else in the house to see it, or to notice that Plex
+   marked something watched by accident. The delete is not reversible.
+3. **The torrent is a separate debt and the tracker decides when it is paid.** A public tracker asks
+   for nothing, so its torrent goes as soon as the film does. A private one keeps seeding until it
+   has given back 240 hours or ratio 1.0, whichever arrives first, because leaving early is how an
+   account gets banned. Disk pressure is never a reason to pay less.
+
+Two consequences that read like bugs and are not:
+
+- **A film that is still seeding is normally still in Plex, and costs nothing extra for it.** Radarr
+  imports by hardlink, so what qBittorrent seeds and what Plex plays are the same bytes under two
+  names. Measured on 2026-08-20: 55 of 64 torrents were exactly that. Of the other nine, one was
+  still downloading, four were films the policy had already deleted and whose torrent was only
+  paying its seed debt (gone from Plex on purpose), three were RAR releases whose extracted `.mkv`
+  shares nothing with the archives, and one was an orphan.
+- **A film deleted from the *arr while its download is in flight becomes an orphan.** The download
+  finishes with nothing to import into, so it stays in the queue as `importBlocked` with
+  `Movie title mismatch, automatic import is not possible`, and Radarr re-sends its
+  `onManualInteractionRequired` Telegram alert **on every restart**: one deletion on 2026-08-09 was
+  still raising alerts eleven days later, after a reboot. That file never reaches Plex. Its torrent
+  still owes the tracker, so it stays until the goal is met, and the queue entry is the only thing
+  worth removing. Remove it without removing the torrent.
+
 ### Indexers / trackers
 
 Current: public (**1337x, YTS, The Pirate Bay, LimeTorrents, Nyaa.si** for anime/JP cinema), Spanish
