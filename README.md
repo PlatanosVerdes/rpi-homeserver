@@ -151,6 +151,8 @@ Plex runs on the Pi, which is weak at video transcoding, so files should
   delete torrents for films you have not watched yet. One deleter, one policy. `DRY_RUN=1` prints
   what it would remove and touches nothing; the "Seed cleanup" row of the Disk usage dashboard shows
   the queue.
+- **Private tracker rules, per site, and what got an account disabled once**:
+  [docs/private-trackers.md](docs/private-trackers.md).
 - **Why the ratio on private trackers is near zero, and the three ways out** (gluetun on a VPN that
   forwards a port, a seedbox, or a forward at home), with the measurements behind it:
   [docs/seeding-and-ratio.md](docs/seeding-and-ratio.md).
