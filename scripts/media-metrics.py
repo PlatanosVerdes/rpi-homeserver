@@ -12,6 +12,7 @@ Three things the existing exporters cannot answer:
   arr_waiting            everything Radarr waits for: downloading, missing or below cutoff
   prowlarr_indexer_up    which indexers are failing right now, over time
   maintainerr_pending_*  which films are watched and waiting out the grace period before deletion
+  arr_orphan_*           what nothing is managing: unimportable queue items, unclaimed data
 
 All three use labels to carry identity, which is not what Prometheus is for. It is a deliberate
 trade: the alternative is the Infinity datasource querying each API live, which means a Grafana
@@ -35,6 +36,17 @@ PROJECT_DIR = Path(os.path.expanduser("~/rpi-homeserver"))
 PUSHGATEWAY = "http://localhost:9091"
 KEEP_UPGRADES = 25
 PAIR_WINDOW = 120  # seconds between the delete and the import to call it the same upgrade
+
+DATA_ROOT = Path("/mnt/data")          # what the containers see as /data
+DOWNLOADS = DATA_ROOT / "downloads"
+SKIP_ENTRIES = {"incomplete"}          # qBittorrent writes downloads in progress here
+MIN_ORPHAN_BYTES = 100 * 1024 ** 2     # below this it is a sample, an nfo or a stray subtitle
+
+QUEUES = [
+    # name, port, the id an unattributable item lacks, the arg that includes those items
+    ("radarr", 7878, "movieId", "includeUnknownMovieItems"),
+    ("sonarr", 8989, "seriesId", "includeUnknownSeriesItems"),
+]
 
 ARRS = [
     # name, port, api, deleted-event type, extra query args, title extractor
@@ -121,9 +133,13 @@ def quality_changes():
     push("arr_history", lines)
 
 
-def qbit_torrents():
+def qbit_list():
     """Read from inside the container: the WebUI trusts localhost, the host arrives via the Docker
-    gateway which is not in its AuthSubnetWhitelist, so this needs no credentials."""
+    gateway which is not in its AuthSubnetWhitelist, so this needs no credentials.
+
+    None means "could not ask", which is not the same as "no torrents": orphan detection has to
+    tell those apart or a qBittorrent that is merely down turns every download into an orphan.
+    """
     try:
         result = subprocess.run(
             ["docker", "exec", "qbittorrent", "curl", "-sf",
@@ -131,9 +147,15 @@ def qbit_torrents():
             capture_output=True, text=True, timeout=30)
         if result.returncode != 0:
             raise RuntimeError(result.stderr.strip()[:120] or "curl failed")
-        items = json.loads(result.stdout)
+        return json.loads(result.stdout)
     except Exception as exc:
         failures.append(f"qbittorrent: {exc}")
+        return None
+
+
+def qbit_torrents():
+    items = qbit_list()
+    if items is None:
         return
 
     progress = ["# HELP qbit_torrent_progress Download progress 0-1, name and state as labels",
@@ -451,6 +473,105 @@ def maintainerr_pending():
     push("maintainerr_pending", counts + sizes + since + per_film)
 
 
+def tree_bytes_and_links(path):
+    """Total bytes under a path, and the highest link count among its real payload files. Small
+    files are ignored for the link count: an nfo or a subtitle is never hardlinked, so counting
+    them would report every release as unshared."""
+    total, links = 0, 0
+    if path.is_file():
+        stat = path.stat()
+        return stat.st_size, stat.st_nlink
+    for root, _, names in os.walk(path):
+        for name in names:
+            try:
+                stat = os.stat(os.path.join(root, name))
+            except OSError:
+                continue
+            total += stat.st_size
+            if stat.st_size > MIN_ORPHAN_BYTES // 2:
+                links = max(links, stat.st_nlink)
+    return total, links
+
+
+def orphans():
+    """The two ways media ends up managed by nothing at all.
+
+    A queue item the *arr cannot attribute to a movie or series never imports. It waits for a
+    human, and the *arr only re-announces it when it restarts, so one deletion made while a
+    download was in flight raised Telegram alerts eleven days later and nothing else ever said so.
+
+    Data in downloads that no torrent claims is invisible to seed-cleanup.py, which only ever looks
+    at torrents that exist. While the library still shares the file it wastes nothing, which is why
+    `linked` is a label and not a filter: the day the retention policy deletes the film, that
+    leftover name becomes the last reference to bytes nobody will ever reclaim, and it is exactly
+    then that it starts counting under linked="no".
+    """
+    queue_rows = []
+    for app, port, id_field, unknown_arg in QUEUES:
+        try:
+            records = get(f"http://localhost:{port}/api/v3/queue?pageSize=200&{unknown_arg}=true",
+                          api_key(app))["records"]
+        except Exception as exc:
+            failures.append(f"{app} queue: {exc}")
+            continue
+        for record in records:
+            stuck = record.get("trackedDownloadState") in ("importBlocked", "importFailed")
+            if not stuck and record.get(id_field):
+                continue
+            reason = ""
+            for message in record.get("statusMessages") or []:
+                reason = ((message.get("messages") or [None])[0]) or message.get("title", "")
+                break
+            queue_rows.append((app, record.get("title", "?"),
+                               record.get("trackedDownloadState", "?"), reason,
+                               record.get("size", 0)))
+
+    lines = ["# HELP arr_orphan_queue_bytes A queue item the arr cannot import without a human",
+             "# TYPE arr_orphan_queue_bytes gauge"]
+    for app, title, state, reason, size in queue_rows:
+        labels = (f'app="{app}",title="{escape(title)[:90]}",state="{escape(state)}",'
+                  f'reason="{escape(reason)[:70]}"')
+        lines.append(f"arr_orphan_queue_bytes{{{labels}}} {size}")
+    lines += ["# HELP arr_orphan_queue_items Queue items waiting for a human, per app",
+              "# TYPE arr_orphan_queue_items gauge"]
+    for app, _, _, _ in QUEUES:
+        lines.append(f'arr_orphan_queue_items{{app="{app}"}} '
+                     f'{sum(1 for row in queue_rows if row[0] == app)}')
+
+    data_rows = []
+    items = qbit_list()
+    if items is not None and DOWNLOADS.is_dir():
+        claimed = set()
+        for torrent in items:
+            content = torrent.get("content_path") or ""
+            if not content:
+                continue
+            path = Path(content.replace("/data/", f"{DATA_ROOT}/", 1))
+            try:
+                claimed.add(path.relative_to(DOWNLOADS).parts[0])
+            except ValueError:
+                continue
+        for entry in sorted(DOWNLOADS.iterdir()):
+            if entry.name in SKIP_ENTRIES or entry.name in claimed:
+                continue
+            size, link_count = tree_bytes_and_links(entry)
+            if size >= MIN_ORPHAN_BYTES:
+                data_rows.append((entry.name, size, link_count))
+
+    lines += ["# HELP arr_orphan_data_bytes Data in downloads that no torrent claims any more",
+              "# TYPE arr_orphan_data_bytes gauge"]
+    for name, size, link_count in data_rows:
+        shared = "yes" if link_count >= 2 else "no"
+        lines.append(f'arr_orphan_data_bytes{{name="{escape(name)[:90]}",linked="{shared}"}} {size}')
+    lines += ["# HELP arr_orphan_data_total_bytes Orphan data, split by whether the library shares it",
+              "# TYPE arr_orphan_data_total_bytes gauge"]
+    for shared in ("yes", "no"):
+        total = sum(size for _, size, link_count in data_rows
+                    if (link_count >= 2) == (shared == "yes"))
+        lines.append(f'arr_orphan_data_total_bytes{{linked="{shared}"}} {total}')
+    push("arr_orphans", lines)
+
+
 def prowlarr_indexers():
     """1 when working, 0 while Prowlarr has it disabled after failures. One series per indexer, so a
     state timeline shows them dropping out and coming back."""
@@ -487,5 +608,6 @@ if __name__ == "__main__":
     waiting_on()
     prowlarr_indexers()
     maintainerr_pending()
+    orphans()
     if failures:
         sys.exit("; ".join(failures))

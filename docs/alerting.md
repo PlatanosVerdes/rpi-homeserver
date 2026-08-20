@@ -31,6 +31,8 @@ this repo is the source of truth.
 | Pi running hot | SoC above 75 C | 10m |
 | Seed cleanup failed | `seed_cleanup_last_status != 0` | 5m |
 | Seed cleanup not running | no pass in more than 3h | 15m |
+| Download nothing can import | a queue item the *arr cannot attribute to any title | 2h |
+| Data in downloads that nothing owns | unclaimed bytes the library does not share either | 1h |
 
 Every expression uses PromQL's `bool` modifier so it returns 1 when it fires, which keeps all the
 rules on the same `threshold > 0` condition instead of seven different reduce/threshold shapes.

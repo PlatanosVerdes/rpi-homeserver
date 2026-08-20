@@ -176,7 +176,10 @@ Two consequences that read like bugs and are not:
   `onManualInteractionRequired` Telegram alert **on every restart**: one deletion on 2026-08-09 was
   still raising alerts eleven days later, after a reboot. That file never reaches Plex. Its torrent
   still owes the tracker, so it stays until the goal is met, and the queue entry is the only thing
-  worth removing. Remove it without removing the torrent.
+  worth removing. Remove it without removing the torrent. Both this and data a removed torrent left
+  behind are exported by `media-metrics.py` as `arr_orphan_*` every five minutes, and alerted on
+  ("Download nothing can import", "Data in downloads that nothing owns"), because the *arr's own
+  notification only fires when it restarts and is easy to lose among the reboot alerts.
 
 ### Indexers / trackers
 
