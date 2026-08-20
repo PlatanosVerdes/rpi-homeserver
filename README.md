@@ -143,6 +143,9 @@ Plex runs on the Pi, which is weak at video transcoding, so files should
   delete torrents for films you have not watched yet. One deleter, one policy. `DRY_RUN=1` prints
   what it would remove and touches nothing; the "Seed cleanup" row of the Disk usage dashboard shows
   the queue.
+- **Why the ratio on private trackers is near zero, and the three ways out** (gluetun on a VPN that
+  forwards a port, a seedbox, or a forward at home), with the measurements behind it:
+  [docs/seeding-and-ratio.md](docs/seeding-and-ratio.md).
 - **Unpackerr** unrars scene releases. Radarr and Sonarr cannot read a `.rar` set, so those
   releases sit in the queue as `importPending` forever and the disk fills up with parts that
   never become a movie. The original archives are left alone so the torrent keeps seeding;
