@@ -61,10 +61,46 @@ home router is pointless, because peers look for the VPN's address and port, not
 | :--- | :--- | :--- | :--- |
 | **qBittorrent inside gluetun**, on a VPN that forwards a port | ratio **and** the ISP seeing torrent traffic, with no hole in the home router | a subscription, and one evening of setup | most of the homelab world; it is the default recipe |
 | **Seedbox** | ratio, completely: a datacentre uplink seeds every new release for you, and home never appears in a swarm | more per month | anyone serious about private trackers |
-| **Port forward at home** | ratio, this afternoon, for free | leaves the home IP in every swarm and hides nothing from the ISP | people who only use private trackers, where the swarm is registered users rather than copyright monitors |
+| ~~**Port forward at home**~~ | **nothing on this line**, see CGNAT below | free | not available here |
 
 The mixed setup is what people with years in this do: **public over the VPN, private on a seedbox.**
 More moving parts, best of both.
+
+### This line is behind CGNAT, so no port forward can ever work
+
+Measured on 2026-08-20, after configuring the forward correctly on the router (rule enabled, source
+filter open, `57429` to `192.168.1.154` on TCP and UDP) and getting nothing:
+
+```
+what the internet sees      79.116.217.174     looks like a normal public address
+what the router holds       100.108.161.199    inside 100.64.0.0/10, which is CGNAT
+packets arriving at the Pi  0                  tcpdump on port 57429 while probing from outside
+```
+
+The router's own WAN address comes from asking it over UPnP, which needs no login:
+
+```bash
+# SSDP discovery, then GetExternalIPAddress on the IGD
+python3 - <<'EOF'   # full script in the git history of this file
+...
+EOF
+# IGD en 192.168.1.1 -> http://192.168.1.1:52869/gatedesc.xml
+# IP de la WAN segun el router: 100.108.161.199
+```
+
+With CGNAT the public address is shared with other customers and the carrier's NAT has no rule
+sending port 57429 here, so the inbound connection dies upstream of the house. The forward is
+configured correctly and simply cannot receive anything. There is no IPv6 escape either: the Pi has
+only ULA and Tailscale addresses, no global `2000::/3` and no default IPv6 route, so Digi is not
+delivering usable IPv6 on this line.
+
+That leaves three ways to inbound, and the free one is a phone call:
+
+1. **Ask Digi for a public IPv4.** They hand one out on request. The forward already configured then
+   starts working with nothing else to change.
+2. **A VPN that forwards a port** (Proton or PIA through gluetun). This is the only option that does
+   not depend on the ISP at all: the listening port lives at the provider, so CGNAT stops mattering.
+3. **A seedbox**, which sidesteps the house entirely.
 
 ### How gluetun changes the picture
 

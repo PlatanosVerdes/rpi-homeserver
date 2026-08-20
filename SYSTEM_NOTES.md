@@ -236,7 +236,7 @@ Three places have to agree on that number, and nothing warns when they do not:
 | :--- | :--- |
 | qBittorrent's own setting | pushed by `scripts/sync-qbit-config.sh` from `.env` |
 | the published container port | `compose-arrs.yml`, `${QBIT_BT_PORT}` tcp **and** udp |
-| the router forward | by hand, to the Pi's static IP, tcp and udp |
+| the router forward | by hand, to the Pi's static IP, tcp and udp. **Pointless while this line is behind CGNAT**, see [docs/seeding-and-ratio.md](docs/seeding-and-ratio.md) |
 
 **The failure this is written for.** The port was moved off the default in qBittorrent, but
 `compose-arrs.yml` kept publishing 6881, so inbound traffic arrived at a port nothing listened on
