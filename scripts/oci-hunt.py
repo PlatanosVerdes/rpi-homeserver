@@ -60,10 +60,14 @@ CAPACITY_MARKERS = ("out of host capacity", "out of capacity")
 # and the micro only every Nth run as a fallback.
 MICRO_EVERY = 5
 
-# Backoff doubles while Oracle keeps saying 429 and resets as soon as a call goes through, so the
-# schedule finds its own ceiling instead of needing one guessed here.
-BACKOFF_MINUTES = 10
-BACKOFF_MAX = 60
+# Backoff is per shape, not global. Oracle words the 429 as "for the user", but the evidence says
+# it is a bucket that refills in seconds rather than a punishment: in one round the first launch
+# call went through and only the second was refused. So a shape that got throttled steps aside for
+# a couple of minutes while the other one keeps asking, instead of both sitting out. It doubles
+# while the refusals repeat and resets the moment a call goes through, so if the limit really is
+# user-wide the ladder finds that out by itself.
+BACKOFF_MINUTES = 2
+BACKOFF_MAX = 30
 
 
 def private_key():
@@ -223,47 +227,49 @@ def launch(config, entry):
     return None, f"{status}: {(answer or {}).get('message', answer)}"
 
 
-def backing_off():
-    until = state().get("backoff_until")
+def cooling(shape):
+    until = state().get("cooldowns", {}).get(shape)
     if not until:
         return False
     return datetime.datetime.now(datetime.timezone.utc) < datetime.datetime.fromisoformat(until)
 
 
-def start_backoff():
+def start_backoff(shape):
     data = state()
-    throttles = data.get("throttles", 0) + 1
-    minutes = min(BACKOFF_MINUTES * (2 ** (throttles - 1)), BACKOFF_MAX)
+    throttles = data.setdefault("throttles", {})
+    count = throttles.get(shape, 0) + 1
+    throttles[shape] = count
+    minutes = min(BACKOFF_MINUTES * (2 ** (count - 1)), BACKOFF_MAX)
     until = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=minutes)
-    data["throttles"] = throttles
-    data["backoff_until"] = until.isoformat()
+    data.setdefault("cooldowns", {})[shape] = until.isoformat()
     save_state(data)
     return minutes
 
 
-def clear_throttles():
+def clear_throttles(shape):
     data = state()
-    if data.get("throttles"):
-        data["throttles"] = 0
+    if data.get("throttles", {}).get(shape):
+        data["throttles"][shape] = 0
         save_state(data)
 
 
 def shapes_for_this_run():
-    """The ARM every run, the micro one run in five. One launch call per run is the budget."""
-    runs = state().get("runs", 0) + 1
+    """One launch call per run, and never an idle run while a shape is available.
+
+    The ARM is the machine worth having, so it gets every turn; the micro takes one turn in five,
+    plus any turn the ARM is cooling down from. Only when both are cooling does the run do nothing.
+    """
     data = state()
+    runs = data.get("runs", 0) + 1
     data["runs"] = runs
     save_state(data)
-    if runs % MICRO_EVERY == 0:
-        return [SHAPES[1]]
-    return [SHAPES[0]]
+
+    arm, micro = SHAPES[0], SHAPES[1]
+    order = [micro, arm] if runs % MICRO_EVERY == 0 else [arm, micro]
+    return [entry for entry in order if not cooling(entry["shape"])][:1]
 
 
 def main():
-    if backing_off():
-        print("throttled by oracle, waiting it out")
-        return
-
     config = discover()
 
     already = existing()
@@ -274,8 +280,13 @@ def main():
         print(f"{NAME} already exists ({instance['lifecycleState']}), nothing to do")
         return
 
+    candidates = shapes_for_this_run()
+    if not candidates:
+        print("las dos formas en espera tras un 429, esta pasada no pregunta")
+        return
+
     attempts = state().get("attempts", 0)
-    for entry in shapes_for_this_run():
+    for entry in candidates:
         instance, error = launch(config, entry)
         attempts += 1
         if instance:
@@ -294,11 +305,11 @@ def main():
         low = (error or "").lower()
         if any(marker in low for marker in CAPACITY_MARKERS):
             # The call went through, which is what resets the throttle ladder.
-            clear_throttles()
+            clear_throttles(entry["shape"])
             print(f"{entry['shape']}: sin capacidad")
             continue
         if "429" in low or "too many requests" in low:
-            minutes = start_backoff()
+            minutes = start_backoff(entry["shape"])
             print(f"{entry['shape']}: 429, esperando {minutes} min")
             break
         print(f"{entry['shape']}: {error}", file=sys.stderr)
