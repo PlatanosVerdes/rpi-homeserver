@@ -99,7 +99,8 @@
       "points": "+0.4p per hour idling in #digitalcore, and the site username must match"
     },
     "api_limits": "A normal API key reaches only /api/v1/torrents, /torrents/download/{id} and /torrents/upload. Profile data is blocked, which is why the account cannot be read automatically.",
-    "_bonus_hold_decision": "Measured and rejected on 2026-08-21. Holding this tracker's finished torrents bought 27% of leech bonus, but only 9% of that was free: 94 GB already shares its inodes with the library and costs nothing, while the other 18% was bought with 179 GB of separate copies (RAR archive sets and films already watched). Paying 179 GB for cheaper downloads on a tracker already at ratio 4.21 with 86 GB of headroom solves a problem that does not exist, while the disk it takes is exactly what the TorrentLeech freeleech grabber needs. So the bonus is grown only through hardlinks from now on: the library copies, which seed for free anyway, and cross-seeds, which are hardlinks by construction. `bonus_hold` stays implemented in tracker-control.py for the day this tracker is leeched from heavily, and stays unconfigured until then."
+    "_bonus_hold_decision": "Measured and rejected on 2026-08-21. Holding this tracker's finished torrents bought 27% of leech bonus, but only 9% of that was free: 94 GB already shares its inodes with the library and costs nothing, while the other 18% was bought with 179 GB of separate copies (RAR archive sets and films already watched). Paying 179 GB for cheaper downloads on a tracker already at ratio 4.21 with 86 GB of headroom solves a problem that does not exist, while the disk it takes is exactly what the TorrentLeech freeleech grabber needs. So the bonus is grown only through hardlinks from now on: the library copies, which seed for free anyway, and cross-seeds, which are hardlinks by construction. `bonus_hold` stays implemented in tracker-control.py for the day this tracker is leeched from heavily, and stays unconfigured until then.",
+    "autobrr_filter": "DC freeleech ratio builder"
   },
   "retrotoon": {
     "_rules_read": "2026-08-21, from the site's own Rules page",
@@ -115,7 +116,8 @@
       "ann.retrotoon.world"
     ],
     "_tracker_hosts_note": "Read on 2026-08-21 out of a real .torrent fetched through Prowlarr, since the host is not in the definition.",
-    "site_wide_freeleech_until": "2026-09-30"
+    "site_wide_freeleech_until": "2026-09-30",
+    "autobrr_filter": "RetroToon cartoons"
   },
   "btschool": {
     "_rules_read": "2026-08-21, from the site's own Rules page",

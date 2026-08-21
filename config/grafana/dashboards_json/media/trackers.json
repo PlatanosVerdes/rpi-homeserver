@@ -8,7 +8,7 @@
     "policy"
   ],
   "schemaVersion": 42,
-  "version": 3,
+  "version": 4,
   "editable": true,
   "graphTooltip": 1,
   "preload": false,
@@ -41,16 +41,225 @@
     },
     {
       "type": "stat",
-      "title": "TorrentLeech ratio",
-      "description": "The account under a deadline. Disabled below 0.4.",
+      "title": "Accounts below their own line",
+      "description": "Every tracker measured against its own threshold: TorrentLeech disables under 0.4, DigitalCore revokes leeching under 0.5, C411 blocks downloads under 0.8. Anything above zero means an account is on the wrong side of a wall.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
       "gridPos": {
         "h": 5,
-        "w": 4,
+        "w": 5,
         "x": 0,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "mappings": [],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "count(((tracker_ratio or tracker_read_ratio) / tracker_min_ratio) < 1) or vector(0)",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "legendFormat": "{{tracker}}"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Tightest headroom, and where",
+      "description": "The smallest amount of non-freeleech downloading left on any account, and which one it is. This is the number that decides what may be grabbed by hand.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 5,
+        "x": 5,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "mappings": [],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 10737418240
+              },
+              {
+                "color": "green",
+                "value": 26843545600
+              }
+            ]
+          },
+          "noValue": "no data",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "textMode": "value_and_name",
+        "wideLayout": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "bottomk(1, tracker_headroom_bytes or tracker_read_headroom_bytes)",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "legendFormat": "{{tracker}}"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Obligations with the clock stopped",
+      "description": "Every tracker. A torrent that owes seeding time and is not announcing pays nothing off, and on DigitalCore one hour of silence is enough to be listed.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 5,
+        "x": 10,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "mappings": [],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(tracker_hnr_at_risk)",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "legendFormat": "{{tracker}}"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "TorrentLeech ratio",
+      "description": "Named because it is the only account under a deadline. Its line is 0.4.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 3,
+        "x": 15,
         "y": 1
       },
       "fieldConfig": {
@@ -89,8 +298,6 @@
         "orientation": "auto",
         "textMode": "auto",
         "wideLayout": true,
-        "percentChangeColorMode": "standard",
-        "showPercentChange": false,
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -107,162 +314,17 @@
           },
           "editorMode": "code",
           "expr": "tracker_ratio",
+          "refId": "A",
           "instant": false,
           "range": true,
-          "legendFormat": "__auto",
-          "refId": "A"
+          "legendFormat": "{{tracker}}"
         }
       ]
     },
     {
       "type": "stat",
-      "title": "Paid downloads that still fit",
-      "description": "buffer / min_ratio on TorrentLeech: how much non-freeleech can still be taken.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 5,
-        "x": 4,
-        "y": 1
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes",
-          "mappings": [],
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 10737418240
-              },
-              {
-                "color": "green",
-                "value": 26843545600
-              }
-            ]
-          },
-          "noValue": "no data",
-          "decimals": 1
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "percentChangeColorMode": "standard",
-        "showPercentChange": false,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "tracker_headroom_bytes",
-          "instant": false,
-          "range": true,
-          "legendFormat": "__auto",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "type": "stat",
-      "title": "Obligations with the clock stopped",
-      "description": "Every tracker. A torrent that owes seeding time and is not announcing pays nothing off. This is the only number that means act now.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 5,
-        "x": 9,
-        "y": 1
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "mappings": [],
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 1
-              }
-            ]
-          },
-          "noValue": "no data"
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "percentChangeColorMode": "standard",
-        "showPercentChange": false,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "sum(tracker_hnr_at_risk)",
-          "instant": true,
-          "range": false,
-          "legendFormat": "__auto",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "type": "stat",
-      "title": "Freeleech only",
-      "description": "Prowlarr filters every app to freeleech results while this is on.",
+      "title": "Grabs a day, all grabbers",
+      "description": "Across every enabled autobrr filter, read from autobrr itself rather than assumed. Each grab is locked on disk until its hit & run window closes, so this is a disk budget as much as a rate.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -270,89 +332,7 @@
       "gridPos": {
         "h": 5,
         "w": 3,
-        "x": 14,
-        "y": 1
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "0": {
-                  "text": "off",
-                  "color": "green",
-                  "index": 0
-                },
-                "1": {
-                  "text": "on",
-                  "color": "orange",
-                  "index": 1
-                }
-              }
-            }
-          ],
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "text",
-                "value": null
-              }
-            ]
-          },
-          "noValue": "no data"
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "percentChangeColorMode": "standard",
-        "showPercentChange": false,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "tracker_tier_freeleech_only",
-          "instant": true,
-          "range": false,
-          "legendFormat": "__auto",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "type": "stat",
-      "title": "Grabs allowed per day",
-      "description": "Chosen by the headroom tier, and sized as a disk budget.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 3,
-        "x": 17,
+        "x": 18,
         "y": 1
       },
       "fieldConfig": {
@@ -382,8 +362,6 @@
         "orientation": "auto",
         "textMode": "auto",
         "wideLayout": true,
-        "percentChangeColorMode": "standard",
-        "showPercentChange": false,
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -399,26 +377,26 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "tracker_tier_grabs_per_day",
+          "expr": "sum(tracker_grabber_per_day * tracker_grabber_enabled) or vector(0)",
+          "refId": "A",
           "instant": true,
           "range": false,
-          "legendFormat": "__auto",
-          "refId": "A"
+          "legendFormat": "{{tracker}}"
         }
       ]
     },
     {
       "type": "stat",
       "title": "Reading age",
-      "description": "tracker-stats.py runs every 30 minutes. A stale reading looks exactly like a healthy account.",
+      "description": "tracker-stats.py runs every 30 minutes. A stale reading looks exactly like a healthy account, which is why this is on the front row.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
       "gridPos": {
         "h": 5,
-        "w": 4,
-        "x": 20,
+        "w": 3,
+        "x": 21,
         "y": 1
       },
       "fieldConfig": {
@@ -453,8 +431,6 @@
         "orientation": "auto",
         "textMode": "auto",
         "wideLayout": true,
-        "percentChangeColorMode": "standard",
-        "showPercentChange": false,
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -471,10 +447,10 @@
           },
           "editorMode": "code",
           "expr": "time() - tracker_last_run_timestamp",
+          "refId": "A",
           "instant": true,
           "range": false,
-          "legendFormat": "__auto",
-          "refId": "A"
+          "legendFormat": "{{tracker}}"
         }
       ]
     },
@@ -800,7 +776,7 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 6,
+        "w": 4,
         "x": 0,
         "y": 13
       },
@@ -857,6 +833,76 @@
           "range": false,
           "legendFormat": "{{tracker}}",
           "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "bargauge",
+      "title": "Grabs a day, per tracker",
+      "description": "Zero means the filter exists and is switched off, which is different from having no grabber at all.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 4,
+        "y": 13
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "mappings": [],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "left",
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "maxVizHeight": 300,
+        "sizing": "auto",
+        "legend": {
+          "showLegend": false
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "legendFormat": "{{tracker}}",
+          "expr": "tracker_grabber_per_day * tracker_grabber_enabled"
         }
       ]
     },
