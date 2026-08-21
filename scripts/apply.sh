@@ -222,6 +222,20 @@ deploy_repo() {
     # Must happen after the pull and before compose can restart Grafana
     [[ "$label" == "homeserver" ]] && render_grafana_alerting
 
+    # qbit_manage rewrites its own config on every run, adding whatever defaults its version wants,
+    # so it cannot be handed the git copy: the working tree would be permanently dirty and the next
+    # pull would abort with "local changes would be overwritten". The committed file is the source
+    # and this is the working copy it is free to scribble on.
+    if [[ "$label" == "homeserver" && -f "$PROJECT_DIR/config/qbit-manage/config.yml" ]]; then
+        mkdir -p "$PROJECT_DIR/appdata/qbit-manage"
+        if ! cmp -s "$PROJECT_DIR/config/qbit-manage/config.yml" \
+            "$PROJECT_DIR/appdata/qbit-manage/config.yml"; then
+            cp "$PROJECT_DIR/config/qbit-manage/config.yml" \
+                "$PROJECT_DIR/appdata/qbit-manage/config.yml"
+            log "[$label] qbit-manage config updated from the committed copy"
+        fi
+    fi
+
     # The webhook receiver is a host systemd service, so a pull updates its files while the old
     # process keeps serving. Apply them here or the change is silently ignored. Safe to restart
     # from inside a deploy this same service may have spawned, thanks to KillMode=process.

@@ -139,7 +139,10 @@ services:
       - QBT_SCHEDULE=${QBIT_MANAGE_SCHEDULE}
       - QBT_LOG_LEVEL=INFO
     volumes:
-      - ./config/qbit-manage:/config
+      # appdata, not config/: this tool rewrites its own config file on every run, filling in the
+      # defaults it wants, which would leave the git working tree dirty and block the deploy's pull.
+      # config/qbit-manage/config.yml is the source, apply.sh copies it in when it changes.
+      - ${APP_CONFIG_PATH}/qbit-manage:/config
       # Only downloads: hardlink counting needs the download side, and the library is none of its
       # business, the same reasoning as qBittorrent's own mount
       - ${DATA_ROOT}/downloads:/data/downloads
