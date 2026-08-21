@@ -1,0 +1,115 @@
+# qbit_manage, running in DRY RUN alongside scripts/seed-cleanup.py until their decisions agree.
+# See PENDING.md, "Adopt the standard tools and retire the bespoke script".
+#
+# Two things this is here to do that the bespoke script cannot: notice a torrent the tracker no
+# longer recognises (a reset passkey went unnoticed for four days on 2026-08-16), and understand
+# cross-seeds, which is a prerequisite for adding cross-seed at all.
+
+commands:
+  dry_run: true            # nothing is deleted or changed until its decisions have been compared
+  cat_update: false        # categories are Radarr's and Sonarr's business, not this tool's
+  tag_update: true         # tags per tracker, which is what share_limits groups filter on
+  rem_unregistered: true   # the feature the bespoke script lacks
+  tag_tracker_error: true
+  rem_orphaned: false      # arr_orphan_* already watches this, and deleting is a separate decision
+  tag_nohardlinks: true
+  share_limits: true
+  recheck: false
+  skip_cleanup: false
+  skip_qb_version_check: false
+
+qbt:
+  host: qbittorrent:8080
+  user: !ENV QBIT_USER
+  pass: !ENV QBIT_PASSWORD
+
+settings:
+  force_auto_tmm: false            # save paths are set by the *arrs, leave them alone
+  tracker_error_tag: issue
+  nohardlinks_tag: noHL
+  private_tag: private
+  public_tag: public
+  ignoreTags_OnUpdate:
+    - noHL
+    - issue
+    - ratio
+    - waiting-seed
+
+directory:
+  # The same path qBittorrent reports, because hardlink counting compares the two views
+  root_dir: /data/downloads
+  remote_dir: /data/downloads
+  recycle_bin: /data/downloads/.RecycleBin
+  orphaned_dir: /data/downloads/orphaned_data
+
+# Every category qBittorrent holds has to be listed or the run refuses to start
+cat:
+  radarr: /data/downloads
+  tv-sonarr: /data/downloads
+  prowlarr: /data/downloads
+
+tracker:
+  torrentleech:
+    tag: torrentleech
+  tleechreload:
+    tag: torrentleech
+  digitalcore:
+    tag: digitalcore
+  c411:
+    tag: c411
+  btschool:
+    tag: btschool
+  retrotoon:
+    tag: retrotoon
+  other:
+    tag: other-tracker
+
+share_limits:
+  # Lower priority number wins, so the tracker with its own rule is evaluated before the generic
+  # private group. Every one of these mirrors config/qbittorrent/seed-rules.json for now, on
+  # purpose: the point of the dry run is to compare like with like.
+
+  torrentleech:
+    priority: 1
+    include_any_tags:
+      - torrentleech
+    # 360 h rather than the tracker's own 240 h, because qBittorrent's clock runs ahead of the
+    # tracker's: it counts while announces are being rejected. Measured gap on 2026-08-21 across
+    # 14 torrents: 26 to 118 hours. See config/qbittorrent/seed-rules.json for the full reasoning.
+    max_seeding_time: 15d
+    max_ratio: 1.2
+    cleanup: false           # dry run first; this becomes true at cutover
+    resume_torrent_after_change: false
+
+  private:
+    priority: 2
+    include_any_tags:
+      - private
+    max_seeding_time: 10d
+    max_ratio: 1.0
+    cleanup: false
+    resume_torrent_after_change: false
+
+  public:
+    priority: 3
+    include_any_tags:
+      - public
+    # The bespoke script drops a public torrent as soon as the library has the file, to get this
+    # address out of public swarms. There is no "delete once hardlinked" rule here, so the closest
+    # equivalent is time: an import takes minutes, so two hours is generous, and the library copy
+    # survives because deleting the download side only removes one of the two names.
+    min_seeding_time: 1h
+    max_seeding_time: 2h
+    max_ratio: -1
+    cleanup: false
+    resume_torrent_after_change: false
+
+orphaned:
+  empty_after_x_days: 7
+  min_file_age_minutes: 60
+  exclude_patterns:
+    - "**/.RecycleBin/**"
+    - "**/orphaned_data/**"
+    - "**/incomplete/**"
+    - "**/*.!qB"
+    - "**/*.parts"
