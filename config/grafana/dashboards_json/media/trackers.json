@@ -8,7 +8,7 @@
     "policy"
   ],
   "schemaVersion": 42,
-  "version": 5,
+  "version": 9,
   "editable": true,
   "graphTooltip": 1,
   "preload": false,
@@ -547,8 +547,8 @@
     },
     {
       "type": "bargauge",
-      "title": "Ratio against each site's own line",
-      "description": "1.0 is the wall on every site at once: TorrentLeech disables under 0.4, DigitalCore revokes leeching under 0.5, C411 blocks downloads under 0.8. The scale stops at 3 on purpose, because DigitalCore's 8.4 flattens everything else into an empty bar. Sites with no ratio rule are absent by design, not missing.",
+      "title": "How far above the line that costs the account",
+      "description": "NOT the ratio itself: this is ratio divided by the site's own threshold, so 1.00 means sitting exactly on the wall no matter which site it is. TorrentLeech disables under 0.4, DigitalCore revokes leeching under 0.5, C411 blocks downloads under 0.8. Each account's real ratio is in its own section below. The scale stops at 3 because DigitalCore's 8.4 flattens everything else into an empty bar, and sites with no ratio rule are absent by design rather than missing.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -561,7 +561,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "suffix: x the line",
           "mappings": [],
           "color": {
             "mode": "thresholds"
@@ -781,8 +781,8 @@
         "uid": "prometheus"
       },
       "gridPos": {
-        "h": 5,
-        "w": 4,
+        "h": 6,
+        "w": 5,
         "x": 0,
         "y": 13
       },
@@ -851,9 +851,9 @@
         "uid": "prometheus"
       },
       "gridPos": {
-        "h": 5,
-        "w": 4,
-        "x": 4,
+        "h": 6,
+        "w": 5,
+        "x": 5,
         "y": 13
       },
       "fieldConfig": {
@@ -921,9 +921,9 @@
         "uid": "prometheus"
       },
       "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 6,
+        "h": 6,
+        "w": 5,
+        "x": 10,
         "y": 13
       },
       "fieldConfig": {
@@ -994,31 +994,154 @@
     {
       "type": "table",
       "title": "Hours each torrent still owes",
-      "description": "Per torrent, per tracker, with whether its clock is running.",
+      "description": "Per torrent, per tracker, and whether its clock is running. A stopped clock on a torrent that still owes hours is the only row worth reacting to.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
       "gridPos": {
-        "h": 5,
-        "w": 12,
-        "x": 12,
+        "h": 6,
+        "w": 9,
+        "x": 15,
         "y": 13
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "h",
+          "unit": "short",
           "decimals": 0,
           "mappings": [],
           "custom": {
             "align": "auto",
-            "filterable": true,
+            "filterable": false,
+            "minWidth": 60,
             "cellOptions": {
               "type": "auto"
             }
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Hours owed"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "gradient"
+                }
+              },
+              {
+                "id": "max",
+                "value": 240
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 100
+                    },
+                    {
+                      "color": "red",
+                      "value": 200
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 130
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Seeding"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "yes": {
+                        "text": "running",
+                        "color": "green",
+                        "index": 0
+                      },
+                      "no": {
+                        "text": "STOPPED",
+                        "color": "red",
+                        "index": 1
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Tracker"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ratio"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "custom.width",
+                "value": 70
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "showHeader": true,
@@ -1055,7 +1178,15 @@
             "excludeByName": {
               "Time": true,
               "job": true,
-              "instance": true
+              "instance": true,
+              "__name__": true
+            },
+            "indexByName": {
+              "name": 0,
+              "tracker": 1,
+              "seeding": 2,
+              "ratio": 3,
+              "Value": 4
             },
             "renameByName": {
               "tracker": "Tracker",
@@ -1076,7 +1207,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 18
+        "y": 19
       },
       "panels": []
     },
@@ -1085,9 +1216,9 @@
       "title": "TorrentLeech: its rules",
       "gridPos": {
         "h": 10,
-        "w": 8,
+        "w": 6,
         "x": 0,
-        "y": 19
+        "y": 20
       },
       "options": {
         "mode": "markdown",
@@ -1104,9 +1235,9 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 4,
-        "x": 8,
-        "y": 19
+        "w": 6,
+        "x": 6,
+        "y": 20
       },
       "fieldConfig": {
         "defaults": {
@@ -1179,9 +1310,9 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 4,
+        "w": 6,
         "x": 12,
-        "y": 19
+        "y": 20
       },
       "fieldConfig": {
         "defaults": {
@@ -1254,9 +1385,9 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 4,
-        "x": 16,
-        "y": 19
+        "w": 6,
+        "x": 18,
+        "y": 20
       },
       "fieldConfig": {
         "defaults": {
@@ -1321,9 +1452,9 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 4,
-        "x": 20,
-        "y": 19
+        "w": 6,
+        "x": 6,
+        "y": 25
       },
       "fieldConfig": {
         "defaults": {
@@ -1387,9 +1518,9 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 4,
-        "x": 8,
-        "y": 24
+        "w": 6,
+        "x": 12,
+        "y": 25
       },
       "fieldConfig": {
         "defaults": {
@@ -1457,9 +1588,9 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 4,
-        "x": 12,
-        "y": 24
+        "w": 6,
+        "x": 18,
+        "y": 25
       },
       "fieldConfig": {
         "defaults": {
@@ -1526,7 +1657,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 29
+        "y": 30
       },
       "panels": []
     },
@@ -1535,9 +1666,9 @@
       "title": "DigitalCore: its rules",
       "gridPos": {
         "h": 10,
-        "w": 8,
+        "w": 6,
         "x": 0,
-        "y": 30
+        "y": 31
       },
       "options": {
         "mode": "markdown",
@@ -1554,9 +1685,9 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 4,
-        "x": 8,
-        "y": 30
+        "w": 6,
+        "x": 6,
+        "y": 31
       },
       "fieldConfig": {
         "defaults": {
@@ -1629,9 +1760,9 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 4,
+        "w": 6,
         "x": 12,
-        "y": 30
+        "y": 31
       },
       "fieldConfig": {
         "defaults": {
@@ -1704,9 +1835,9 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 4,
-        "x": 16,
-        "y": 30
+        "w": 6,
+        "x": 18,
+        "y": 31
       },
       "fieldConfig": {
         "defaults": {
@@ -1771,9 +1902,9 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 4,
-        "x": 20,
-        "y": 30
+        "w": 6,
+        "x": 6,
+        "y": 36
       },
       "fieldConfig": {
         "defaults": {
@@ -1837,9 +1968,9 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 4,
-        "x": 8,
-        "y": 35
+        "w": 6,
+        "x": 12,
+        "y": 36
       },
       "fieldConfig": {
         "defaults": {
@@ -1907,9 +2038,9 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 4,
-        "x": 12,
-        "y": 35
+        "w": 6,
+        "x": 18,
+        "y": 36
       },
       "fieldConfig": {
         "defaults": {
@@ -1971,7 +2102,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 40
+        "y": 41
       },
       "panels": []
     },
@@ -1980,9 +2111,9 @@
       "title": "C411: its rules",
       "gridPos": {
         "h": 10,
-        "w": 8,
+        "w": 6,
         "x": 0,
-        "y": 41
+        "y": 42
       },
       "options": {
         "mode": "markdown",
@@ -1999,9 +2130,9 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 4,
-        "x": 8,
-        "y": 41
+        "w": 6,
+        "x": 6,
+        "y": 42
       },
       "fieldConfig": {
         "defaults": {
@@ -2074,9 +2205,9 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 4,
+        "w": 6,
         "x": 12,
-        "y": 41
+        "y": 42
       },
       "fieldConfig": {
         "defaults": {
@@ -2149,9 +2280,9 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 4,
-        "x": 16,
-        "y": 41
+        "w": 6,
+        "x": 18,
+        "y": 42
       },
       "fieldConfig": {
         "defaults": {
@@ -2215,9 +2346,9 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 4,
-        "x": 20,
-        "y": 41
+        "w": 6,
+        "x": 6,
+        "y": 47
       },
       "fieldConfig": {
         "defaults": {
@@ -2282,9 +2413,9 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 4,
-        "x": 8,
-        "y": 46
+        "w": 6,
+        "x": 12,
+        "y": 47
       },
       "fieldConfig": {
         "defaults": {
@@ -2348,9 +2479,9 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 4,
-        "x": 12,
-        "y": 46
+        "w": 6,
+        "x": 18,
+        "y": 47
       },
       "fieldConfig": {
         "defaults": {
@@ -2421,7 +2552,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 51
+        "y": 52
       },
       "panels": []
     },
@@ -2430,9 +2561,9 @@
       "title": "BTSCHOOL: its rules",
       "gridPos": {
         "h": 10,
-        "w": 8,
+        "w": 6,
         "x": 0,
-        "y": 52
+        "y": 53
       },
       "options": {
         "mode": "markdown",
@@ -2449,9 +2580,9 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 4,
-        "x": 8,
-        "y": 52
+        "w": 6,
+        "x": 6,
+        "y": 53
       },
       "fieldConfig": {
         "defaults": {
@@ -2524,9 +2655,9 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 4,
+        "w": 6,
         "x": 12,
-        "y": 52
+        "y": 53
       },
       "fieldConfig": {
         "defaults": {
@@ -2591,9 +2722,9 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 4,
-        "x": 16,
-        "y": 52
+        "w": 6,
+        "x": 18,
+        "y": 53
       },
       "fieldConfig": {
         "defaults": {
@@ -2657,9 +2788,9 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 4,
-        "x": 20,
-        "y": 52
+        "w": 6,
+        "x": 6,
+        "y": 58
       },
       "fieldConfig": {
         "defaults": {
@@ -2724,9 +2855,9 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 4,
-        "x": 8,
-        "y": 57
+        "w": 6,
+        "x": 12,
+        "y": 58
       },
       "fieldConfig": {
         "defaults": {
@@ -2790,9 +2921,9 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 4,
-        "x": 12,
-        "y": 57
+        "w": 6,
+        "x": 18,
+        "y": 58
       },
       "fieldConfig": {
         "defaults": {
@@ -2854,7 +2985,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 62
+        "y": 63
       },
       "panels": []
     },
@@ -2863,9 +2994,9 @@
       "title": "retrotoon.world: its rules",
       "gridPos": {
         "h": 10,
-        "w": 8,
+        "w": 6,
         "x": 0,
-        "y": 63
+        "y": 64
       },
       "options": {
         "mode": "markdown",
@@ -2882,9 +3013,9 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 4,
-        "x": 8,
-        "y": 63
+        "w": 6,
+        "x": 6,
+        "y": 64
       },
       "fieldConfig": {
         "defaults": {
@@ -2948,9 +3079,9 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 4,
+        "w": 6,
         "x": 12,
-        "y": 63
+        "y": 64
       },
       "fieldConfig": {
         "defaults": {
@@ -3014,9 +3145,9 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 4,
-        "x": 16,
-        "y": 63
+        "w": 6,
+        "x": 18,
+        "y": 64
       },
       "fieldConfig": {
         "defaults": {
@@ -3081,9 +3212,9 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 4,
-        "x": 20,
-        "y": 63
+        "w": 6,
+        "x": 6,
+        "y": 69
       },
       "fieldConfig": {
         "defaults": {
@@ -3148,9 +3279,9 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 4,
-        "x": 8,
-        "y": 68
+        "w": 6,
+        "x": 12,
+        "y": 69
       },
       "fieldConfig": {
         "defaults": {
@@ -3214,9 +3345,9 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 4,
-        "x": 12,
-        "y": 68
+        "w": 6,
+        "x": 18,
+        "y": 69
       },
       "fieldConfig": {
         "defaults": {
@@ -3287,7 +3418,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 73
+        "y": 74
       },
       "panels": []
     },
@@ -3303,7 +3434,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 74
+        "y": 75
       },
       "fieldConfig": {
         "defaults": {
@@ -3388,7 +3519,7 @@
         "h": 7,
         "w": 8,
         "x": 8,
-        "y": 74
+        "y": 75
       },
       "fieldConfig": {
         "defaults": {
@@ -3461,7 +3592,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 74
+        "y": 75
       },
       "fieldConfig": {
         "defaults": {
@@ -3534,7 +3665,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 81
+        "y": 82
       },
       "fieldConfig": {
         "defaults": {
@@ -3607,7 +3738,7 @@
         "h": 7,
         "w": 4,
         "x": 8,
-        "y": 81
+        "y": 82
       },
       "fieldConfig": {
         "defaults": {
@@ -3677,7 +3808,7 @@
         "h": 7,
         "w": 4,
         "x": 12,
-        "y": 81
+        "y": 82
       },
       "fieldConfig": {
         "defaults": {
@@ -3751,7 +3882,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 81
+        "y": 82
       },
       "fieldConfig": {
         "defaults": {
