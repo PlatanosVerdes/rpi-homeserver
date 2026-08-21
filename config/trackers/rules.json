@@ -30,5 +30,51 @@
       }
     ],
     "min_free_gb": 400
+  },
+  "digitalcore": {
+    "_rules_read": "2026-08-21, from the site's own Rules page",
+    "prowlarr_indexer": "DigitalCore (API)",
+    "min_ratio": 0.5,
+    "_min_ratio_note": "Below it: five days of ratio watch, then leeching is revoked. The account stays enabled, so this costs downloads rather than the account.",
+    "hit_and_run": {
+      "min_seed_hours": 240,
+      "min_ratio": 1.0
+    },
+    "_hit_and_run_note": "The site counts H&R (the profile showed 1) but its Rules page does not state the criteria, so this is the generic private default until their FAQ says otherwise. Do not relax it on a guess.",
+    "tracker_hosts": [
+      "tracker.digitalcore.club",
+      "trackerprxy.digitalcore.club"
+    ],
+    "cross_seed": "explicitly allowed by rule 2, in those words",
+    "never": "add trackers to their .torrent files, or enable DHT/PEX on them: rule 2 forbids modifying their torrents at all, which is exactly what fixed TorrentLeech's passkey"
+  },
+  "retrotoon": {
+    "_rules_read": "2026-08-21, from the site's own Rules page",
+    "prowlarr_indexer": "Generic Torznab",
+    "min_ratio": 0,
+    "_min_ratio_note": "No ratio requirement stated. The rule here is seed time, not ratio.",
+    "hit_and_run": {
+      "min_seed_hours": 72,
+      "min_ratio": 1.0
+    },
+    "_hit_and_run_note": "72 h of seeding, reached within the first 10 days after the download, and the site calls it its strictest rule with no exceptions. The generic 240 h goal in seed-rules.json already exceeds it, so nothing is at risk while no override exists.",
+    "tracker_hosts": [],
+    "_tracker_hosts_note": "Unknown until the first torrent from here lands in qBittorrent: the announce host is inside the .torrent, not in the Prowlarr definition. Until then the generic private goal applies, which is stricter.",
+    "site_wide_freeleech_until": "2026-09-30"
+  },
+  "btschool": {
+    "_rules_read": "2026-08-21, from the site's own Rules page",
+    "prowlarr_indexer": "BTSCHOOL",
+    "min_ratio": 0,
+    "_min_ratio_note": "The rules say a low ratio costs download privileges but put the number in their FAQ, which has not been read yet.",
+    "hit_and_run": {
+      "min_seed_hours": 20,
+      "min_ratio": 1.0
+    },
+    "_hit_and_run_note": "20 h of seeding within 10 days of finishing, regardless of torrent size, and upload above download clears it outright. Ten unmet obligations is a ban, clearing one costs 20000 bonus points, and an H&R ban is lifted only by a 100 CNY donation.",
+    "tracker_hosts": [],
+    "_tracker_hosts_note": "Unknown until the first torrent from here lands in qBittorrent.",
+    "max_upload_mbytes_per_second": 25,
+    "_max_upload_note": "Their cap, not ours: over 25 MB/s on a reported announce is penalised at three times the reported upload, and over 100 MB/s is an automatic ban. qBittorrent's upload is unlimited and its global limit cannot be set per tracker, so this only becomes a real constraint once something seeds here. Measured peak so far across all trackers: about 0.5 MB/s."
   }
 }
