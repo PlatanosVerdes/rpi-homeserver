@@ -381,6 +381,15 @@ Prowlarr rather than guessed, so the seed goal is now theirs and not the generic
 third more than the 72 h they ask for, which covers a lagging tracker clock and still frees the disk
 two and a half times sooner than 240 h did.
 
+**autobrr is wired up and switched off.** The indexer, its passkey and the IRC connection to
+`irc.retrotoon.world:6697` (`#announce`, nick `PlatanoVerde`, bot mode on) are all in place, and the
+filter `RetroToon (off until wanted)` is **disabled**: the plumbing is done and the tap is closed,
+because this is a cartoons-only site and disk is the scarce thing. Enabling it is one toggle.
+
+**C411 cannot have a grabber at all**: autobrr ships no definition for it. That is no loss. With
+1.95 GB of headroom the correct policy there is not to grab, and its hit & run system being disabled
+does not change the ratio wall.
+
 **The 40-day freeleech is the moment to take anything wanted from here**, since downloads cost
 nothing against ratio while it lasts.
 
