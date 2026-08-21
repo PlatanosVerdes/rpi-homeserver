@@ -226,12 +226,45 @@ deploy_repo() {
     # so it cannot be handed the git copy: the working tree would be permanently dirty and the next
     # pull would abort with "local changes would be overwritten". The committed file is the source
     # and this is the working copy it is free to scribble on.
-    # sudo and chown, not a bare mkdir: compose can reach this mount first, and then Docker creates
-    # the directory as root, the copy below fails with "Permission denied", and the container
-    # restart-loops on a /config with no config.yml in it. Idempotent, so it costs nothing.
+    # Docker creates a missing bind-mount target as root, which locks out every container that runs
+    # as PUID:PGID: autobrr crash-looped on "permission denied" creating its own database, and
+    # qbit-manage before it could not be handed its config. So pre-create those directories, and
+    # only those: appdata holds ten directories that are legitimately root-owned because their
+    # container runs as root, and chowning those would break them instead.
+    #
+    # The list comes from the resolved compose config rather than a hand-kept one here, so a new
+    # service is covered the day it is added and nobody has to remember this comment exists.
+    if [[ "$label" == "homeserver" ]]; then
+        local appdata_dirs
+        appdata_dirs=$(cd "$PROJECT_DIR" && docker compose --profile all config --format json 2>/dev/null |
+            python3 -c '
+import json, sys
+try:
+    doc = json.load(sys.stdin)
+except ValueError:
+    sys.exit(0)
+for svc in (doc.get("services") or {}).values():
+    if svc.get("user") != "1000:1000":
+        continue
+    for vol in svc.get("volumes") or []:
+        src = vol.get("source") or ""
+        if "/appdata/" in src:
+            print(src)
+' | sort -u) || appdata_dirs=""
+        while IFS= read -r dir; do
+            [[ -n "$dir" ]] || continue
+            if [[ ! -d "$dir" ]] || [[ "$(stat -c %u "$dir")" != "$(id -u)" ]]; then
+                sudo mkdir -p "$dir" && sudo chown "$(id -u):$(id -g)" "$dir" &&
+                    log "[$label] fixed ownership of ${dir#"$PROJECT_DIR/"}"
+            fi
+        done <<< "$appdata_dirs"
+    fi
+
+    # qbit_manage rewrites its own config on every run, adding whatever defaults its version wants,
+    # so it cannot be handed the git copy: the working tree would be permanently dirty and the next
+    # pull would abort with "local changes would be overwritten". The committed file is the source
+    # and this is the working copy it is free to scribble on.
     if [[ "$label" == "homeserver" && -f "$PROJECT_DIR/config/qbit-manage/config.yml" ]]; then
-        sudo mkdir -p "$PROJECT_DIR/appdata/qbit-manage"
-        sudo chown "$(id -u):$(id -g)" "$PROJECT_DIR/appdata/qbit-manage"
         if ! cmp -s "$PROJECT_DIR/config/qbit-manage/config.yml" \
             "$PROJECT_DIR/appdata/qbit-manage/config.yml"; then
             cp "$PROJECT_DIR/config/qbit-manage/config.yml" \
