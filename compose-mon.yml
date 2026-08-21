@@ -127,6 +127,12 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
       # No Telegram vars here on purpose: the contact point is rendered before startup by
       # apply.sh, so the token never enters the container's environment
+      #
+      # Every link Grafana puts in a notification is built from this. Without it the default is
+      # http://localhost:3000, and Telegram silently refuses to linkify a localhost URL: the
+      # "Silence this" line arrived as plain text with no entity, which reads like a broken alert
+      # rather than a missing setting.
+      - GF_SERVER_ROOT_URL=https://grafana.platanosverdes.com
     volumes:
       - ${APP_CONFIG_PATH}/grafana/data:/var/lib/grafana
       - ${CONFIG_ROOT}/grafana/provisioning:/etc/grafana/provisioning:ro
