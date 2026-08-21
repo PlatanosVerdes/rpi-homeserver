@@ -234,7 +234,7 @@
     ]
   },
   {
-    "name": "RAR pack (prefer not)",
+    "name": "RAR pack (reject)",
     "includeCustomFormatWhenRenaming": false,
     "specifications": [
       {

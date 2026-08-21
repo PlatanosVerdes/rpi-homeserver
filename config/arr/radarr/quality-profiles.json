@@ -411,8 +411,8 @@
         "score": 3000
       },
       {
-        "formatName": "RAR pack (prefer not)",
-        "score": -300
+        "formatName": "RAR pack (reject)",
+        "score": -20000
       }
     ],
     "minUpgradeFormatScore": 1,
@@ -833,8 +833,8 @@
         "score": 3000
       },
       {
-        "formatName": "RAR pack (prefer not)",
-        "score": -300
+        "formatName": "RAR pack (reject)",
+        "score": -20000
       }
     ],
     "minUpgradeFormatScore": 1,
@@ -1255,8 +1255,8 @@
         "score": 3000
       },
       {
-        "formatName": "RAR pack (prefer not)",
-        "score": -300
+        "formatName": "RAR pack (reject)",
+        "score": -20000
       }
     ],
     "minUpgradeFormatScore": 1,

@@ -105,12 +105,25 @@ Plex runs on the Pi, which is weak at video transcoding, so files should
   copy of the disc, but that extra quality is imperceptible on a 55-inch TV or an iPad and
   only wastes disk, whereas a Bluray-1080p encode is roughly 99% of the quality at 5-15 GB.
 - **Penalize** Remux and heavy lossless audio (DTS-HD): quality the devices cannot benefit from.
-- **Prefer a single file over a RAR pack** (`RAR pack (prefer not)`, -300). A packed release is
-  seeded as its `.rNN` archives while Plex plays the `.mkv` unpackerr extracts, so the film sits
-  on disk twice until the tracker is paid. There is nothing in a release title that says "this
-  is packed", so the format matches the groups that actually did it here (GAZPROM, CEBRAY,
-  GAZER) and the list grows as more turn up. -300 is a nudge, not a veto: `minFormatScore` is
-  -6000, so a packed release still wins when it is the only copy of a film.
+- **Reject RAR packs outright** (`RAR pack (reject)`, **-20000**). A packed release is seeded as
+  its `.rNN` archives while Plex plays the `.mkv` unpackerr extracts, so the film sits on disk
+  twice until the tracker is paid, and no hardlink can ever fix that: the extracted file is new
+  bytes. There is nothing in a release title that says "this is packed", so the format matches the
+  groups that actually did it here (GAZPROM, CEBRAY, GAZER) and the list grows as more turn up.
+
+  It used to be -300, a nudge rather than a veto, and the nudge lost. Measured on 2026-08-21,
+  **Project Hail Mary was occupying 197 GB in 182 files with no shared inode**: two packed
+  releases of the same film, 81.7 GB and 57.8 GB of archives, plus the 57.5 GB `.mkv` extracted
+  from one of them. That is 7% of the data disk on one title.
+
+  The score is -20000 rather than -6000 for a reason worth knowing: `minFormatScore` is -6000 and a
+  release is only rejected when its **total** falls below it, so positives offset the penalty. The
+  release that caused the 197 GB was Spanish-audio (+3000 or more), which a -6000 penalty would
+  have let through at -3000. -20000 cannot be offset by anything this profile awards.
+
+  **The trade-off, stated plainly:** a film available only as a packed release will now not be
+  downloaded at all. Project Hail Mary is exactly that case, and this repo is choosing the empty
+  shelf over 197 GB.
 - **Language preference:** Castilian Spanish > VOSE (original audio with Spanish subtitles) > English > Latin-American Spanish (avoided).
 - **Rule of thumb for smooth playback:** 1080p, x264/H.264, AAC or EAC3/AC3, text subtitles (SRT / mov_text).
 
