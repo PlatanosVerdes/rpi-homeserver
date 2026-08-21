@@ -314,9 +314,12 @@ Add their automatic freeleech on anything 15 GB or larger and every new torrent'
 the cheapest path to unlimited downloading on this box runs through DigitalCore rather than
 TorrentLeech.
 
-**Half of this is now automatic** (2026-08-21): `tracker-control.py` holds up to 700 GB of that
-tracker's torrents against a 600 GB free-space floor, ranked by `min(size, 50 GiB) x (1 + 1/seeders)`,
-so spare disk earns the bonus instead of being reclaimed. Currently 273 GB held, about 27%.
+**Tried and rejected the same day.** Holding that tracker's torrents to grow the bonus was
+implemented, measured and turned off: of a 27% bonus, 9% comes free from torrents that share inodes
+with the library and 18% was bought with 179 GB of separate copies, on an account already at ratio
+4.21 with 86 GB of headroom. That disk is worth more to the TorrentLeech grabber. The bonus grows
+through hardlinks only, which is what cross-seed produces anyway. The mechanism stays in
+`tracker-control.py`, unconfigured, for the day the arithmetic reverses.
 
 **The half that is left needs two secrets from the site**, because autobrr ships a DigitalCore
 definition (IRC `irc.digitalcore.club:7000`, channel `#announce`, announcer `ENDOR`, and the announce
