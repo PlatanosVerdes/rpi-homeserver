@@ -288,9 +288,24 @@ The rules from (1) belong in configuration, not in anyone's memory. Where things
 | BTSCHOOL | open | open |
 | retrotoon.world (Generic Torznab) | open | open |
 
-Two decisions still to make: whether TorrentLeech's freeleech-only flag comes off once the ratio is
-comfortable or stays forever as cheap insurance, and what each remaining tracker actually demands
-before its goal can be set honestly rather than guessed.
+**The freeleech-only flag is not a decision, it is a control loop.** It should come on when the
+buffer is thin and go off when it is comfortable, which makes it the natural consumer of the metrics
+in (3) rather than something to argue about once:
+
+```
+buffer under 20 GB   ->  requiredFlags = [1]   (freeleech only, the automation cannot dig deeper)
+buffer over 50 GB    ->  requiredFlags = []    (anything goes again)
+in between           ->  leave it alone, hysteresis keeps it from flapping
+```
+
+Both halves are already proven to work by hand: the flag is set through
+`/api/v3/indexer/{id}` with `?forceSave=true` (Radarr refuses the save while the indexer is
+unreachable), and the buffer is `uploaded - threshold x downloaded` from the site's own header. So
+this is a dozen lines on top of whatever reads the stats, and it turns a rule that was written down
+into a rule that enforces itself.
+
+Still open per tracker: what each one actually demands, before its seed goal can be set honestly
+rather than guessed.
 
 **The trap to remember when editing any of this:** `sync-arr-config.sh` reports success and applies
 nothing when Radarr holds a custom format the repo does not list. Measured on 2026-08-21 with 13
