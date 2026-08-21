@@ -312,7 +312,22 @@ Two rules shape the play, and both point away from what TorrentLeech rewards:
 
 Add their automatic freeleech on anything 15 GB or larger and every new torrent's first 24 hours, and
 the cheapest path to unlimited downloading on this box runs through DigitalCore rather than
-TorrentLeech. Worth deciding whether cross-seed and an autobrr filter should be aimed there first.
+TorrentLeech.
+
+**Half of this is now automatic** (2026-08-21): `tracker-control.py` holds up to 700 GB of that
+tracker's torrents against a 600 GB free-space floor, ranked by `min(size, 50 GiB) x (1 + 1/seeders)`,
+so spare disk earns the bonus instead of being reclaimed. Currently 273 GB held, about 27%.
+
+**The half that is left needs two secrets from the site**, because autobrr ships a DigitalCore
+definition (IRC `irc.digitalcore.club:7000`, channel `#announce`, announcer `ENDOR`, and the announce
+line carries a `freeleech` tag):
+
+- its **passkey**, for the download URL `/api/v1/torrents/download/{id}/{passkey}`;
+- its **IRC key**, for the invite command `/msg ENDOR !invite <username> <irckey>`.
+
+NickServ stays empty, as on TorrentLeech. The nick must match the site username exactly, which also
+earns 0.4 points an hour for idling in `#digitalcore`. autobrr also ships a `retrotoonworld`
+definition; its passkey is already known from its announce URL.
 
 ### C411 has 2 GB of headroom and nobody was watching it
 

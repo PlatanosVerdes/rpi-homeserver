@@ -279,7 +279,32 @@ anything at all.
 | Seed goal | **168 h / ratio 1.0**, keyed on both announce hosts | a week, 40% above their 5 days, because the site counts only what it saw announced. It was 240 h while their rule was unknown |
 | H&R measurement | 120 h / 1.0, their real rule | 8 obligations open right now, worst 115 h to go. None with the clock stopped |
 | cross-seed | **included**, and the first two matches came from here | the site says cross-seeding is fine, and it is free ratio |
+| Spare disk | **up to 700 GB held for the leech bonus**, floor 600 GB free | see below: here, not deleting is the correct policy |
 | Rules of record | `config/trackers/rules.json` | including the two things never to do to their torrents |
+
+#### Spare disk is turned into free downloads, automatically
+
+This is the one tracker where **deleting is the wrong instinct**. Every 10 GB held is 1% off what
+every future download costs, so disk that is sitting empty is money left on the table.
+`tracker-control.py` therefore ranks this tracker's finished torrents by what they actually earn and
+tags the best ones `keep-bonus`, which `seed-cleanup.py` never deletes:
+
+```
+value = min(size, 50 GiB) x (1 + 1 / seeders)      the site's own two rules, applied
+budget = 700 GB, shrinking by whatever is missing below 600 GB free
+```
+
+Currently holding 10 torrents, 273 GB, about 27%. Note what the ranking does: a 4.9 GB film with
+3 seeders outranks a 12.9 GB one with 74, because scarcity nearly doubles its value. That is the
+site's rule, not a preference.
+
+Above the floor **nothing on this tracker is deleted at all**. Below it the budget shrinks by exactly
+what is missing, the tags come off the least valuable first, and the next cleanup pass reclaims them.
+No case-by-case decisions, and no question to answer when a RAR release's archives come up: on
+TorrentLeech they go, here they pay their way until the disk needs them.
+
+The tag is `keep-bonus`, separate from the plain **`keep`** a person adds by hand, which the
+automation never touches.
 
 **The passkey trick used on TorrentLeech is forbidden here.** When TorrentLeech reset its passkey,
 every torrent was fixed by rewriting its announce URL with `addTrackers` and `removeTrackers`. Rule 2
