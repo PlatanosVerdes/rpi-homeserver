@@ -186,11 +186,25 @@ then complain it cannot import it. These grabs belong to nothing: they exist to 
 the `ratio` tag says so. `seed-cleanup.py` finds no library copy for them and falls through to the
 TorrentLeech goal, which is past the obligation either way.
 
-Two API traps, both of which cost an hour: in a qBittorrent action `label` does nothing (it is
-Deluge's field, tags come from `tags`), and `POST /api/filters` fails with
-`NOT NULL constraint failed: filter.resolutions` unless every list field is present, even empty,
-while storing neither the actions nor the indexer link, which need `POST /api/actions` and a
-follow-up `PUT /api/filters/{id}` with nulls stripped.
+Three API traps in autobrr, each of which cost an hour:
+
+- In a qBittorrent action **`label` does nothing**. It is Deluge's field; qBittorrent tags come from
+  `tags`. A filter can match, push successfully, and still land untagged.
+- **`POST /api/filters` fails** with `NOT NULL constraint failed: filter.resolutions` unless every
+  list field is present, even empty, and stores neither the actions nor the indexer link: those need
+  `POST /api/actions` and a follow-up `PUT /api/filters/{id}` with nulls stripped.
+- **`PUT /api/actions/{id}` detaches the action** unless the body carries `filter_id`, because the
+  GET that feeds the update does not return that field. A detached action leaves the filter matching
+  releases and pushing nothing, and the only trace is one line in autobrr's log:
+  `no active actions found for filter`. It cost four freeleech releases on 2026-08-21, announced in
+  the hour after the action was edited. `tracker-control.py` now asserts
+  `actions_enabled_count >= 1` on every run, and the "filter matched" count in autobrr's own log is
+  worth comparing against what actually reached the client.
+
+**One download slot means one download.** TorrentLeech's entry class grants a single slot and a
+partially downloaded torrent occupies it, so qBittorrent's queue is set to `max_active_downloads: 1`
+in `config/qbittorrent/preferences.json`. Grabs then queue instead of jamming the slot, which is also
+why the grab rate can be raised without thinking about concurrency.
 
 ### Links
 

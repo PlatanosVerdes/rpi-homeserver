@@ -199,6 +199,19 @@ def set_grab_rate(filter_name, per_day, enabled=True):
     autobrr(f"filters/{current['id']}", body=body, method="PUT")
     changes.append(f"autobrr: {filter_name} -> "
                    f"{f'{per_day} grabs/day' if enabled else 'paused, disk is full'}")
+    check_has_action(filter_name)
+
+
+def check_has_action(filter_name):
+    """A filter with no enabled action matches releases and pushes nothing, and says so only in
+    autobrr's own log: "no active actions found for filter". It happened on 2026-08-21, silently, for
+    the four freeleech releases announced in the hour after an action was updated without its
+    `filter_id` (the GET that feeds the update does not return that field, so the PUT nulls it).
+    Anything that touches the filter checks afterwards."""
+    listed = next((f for f in autobrr("filters") if f["name"] == filter_name), None)
+    if not listed or not listed.get("actions_enabled_count"):
+        raise RuntimeError(f"autobrr filter {filter_name} has no enabled action: it will match "
+                           f"releases and push nothing")
 
 
 def push(job, lines):
@@ -277,6 +290,7 @@ def main():
             # the indexer at every tier.
             lambda: set_indexer_enabled("sonarr", needle, True),
             lambda: set_grab_rate(config["autobrr_filter"], per_day, room) if per_day else None,
+            lambda: check_has_action(config["autobrr_filter"]),
         ):
             try:
                 action()
