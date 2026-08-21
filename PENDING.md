@@ -388,7 +388,8 @@ wants to maintain it. So, in this order:
    (`rem_unregistered`, `share_limits`, `rem_orphaned`, `cat_update`). Config in
    `appdata/qbit-manage/config.yml`, which the tool rewrites itself, so it is not in git.
 
-   **The evaluation, and what to do on or after 2026-08-28:**
+   **Approved on 2026-08-21, so no need to ask again.** The evaluation, and what to do on or after
+   2026-08-28:
 
    1. Compare a week of both tools on the same torrents. `seed-cleanup.py` reports its decisions in
       `seed-cleanup.log` and the Retention dashboard; qbit_manage's are in `docker logs qbit-manage`.
@@ -410,6 +411,11 @@ wants to maintain it. So, in this order:
 
    One thing to fix while evaluating: the `nohardlinks` list names `tv-sonarr`, and qbit_manage
    reports no torrents in that category, so series are currently outside the check.
+
+   And one that cross-seed introduced: its injected torrents land in a `cross-seed-link` category
+   that no list here mentions, so they are outside `nohardlinks` too. That is correct for now (they
+   are hardlinks by definition), but the category has to be accounted for before `share_limits` is
+   allowed to delete anything.
 
 3. **What cross-seed changes about deletion**, now that it runs: a cross-seeded file has a link
    count above one for as long as the second torrent exists, and `seed-cleanup.py` reads that as
