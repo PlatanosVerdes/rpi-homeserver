@@ -335,9 +335,50 @@ that combination is the cheapest ratio available anywhere on this box.
 
 ## C411
 
-The account is alive: 4 torrents seeding, 2.3 GB uploaded. What is broken is only Prowlarr's search
-path, which is routed through a SOCKS proxy whose credentials have expired. Its rules have not been
-read yet, so it runs on the generic 240 h / 1.0 goal.
+Rules read 2026-08-21. **This is the tightest account on the box, and it is the one nobody was
+watching.** The site shows 52.2 GB up against 63.3 GB down for a ratio of **0.83**, and its minimum
+to download anything is **0.8**.
+
+```
+headroom = (52.2 - 0.8 x 63.3) / 0.8 = 1.95 GB of paid downloads left
+```
+
+Two gigabytes. One ordinary film that is not freeleech blocks leeching on this site.
+
+And the ratio is thinner than it looks: **new accounts get 50 GB of upload credit** that counts
+towards the ratio, so of those 52.2 GB only **2.3 GB were really uploaded** (which matches
+qBittorrent exactly). The credit is a one-off, it does not grow back, and it is what has been holding
+this account above its line.
+
+### Its rules
+
+| Rule | Value |
+| :--- | :--- |
+| Minimum ratio to download | **0.8**. Below it, downloads are blocked until it recovers. The account is not disabled |
+| Signup credit | **50 GB of upload**, counted in the ratio |
+| Hit & run | **currently disabled site-wide.** Only ratio decides whether you can leech |
+| H&R when it returns | 72 h **or** ratio 1.0 per torrent, with a 24 h grace period before the clock starts |
+| H&R exemptions | global ratio ≥ 2.0, your first three torrents, anything under 100 MB, anything less than half downloaded |
+| H&R sanctions | a warning 24 h before the deadline, 3 active violations block downloads, **5 strikes is an automatic ban** |
+| Cross-seeding | **explicitly allowed**: "vous uploadez réellement les données" |
+| Freeleech | full (0x), 50%, and 2x upload, per torrent, per account or site-wide |
+| Cheating | announced upload is cross-checked against real swarm activity; ghost leech and modified clients lead to a permanent ban |
+
+### How it is configured here
+
+| Piece | Value | Why |
+| :--- | :--- | :--- |
+| Prowlarr | id 9, routed through the `nordvpn` SOCKS proxy | **searching is broken**: the proxy credentials have expired. The announce path is fine, which is why 4 torrents still seed and have uploaded 2.3 GB |
+| Seed goal | the generic 240 h / ratio 1.0 | more than three times their 72 h, so nothing can trip their H&R even after it comes back |
+| H&R measurement | on, as if their system were enabled | it is documented as returning, and measuring early costs nothing |
+| cross-seed | included | |
+
+### What to do about it
+
+Nothing automatic can help here yet, because the account cannot be read: its Prowlarr entry holds no
+username and password, so `tracker-stats.py` has no way in. Until it does, the rule is manual and
+simple: **on C411, freeleech only.** Everything else there is two gigabytes from blocking the
+account's downloads.
 
 ## Adding a new private tracker
 

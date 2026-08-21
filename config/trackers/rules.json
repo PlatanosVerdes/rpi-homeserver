@@ -76,5 +76,22 @@
     "_tracker_hosts_note": "Unknown until the first torrent from here lands in qBittorrent.",
     "max_upload_mbytes_per_second": 25,
     "_max_upload_note": "Their cap, not ours: over 25 MB/s on a reported announce is penalised at three times the reported upload, and over 100 MB/s is an automatic ban. qBittorrent's upload is unlimited and its global limit cannot be set per tracker, so this only becomes a real constraint once something seeds here. Measured peak so far across all trackers: about 0.5 MB/s."
+  },
+  "c411": {
+    "_rules_read": "2026-08-21, from the site's own Ratio & Seedtime wiki page",
+    "prowlarr_indexer": "C411",
+    "min_ratio": 0.8,
+    "_min_ratio_note": "Below 0.8 downloads are blocked until the ratio recovers. The account is not disabled, it just cannot leech.",
+    "hit_and_run": {
+      "min_seed_hours": 72,
+      "min_ratio": 1.0
+    },
+    "_hit_and_run_note": "Their H&R system is DISABLED right now, and the wiki documents the rules for when it comes back: 72 h or ratio 1.0 per torrent, a 24 h grace period, exemptions for a global ratio of 2.0, the first three torrents, anything under 100 MB and anything less than half downloaded. Three active violations block downloads, five strikes is a ban. Measured here as if it were on, because it will be.",
+    "tracker_hosts": [
+      "c411.org"
+    ],
+    "signup_upload_credit_gb": 50,
+    "_credit_note": "New accounts get 50 GB of upload credit that counts towards the ratio, so the 52.2 GB the site shows is 2.3 GB really uploaded plus the credit. Any headroom figure from this site is inflated by it and does not grow back.",
+    "cross_seed": "explicitly allowed by the wiki"
   }
 }
