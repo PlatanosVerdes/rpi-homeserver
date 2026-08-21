@@ -174,9 +174,10 @@ Plex runs on the Pi, which is weak at video transcoding, so files should
 
   **`keep` is the manual override**: tag a torrent `keep` in qBittorrent and this never touches it,
   whatever the goals say. No deploy, no config edit, effective on the next pass. `keep-bonus` is the
-  same brake applied automatically: on a tracker that pays for holding data (DigitalCore gives 1% off
-  every download per 10 GB seeded), `tracker-control.py` tags the most valuable torrents up to a disk
-  budget and releases them as space runs short. See [docs/private-trackers.md](docs/private-trackers.md).
+  same brake applied automatically by `tracker-control.py`, for a tracker that pays for holding data.
+  It is implemented and deliberately **not** configured: measured on DigitalCore, it bought 18% of
+  leech bonus for 179 GB of disk on an account already at ratio 4.21, while the free 9% that comes
+  from library hardlinks costs nothing. See [docs/private-trackers.md](docs/private-trackers.md).
 
   Goals live in `config/qbittorrent/seed-rules.json` (240 h seeding or ratio 1.0 for private, nothing
   for public). Whether a tracker is private comes from qBittorrent, so there is no list to maintain.
