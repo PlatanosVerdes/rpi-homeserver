@@ -13,5 +13,23 @@
   },
 
   "trackers": {
+    "_comment": [
+      "Per-tracker overrides. TorrentLeech clears a hit-and-run at 240 h of seeding, but it counts",
+      "only the hours it actually saw: qBittorrent's own counter keeps running while announces fail,",
+      "and it ran for days with an invalid passkey after the account was disabled on 2026-08-16.",
+      "Measured on 2026-08-21, the client was ahead of the tracker by 26 to 118 hours across the 14",
+      "torrents on the H&R list, and Pokemon Detective Pikachu was 3 hours from being deleted at 237 h",
+      "of local time while the tracker had credited 152. Deleting it there would have left the warning",
+      "uncleared forever, which is the one outcome this script exists to prevent. 360 h covers the",
+      "worst measured gap with margin, and the ratio target is above 1.0 for the same reason."
+    ],
+    "tracker.torrentleech.org": {
+      "min_seed_hours": 360,
+      "min_ratio": 1.2
+    },
+    "tracker.tleechreload.org": {
+      "min_seed_hours": 360,
+      "min_ratio": 1.2
+    }
   }
 }
