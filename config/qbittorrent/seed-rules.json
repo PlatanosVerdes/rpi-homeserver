@@ -30,6 +30,15 @@
     "tracker.tleechreload.org": {
       "min_seed_hours": 360,
       "min_ratio": 1.2
+    },
+    "_comment_retrotoon": [
+      "retrotoon asks for 72 h per torrent, reached inside the first 10 days, and calls it its",
+      "strictest rule. 96 h is a third more than that, which covers a lagging tracker clock while",
+      "still freeing the disk two and a half times sooner than the generic 240 h default did."
+    ],
+    "ann.retrotoon.world": {
+      "min_seed_hours": 96,
+      "min_ratio": 1.0
     }
   }
 }
