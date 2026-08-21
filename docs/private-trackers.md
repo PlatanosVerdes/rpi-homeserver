@@ -76,6 +76,29 @@ indexer covers the automation, and the single slot takes care of itself as long 
 grabbed by hand. **A manual download from the site is the one path with no safety net: check the
 FREELEECH tag before clicking.**
 
+### The autobrr trap that gets accounts banned
+
+Read before configuring autobrr, because this is a ban, not a warning. From a site notice dated
+2026-08-07:
+
+> We've had to ban over 500 users in the past period due to a misconfiguration in autobrr's IRC
+> settings that was hammering our IRC network with rapid connect/disconnect cycles, effectively a
+> DDoS against our own infrastructure.
+
+The setting is **Settings → IRC → the announce connection → Identification → Mechanism**. Setting it
+to SASL (plain) or NickServ makes the bot reconnect every one or two seconds. **Leave it on None**,
+which is the default.
+
+And the three things their notice states outright, which contradict the generic autobrr advice found
+everywhere else:
+
+- the bot nick does **not** need registering on IRC;
+- SASL and NickServ authentication are **not** needed;
+- the bot **autojoins** the right channel with no extra configuration.
+
+The bot nick is `<your-username>_bot` and the channel is `#tlannounces`. Verify with
+`/whois <your-username>_bot` from your own client: it should be in that one channel and nowhere else.
+
 ### Links given by staff
 
 - Common mistakes: <https://wiki.torrentleech.org/doku.php/common_mistakes>
