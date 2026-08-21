@@ -257,19 +257,20 @@ Maintainerr can express, and give it a longer threshold than a film gets.
 
 ---
 
-## Private trackers: know the rules, encode them, and watch the numbers
+## Private trackers: know the rules, encode them, and stop maintaining bespoke code
 
 Opened on 2026-08-20, the day a TorrentLeech account was disabled and reinstated with **14 days to
-fix the ratio (until 2026-09-03)**. What was learned that day is in
-[docs/private-trackers.md](docs/private-trackers.md); these three are what is still missing.
+fix the ratio (until 2026-09-03)**, and revised on 2026-08-21 once the ratio was over the line
+again. Background in [docs/private-trackers.md](docs/private-trackers.md) and
+[docs/seeding-and-ratio.md](docs/seeding-and-ratio.md).
 
 ### 1. Learn how each private tracker actually works
 
-Only TorrentLeech is properly documented, and only because staff spelled it out: minimum ratio 0.4,
-three uncleared hit & runs, one download slot, freeleech excluded from the ratio denominator.
-DigitalCore is half known (freeleech periods, upload multipliers, bonus points, the per-torrent
-`Connectable` column). **C411, BTSCHOOL and retrotoon.world are unknown**, and being unknown is
-exactly how the last account was lost.
+TorrentLeech is documented, because staff spelled it out: minimum ratio 0.4, three uncleared hit &
+runs, one download slot, freeleech excluded from the ratio denominator, 240 h or ratio 1:1 to clear
+a hit & run, and a passkey reset on every disable. DigitalCore is half known (freeleech periods,
+upload multipliers, bonus points, the per-torrent `Connectable` column). **C411, BTSCHOOL and
+retrotoon.world are unknown**, and being unknown is exactly how the last account was lost.
 
 Per site, the six answers that matter: minimum ratio, what triggers a hit & run and how it clears,
 any minimum seed time per torrent, how many download slots the current class allows, whether
@@ -277,30 +278,71 @@ freeleech exists and how it is flagged, and what the bonus-point shop sells.
 
 ### 2. Put the right setup on each tracker
 
-The rules from (1) belong in the configuration, not in anyone's memory. Two places already exist and
-are mostly empty:
+The rules from (1) belong in configuration, not in anyone's memory. Where things stand:
 
-- **`requiredFlags` per indexer in Radarr and Sonarr.** TorrentLeech is now `[1]` (freeleech only)
-  and that is the only one set. Each other private tracker needs a deliberate answer, and Cardigann
-  definitions like DigitalCore's also carry their own `freeleech` toggle.
-- **`config/qbittorrent/seed-rules.json` has a `trackers` map that is completely empty**, so every
-  private tracker currently shares the generic 240 h / ratio 1.0 goal. Once (1) is known, each
-  tracker's real requirement goes there, which is the difference between "probably seeded enough"
-  and "seeded exactly what this site demands".
+| Tracker | Grab rule | Seed goal |
+| :--- | :--- | :--- |
+| TorrentLeech | **done**: `requiredFlags = [1]`, freeleech only, in Radarr and Sonarr | **done**: 360 h / ratio 1.2 in `seed-rules.json` |
+| DigitalCore | open: its Cardigann definition carries its own `freeleech` toggle | open, on the generic 240 h / 1.0 |
+| C411 | open | open |
+| BTSCHOOL | open | open |
+| retrotoon.world (Generic Torznab) | open | open |
 
-Also worth deciding: whether the freeleech-only flag on TorrentLeech comes off once the ratio is
-healthy, or stays forever as a cheap insurance policy.
+Two decisions still to make: whether TorrentLeech's freeleech-only flag comes off once the ratio is
+comfortable or stays forever as cheap insurance, and what each remaining tracker actually demands
+before its goal can be set honestly rather than guessed.
+
+**The trap to remember when editing any of this:** `sync-arr-config.sh` reports success and applies
+nothing when Radarr holds a custom format the repo does not list. Measured on 2026-08-21 with 13
+formats live against 12 in the repo: the profile PUT returned 202 and changed neither the scores nor
+`cutoffFormatScore`. Deleting the stray format made the same sync work. Worth hardening so the
+script sends every format Radarr knows (score 0 for the unlisted) and reports failures instead of
+counting processed profiles.
 
 ### 3. Alerts and a Grafana row for the tracker numbers
 
 Design is written up in [docs/private-trackers.md](docs/private-trackers.md). Short version: one
 script fetching each site with a stored session cookie, exporting `tracker_ratio`,
 `tracker_buffer_bytes`, `tracker_hit_and_run` and `tracker_bonus_points` to the Pushgateway that is
-already running, plus three alerts (buffer under a floor, hit-and-run counter rising, ratio under the
-site minimum) through the existing Telegram contact point.
+already running, plus three alerts (buffer under a floor, hit-and-run counter rising, ratio under
+the site minimum) through the existing Telegram contact point.
 
-**Blocked on credentials, and this is the only blocker:** there is no API for this. DigitalCore's API
-key, the one Prowlarr already uses for searching, returns **403 on every user endpoint** (`/api/v1/user`,
-`/users/current`, `/account`, `/user/stats`, `/me`), so even the site with an API needs a browser
-session cookie. The numbers themselves are easy once authenticated: every one of them is rendered in
-the page header, so any page will do.
+**Blocked on credentials, and this is the only blocker:** there is no API for this. DigitalCore's
+API key, the one Prowlarr already uses for searching, returns **403 on every user endpoint**
+(`/api/v1/user`, `/users/current`, `/account`, `/user/stats`, `/me`), so even the site with an API
+needs a browser session cookie. The numbers themselves are easy once authenticated: every one of
+them is rendered in the page header, so any page will do.
+
+### 4. Adopt the standard tools and retire the bespoke script
+
+Decided on 2026-08-21, and it reverses an earlier position: keeping `seed-cleanup.py` was defended
+on the grounds that it works and is understood, but the day produced two silent failures in
+home-made scripts (the arr-config sync above, and the client-versus-tracker clock gap that was three
+hours from deleting a torrent that still owed 88 hours). Bespoke code **is** the mess when nobody
+wants to maintain it. So, in this order:
+
+1. **cross-seed first.** Free ratio and not one extra byte: it finds the same content on other
+   trackers and seeds the same files there via hardlinks. Talks to Prowlarr (one Torznab URL per
+   indexer, with the API key) and injects directly into qBittorrent. Nothing here has to change to
+   make room for it, and `seed-cleanup.py` already refuses to touch a path shared by more than one
+   torrent, so cross-seeds are protected from day one.
+2. **qbit_manage with `--dry-run`, in parallel** with the current script, comparing decisions until
+   they agree. It covers everything `seed-cleanup.py` does (per-tracker share limits, the
+   `nohardlinks` rule, orphaned data) plus two things it lacks: **removing unregistered torrents**,
+   which would have caught the reset passkey on the first pass instead of four days later, and
+   explicit cross-seed protection.
+3. **Retire `seed-cleanup.py`** once a week of dry-run agrees. Three rules must survive the move:
+   the per-tracker goals (360 h on TorrentLeech, because its clock runs behind the client's), the
+   public-tracker rule of dropping a torrent as soon as the library has the file, and the absolute
+   one, that nothing is deleted while any tracker is still owed.
+4. **autobrr last**, once the ratio is healthy. It reacts to a tracker's IRC announce in seconds
+   rather than the minutes an RSS poll costs, which is the difference between being an early seeder
+   and arriving to a swarm that already has thirty. Its filter has to cap concurrency at one while
+   TorrentLeech only grants one download slot.
+
+The one thing `seed-cleanup.py` does that qbit_manage cannot is ask Radarr and Sonarr what a
+download actually produced, which mattered for RAR releases. That reason disappeared on 2026-08-21
+when RAR packs became a hard reject.
+
+And Jackett is deliberately **not** part of this: it is Prowlarr's predecessor, Prowlarr is already
+here, and both cross-seed and autobrr integrate with Prowlarr directly.
