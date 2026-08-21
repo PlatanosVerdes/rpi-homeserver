@@ -62,7 +62,9 @@ RULES_FILE = Path(os.environ.get("SEED_RULES", PROJECT_DIR / "config/qbittorrent
 STATE_FILE = Path(os.environ.get("SEED_STATE", PROJECT_DIR / "appdata/seed-cleanup/state.json"))
 DRY_RUN = os.environ.get("DRY_RUN") == "1"
 WAITING_TAG = "waiting-seed"
-KEEP_TAG = "keep"
+# `keep` is the human's escape hatch; `keep-bonus` belongs to tracker-control.py, which adds and
+# removes it on its own. Two names so the automation can never clear a tag a person put there.
+KEEP_TAGS = {"keep", "keep-bonus"}
 CONTAINER_DATA_ROOT = "/data/"
 
 # States where the files are being read or moved. Deleting under any of them risks a half-written
@@ -267,8 +269,10 @@ def classify(torrents, rules, data_root):
         # touches it again, whatever the goals say. Added 2026-08-21, when a RAR release's archives
         # came up for removal and the answer was "explain it first", which needed somewhere to put
         # "not yet" that a cron running in seventeen minutes would honour.
-        if KEEP_TAG in {tag.strip() for tag in (t.get("tags") or "").split(",")}:
-            keep.append({**entry, "why": f"tagged {KEEP_TAG} by hand"})
+        tags = {tag.strip() for tag in (t.get("tags") or "").split(",")}
+        held = tags & KEEP_TAGS
+        if held:
+            keep.append({**entry, "why": f"tagged {sorted(held)[0]}"})
             continue
         name, goal = goal_for(t, rules)
         entry["goal_name"] = name
