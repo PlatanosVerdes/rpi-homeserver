@@ -31,6 +31,20 @@
       "min_seed_hours": 360,
       "min_ratio": 1.2
     },
+    "_comment_digitalcore": [
+      "DigitalCore clears a hit and run at 5 days of seeding or ratio 1:1, and its FAQ is explicit",
+      "that the site counts only the hours it saw announced, so the client's own counter is not",
+      "evidence. 168 h is a week: 40% above their 120 h, which covers announce gaps without holding",
+      "the disk for the ten days the generic private default was costing."
+    ],
+    "tracker.digitalcore.club": {
+      "min_seed_hours": 168,
+      "min_ratio": 1.0
+    },
+    "trackerprxy.digitalcore.club": {
+      "min_seed_hours": 168,
+      "min_ratio": 1.0
+    },
     "_comment_retrotoon": [
       "retrotoon asks for 72 h per torrent, reached inside the first 10 days, and calls it its",
       "strictest rule. 96 h is a third more than that, which covers a lagging tracker clock while",

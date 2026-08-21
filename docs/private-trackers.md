@@ -218,33 +218,61 @@ why the grab rate can be raised without thinking about concurrency.
 
 ## DigitalCore
 
-Rules read 2026-08-21. The healthiest account here: ratio **4.21**, 49.18 GiB up against 11.68 GiB
-down, and 701 bonus points.
+Rules and FAQ read 2026-08-21. The healthiest account here: ratio **4.21**, 49.19 GiB up against
+11.68 GiB down, 711 bonus points, **0 hit and runs**.
 
 ### Its rules
 
 | Rule | Value |
 | :--- | :--- |
-| Minimum ratio | **0.5**. Below it, five days of *ratio watch*, then **leeching is revoked** and the account stays enabled |
-| Hit & run | the site counts them (the profile shows 1) but the Rules page never states the criteria. Unknown, so treated as the generic 240 h / 1.0 |
-| Cross-seeding | **explicitly allowed**, in those words: "You can, of course, CROSS-SEED" |
+| Minimum ratio | **0.5**. Below it, five days of *ratio watch*, then **leeching is revoked**. The account stays enabled and leeching returns when the ratio does |
+| Hit & run | the obligation starts at **10% downloaded** and clears at **5 days of seeding or ratio 1:1**. Freeleech is **not** exempt |
+| How it is detected | **one hour without an announce** and the torrent is listed. You then have 10 days to fix it before it becomes permanent and needs points, upload credit or a donation |
+| H&R penalty | **5 of them is a warning**, more is a download ban |
+| Whose clock counts | **the site's, and only the site's.** Its FAQ says outright that what the client shows does not matter, because seed time is logged only when an announce succeeds |
+| Free automatically | every new torrent for **24 h** (the download must finish inside the window), and **anything 15 GB or larger** |
+| Leech bonus | **10 GB actively seeded = 1% off what a download costs**, averaged over 7 days. 1 TB seeded is 100%, which is a site-wide freeleech |
+| Banned clients | uTorrent (except v2.2.1), BitComet, Azureus, Shareaza, BitLord, ktorrent and others. **qBittorrent is not on the list** |
+| Inactivity | 90 days without signing in disables the account |
+| Cross-seeding | **explicitly allowed**, in those words |
 | Modifying their torrents | **forbidden**: no extra trackers, no DHT, no PEX, no re-hosting through debrid services |
-| VPN and proxies | explicitly permitted, and recommended, from any IP |
-| Promotions | freeleech periods and upload multipliers, generous enough that the site ratio looks nothing like the client's |
-| Bonus | points shop, plus a leech bonus (12% now) and a daily login streak |
-| IRC bots | must authenticate with your own username and IRC key and set usermode `+B`, and **bots are not permitted in official channels** |
+| VPN | allowed, and the site is hosted in Russia where VPN IPs are blocked, hence their own proxy at `prxy.digitalcore.club` |
+| Supported tools | Prowlarr, **autobrr**, Jackett, Irssi AutoDL, by name |
 
-Their displayed **buffer is measured at ratio 1.0**, not at the 0.5 that actually matters:
-`49.18 - 11.68 = 37.50 GiB` is what the site shows, while the real headroom is
-`(49.18 - 0.5 x 11.68) / 0.5 = 86.7 GB` of paid downloads. Worth knowing before panicking at a
-number.
+Their displayed **buffer is measured at ratio 1.0**, not at the 0.5 that decides anything:
+`49.19 - 11.68 = 37.51 GiB` is what the header shows, while the real headroom is
+`(49.19 - 0.5 x 11.68) / 0.5 = 86.7 GB` of paid downloads.
+
+### The leech bonus is the best mechanic on any tracker here
+
+Worth reading twice, because it inverts the usual problem. Ratio normally needs somebody to want
+your files; this pays for **holding** them:
+
+```
+10 GB seeded            = 1% off every download
+272 GB seeded (now)     = 12%, which is what the account shows
+1000 GB seeded          = 100%, i.e. everything is freeleech, site-wide
+```
+
+Two details decide how to play it:
+
+- **Only 50 GiB per torrent counts.** A 200 GB torrent contributes 50. So many medium torrents beat
+  a few enormous ones, which is the opposite of the TorrentLeech strategy.
+- **Scarcity pays double.** The bonus is scaled by `1 + (1 / seeders)`, so a torrent with a single
+  seeder counts twice as much as a well-seeded one. Being the only seeder of something obscure is
+  worth more here than being early on something popular.
+
+Add the automatic freeleech on anything 15 GB or larger, and DigitalCore is the cheapest ratio
+available on this box: seed a terabyte of scarce medium-sized torrents and downloads stop costing
+anything at all.
 
 ### How it is configured here
 
 | Piece | Value | Why |
 | :--- | :--- | :--- |
 | Prowlarr | API key, FlareSolverr, no freeleech switch | the definition is an API one, so there is no `freeleech` checkbox to flip |
-| Seed goal | the generic 240 h / ratio 1.0 | their real H&R criteria are unknown, and a guess here is what loses accounts |
+| Seed goal | **168 h / ratio 1.0**, keyed on both announce hosts | a week, 40% above their 5 days, because the site counts only what it saw announced. It was 240 h while their rule was unknown |
+| H&R measurement | 120 h / 1.0, their real rule | 8 obligations open right now, worst 115 h to go. None with the clock stopped |
 | cross-seed | **included**, and the first two matches came from here | the site says cross-seeding is fine, and it is free ratio |
 | Rules of record | `config/trackers/rules.json` | including the two things never to do to their torrents |
 
@@ -253,16 +281,16 @@ every torrent was fixed by rewriting its announce URL with `addTrackers` and `re
 here forbids modifying their torrent files at all, so the same outage on this site means
 re-downloading the `.torrent`, not editing it.
 
+**Open obligations are not violations.** The metric here counts torrents that have not yet cleared
+their 5 days, which is the normal state of anything recent. The site only *lists* a hit and run once
+a torrent stops announcing for an hour, which is exactly what `tracker_hnr_at_risk` watches.
+
 ### Still open
 
-Their H&R criteria, from the FAQ rather than the Rules page, and their minimum seed time if they
-state one. The account cannot be read automatically either: the Prowlarr indexer holds an API key
-rather than a username and password, and that key returns 403 on every user endpoint, so
-`tracker-stats.py` measures its hit & run from qBittorrent and nothing else.
-
-Note the local count reads **10 open obligations** against the site's own **1**: the generic 240 h
-default is far stricter than whatever they actually enforce. Over-counting only ever means seeding
-for longer, so it stays until their real rule is known.
+Nothing about the rules. What is left is a choice: an announce-channel filter, since they support
+autobrr by name (`irc.digitalcore.club:7000`, channels `#digitalcore`, `#announce`, `#pre`, joined
+with `/msg ENDOR !invite <username> <irckey>`), and the account still cannot be read automatically
+because a normal API key reaches only the torrent endpoints, not profile data.
 
 ## retrotoon.world
 

@@ -293,10 +293,26 @@ What each one still owes:
 | Tracker | Known | Missing |
 | :--- | :--- | :--- |
 | TorrentLeech | everything, from staff | nothing |
-| DigitalCore | ratio 0.5, ratio watch 5 days, cross-seeding allowed, torrents must not be modified | its **H&R criteria**, which are in the FAQ and not the Rules page |
+| DigitalCore | **everything**, rules and FAQ both: ratio 0.5, H&R at 5 days or 1:1 from 10% downloaded, leech bonus, banned clients, 90-day inactivity | nothing about the rules. An autobrr filter is available, since they support it by name |
 | retrotoon.world | 72 h per torrent within 10 days, no ratio rule, site-wide freeleech for 40 days | its **announce host**, unknown until the first torrent arrives |
 | BTSCHOOL | H&R 20 h in 10 days, 10 unmet is a ban, promotion rules, 25 MB/s upload cap | its **minimum ratio** and its **client whitelist**, both in the FAQ. And it may not survive probation |
 | C411 | ratio 0.8 to leech, 50 GB signup credit, H&R disabled for now (72 h when it returns), cross-seeding allowed | its **proxy credentials**, and a way to read the account: its Prowlarr entry holds no username and password |
+
+### DigitalCore's leech bonus is the cheapest ratio on this box
+
+Their FAQ, read 2026-08-21: **10 GB actively seeded buys 1% off what every download costs against
+ratio**, averaged over seven days, and **1 TB seeded is 100%, a site-wide freeleech**. The account
+is at 12% with about 272 GB seeded.
+
+Two rules shape the play, and both point away from what TorrentLeech rewards:
+
+- **only 50 GiB per torrent counts**, so many medium torrents beat a few enormous ones;
+- the bonus is scaled by `1 + (1 / seeders)`, so **being the only seeder of something scarce pays
+  double**.
+
+Add their automatic freeleech on anything 15 GB or larger and every new torrent's first 24 hours, and
+the cheapest path to unlimited downloading on this box runs through DigitalCore rather than
+TorrentLeech. Worth deciding whether cross-seed and an autobrr filter should be aimed there first.
 
 ### C411 has 2 GB of headroom and nobody was watching it
 
