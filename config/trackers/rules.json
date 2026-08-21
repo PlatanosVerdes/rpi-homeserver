@@ -99,12 +99,7 @@
       "points": "+0.4p per hour idling in #digitalcore, and the site username must match"
     },
     "api_limits": "A normal API key reaches only /api/v1/torrents, /torrents/download/{id} and /torrents/upload. Profile data is blocked, which is why the account cannot be read automatically.",
-    "bonus_hold": {
-      "tag": "keep-bonus",
-      "max_hold_gb": 700,
-      "free_gb_floor": 600,
-      "_note": "Spare disk turned into free downloads. 10 GB seeded here is 1% off everything, so up to 700 GB of this tracker's finished torrents are tagged and kept instead of being reclaimed, ranked by what they actually earn: min(size, 50 GiB) x (1 + 1/seeders). Below 600 GB free the budget shrinks by exactly what is missing, tags come off the least valuable first, and the next cleanup pass frees them. Above it nothing is deleted on this tracker at all, which is the correct answer where holding pays."
-    }
+    "_bonus_hold_decision": "Measured and rejected on 2026-08-21. Holding this tracker's finished torrents bought 27% of leech bonus, but only 9% of that was free: 94 GB already shares its inodes with the library and costs nothing, while the other 18% was bought with 179 GB of separate copies (RAR archive sets and films already watched). Paying 179 GB for cheaper downloads on a tracker already at ratio 4.21 with 86 GB of headroom solves a problem that does not exist, while the disk it takes is exactly what the TorrentLeech freeleech grabber needs. So the bonus is grown only through hardlinks from now on: the library copies, which seed for free anyway, and cross-seeds, which are hardlinks by construction. `bonus_hold` stays implemented in tracker-control.py for the day this tracker is leeched from heavily, and stays unconfigured until then."
   },
   "retrotoon": {
     "_rules_read": "2026-08-21, from the site's own Rules page",
