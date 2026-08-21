@@ -178,6 +178,29 @@ Plex runs on the Pi, which is weak at video transcoding, so files should
   delete torrents for films you have not watched yet. One deleter, one policy. `DRY_RUN=1` prints
   what it would remove and touches nothing; the "Seed cleanup" row of the Disk usage dashboard shows
   the queue.
+- **tracker-stats.py + tracker-control.py** keep the account on the right side of the tracker's
+  ratio rule without anyone watching it. Every half hour the first logs into TorrentLeech and reads
+  what the site says (ratio, uploaded, downloaded, points, any active warning); five minutes later
+  the second acts on one derived number:
+
+  ```
+  buffer   = uploaded - min_ratio x downloaded
+  headroom = buffer / min_ratio      <- GB of non-freeleech downloads that still fit
+  ```
+
+  | Headroom | Radarr | Sonarr | autobrr |
+  | :--- | :--- | :--- | :--- |
+  | under 25 GB | freeleech only | TorrentLeech off | 3 grabs a day |
+  | 25 to 100 GB | freeleech only | TorrentLeech off | 2 grabs a day |
+  | over 100 GB | any torrent | TorrentLeech on | 1 grab a day |
+
+  Sonarr is on or off rather than restricted because **`requiredFlags` does not exist on Sonarr's
+  Torznab indexer**, only on Radarr's, so there is no way to tell it to prefer freeleech. With
+  18 GB of headroom, one 20 GB season pack that is not freeleech takes the ratio from 0.52 to
+  0.397, and 0.4 is the line TorrentLeech disables accounts under. The grabber also pauses below a
+  free-space floor whatever the ratio says, because a grab cannot be deleted until its hit & run
+  window closes. Thresholds live in `config/trackers/rules.json`; `DRY_RUN=1` prints what it would
+  change.
 - **Private tracker rules, per site, and what got an account disabled once**:
   [docs/private-trackers.md](docs/private-trackers.md).
 - **Why the ratio on private trackers is near zero, and the three ways out** (gluetun on a VPN that

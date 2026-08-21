@@ -816,3 +816,143 @@ groups:
               datasource: { type: __expr__, uid: __expr__ }
               conditions:
                 - evaluator: { type: gt, params: [0] }
+
+      - uid: homelab-tracker-headroom
+        title: 'Almost no paid downloads left'
+        condition: C
+        # Headroom is what fits above the ratio the site disables the account at, so this is the
+        # number that decides whether the *arrs may take a torrent that is not freeleech. Below
+        # 10 GB a single film can cross the line, and crossing it is a warning with a seven-day
+        # clock, not a nudge.
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: '{{ $labels.tracker }}: under 10 GB of non-freeleech downloads still fit'
+          description: >-
+            buffer = uploaded - min_ratio x downloaded, and headroom is that buffer divided by
+            min_ratio. tracker-control.py should already have switched the *arrs to freeleech only;
+            if it has not, its own log says why.
+        noDataState: OK
+        execErrState: KeepLast
+        data:
+          - refId: A
+            relativeTimeRange: { from: 3600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: 'tracker_headroom_bytes < bool 10737418240'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+
+      - uid: homelab-tracker-below-line
+        title: 'Ratio under the line the tracker disables at'
+        condition: C
+        # Not a warning about a trend: at this point the site either has issued its warning or is
+        # about to, and the only way back is upload or freeleech. Fires fast on purpose.
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          summary: '{{ $labels.tracker }}: ratio is below its minimum'
+          description: >-
+            The account is on the wrong side of the line. Everything not freeleech must stop, and
+            what is already seeding has to finish. See docs/private-trackers.md.
+        noDataState: OK
+        execErrState: KeepLast
+        data:
+          - refId: A
+            relativeTimeRange: { from: 3600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: '(tracker_ratio < tracker_min_ratio) > bool 0'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+
+      - uid: homelab-tracker-hnr-stopped
+        title: 'A hit & run obligation with the clock stopped'
+        condition: C
+        # The site counts seeding time from announces, so a torrent that owes hours and is paused,
+        # errored or missing its files is not paying anything off. Three uncleared obligations is
+        # a disabled account on TorrentLeech, and the fix is free while the torrent still exists.
+        for: 30m
+        labels:
+          severity: critical
+        annotations:
+          summary: '{{ $labels.tracker }}: a torrent owes seeding hours and is not seeding'
+          description: >-
+            Resume it, fix its files, or expect the obligation to stay open. tracker_hnr_torrent_
+            hours_left names the torrents and how many hours each still owes.
+        noDataState: OK
+        execErrState: KeepLast
+        data:
+          - refId: A
+            relativeTimeRange: { from: 3600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: 'tracker_hnr_at_risk > bool 0'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+
+      - uid: homelab-tracker-stats-stale
+        title: 'Tracker numbers not being read'
+        condition: C
+        # Everything above, and the control loop that acts on it, is blind without this. A stopped
+        # scrape looks exactly like a healthy account, which is the worst way to fail.
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: No tracker reading in over 2 hours
+          description: >-
+            tracker-stats.py runs every 30 minutes. Either cron stopped, the site changed its login,
+            or the stored session cookie no longer works and the password in Prowlarr is stale.
+        noDataState: OK
+        execErrState: KeepLast
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: '(time() - tracker_last_run_timestamp) > bool 7200'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }

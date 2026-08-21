@@ -153,6 +153,76 @@ The configuration itself lives in autobrr's own database under `appdata/autobrr/
 because autobrr rewrites it. It is backed up with the rest of appdata; the table above is what to
 re-enter if it is ever lost.
 
+### The control loop, automated
+
+Since 2026-08-21 nothing here depends on remembering to check the site. `tracker-stats.py` logs in
+every half hour and reads the account; `tracker-control.py` acts on it five minutes later.
+
+**What is read**, from `/profile/<user>/view`: uploaded, downloaded, ratio, TL points, class, and the
+date any active warning runs to. The credentials come from Prowlarr, which already stores them for
+the same site, so the password lives in exactly one place. The session cookie is kept in
+`appdata/tracker-stats/` and only replaced when it stops working, which turns 48 logins a day into
+roughly one: this is a tracker that banned 500 accounts for hammering its IRC, and there is no
+reason to test its patience for a number that moves in gigabytes.
+
+**What is computed.** The ratio alone says nothing about how much room is left, so the number that
+drives everything is the headroom above the line the site disables accounts under:
+
+```
+buffer   = uploaded - min_ratio x downloaded
+headroom = buffer / min_ratio          GB of non-freeleech downloads that still fit
+
+31.17 - 0.4 x 59.84 = 7.23 GB buffer   ->  7.23 / 0.4 = 18 GB of headroom
+```
+
+Freeleech never moves `downloaded`, which is why the grabber can run at any ratio while the *arrs
+are held back.
+
+**What is moved**, per tier, from `config/trackers/rules.json`:
+
+| Headroom | Radarr | Sonarr | autobrr |
+|---|---|---|---|
+| under 25 GB | `requiredFlags = [1]` | indexer off | 3 grabs a day |
+| 25 to 100 GB | `requiredFlags = [1]` | indexer off | 2 grabs a day |
+| over 100 GB | `requiredFlags = []` | indexer on | 1 grab a day |
+
+Nothing is written when the value already matches, so the loop is silent except at a crossing, and
+it refuses to act on a reading over three hours old. Every change goes to Telegram.
+
+#### Sonarr cannot be told to prefer freeleech
+
+`requiredFlags` is a field on Radarr's Torznab indexer and **not on Sonarr's**. The freeleech-only
+rule was believed to be in place on both; it never was, so every series grab from TorrentLeech was
+counting against the ratio. With 18 GB of headroom a single 20 GB season pack that is not freeleech
+takes the account from 0.521 to `33.47 / 84.25 = 0.397`, below the 0.4 line. So while the headroom is
+thin the indexer itself is the switch, and series come from elsewhere.
+
+#### The free-space floor beats the ratio
+
+A grab cannot be deleted until its hit & run window closes, so the grab rate is a disk budget and
+the tier is only the ration. Below `min_free_gb` the grabber is disabled outright, whatever the
+ratio says: a full array breaks imports for the whole library, and none of those bytes could be
+freed early anyway. The floor has 50 GB of hysteresis so it does not flap while seed-cleanup frees
+torrents around the threshold.
+
+#### Hit & run is measured locally, not scraped
+
+A torrent clears by seeding 240 h or reaching ratio 1.0, and `torrents/info` knows both before the
+site recomputes. What is exported is not "how many obligations exist", which is a normal and boring
+number, but how many are **owed while the clock is stopped**: the site counts seeding time from
+announces, so a paused, errored or file-missing torrent pays nothing off. That is the one that
+alerts.
+
+#### What it exports
+
+`tracker_ratio`, `tracker_min_ratio`, `tracker_uploaded_bytes`, `tracker_downloaded_bytes`,
+`tracker_buffer_bytes`, `tracker_headroom_bytes`, `tracker_points`, `tracker_warning_seconds`,
+`tracker_hnr_pending`, `tracker_hnr_at_risk`, `tracker_hnr_torrent_hours_left` (per torrent),
+`tracker_tier_grabs_per_day`, `tracker_tier_freeleech_only`, `tracker_grabber_paused_no_disk`, and a
+timestamp for each script. Four alerts sit on those: headroom under 10 GB, ratio below the line, an
+obligation with the clock stopped, and no reading in two hours. The last one matters most, because a
+stopped scrape looks exactly like a healthy account.
+
 ### Links given by staff
 
 - Common mistakes: <https://wiki.torrentleech.org/doku.php/common_mistakes>
