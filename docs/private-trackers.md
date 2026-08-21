@@ -108,7 +108,7 @@ click. What is deployed:
 | Piece | Value |
 |---|---|
 | Indexer | TorrentLeech, IRC enabled, nick `<username>_bot`, channel `#tlannounces`, Mechanism **None** |
-| Filter | `TL freeleech grande`: freeleech only, 5 GB to 40 GB, max **2 downloads per day** |
+| Filter | `TL freeleech ratio builder`: freeleech only, 5 GB to 40 GB, max **2 downloads per day** |
 | Action | qBittorrent, **no category**, tag `ratio` |
 | Client rule | `max_active_downloads = 1`, so a grab never competes with a Radarr download |
 
