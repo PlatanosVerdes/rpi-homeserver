@@ -188,19 +188,21 @@ Plex runs on the Pi, which is weak at video transcoding, so files should
   headroom = buffer / min_ratio      <- GB of non-freeleech downloads that still fit
   ```
 
-  | Headroom | Radarr | Sonarr | autobrr |
+  | Headroom | Prowlarr | Radarr | autobrr |
   | :--- | :--- | :--- | :--- |
-  | under 25 GB | freeleech only | TorrentLeech off | 3 grabs a day |
-  | 25 to 100 GB | freeleech only | TorrentLeech off | 2 grabs a day |
-  | over 100 GB | any torrent | TorrentLeech on | 1 grab a day |
+  | under 25 GB | freeleech results only | `requiredFlags = [1]` | 3 grabs a day |
+  | 25 to 100 GB | freeleech results only | `requiredFlags = [1]` | 2 grabs a day |
+  | over 100 GB | all results | `requiredFlags = []` | 1 grab a day |
 
-  Sonarr is on or off rather than restricted because **`requiredFlags` does not exist on Sonarr's
-  Torznab indexer**, only on Radarr's, so there is no way to tell it to prefer freeleech. With
-  18 GB of headroom, one 20 GB season pack that is not freeleech takes the ratio from 0.52 to
-  0.397, and 0.4 is the line TorrentLeech disables accounts under. The grabber also pauses below a
-  free-space floor whatever the ratio says, because a grab cannot be deleted until its hit & run
-  window closes. Thresholds live in `config/trackers/rules.json`; `DRY_RUN=1` prints what it would
-  change.
+  **The filter lives in Prowlarr because that is the only place that covers everything.**
+  `requiredFlags` exists on Radarr's Torznab indexer and not on Sonarr's, and Prowlarr full-syncs
+  its indexers to both, so anything switched in an *arr is overwritten on the next sync. The
+  tracker's own freeleech facet, applied in Prowlarr, filters every app that searches through it,
+  Sonarr included, and nobody loses an indexer. With 18 GB of headroom one 20 GB season pack that is
+  not freeleech takes the ratio from 0.52 to 0.397, and 0.4 is the line TorrentLeech disables
+  accounts under. The grabber also pauses below a free-space floor whatever the ratio says, because
+  a grab cannot be deleted until its hit & run window closes. Thresholds live in
+  `config/trackers/rules.json`; `DRY_RUN=1` prints what it would change.
 - **Private tracker rules, per site, and what got an account disabled once**:
   [docs/private-trackers.md](docs/private-trackers.md).
 - **Why the ratio on private trackers is near zero, and the three ways out** (gluetun on a VPN that

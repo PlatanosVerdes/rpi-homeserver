@@ -5,14 +5,16 @@
 before the account crosses the ratio the site disables it at. That number picks a tier, and the tier
 sets three things:
 
+  Prowlarr  the indexer's own "Search freeleech only" filter, which every app inherits
   Radarr    requiredFlags = [1] (freeleech only) or [] (anything)
-  Sonarr    the TorrentLeech indexer on or off
   autobrr   how many freeleech grabs a day the ratio builder may take
 
-**Sonarr is on or off because it cannot be told to prefer freeleech**: `requiredFlags` exists on
-Radarr's Torznab indexer and not on Sonarr's, so the only way to stop a 20 GB season pack that is
-not freeleech is to take the indexer away. With 19 GB of headroom, one such pack is the difference
-between ratio 0.52 and 0.397, and 0.397 is a disabled account.
+**The filter belongs in Prowlarr, not in the *arrs.** `requiredFlags` exists on Radarr's Torznab
+indexer and not on Sonarr's, so filtering there would leave series unprotected: with 19 GB of
+headroom one 20 GB season pack that is not freeleech is the difference between ratio 0.52 and 0.397,
+and 0.397 is a disabled account. TorrentLeech's Cardigann definition carries a `freeleech` checkbox
+that adds the site's own FREELEECH facet to every query, so switching it there covers Radarr, Sonarr
+and anything else that searches through Prowlarr, and nobody loses an indexer.
 
 Nothing is written when the desired value is already in place, so this is silent on almost every run
 and only announces the crossings. It refuses to act on a stale reading: acting on last week's ratio
@@ -39,6 +41,7 @@ DRY_RUN = os.environ.get("DRY_RUN") == "1"
 MAX_READING_AGE = 3 * 3600         # a reading older than this is not something to act on
 FREELEECH_FLAG = 1                 # G_Freeleech, in Radarr's indexer flags
 ARRS = {"radarr": 7878, "sonarr": 8989}
+PROWLARR = "http://localhost:9696"
 DATA_ROOT = Path(os.environ.get("DATA_ROOT", "/mnt/data"))
 # The list fields autobrr's own API rejects a filter for omitting, even when they are empty.
 AUTOBRR_LISTS = ("resolutions", "sources", "codecs", "containers", "match_hdr", "except_hdr",
@@ -54,6 +57,11 @@ def env(name, default=None):
             if line.startswith(f"{name}=") and not line.startswith("#"):
                 return line.split("=", 1)[1].strip().strip('"').strip("'")
     return default
+
+
+def prowlarr_key():
+    text = (PROJECT_DIR / "appdata/prowlarr/config.xml").read_text(errors="ignore")
+    return text.split("<ApiKey>")[1].split("</ApiKey>")[0]
 
 
 def arr_key(app):
@@ -110,8 +118,30 @@ def set_required_flags(app, needle, freeleech_only):
                    f"{'freeleech only' if freeleech_only else 'any torrent'}")
 
 
+def set_prowlarr_freeleech(needle, only):
+    """The one switch every app inherits: the site's FREELEECH facet, applied to every query."""
+    key = prowlarr_key()
+    indexers = call(f"{PROWLARR}/api/v1/indexer", key)
+    indexer = next((i for i in indexers if needle.lower() in i["name"].lower()), None)
+    if indexer is None:
+        raise RuntimeError(f"prowlarr has no indexer matching {needle}")
+    field = next((f for f in indexer.get("fields") or [] if f["name"] == "freeleech"), None)
+    if field is None:
+        raise RuntimeError(f"prowlarr indexer {indexer['name']} has no freeleech filter")
+    if bool(field.get("value")) == only:
+        return
+    field["value"] = only
+    if DRY_RUN:
+        changes.append(f"[dry-run] prowlarr: freeleech only -> {only}")
+        return
+    call(f"{PROWLARR}/api/v1/indexer/{indexer['id']}?forceSave=true", key, body=indexer,
+         method="PUT")
+    changes.append(f"prowlarr: {indexer['name']} -> "
+                   f"{'freeleech results only' if only else 'all results'}")
+
+
 def set_indexer_enabled(app, needle, enabled):
-    """Sonarr has no freeleech flag, so the indexer itself is the switch."""
+    """Kept to put an indexer back: taking one away was the wrong answer to a filtering problem."""
     key, indexer = arr_indexer(app, needle)
     switches = ["enableRss", "enableAutomaticSearch", "enableInteractiveSearch"]
     if all(bool(indexer.get(name)) == enabled for name in switches):
@@ -241,8 +271,11 @@ def main():
                             f"grabber paused")
 
         for action in (
+            lambda: set_prowlarr_freeleech(needle, freeleech_only),
             lambda: set_required_flags("radarr", needle, freeleech_only),
-            lambda: set_indexer_enabled("sonarr", needle, not freeleech_only),
+            # TorrentLeech has series, and Prowlarr is where the filtering happens, so Sonarr keeps
+            # the indexer at every tier.
+            lambda: set_indexer_enabled("sonarr", needle, True),
             lambda: set_grab_rate(config["autobrr_filter"], per_day, room) if per_day else None,
         ):
             try:
