@@ -125,6 +125,20 @@ Plex runs on the Pi, which is weak at video transcoding, so files should
   downloaded at all. Project Hail Mary is exactly that case, and this repo is choosing the empty
   shelf over 197 GB.
 - **Language preference:** Castilian Spanish > VOSE (original audio with Spanish subtitles) > English > Latin-American Spanish (avoided).
+- **A film is considered finished at `cutoffFormatScore` 2200**, which is Spanish audio plus x264.
+  This is the setting that decides when Radarr stops hunting for a better release, and it used to
+  be **10000, a score nothing can reach**: the positive formats here add up to at most +6700 and
+  several of them are mutually exclusive, so a realistic good release scores about +3200. The
+  consequence was that no film was ever "done" and every one of them stayed in permanent upgrade
+  search. Each upgrade then replaces the library file and leaves the previous release seeding its
+  tracker debt, so the churn was paid for in disk.
+
+  It is a threshold to reach, not a penalty, which is what makes it easy to confuse with
+  `minFormatScore`: that one is a floor (reject below it), this one is a target (stop when reached).
+
+  The remaining churn is deliberate: a film that exists only with English audio scores 700 and keeps
+  being searched, because Castilian audio is worth +2000 here and is worth waiting for. Dropping
+  this to 700 would stop that too, at the cost of never upgrading to a Spanish release.
 - **Rule of thumb for smooth playback:** 1080p, x264/H.264, AAC or EAC3/AC3, text subtitles (SRT / mov_text).
 
 **Supporting automation:**
