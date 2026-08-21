@@ -283,13 +283,13 @@ Rules read 2026-08-21. Nothing downloaded yet: 0 up, 0 down, 273 bonus points.
 | Piece | Value | Why |
 | :--- | :--- | :--- |
 | Prowlarr | `Generic Torznab`, working | it is the generic definition, so there is no site-specific switch |
-| Seed goal | the generic 240 h / ratio 1.0 | **stricter than their 72 h**, so nothing is at risk. It costs disk, not safety |
+| Seed goal | **96 h / ratio 1.0**, keyed on `ann.retrotoon.world` | a third above their 72 h, which is margin for their clock without holding the disk for ten days |
 | cross-seed | included | free ratio, same as everywhere |
 
-Its announce host is not in `config/trackers/rules.json` yet, because the host lives inside the
-`.torrent` and nothing has been downloaded from here. Until it is, the generic goal applies, which
-over-satisfies their rule. Filling it in is what would let a torrent go at 84 h instead of 240 h and
-free the disk sooner.
+Its announce host is **`ann.retrotoon.world`**, read out of a real `.torrent` fetched through
+Prowlarr rather than guessed, so the seed goal is now theirs and not the generic default: **96 h**, a
+third more than the 72 h they ask for, which covers a lagging tracker clock and still frees the disk
+two and a half times sooner than 240 h did.
 
 **The 40-day freeleech is the moment to take anything wanted from here**, since downloads cost
 nothing against ratio while it lasts.
@@ -324,7 +324,7 @@ is a donation. So this is a decision, not a task: donate, or let the account go.
 
 | Piece | Value | Why |
 | :--- | :--- | :--- |
-| Prowlarr | id 11, FlareSolverr, working | |
+| Prowlarr | id 11, FlareSolverr, **search works, download does not** | the site answers a `.torrent` request with an invalid file, which is what an account still inside its newbie assessment looks like. Its announce host is therefore still unknown |
 | Seed goal | the generic 240 h / ratio 1.0 | twelve times their 20 h requirement, so it cannot cause an H&R |
 | cross-seed | included | |
 | Upload cap | **not applied** | qBittorrent's limit is global and cannot be set per tracker, so capping at 25 MB/s would throttle TorrentLeech, which is where the ratio comes from. Nothing seeds here yet and the measured peak across all trackers is about 0.5 MB/s, so it is theoretical until it is not |
@@ -368,7 +368,7 @@ this account above its line.
 
 | Piece | Value | Why |
 | :--- | :--- | :--- |
-| Prowlarr | id 9, routed through the `nordvpn` SOCKS proxy | **searching is broken**: the proxy credentials have expired. The announce path is fine, which is why 4 torrents still seed and have uploaded 2.3 GB |
+| Prowlarr | id 9, API key set, **proxy removed on 2026-08-21** | two separate faults were hiding behind one symptom: the SOCKS credentials had expired, and the site itself is now serving a **Maintenance** page, which is what Prowlarr cannot parse as XML. The announce path is fine throughout, which is why 4 torrents keep seeding |
 | Seed goal | the generic 240 h / ratio 1.0 | more than three times their 72 h, so nothing can trip their H&R even after it comes back |
 | H&R measurement | on, as if their system were enabled | it is documented as returning, and measuring early costs nothing |
 | cross-seed | included | |
