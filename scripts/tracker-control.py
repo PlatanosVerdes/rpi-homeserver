@@ -226,6 +226,9 @@ def push(job, lines):
 
 
 def telegram(text):
+    # A dry run is an inspection: it must not write, and a message on the phone is a write.
+    if DRY_RUN:
+        return
     token, chat = env("TELEGRAM_ALERT_BOT_TOKEN"), env("TELEGRAM_ALERT_CHAT_ID")
     if not token or not chat:
         failures.append("no telegram credentials in .env")

@@ -264,7 +264,24 @@ fix the ratio (until 2026-09-03)**, and revised on 2026-08-21 once the ratio was
 again. Background in [docs/private-trackers.md](docs/private-trackers.md) and
 [docs/seeding-and-ratio.md](docs/seeding-and-ratio.md).
 
-### 1. Learn how each private tracker actually works
+### 1. Learn how each private tracker actually works, one at a time
+
+The order agreed on 2026-08-21: **one site per sitting**, and each one leaves the guide in
+[docs/private-trackers.md](docs/private-trackers.md) a little longer. TorrentLeech is the worked
+example, and its section is the shape the others should end up with: rules first, then the
+configuration applied here, then why, then its links. The checklist for a new one is at the end of
+that page.
+
+Two things the C411 diagnosis added to the method, both worth doing before assuming the worst:
+
+- **A failing indexer is not necessarily a disabled account.** Ask Prowlarr what it actually saw:
+  `POST /api/v1/indexer/test` with the indexer's own body returns the real error, and
+  `GET /api/v1/health` says how long it has been failing. C411's answer was a broken SOCKS proxy.
+- **Check whether the site is reachable at all before touching credentials**, because a dead proxy,
+  a dead definition (Frozen Layer has no definition file at all) and a dead account look identical
+  from the outside.
+
+
 
 TorrentLeech is documented, because staff spelled it out: minimum ratio 0.4, three uncleared hit &
 runs, one download slot, freeleech excluded from the ratio denominator, 240 h or ratio 1:1 to clear
@@ -275,6 +292,19 @@ retrotoon.world are unknown**, and being unknown is exactly how the last account
 Per site, the six answers that matter: minimum ratio, what triggers a hit & run and how it clears,
 any minimum seed time per torrent, how many download slots the current class allows, whether
 freeleech exists and how it is flagged, and what the bonus-point shop sells.
+
+**C411 first, and it is not a ban.** Diagnosed 2026-08-21: the indexer is tagged `nordvpn`, which
+routes it through the Socks5 proxy `nl.socks.nordhold.net:1080`, and Prowlarr's own test says
+`Failed to authenticate with the SOCKS server`. The host resolves and port 1080 is open, so the
+proxy is alive and the **NordVPN service credentials stored in Prowlarr are stale**.
+
+The fix needs a NordVPN login, so it is yours: Nord dashboard, NordVPN, **Service credentials** (not
+the account email and password), then Prowlarr, Settings, Indexer Proxies, `Socks5`, paste the new
+pair, and test C411 again. Removing the `nordvpn` tag is the other way out, but that puts this
+connection's own IP in front of the tracker, which is a decision rather than a fix.
+
+While in there: **Frozen Layer has no definition file at all** (`Indexers have no definition and
+will not work`), so it is dead weight in every search.
 
 ### 2. Put the right setup on each tracker
 
@@ -353,15 +383,40 @@ wants to maintain it. So, in this order:
    indexer, with the API key) and injects directly into qBittorrent. Nothing here has to change to
    make room for it, and `seed-cleanup.py` already refuses to touch a path shared by more than one
    torrent, so cross-seeds are protected from day one.
-2. **qbit_manage with `--dry-run`, in parallel** with the current script, comparing decisions until
-   they agree. It covers everything `seed-cleanup.py` does (per-tracker share limits, the
-   `nohardlinks` rule, orphaned data) plus two things it lacks: **removing unregistered torrents**,
-   which would have caught the reset passkey on the first pass instead of four days later, and
-   explicit cross-seed protection.
-3. **Retire `seed-cleanup.py`** once a week of dry-run agrees. Three rules must survive the move:
-   the per-tracker goals (360 h on TorrentLeech, because its clock runs behind the client's), the
-   public-tracker rule of dropping a torrent as soon as the library has the file, and the absolute
-   one, that nothing is deleted while any tracker is still owed.
+2. **qbit_manage, in evaluation since 2026-08-21.** Running hourly and writing **tags only**:
+   `tag_update`, `tag_tracker_error`, `tag_nohardlinks`. Everything that deletes is off
+   (`rem_unregistered`, `share_limits`, `rem_orphaned`, `cat_update`). Config in
+   `appdata/qbit-manage/config.yml`, which the tool rewrites itself, so it is not in git.
+
+   **The evaluation, and what to do on or after 2026-08-28:**
+
+   1. Compare a week of both tools on the same torrents. `seed-cleanup.py` reports its decisions in
+      `seed-cleanup.log` and the Retention dashboard; qbit_manage's are in `docker logs qbit-manage`.
+      What has to agree: which torrents are `noHL` (the library no longer holds them) against what
+      `seed-cleanup.py` calls "film gone from the library", and which are tagged `issue` against
+      what it treats as unregistered.
+   2. Turn on `rem_unregistered` first, on its own. It is the reason to adopt the tool: a reset
+      passkey makes every torrent announce `unregistered torrent pass`, and this catches it on the
+      first pass instead of four days later. It only removes torrents the tracker itself has
+      disowned, which is the safest deletion there is.
+   3. Then `share_limits`, and only then. The groups are already written and are the risky part,
+      because share limits **cannot see the library**: `include_all_tags: [torrentleech, noHL]` is
+      what stops it deleting a torrent whose bytes Plex is still sharing. Verify that on real data
+      before trusting it.
+   4. Only after both have run for a week does `seed-cleanup.py` come out of cron. Three rules must
+      survive the move: the per-tracker goals (360 h on TorrentLeech, because its clock runs behind
+      the client's), the public-tracker rule of dropping a torrent as soon as the library has the
+      file, and the absolute one, that nothing is deleted while any tracker is still owed.
+
+   One thing to fix while evaluating: the `nohardlinks` list names `tv-sonarr`, and qbit_manage
+   reports no torrents in that category, so series are currently outside the check.
+
+3. **What cross-seed changes about deletion**, now that it runs: a cross-seeded file has a link
+   count above one for as long as the second torrent exists, and `seed-cleanup.py` reads that as
+   "the library still holds it" and keeps both forever. Nothing is lost and nothing is over-deleted,
+   but bytes that used to be reclaimed after watching now stay until the cross-seed goes. That is
+   the trade for free ratio, and it is another reason the deleting side belongs in qbit_manage,
+   which understands cross-seeds explicitly.
 4. **autobrr**, planned last but **done first, on 2026-08-21**, because the ratio was the thing
    under a deadline and this is what fixes it: it reacts to a tracker's IRC announce in seconds
    rather than the minutes an RSS poll costs, which is the difference between being an early seeder
