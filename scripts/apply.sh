@@ -226,8 +226,12 @@ deploy_repo() {
     # so it cannot be handed the git copy: the working tree would be permanently dirty and the next
     # pull would abort with "local changes would be overwritten". The committed file is the source
     # and this is the working copy it is free to scribble on.
+    # sudo and chown, not a bare mkdir: compose can reach this mount first, and then Docker creates
+    # the directory as root, the copy below fails with "Permission denied", and the container
+    # restart-loops on a /config with no config.yml in it. Idempotent, so it costs nothing.
     if [[ "$label" == "homeserver" && -f "$PROJECT_DIR/config/qbit-manage/config.yml" ]]; then
-        mkdir -p "$PROJECT_DIR/appdata/qbit-manage"
+        sudo mkdir -p "$PROJECT_DIR/appdata/qbit-manage"
+        sudo chown "$(id -u):$(id -g)" "$PROJECT_DIR/appdata/qbit-manage"
         if ! cmp -s "$PROJECT_DIR/config/qbit-manage/config.yml" \
             "$PROJECT_DIR/appdata/qbit-manage/config.yml"; then
             cp "$PROJECT_DIR/config/qbit-manage/config.yml" \
