@@ -894,7 +894,11 @@ groups:
         # The site counts seeding time from announces, so a torrent that owes hours and is paused,
         # errored or missing its files is not paying anything off. Three uncleared obligations is
         # a disabled account on TorrentLeech, and the fix is free while the torrent still exists.
-        for: 30m
+        #
+        # 5m, not 30m, because of DigitalCore: its FAQ says one hour without an announce is enough
+        # to be listed, and the reading itself is only refreshed every 30 minutes, so the alert has
+        # to add as little delay as possible on top of that.
+        for: 5m
         labels:
           severity: critical
         annotations:
