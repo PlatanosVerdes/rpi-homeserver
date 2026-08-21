@@ -32,21 +32,73 @@
     "min_free_gb": 400
   },
   "digitalcore": {
-    "_rules_read": "2026-08-21, from the site's own Rules page",
+    "_rules_read": "2026-08-21, from the site's own Rules page and FAQ",
     "prowlarr_indexer": "DigitalCore (API)",
     "min_ratio": 0.5,
     "_min_ratio_note": "Below it: five days of ratio watch, then leeching is revoked. The account stays enabled, so this costs downloads rather than the account.",
     "hit_and_run": {
-      "min_seed_hours": 240,
+      "min_seed_hours": 120,
       "min_ratio": 1.0
     },
-    "_hit_and_run_note": "The site counts H&R (the profile showed 1) but its Rules page does not state the criteria, so this is the generic private default until their FAQ says otherwise. Do not relax it on a guess.",
+    "_hit_and_run_note": "Their real rule, from the FAQ: the obligation starts once 10% of a torrent is downloaded, and clears at 5 days of seeding OR ratio 1:1. Freeleech is NOT exempt. A torrent that stops announcing for one hour is listed as a hit and run immediately, with 10 days to fix it before it becomes permanent and needs points, upload credit or a donation to remove. Five of them is a warning, more is a download ban. **The site is the only source of truth for seed time**: it counts only what it saw announced, so the client's own counter means nothing here.",
     "tracker_hosts": [
       "tracker.digitalcore.club",
       "trackerprxy.digitalcore.club"
     ],
     "cross_seed": "explicitly allowed by rule 2, in those words",
-    "never": "add trackers to their .torrent files, or enable DHT/PEX on them: rule 2 forbids modifying their torrents at all, which is exactly what fixed TorrentLeech's passkey"
+    "never": "add trackers to their .torrent files, or enable DHT/PEX on them: rule 2 forbids modifying their torrents at all, which is exactly what fixed TorrentLeech's passkey",
+    "hnr_warning_at": 5,
+    "banned_clients": [
+      "uTorrent (all but v2.2.1)",
+      "BitComet",
+      "Azureus",
+      "Shareaza",
+      "BitLord",
+      "ktorrent",
+      "LimeWire",
+      "btpd",
+      "BTuga",
+      "ava",
+      "Mozilla",
+      "BitTorrent/3.4.2"
+    ],
+    "_banned_clients_note": "qBittorrent is not on the list, so this box is fine.",
+    "leech_bonus": {
+      "per_1_percent_gb_seeded": 10,
+      "site_wide_freeleech_at_gb": 1000,
+      "max_counted_per_torrent_gb": 50,
+      "window_days": 7,
+      "scarcity_factor": "1 + (1 / seeders), so a torrent with a single seeder pays double"
+    },
+    "_leech_bonus_note": "The single most valuable mechanic on any tracker here: every 10 GB actively seeded is 1% off what a download costs against ratio, averaged over 7 days, and 1 TB seeded is 100%, which is a site-wide freeleech. Only 50 GiB per torrent counts, so many medium torrents beat a few huge ones. Currently at 12% with about 272 GB seeded.",
+    "free_when": [
+      "new torrents, for 24 h after upload, if the download completes inside the window",
+      "anything 15 GB or larger"
+    ],
+    "inactivity_days": 90,
+    "official_proxy": "https://prxy.digitalcore.club/",
+    "_proxy_note": "The website is hosted in Russia, where VPN IPs are blocked, so the site and IRC may be unreachable from behind one. That is what trackerprxy.digitalcore.club is, and why one cross-seed announces there.",
+    "supported_tools": [
+      "Prowlarr",
+      "autobrr",
+      "Jackett",
+      "Irssi AutoDL"
+    ],
+    "irc": {
+      "servers": [
+        "irc.digitalcore.club:7000",
+        "thugs.digitalcore.club:7000",
+        "donot-look-behind-u.digitalcore.club:7000"
+      ],
+      "channels": [
+        "#digitalcore",
+        "#announce",
+        "#pre"
+      ],
+      "invite": "/msg ENDOR !invite <siteusername> <irckey>",
+      "points": "+0.4p per hour idling in #digitalcore, and the site username must match"
+    },
+    "api_limits": "A normal API key reaches only /api/v1/torrents, /torrents/download/{id} and /torrents/upload. Profile data is blocked, which is why the account cannot be read automatically."
   },
   "retrotoon": {
     "_rules_read": "2026-08-21, from the site's own Rules page",
