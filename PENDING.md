@@ -282,27 +282,30 @@ The rules from (1) belong in configuration, not in anyone's memory. Where things
 
 | Tracker | Grab rule | Seed goal |
 | :--- | :--- | :--- |
-| TorrentLeech | **done**: `requiredFlags = [1]`, freeleech only, in Radarr and Sonarr | **done**: 360 h / ratio 1.2 in `seed-rules.json` |
+| TorrentLeech | **done, and automated**: the tier in `config/trackers/rules.json` sets it from the headroom. Sonarr has no `requiredFlags` field at all, so there the indexer itself is switched | **done**: 360 h / ratio 1.2 in `seed-rules.json` |
 | DigitalCore | open: its Cardigann definition carries its own `freeleech` toggle | open, on the generic 240 h / 1.0 |
 | C411 | open | open |
 | BTSCHOOL | open | open |
 | retrotoon.world (Generic Torznab) | open | open |
 
-**The freeleech-only flag is not a decision, it is a control loop.** It should come on when the
-buffer is thin and go off when it is comfortable, which makes it the natural consumer of the metrics
-in (3) rather than something to argue about once:
+**The freeleech-only flag was never a decision, it was a control loop, and it is one now.**
+`tracker-control.py` moves it, the Sonarr indexer and the autobrr grab rate from a single number, the
+headroom (`buffer / min_ratio`, the GB of non-freeleech downloads that still fit above the line).
+Tiers live in `config/trackers/rules.json`; see the section in
+[docs/private-trackers.md](docs/private-trackers.md).
 
-```
-buffer under 20 GB   ->  requiredFlags = [1]   (freeleech only, the automation cannot dig deeper)
-buffer over 50 GB    ->  requiredFlags = []    (anything goes again)
-in between           ->  leave it alone, hysteresis keeps it from flapping
-```
+Two things that turned up while building it and are worth not forgetting:
 
-Both halves are already proven to work by hand: the flag is set through
-`/api/v3/indexer/{id}` with `?forceSave=true` (Radarr refuses the save while the indexer is
-unreachable), and the buffer is `uploaded - threshold x downloaded` from the site's own header. So
-this is a dozen lines on top of whatever reads the stats, and it turns a rule that was written down
-into a rule that enforces itself.
+- **Sonarr has no `requiredFlags` field.** It is a Radarr-only field on the Torznab indexer, so the
+  "freeleech only, in Radarr and Sonarr" line above was never true in Sonarr. While the headroom is
+  thin the indexer is disabled there instead.
+- **The grab rate is a disk budget, not a preference**, because a grab cannot be deleted until its
+  hit & run window closes. The loop therefore also honours a free-space floor, which overrides the
+  ratio in both directions.
+
+What is still open here is only the other four sites: each needs its own entry in
+`config/trackers/rules.json`, which needs (1) first, and needs checking whether its profile page can
+be read the same way.
 
 Still open per tracker: what each one actually demands, before its seed goal can be set honestly
 rather than guessed.
@@ -316,17 +319,24 @@ counting processed profiles.
 
 ### 3. Alerts and a Grafana row for the tracker numbers
 
-Design is written up in [docs/private-trackers.md](docs/private-trackers.md). Short version: one
-script fetching each site with a stored session cookie, exporting `tracker_ratio`,
-`tracker_buffer_bytes`, `tracker_hit_and_run` and `tracker_bonus_points` to the Pushgateway that is
-already running, plus three alerts (buffer under a floor, hit-and-run counter rising, ratio under
-the site minimum) through the existing Telegram contact point.
+**Done for TorrentLeech on 2026-08-21**, by `scripts/tracker-stats.py`: `tracker_ratio`,
+`tracker_buffer_bytes`, `tracker_headroom_bytes`, `tracker_points`, `tracker_warning_seconds`,
+`tracker_hnr_pending`, `tracker_hnr_at_risk` and a per-torrent `tracker_hnr_torrent_hours_left`,
+with four alerts on top (headroom under 10 GB, ratio below the line, an obligation whose clock is
+stopped, and no reading in two hours).
 
-**Blocked on credentials, and this is the only blocker:** there is no API for this. DigitalCore's
-API key, the one Prowlarr already uses for searching, returns **403 on every user endpoint**
-(`/api/v1/user`, `/users/current`, `/account`, `/user/stats`, `/me`), so even the site with an API
-needs a browser session cookie. The numbers themselves are easy once authenticated: every one of
-them is rendered in the page header, so any page will do.
+**The credential blocker turned out not to be one.** There is still no API, but the site logs in from
+a plain form POST and Prowlarr already holds the username and password for the same site, so nothing
+new had to be stored: read the credentials from Prowlarr's own API, keep the session cookie on disk,
+and re-login only when it stops working. DigitalCore's API key still returns 403 on every user
+endpoint (`/api/v1/user`, `/users/current`, `/account`, `/user/stats`, `/me`), which is why this is
+per-site work rather than one generic exporter.
+
+What is left: a Grafana row for these series (the alerts exist, the panels do not), and the same
+treatment for the other four sites, each of which needs its login form and profile shape checked
+once. The parsing in `tracker-stats.py` is deliberately dumb about markup (strip the tags, read the
+value on the line after its label) precisely so a second site is a config entry rather than a
+selector hunt.
 
 ### 4. Adopt the standard tools and retire the bespoke script
 

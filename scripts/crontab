@@ -63,3 +63,16 @@
 # through. Exits immediately once the instance exists, so this is safe to leave in forever.
 # See scripts/oci-hunt.py.
 */2 * * * * /home/raspi/rpi-homeserver/scripts/oci-hunt.py >> /home/raspi/rpi-homeserver/oci-hunt.log 2>&1
+
+# What the tracker itself says about the account, every half hour: ratio, uploaded, downloaded, and
+# the number that decides everything, the headroom of paid downloads left before the site disables
+# the account. One page fetch per run, reusing a stored session cookie, because this is a tracker
+# that bans for hammering. See scripts/tracker-stats.py.
+*/30 * * * * /home/raspi/rpi-homeserver/scripts/tracker-stats.py >> /home/raspi/rpi-homeserver/tracker-stats.log 2>&1
+
+# Acts on that reading five minutes later: Radarr freeleech-only or not, the Sonarr indexer on or
+# off (it has no freeleech flag, so the indexer is the switch), and the autobrr grab rate, which is
+# a disk budget because a grab cannot be deleted until its hit & run window closes. Writes nothing
+# when the values already match, refuses to act on a reading over 3 h old, and pauses the grabber
+# below the free-space floor. See scripts/tracker-control.py; DRY_RUN=1 to see what it would change.
+5,35 * * * * /home/raspi/rpi-homeserver/scripts/tracker-control.py >> /home/raspi/rpi-homeserver/tracker-control.log 2>&1
