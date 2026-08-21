@@ -283,11 +283,45 @@ Two things the C411 diagnosis added to the method, both worth doing before assum
 
 
 
-TorrentLeech is documented, because staff spelled it out: minimum ratio 0.4, three uncleared hit &
-runs, one download slot, freeleech excluded from the ratio denominator, 240 h or ratio 1:1 to clear
-a hit & run, and a passkey reset on every disable. DigitalCore is half known (freeleech periods,
-upload multipliers, bonus points, the per-torrent `Connectable` column). **C411, BTSCHOOL and
-retrotoon.world are unknown**, and being unknown is exactly how the last account was lost.
+**Read on 2026-08-21: DigitalCore, retrotoon.world, BTSCHOOL and C411**, all four written up in
+[docs/private-trackers.md](docs/private-trackers.md) with their rules, what is configured for them
+and why. Their rules of record are in `config/trackers/rules.json`, and `tracker-stats.py` now
+measures the hit & run clock for every tracker in that file, not only the one it can log into.
+
+What each one still owes:
+
+| Tracker | Known | Missing |
+| :--- | :--- | :--- |
+| TorrentLeech | everything, from staff | nothing |
+| DigitalCore | ratio 0.5, ratio watch 5 days, cross-seeding allowed, torrents must not be modified | its **H&R criteria**, which are in the FAQ and not the Rules page |
+| retrotoon.world | 72 h per torrent within 10 days, no ratio rule, site-wide freeleech for 40 days | its **announce host**, unknown until the first torrent arrives |
+| BTSCHOOL | H&R 20 h in 10 days, 10 unmet is a ban, promotion rules, 25 MB/s upload cap | its **minimum ratio** and its **client whitelist**, both in the FAQ. And it may not survive probation |
+| C411 | ratio 0.8 to leech, 50 GB signup credit, H&R disabled for now (72 h when it returns), cross-seeding allowed | its **proxy credentials**, and a way to read the account: its Prowlarr entry holds no username and password |
+
+### C411 has 2 GB of headroom and nobody was watching it
+
+The site shows ratio **0.83** against a minimum of **0.8** to download anything, which is
+`(52.2 - 0.8 x 63.3) / 0.8 = 1.95 GB` of paid downloads left. One ordinary film blocks leeching
+there.
+
+Worse, the ratio is propped up by a **50 GB signup upload credit** counted into it: only 2.3 GB were
+really uploaded. The credit is a one-off and does not grow back.
+
+Nothing automatic can help until the account can be read, and its Prowlarr entry holds no username
+and password. Two things to do, in this order: fix the SOCKS credentials so search works again, then
+decide whether to store site credentials for it so `tracker-stats.py` can watch it like
+TorrentLeech. Until then the rule is manual: **on C411, freeleech only.**
+
+### BTSCHOOL is about to fail its probation, and that is a decision
+
+The account has **2 days 15 hours left** of the newbie assessment as of 2026-08-21 18:40, and needs
+**50 GB uploaded, 50 GB downloaded and 6000 bonus points** to pass. It currently has zero of all
+three, and 50 GB of upload in under three days is not something seeding can produce on demand.
+
+The site's own page offers the alternative outright: a donation passes the assessment. So the choice
+is to donate or to let the account go, and there is no third option worth pretending about. If it is
+kept, its promotion rules are the most generous here: anything over 20 GB is free, and every torrent
+pays **double upload** one month after release.
 
 Per site, the six answers that matter: minimum ratio, what triggers a hit & run and how it clears,
 any minimum seed time per torrent, how many download slots the current class allows, whether

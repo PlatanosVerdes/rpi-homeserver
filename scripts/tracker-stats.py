@@ -271,6 +271,23 @@ def main():
     for tracker, config in rules.items():
         label = f'tracker="{escape(tracker)}"'
         min_ratio = config.get("min_ratio", 0.4)
+        pending, worst = hit_and_run(config, torrents)
+        detail_rows = sorted(pending, key=lambda row: -row[1])[:25]
+
+        # A site nobody can log into still has torrents in the client, and the hit & run clock is
+        # the half that gets accounts banned. So the obligations are measured for every tracker in
+        # the file, and only the account numbers need a `site`.
+        if not config.get("site"):
+            lines += [f"tracker_min_ratio{{{label}}} {min_ratio}",
+                      f"tracker_hnr_pending{{{label}}} {len(pending)}",
+                      f"tracker_hnr_hours_worst{{{label}}} {worst:.1f}",
+                      f"tracker_hnr_at_risk{{{label}}} {sum(1 for row in pending if row[3])}"]
+            for name, hours_left, ratio, stopped in detail_rows:
+                detail.append(f'tracker_hnr_torrent_hours_left{{{label},'
+                              f'name="{escape(name)[:90]}",ratio="{ratio:.2f}",'
+                              f'seeding="{"no" if stopped else "yes"}"}} {hours_left:.1f}')
+            continue
+
         try:
             stats = profile(tracker, config)
         except Exception as exc:
@@ -279,7 +296,6 @@ def main():
             continue
 
         buffer_bytes = stats["uploaded"] - min_ratio * stats["downloaded"]
-        pending, worst = hit_and_run(config, torrents)
         lines += [
             f"tracker_up{{{label}}} 1",
             f'tracker_ratio{{{label}}} {stats["ratio"] if stats["ratio"] is not None else 0}',
@@ -302,7 +318,7 @@ def main():
             "hnr_pending": len(pending), "hnr_at_risk": sum(1 for row in pending if row[3]),
             "warning_seconds": warning_seconds(stats["warned_until"]),
         }
-        for name, hours_left, ratio, stopped in sorted(pending, key=lambda row: -row[1])[:25]:
+        for name, hours_left, ratio, stopped in detail_rows:
             detail.append(f'tracker_hnr_torrent_hours_left{{{label},'
                           f'name="{escape(name)[:90]}",ratio="{ratio:.2f}",'
                           f'seeding="{"no" if stopped else "yes"}"}} {hours_left:.1f}')

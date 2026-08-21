@@ -218,38 +218,167 @@ why the grab rate can be raised without thinking about concurrency.
 
 ## DigitalCore
 
-### What is known
+Rules read 2026-08-21. The healthiest account here: ratio **4.21**, 49.18 GiB up against 11.68 GiB
+down, and 701 bonus points.
 
-- **Freeleech periods and upload multipliers** are generous enough that the on-site ratio looks
-  nothing like the client's: 2.76 on site against 0.006 in qBittorrent, same week.
-- **Bonus points** accumulate and are spendable; read the shop before grinding ratio by hand.
-- The per-torrent **`Connectable`** column under *Activity & Logs → Transfers* is the best inbound
-  check available anywhere: a third party telling you whether the world can reach your port. It read
-  `No` on all seven torrents behind CGNAT and flipped to `Yes` minutes after a public IP arrived.
-- Its API key, the one Prowlarr uses for searching, returns **403 on every user endpoint**
-  (`/api/v1/user`, `/users/current`, `/account`, `/user/stats`, `/me`), so reading the account needs a
-  browser session like TorrentLeech's.
+### Its rules
+
+| Rule | Value |
+| :--- | :--- |
+| Minimum ratio | **0.5**. Below it, five days of *ratio watch*, then **leeching is revoked** and the account stays enabled |
+| Hit & run | the site counts them (the profile shows 1) but the Rules page never states the criteria. Unknown, so treated as the generic 240 h / 1.0 |
+| Cross-seeding | **explicitly allowed**, in those words: "You can, of course, CROSS-SEED" |
+| Modifying their torrents | **forbidden**: no extra trackers, no DHT, no PEX, no re-hosting through debrid services |
+| VPN and proxies | explicitly permitted, and recommended, from any IP |
+| Promotions | freeleech periods and upload multipliers, generous enough that the site ratio looks nothing like the client's |
+| Bonus | points shop, plus a leech bonus (12% now) and a daily login streak |
+| IRC bots | must authenticate with your own username and IRC key and set usermode `+B`, and **bots are not permitted in official channels** |
+
+Their displayed **buffer is measured at ratio 1.0**, not at the 0.5 that actually matters:
+`49.18 - 11.68 = 37.50 GiB` is what the site shows, while the real headroom is
+`(49.18 - 0.5 x 11.68) / 0.5 = 86.7 GB` of paid downloads. Worth knowing before panicking at a
+number.
+
+### How it is configured here
+
+| Piece | Value | Why |
+| :--- | :--- | :--- |
+| Prowlarr | API key, FlareSolverr, no freeleech switch | the definition is an API one, so there is no `freeleech` checkbox to flip |
+| Seed goal | the generic 240 h / ratio 1.0 | their real H&R criteria are unknown, and a guess here is what loses accounts |
+| cross-seed | **included**, and the first two matches came from here | the site says cross-seeding is fine, and it is free ratio |
+| Rules of record | `config/trackers/rules.json` | including the two things never to do to their torrents |
+
+**The passkey trick used on TorrentLeech is forbidden here.** When TorrentLeech reset its passkey,
+every torrent was fixed by rewriting its announce URL with `addTrackers` and `removeTrackers`. Rule 2
+here forbids modifying their torrent files at all, so the same outage on this site means
+re-downloading the `.torrent`, not editing it.
 
 ### Still open
 
-Minimum ratio, its hit & run rule, seed time per torrent, slots per class, and how freeleech is
-flagged. Until those are known it runs on the generic goal (240 h or ratio 1.0) and has no entry in
-`config/trackers/rules.json`.
+Their H&R criteria, from the FAQ rather than the Rules page, and their minimum seed time if they
+state one. The account cannot be read automatically either: the Prowlarr indexer holds an API key
+rather than a username and password, and that key returns 403 on every user endpoint, so
+`tracker-stats.py` measures its hit & run from qBittorrent and nothing else.
 
-## C411, BTSCHOOL, retrotoon.world
+Note the local count reads **10 open obligations** against the site's own **1**: the generic 240 h
+default is far stricter than whatever they actually enforce. Over-counting only ever means seeding
+for longer, so it stays until their real rule is known.
 
-Unknown, which is the state that loses accounts. For each, six answers are needed before its
-configuration can be written honestly rather than guessed:
+## retrotoon.world
 
-1. minimum ratio, and what happens below it;
-2. what triggers a hit & run and how it clears;
-3. any minimum seed time per torrent;
-4. how many download slots the current class allows;
-5. whether freeleech exists and how it is flagged (a Cardigann `freeleech` setting, an indexer flag,
-   or nothing);
-6. what the bonus-point shop sells.
+Rules read 2026-08-21. Nothing downloaded yet: 0 up, 0 down, 273 bonus points.
 
-C411 is currently down in Prowlarr, which is its own thing to fix first.
+### Its rules
+
+| Rule | Value |
+| :--- | :--- |
+| Seed time | **72 h per torrent, reached within the first 10 days** after the download. The site calls this its strictest rule, "no exceptions" |
+| Minimum ratio | none stated. The obligation here is time, not ratio |
+| Right now | **site-wide freeleech for another 40 days** (until roughly 2026-09-30): nothing counts against ratio |
+| Content | animation only, and strictly family-friendly. Adult content is an immediate permanent ban |
+| Bonus | seed-bonus points, tripled on the daily featured torrent |
+
+### How it is configured here
+
+| Piece | Value | Why |
+| :--- | :--- | :--- |
+| Prowlarr | `Generic Torznab`, working | it is the generic definition, so there is no site-specific switch |
+| Seed goal | the generic 240 h / ratio 1.0 | **stricter than their 72 h**, so nothing is at risk. It costs disk, not safety |
+| cross-seed | included | free ratio, same as everywhere |
+
+Its announce host is not in `config/trackers/rules.json` yet, because the host lives inside the
+`.torrent` and nothing has been downloaded from here. Until it is, the generic goal applies, which
+over-satisfies their rule. Filling it in is what would let a torrent go at 84 h instead of 240 h and
+free the disk sooner.
+
+**The 40-day freeleech is the moment to take anything wanted from here**, since downloads cost
+nothing against ratio while it lasts.
+
+## BTSCHOOL
+
+Rules read 2026-08-21, and this one has a deadline attached.
+
+### The newbie assessment, which is nearly over
+
+The account is inside its probation window with **2 days 15 hours left**, and to pass it needs
+**50 GB uploaded, 50 GB downloaded and 6000 bonus points**. Current state: zero of all three.
+
+That is not reachable in the time left by seeding, and the site says so itself: the other way through
+is a donation. So this is a decision, not a task: donate, or let the account go. Recorded in
+[../PENDING.md](../PENDING.md).
+
+### Its rules
+
+| Rule | Value |
+| :--- | :--- |
+| Hit & run | **20 h of seeding within 10 days** of finishing, whatever the torrent's size. Upload above download clears it outright |
+| H&R penalty | **10 unmet obligations is a ban**. Clearing one costs 20000 bonus points, and an H&R ban is lifted only by a 100 CNY donation |
+| Minimum ratio | not on the Rules page: it says a low ratio costs download privileges and puts the number in the FAQ |
+| Account pruning | no traffic at all for 30 days without logging in deletes the account; 150 days deletes an unsealed one |
+| Upload speed | **their cap, 25 MB/s**. Above it, reported upload is penalised threefold; above 100 MB/s the account is banned automatically |
+| Promotions | Free, 2X, 2XFree, 50%, 30%. Anything over 20 GB is automatically Free, so are Blu-ray and HD DVD raw discs and the first episode of a season, and **everything becomes permanent 2X upload one month after release** |
+| Their torrents | do not upload their `.torrent` files to other trackers |
+| Clients | only clients on their whitelist, which is in the FAQ |
+
+### How it is configured here
+
+| Piece | Value | Why |
+| :--- | :--- | :--- |
+| Prowlarr | id 11, FlareSolverr, working | |
+| Seed goal | the generic 240 h / ratio 1.0 | twelve times their 20 h requirement, so it cannot cause an H&R |
+| cross-seed | included | |
+| Upload cap | **not applied** | qBittorrent's limit is global and cannot be set per tracker, so capping at 25 MB/s would throttle TorrentLeech, which is where the ratio comes from. Nothing seeds here yet and the measured peak across all trackers is about 0.5 MB/s, so it is theoretical until it is not |
+
+The promotion rules are the most generous of any site here and are worth reading twice: **over 20 GB
+is free, and after a month everything pays double upload**. If the account survives its probation,
+that combination is the cheapest ratio available anywhere on this box.
+
+## C411
+
+Rules read 2026-08-21. **This is the tightest account on the box, and it is the one nobody was
+watching.** The site shows 52.2 GB up against 63.3 GB down for a ratio of **0.83**, and its minimum
+to download anything is **0.8**.
+
+```
+headroom = (52.2 - 0.8 x 63.3) / 0.8 = 1.95 GB of paid downloads left
+```
+
+Two gigabytes. One ordinary film that is not freeleech blocks leeching on this site.
+
+And the ratio is thinner than it looks: **new accounts get 50 GB of upload credit** that counts
+towards the ratio, so of those 52.2 GB only **2.3 GB were really uploaded** (which matches
+qBittorrent exactly). The credit is a one-off, it does not grow back, and it is what has been holding
+this account above its line.
+
+### Its rules
+
+| Rule | Value |
+| :--- | :--- |
+| Minimum ratio to download | **0.8**. Below it, downloads are blocked until it recovers. The account is not disabled |
+| Signup credit | **50 GB of upload**, counted in the ratio |
+| Hit & run | **currently disabled site-wide.** Only ratio decides whether you can leech |
+| H&R when it returns | 72 h **or** ratio 1.0 per torrent, with a 24 h grace period before the clock starts |
+| H&R exemptions | global ratio ≥ 2.0, your first three torrents, anything under 100 MB, anything less than half downloaded |
+| H&R sanctions | a warning 24 h before the deadline, 3 active violations block downloads, **5 strikes is an automatic ban** |
+| Cross-seeding | **explicitly allowed**: "vous uploadez réellement les données" |
+| Freeleech | full (0x), 50%, and 2x upload, per torrent, per account or site-wide |
+| Cheating | announced upload is cross-checked against real swarm activity; ghost leech and modified clients lead to a permanent ban |
+
+### How it is configured here
+
+| Piece | Value | Why |
+| :--- | :--- | :--- |
+| Prowlarr | id 9, routed through the `nordvpn` SOCKS proxy | **searching is broken**: the proxy credentials have expired. The announce path is fine, which is why 4 torrents still seed and have uploaded 2.3 GB |
+| Seed goal | the generic 240 h / ratio 1.0 | more than three times their 72 h, so nothing can trip their H&R even after it comes back |
+| H&R measurement | on, as if their system were enabled | it is documented as returning, and measuring early costs nothing |
+| cross-seed | included | |
+
+### What to do about it
+
+Nothing automatic can help here yet, because the account cannot be read: its Prowlarr entry holds no
+username and password, so `tracker-stats.py` has no way in. Until it does, the rule is manual and
+simple: **on C411, freeleech only.** Everything else there is two gigabytes from blocking the
+account's downloads.
 
 ## Adding a new private tracker
 
