@@ -1,8 +1,11 @@
 # Seeding and Ratio
 
 Why this box downloads from anywhere and seeds almost nothing on private trackers, what the options
-are, and which one people actually pick. Written on 2026-08-20, after a TorrentLeech account was
-disabled for ratio.
+are, and which one people actually pick.
+
+**The policy that decides what gets deleted and when, and the per-tracker rules and configuration,
+live in [private-trackers.md](private-trackers.md).** This page is the diagnosis underneath it: the
+measurements, why a port forward was impossible on this line, and what changed.
 
 ## The measurement that explains everything
 

@@ -112,6 +112,21 @@
         href: http://{{HOMEPAGE_VAR_TAILSCALE_IP}}:8191
         server: my-docker
         container: flaresolverr
+    - autobrr:
+        icon: autobrr.png
+        href: https://autobrr.platanosverdes.com
+        description: Grabs freeleech off the tracker's IRC announce
+        server: my-docker
+        container: autobrr
+        widget:
+          type: autobrr
+          url: http://autobrr:7474
+          key: "{{HOMEPAGE_VAR_AUTOBRR_KEY}}"
+    - qbit-manage:
+        icon: qbittorrent.png
+        description: Tags torrents by tracker and hardlink state
+        server: my-docker
+        container: qbit-manage
     - Maintainerr:
         icon: maintainerr.png
         href: https://maintainerr.platanosverdes.com

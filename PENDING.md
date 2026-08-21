@@ -282,7 +282,7 @@ The rules from (1) belong in configuration, not in anyone's memory. Where things
 
 | Tracker | Grab rule | Seed goal |
 | :--- | :--- | :--- |
-| TorrentLeech | **done, and automated**: the tier in `config/trackers/rules.json` sets it from the headroom. Sonarr has no `requiredFlags` field at all, so there the indexer itself is switched | **done**: 360 h / ratio 1.2 in `seed-rules.json` |
+| TorrentLeech | **done, and automated**: the tier in `config/trackers/rules.json` drives Prowlarr's own freeleech filter, which every app inherits, plus `requiredFlags` in Radarr as a backstop | **done**: 360 h / ratio 1.2 in `seed-rules.json` |
 | DigitalCore | open: its Cardigann definition carries its own `freeleech` toggle | open, on the generic 240 h / 1.0 |
 | C411 | open | open |
 | BTSCHOOL | open | open |
@@ -296,9 +296,11 @@ Tiers live in `config/trackers/rules.json`; see the section in
 
 Two things that turned up while building it and are worth not forgetting:
 
-- **Sonarr has no `requiredFlags` field.** It is a Radarr-only field on the Torznab indexer, so the
-  "freeleech only, in Radarr and Sonarr" line above was never true in Sonarr. While the headroom is
-  thin the indexer is disabled there instead.
+- **Sonarr has no `requiredFlags` field**, so the "freeleech only, in Radarr and Sonarr" line above
+  was never true in Sonarr. Taking the indexer away from Sonarr was the first fix and it was the
+  wrong one: TorrentLeech has series, and Prowlarr full-syncs indexers back to the *arrs anyway. The
+  filter belongs in Prowlarr, whose Cardigann definition carries a `Search freeleech only` checkbox
+  that every app inherits.
 - **The grab rate is a disk budget, not a preference**, because a grab cannot be deleted until its
   hit & run window closes. The loop therefore also honours a free-space floor, which overrides the
   ratio in both directions.
