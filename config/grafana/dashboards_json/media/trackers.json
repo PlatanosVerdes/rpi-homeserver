@@ -8,7 +8,7 @@
     "policy"
   ],
   "schemaVersion": 42,
-  "version": 4,
+  "version": 5,
   "editable": true,
   "graphTooltip": 1,
   "preload": false,
@@ -548,7 +548,7 @@
     {
       "type": "bargauge",
       "title": "Ratio against each site's own line",
-      "description": "1.0 means exactly on the line that costs the account. Sites with no ratio rule are absent by design.",
+      "description": "1.0 is the wall on every site at once: TorrentLeech disables under 0.4, DigitalCore revokes leeching under 0.5, C411 blocks downloads under 0.8. The scale stops at 3 on purpose, because DigitalCore's 8.4 flattens everything else into an empty bar. Sites with no ratio rule are absent by design, not missing.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -578,13 +578,19 @@
                 "value": 1
               },
               {
+                "color": "yellow",
+                "value": 1.25
+              },
+              {
                 "color": "green",
                 "value": 1.5
               }
             ]
           },
           "noValue": "no data",
-          "decimals": 2
+          "decimals": 2,
+          "max": 3,
+          "min": 0
         },
         "overrides": []
       },
@@ -3591,15 +3597,15 @@
     },
     {
       "type": "timeseries",
-      "title": "Obligations: open, and with the clock stopped",
-      "description": "",
+      "title": "Open obligations, per tracker",
+      "description": "Normal for anything recent: it counts torrents that have not yet cleared their tracker's seed requirement. Only the panel beside it is an emergency.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
       "gridPos": {
         "h": 7,
-        "w": 8,
+        "w": 4,
         "x": 8,
         "y": 81
       },
@@ -3634,12 +3640,10 @@
       },
       "options": {
         "legend": {
-          "displayMode": "table",
+          "displayMode": "list",
           "placement": "bottom",
           "showLegend": true,
-          "calcs": [
-            "lastNotNull"
-          ]
+          "calcs": []
         },
         "tooltip": {
           "mode": "multi",
@@ -3653,23 +3657,85 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
+          "refId": "A",
           "expr": "tracker_hnr_pending",
           "instant": false,
           "range": true,
-          "legendFormat": "{{tracker}} open",
-          "refId": "A"
+          "legendFormat": "{{tracker}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Clock stopped, per tracker",
+      "description": "A torrent that owes seeding time and is not announcing pays nothing off. Flat at zero is the only acceptable shape here.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 4,
+        "x": 12,
+        "y": 81
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "mappings": [],
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "noValue": "no data",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": true,
+            "gradientMode": "opacity",
+            "axisPlacement": "auto"
+          }
         },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
           },
           "editorMode": "code",
+          "refId": "A",
           "expr": "tracker_hnr_at_risk",
           "instant": false,
           "range": true,
-          "legendFormat": "{{tracker}} STOPPED",
-          "refId": "B"
+          "legendFormat": "{{tracker}}"
         }
       ]
     },
