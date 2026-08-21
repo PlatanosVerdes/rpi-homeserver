@@ -4,7 +4,7 @@
     "upgradeAllowed": true,
     "cutoff": 7,
     "minFormatScore": -6000,
-    "cutoffFormatScore": 10000,
+    "cutoffFormatScore": 2200,
     "items": [
       {
         "quality": {
@@ -426,7 +426,7 @@
     "upgradeAllowed": true,
     "cutoff": 19,
     "minFormatScore": -6000,
-    "cutoffFormatScore": 10000,
+    "cutoffFormatScore": 2200,
     "items": [
       {
         "quality": {
@@ -848,7 +848,7 @@
     "upgradeAllowed": true,
     "cutoff": 19,
     "minFormatScore": -6000,
-    "cutoffFormatScore": 10000,
+    "cutoffFormatScore": 2200,
     "items": [
       {
         "quality": {
