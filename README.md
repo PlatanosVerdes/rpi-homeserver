@@ -172,6 +172,9 @@ Plex runs on the Pi, which is weak at video transcoding, so files should
   taken on a link count above one, the library copy is untouched and nothing is freed but the
   seeding. Private trackers are unaffected, which is where seeding is the currency.
 
+  **`keep` is the manual override**: tag a torrent `keep` in qBittorrent and this never touches it,
+  whatever the goals say. No deploy, no config edit, effective on the next pass.
+
   Goals live in `config/qbittorrent/seed-rules.json` (240 h seeding or ratio 1.0 for private, nothing
   for public). Whether a tracker is private comes from qBittorrent, so there is no list to maintain.
   qBittorrent's own share limits stay **off on purpose**: they cannot see the library, so they would

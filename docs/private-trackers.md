@@ -34,6 +34,11 @@ because an unpaid torrent turns into a hit & run and three of those disable an a
 **Nothing is ever deleted while a tracker is still owed.** That is the one line in this file with no
 exceptions.
 
+**The manual override is a tag.** Add `keep` to a torrent in qBittorrent and `seed-cleanup.py` will
+never touch it, whatever the goals say. It needs no deploy and no config change, which is the point:
+it exists for the moment something is about to be removed and the answer is "not yet, explain it
+first".
+
 Where it lives: goals per tracker in `config/qbittorrent/seed-rules.json`, enforcement in
 `scripts/seed-cleanup.py`, the film side in Maintainerr, and the full lifecycle in the README's
 deletion policy.
