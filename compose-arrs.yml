@@ -119,6 +119,34 @@ services:
       - media-network
 
   # --- UNPACKERR (unrars scene releases so Radarr/Sonarr can import them) ---
+  # Torrent lifecycle: tags by tracker, applies a seed goal per tracker, and notices a torrent the
+  # tracker no longer recognises. Running in DRY RUN alongside scripts/seed-cleanup.py until their
+  # decisions agree, then it replaces it. See PENDING.md and config/qbit-manage/config.yml.
+  qbit-manage:
+    image: ghcr.io/stuffanthings/qbit_manage:${QBIT_MANAGE_VERSION}
+    container_name: qbit-manage
+    restart: unless-stopped
+    mem_limit: 512m
+    profiles: [media, all]
+    user: "${PUID}:${PGID}"
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      - TZ=${TZ}
+      # The WebUI's whitelist covers the LAN and the tailnet, not the Docker bridge this arrives on
+      - QBIT_USER=${QBIT_USER}
+      - QBIT_PASSWORD=${QBIT_PASSWORD}
+      - QBT_SCHEDULE=${QBIT_MANAGE_SCHEDULE}
+      - QBT_DRY_RUN=true
+      - QBT_LOG_LEVEL=INFO
+    volumes:
+      - ./config/qbit-manage:/config
+      # Only downloads: hardlink counting needs the download side, and the library is none of its
+      # business, the same reasoning as qBittorrent's own mount
+      - ${DATA_ROOT}/downloads:/data/downloads
+    networks:
+      - media-network
+
   unpackerr:
     image: ghcr.io/unpackerr/unpackerr:${UNPACKERR_VERSION}
     container_name: unpackerr
