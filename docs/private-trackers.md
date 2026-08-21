@@ -373,6 +373,17 @@ this account above its line.
 | H&R measurement | on, as if their system were enabled | it is documented as returning, and measuring early costs nothing |
 | cross-seed | included | |
 
+### From its terms of use, read 2026-08-21
+
+| Term | What it means here |
+| :--- | :--- |
+| **Never share your passkey or personal announce link** | checked: nothing in this repo contains one. The only long hex strings tracked are an acestream content id and Docker image digests |
+| VPN and proxies | not forbidden; using one **to cheat the ratio** is. C411's Prowlarr entry routes its searches through the `nordvpn` SOCKS proxy, which is search traffic and touches no announce |
+| One account per person, no sharing | |
+| Uploads | must be seeded at least 48 h after publishing, if anything is ever uploaded here |
+| Sanctions | progressive: warning, then temporary suspension, then permanent ban. Not the instant disable TorrentLeech uses |
+| New members | get a grace period, which is what the 50 GB credit is |
+
 ### What to do about it
 
 Nothing automatic can help here yet, because the account cannot be read: its Prowlarr entry holds no
