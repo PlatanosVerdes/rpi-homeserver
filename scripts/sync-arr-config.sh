@@ -80,24 +80,74 @@ sync_app() {
         failures=$((failures + 1)); return 1
     }
 
-    local qp_count=0
+    # A profile has to score EVERY format this install holds, not just the committed ones. Radarr
+    # silently discards the whole update when formatItems omits one of them: it answers 202, echoes
+    # the body back, and changes nothing. Measured on 2026-08-21 with 13 formats live against 12 in
+    # the repo, when neither the scores nor cutoffFormatScore moved and this script still reported
+    # three profiles synced. Whatever the repo does not score is sent as 0.
+    local all_formats
+    all_formats=$(call GET "$base/customformat" "$key" | jq 'map({format: .id, name: .name})') || {
+        failures=$((failures + 1)); return 1
+    }
+
+    # A formatName in the committed profile that does not exist here is dropped from the body
+    # without a word, so a typo would look like a clean sync forever. Say it out loud instead.
+    local unknown
+    unknown=$(jq -r --argjson all "$all_formats" '
+        ($all | map(.name)) as $known
+        | [.[].formatItems[].formatName] | unique | map(select(. as $n | $known | index($n) | not))
+        | join(", ")' "$qp_path")
+    if [[ -n "$unknown" ]]; then
+        echo "[$app] profiles name formats that do not exist here: $unknown" >&2
+        failures=$((failures + 1))
+    fi
+
+    local qp_count=0 qp_applied=0
     while IFS= read -r qp; do
         qp_count=$((qp_count + 1))
-        local name profile_id body
+        local name profile_id body live
         name=$(jq -r '.name' <<< "$qp")
-        body=$(jq --argjson namemap "$name_to_id" \
-            '.formatItems = [.formatItems[] | {format: $namemap[.formatName], name: .formatName, score}]' \
-            <<< "$qp")
+        body=$(jq --argjson all "$all_formats" '
+            . as $p
+            | .formatItems = [
+                $all[] as $f
+                | $f + {score: ([$p.formatItems[] | select(.formatName == $f.name) | .score] | first // 0)}
+              ]' <<< "$qp")
+
         profile_id=$(jq -r --arg n "$name" '.[$n] // empty' <<< "$existing_profiles")
         if [[ -n "$profile_id" ]]; then
             body=$(jq --argjson id "$profile_id" '. + {id: $id}' <<< "$body")
-            call PUT "$base/qualityprofile/$profile_id" "$key" "$body" > /dev/null || failures=$((failures + 1))
+            call PUT "$base/qualityprofile/$profile_id" "$key" "$body" > /dev/null || {
+                failures=$((failures + 1)); continue
+            }
         else
-            call POST "$base/qualityprofile" "$key" "$body" > /dev/null || failures=$((failures + 1))
+            profile_id=$(call POST "$base/qualityprofile" "$key" "$body" | jq -r '.id') || {
+                failures=$((failures + 1)); continue
+            }
+        fi
+
+        # Read back instead of trusting the 202, the same reason sync-qbit-config.sh does it: this
+        # API accepts changes it never makes, and a sync that claims success while doing nothing is
+        # worse than one that fails loudly.
+        live=$(call GET "$base/qualityprofile/$profile_id" "$key") || {
+            failures=$((failures + 1)); continue
+        }
+        local drift
+        drift=$(jq -rn --argjson want "$body" --argjson live "$live" '
+            ($live.formatItems | map({(.name): .score}) | add // {}) as $live_scores
+            | [$want | (.cutoffFormatScore // 0) as $c
+               | select($c != ($live.cutoffFormatScore // 0)) | "cutoffFormatScore"]
+              + [$want.formatItems[] | select($live_scores[.name] != .score) | .name]
+            | join(", ")')
+        if [[ -n "$drift" ]]; then
+            echo "[$app] $name: did NOT stick -> $drift" >&2
+            failures=$((failures + 1))
+        else
+            qp_applied=$((qp_applied + 1))
         fi
     done < <(jq -c '.[]' "$qp_path")
 
-    echo "[$app] $cf_count custom formats, $qp_count quality profiles synced"
+    echo "[$app] $cf_count custom formats, $qp_applied of $qp_count quality profiles applied"
 }
 
 # Radarr's QualityProfiles.Language column is a legacy field the current API/UI never reads or
