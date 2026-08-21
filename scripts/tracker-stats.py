@@ -204,6 +204,52 @@ def hit_and_run(config, torrents):
     return pending, worst_hours
 
 
+def tracker_host(torrent):
+    url = torrent.get("tracker") or ""
+    return url.split("://", 1)[-1].split("/", 1)[0].split(":", 1)[0]
+
+
+def client_side(config, torrents):
+    """What the client knows per tracker, which is every tracker, not only the ones that log in.
+
+    Three of the five accounts here cannot be read (an API key that blocks profile data, a captcha,
+    a site in maintenance), so without this a dashboard has one populated row and four empty ones.
+    None of these numbers is the tracker's own accounting, and they are labelled `source="client"`
+    for exactly that reason.
+
+    The leech-bonus estimate applies DigitalCore's published formula to what is actually seeding:
+    1% per 10 GB, only 50 GiB counted per torrent, scaled by `1 + (1/seeders)` for scarcity. It is an
+    estimate of a number only that site can compute, and it is the only way to see the effect of a
+    cross-seed the day it lands.
+    """
+    hosts = set(config.get("tracker_hosts") or [])
+    rows = [t for t in torrents if tracker_host(t) in hosts]
+    seeding = [t for t in rows if t.get("progress", 0) >= 1]
+    bonus_gb = sum(min(t["size"], 50 * 1024 ** 3) * (1 + 1 / max(t.get("num_complete") or 0, 1))
+                   for t in seeding) / 1024 ** 3
+    return {
+        "torrents": len(rows),
+        "seeding": len(seeding),
+        "bytes_on_disk": sum(t["size"] for t in rows),
+        "uploaded_bytes": sum(t.get("uploaded") or 0 for t in rows),
+        "leech_bonus_percent": min(100.0, bonus_gb / 10),
+    }
+
+
+def readings():
+    """Numbers read off a site by eye, because three of these accounts cannot be read any other way.
+
+    Kept in git with the date they were read, so a panel can show both the figure and how stale it is.
+    A number with no timestamp is worse than no number.
+    """
+    path = Path(os.environ.get("TRACKER_READINGS",
+                               PROJECT_DIR / "config/trackers/readings.json"))
+    try:
+        return json.loads(path.read_text())
+    except Exception:
+        return {}
+
+
 def escape(value):
     return str(value).replace("\\", "\\\\").replace('"', '\\"').replace("\n", " ")
 
@@ -263,16 +309,83 @@ def main():
         "# TYPE tracker_hnr_at_risk gauge",
         "# HELP tracker_last_run_timestamp When this script last read the site",
         "# TYPE tracker_last_run_timestamp gauge",
+        "# HELP tracker_client_torrents Torrents in the client for this tracker",
+        "# TYPE tracker_client_torrents gauge",
+        "# HELP tracker_client_seeding Of those, how many are complete and seeding",
+        "# TYPE tracker_client_seeding gauge",
+        "# HELP tracker_client_bytes_on_disk What this tracker's torrents occupy locally",
+        "# TYPE tracker_client_bytes_on_disk gauge",
+        "# HELP tracker_client_uploaded_bytes Uploaded per the client, which is not the site's count",
+        "# TYPE tracker_client_uploaded_bytes gauge",
+        "# HELP tracker_leech_bonus_percent Estimated leech bonus from what is seeding, DigitalCore's formula",
+        "# TYPE tracker_leech_bonus_percent gauge",
+        "# HELP tracker_read_ratio Ratio read off the site by eye, for accounts that cannot be scraped",
+        "# TYPE tracker_read_ratio gauge",
+        "# HELP tracker_read_uploaded_bytes Uploaded, read off the site by eye",
+        "# TYPE tracker_read_uploaded_bytes gauge",
+        "# HELP tracker_read_downloaded_bytes Downloaded, read off the site by eye",
+        "# TYPE tracker_read_downloaded_bytes gauge",
+        "# HELP tracker_read_headroom_bytes Non-freeleech downloads that fit, from the read figures",
+        "# TYPE tracker_read_headroom_bytes gauge",
+        "# HELP tracker_read_points Bonus points, read off the site by eye",
+        "# TYPE tracker_read_points gauge",
+        "# HELP tracker_read_hnr Hit and run count the site itself shows",
+        "# TYPE tracker_read_hnr gauge",
+        "# HELP tracker_read_timestamp When those figures were read",
+        "# TYPE tracker_read_timestamp gauge",
+        "# HELP tracker_deadline_seconds Seconds left on a deadline the site imposes, 0 when none",
+        "# TYPE tracker_deadline_seconds gauge",
     ]
     detail = ["# HELP tracker_hnr_torrent_hours_left Hours of seeding a torrent still owes",
               "# TYPE tracker_hnr_torrent_hours_left gauge"]
 
+    all_readings = readings()
     state = {"read_at": datetime.now(timezone.utc).timestamp(), "trackers": {}}
     for tracker, config in rules.items():
         label = f'tracker="{escape(tracker)}"'
         min_ratio = config.get("min_ratio", 0.4)
         pending, worst = hit_and_run(config, torrents)
         detail_rows = sorted(pending, key=lambda row: -row[1])[:25]
+
+        # Every tracker gets these, readable account or not.
+        client = client_side(config, torrents)
+        lines += [f'tracker_client_torrents{{{label}}} {client["torrents"]}',
+                  f'tracker_client_seeding{{{label}}} {client["seeding"]}',
+                  f'tracker_client_bytes_on_disk{{{label}}} {client["bytes_on_disk"]}',
+                  f'tracker_client_uploaded_bytes{{{label}}} {client["uploaded_bytes"]}',
+                  ]
+        # Only where the mechanic exists: on a site with no leech bonus the number is noise.
+        if config.get("leech_bonus"):
+            lines.append(f'tracker_leech_bonus_percent{{{label}}} '
+                         f'{client["leech_bonus_percent"]:.1f}')
+
+        read = (all_readings.get(tracker) or {})
+        if read:
+            up = read.get("uploaded_gb")
+            down = read.get("downloaded_gb")
+            if up is not None and down is not None:
+                buffer_read = up * 1024 ** 3 - min_ratio * down * 1024 ** 3
+                lines += [f'tracker_read_uploaded_bytes{{{label}}} {up * 1024 ** 3:.0f}',
+                          f'tracker_read_downloaded_bytes{{{label}}} {down * 1024 ** 3:.0f}',
+                          f"tracker_read_headroom_bytes{{{label}}} "
+                          f"{buffer_read / min_ratio if min_ratio else 0:.0f}"]
+            for key, metric in (("ratio", "tracker_read_ratio"), ("points", "tracker_read_points"),
+                                ("hit_and_run", "tracker_read_hnr")):
+                if read.get(key) is not None:
+                    lines.append(f"{metric}{{{label}}} {read[key]}")
+            if read.get("read_at"):
+                try:
+                    when = datetime.fromisoformat(read["read_at"]).replace(tzinfo=timezone.utc)
+                    lines.append(f"tracker_read_timestamp{{{label}}} {when.timestamp():.0f}")
+                except ValueError:
+                    failures.append(f"{tracker}: unreadable read_at {read['read_at']}")
+            if read.get("deadline"):
+                try:
+                    when = datetime.fromisoformat(read["deadline"]).replace(tzinfo=timezone.utc)
+                    left = (when - datetime.now(timezone.utc)).total_seconds()
+                    lines.append(f"tracker_deadline_seconds{{{label}}} {max(0.0, left):.0f}")
+                except ValueError:
+                    failures.append(f"{tracker}: unreadable deadline {read['deadline']}")
 
         # A site nobody can log into still has torrents in the client, and the hit & run clock is
         # the half that gets accounts banned. So the obligations are measured for every tracker in
