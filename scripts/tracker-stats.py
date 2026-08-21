@@ -364,11 +364,12 @@ def main():
             up = read.get("uploaded_gb")
             down = read.get("downloaded_gb")
             if up is not None and down is not None:
-                buffer_read = up * 1024 ** 3 - min_ratio * down * 1024 ** 3
                 lines += [f'tracker_read_uploaded_bytes{{{label}}} {up * 1024 ** 3:.0f}',
-                          f'tracker_read_downloaded_bytes{{{label}}} {down * 1024 ** 3:.0f}',
-                          f"tracker_read_headroom_bytes{{{label}}} "
-                          f"{buffer_read / min_ratio if min_ratio else 0:.0f}"]
+                          f'tracker_read_downloaded_bytes{{{label}}} {down * 1024 ** 3:.0f}']
+                if min_ratio > 0:
+                    buffer_read = (up - min_ratio * down) * 1024 ** 3
+                    lines.append(f"tracker_read_headroom_bytes{{{label}}} "
+                                 f"{buffer_read / min_ratio:.0f}")
             for key, metric in (("ratio", "tracker_read_ratio"), ("points", "tracker_read_points"),
                                 ("hit_and_run", "tracker_read_hnr")):
                 if read.get(key) is not None:
@@ -391,8 +392,11 @@ def main():
         # the half that gets accounts banned. So the obligations are measured for every tracker in
         # the file, and only the account numbers need a `site`.
         if not config.get("site"):
-            lines += [f"tracker_min_ratio{{{label}}} {min_ratio}",
-                      f"tracker_hnr_pending{{{label}}} {len(pending)}",
+            # A site with no ratio rule gets no line and no headroom: emitting zero for both put
+            # BTSCHOOL at the top of a "tightest headroom" panel it has no business being in.
+            if min_ratio > 0:
+                lines.append(f"tracker_min_ratio{{{label}}} {min_ratio}")
+            lines += [f"tracker_hnr_pending{{{label}}} {len(pending)}",
                       f"tracker_hnr_hours_worst{{{label}}} {worst:.1f}",
                       f"tracker_hnr_at_risk{{{label}}} {sum(1 for row in pending if row[3])}"]
             for name, hours_left, ratio, stopped in detail_rows:

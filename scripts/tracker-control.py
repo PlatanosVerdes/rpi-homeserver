@@ -166,6 +166,28 @@ def autobrr(path, body=None, method="GET"):
                 body=body, method=method)
 
 
+def grabber_metrics(tracker, config):
+    """What each tracker's grabber is actually set to, read from autobrr rather than assumed.
+
+    The dashboard used to show TorrentLeech's tier as if it were the whole picture, which stopped
+    being true the moment a second grabber existed. Only the tiers are steered from here; every
+    tracker that names a filter gets its rate reported, enabled or not.
+    """
+    name = config.get("autobrr_filter")
+    if not name:
+        return []
+    current = next((f for f in autobrr("filters") if f["name"] == name), None)
+    if current is None:
+        raise RuntimeError(f"autobrr has no filter named {name}")
+    per_day = current.get("max_downloads") or 0
+    if (current.get("max_downloads_unit") or "DAY").upper() == "HOUR":
+        per_day *= 24
+    label = f'tracker="{tracker}"'
+    return [f"tracker_grabber_enabled{{{label}}} {int(bool(current.get('enabled')))}",
+            f"tracker_grabber_per_day{{{label}}} {per_day}",
+            f"tracker_grabber_actions{{{label}}} {current.get('actions_enabled_count') or 0}"]
+
+
 def bonus_hold(tracker, config, torrents):
     """Turn spare disk into free downloads, where the tracker pays for holding data.
 
@@ -342,7 +364,13 @@ def main():
         print(f"the tracker reading is {age / 3600:.1f} h old, not acting on it", file=sys.stderr)
         return 1
 
-    lines = ["# HELP tracker_tier_grabs_per_day Freeleech grabs a day the current tier allows",
+    lines = ["# HELP tracker_grabber_enabled 1 when this tracker's autobrr filter is switched on",
+             "# TYPE tracker_grabber_enabled gauge",
+             "# HELP tracker_grabber_per_day Grabs a day its filter allows, whatever the unit is set to",
+             "# TYPE tracker_grabber_per_day gauge",
+             "# HELP tracker_grabber_actions Enabled actions on that filter: zero means it pushes nothing",
+             "# TYPE tracker_grabber_actions gauge",
+             "# HELP tracker_tier_grabs_per_day Freeleech grabs a day the current tier allows",
              "# TYPE tracker_tier_grabs_per_day gauge",
              "# HELP tracker_grabber_paused_no_disk 1 while the grabber is off for lack of space",
              "# TYPE tracker_grabber_paused_no_disk gauge",
@@ -356,6 +384,12 @@ def main():
             bonus_hold(tracker, config, torrents_now())
         except Exception as exc:
             failures.append(f"{tracker}: bonus hold: {exc}")
+
+        # Reported for every tracker that has a grabber, steered or not.
+        try:
+            lines += grabber_metrics(tracker, config)
+        except Exception as exc:
+            failures.append(f"{tracker}: grabber state: {exc}")
 
         # A tracker with no tiers is here for its rules and its hit & run clock, not to be steered:
         # there is nothing to read from it and nothing to switch.
