@@ -5,15 +5,19 @@
 # longer recognises (a reset passkey went unnoticed for four days on 2026-08-16), and understand
 # cross-seeds, which is a prerequisite for adding cross-seed at all.
 
+# Evaluation phase: this writes TAGS and nothing else. Every command that deletes a torrent, or
+# that writes a share limit into qBittorrent, is off. Tags are needed for real (dry_run skips them,
+# and then the share_limits groups match nothing and report zeros, which is useless for comparing),
+# and they are reversible in one click.
 commands:
-  dry_run: true            # nothing is deleted or changed until its decisions have been compared
+  dry_run: false
   cat_update: false        # categories are Radarr's and Sonarr's business, not this tool's
-  tag_update: true         # tags per tracker, which is what share_limits groups filter on
-  rem_unregistered: true   # the feature the bespoke script lacks
-  tag_tracker_error: true
-  rem_orphaned: false      # arr_orphan_* already watches this, and deleting is a separate decision
-  tag_nohardlinks: true
-  share_limits: true
+  tag_update: true         # a tag per tracker, which is what share_limits groups filter on
+  tag_tracker_error: true  # tags what a tracker no longer recognises, rather than removing it
+  rem_unregistered: false  # the feature that makes this tool worth adopting, but it deletes: later
+  tag_nohardlinks: true    # tags what the library no longer holds
+  share_limits: false      # writing limits into qBittorrent is the thing the README keeps off
+  rem_orphaned: false      # arr_orphan_* already watches this, and deleting is its own decision
   recheck: false
   skip_cleanup: false
   skip_qb_version_check: false
@@ -41,6 +45,12 @@ directory:
   remote_dir: /data/downloads
   recycle_bin: /data/downloads/.RecycleBin
   orphaned_dir: /data/downloads/orphaned_data
+
+# Required as a list whenever tag_nohardlinks runs. Only radarr has torrents today; tv-sonarr is
+# listed so the day it does, it is covered.
+nohardlinks:
+  - radarr
+  - tv-sonarr
 
 # Every category qBittorrent holds has to be listed or the run refuses to start
 cat:
@@ -98,7 +108,7 @@ share_limits:
     # address out of public swarms. There is no "delete once hardlinked" rule here, so the closest
     # equivalent is time: an import takes minutes, so two hours is generous, and the library copy
     # survives because deleting the download side only removes one of the two names.
-    min_seeding_time: 1h
+    # min_seeding_time is deliberately absent: this tool refuses it unless max_ratio is above 0.
     max_seeding_time: 2h
     max_ratio: -1
     cleanup: false

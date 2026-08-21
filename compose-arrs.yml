@@ -137,7 +137,6 @@ services:
       - QBIT_USER=${QBIT_USER}
       - QBIT_PASSWORD=${QBIT_PASSWORD}
       - QBT_SCHEDULE=${QBIT_MANAGE_SCHEDULE}
-      - QBT_DRY_RUN=true
       - QBT_LOG_LEVEL=INFO
     volumes:
       - ./config/qbit-manage:/config
