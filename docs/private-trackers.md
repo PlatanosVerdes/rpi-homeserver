@@ -253,14 +253,60 @@ C411 is currently down in Prowlarr, which is its own thing to fix first.
 
 ## Adding a new private tracker
 
-1. Read its rules pages and fill in the six answers above.
-2. Add the indexer in Prowlarr, check the definition for a `freeleech` setting, and test a search.
-3. Add its hostname and rules to `config/trackers/rules.json`, and its seed goal to
-   `config/qbittorrent/seed-rules.json`, hours above what the site asks for.
-4. If it has an announce channel, add it to autobrr with Mechanism `None`, and size the grab rate as
-   a disk budget rather than a preference.
-5. Run `tracker-stats.py` and confirm the site's numbers come back; then `DRY_RUN=1
-   tracker-control.py` and confirm the tier it picks is the one you expect.
+One site per sitting, and the section it earns on this page looks like TorrentLeech's above: rules,
+then the configuration applied, then why.
+
+1. **Read its rules pages** and answer the six questions above. Write them down here before
+   configuring anything; a guessed seed goal is how accounts are lost.
+2. **Check the indexer actually works before believing anything else.** A dead proxy, a missing
+   definition file and a disabled account look identical from outside:
+
+   ```bash
+   K=$(sed -n 's/.*<ApiKey>\([^<]*\)<.*/\1/p' appdata/prowlarr/config.xml | head -1)
+   curl -s -H "X-Api-Key: $K" http://localhost:9696/api/v1/indexer/<id> > /tmp/ix.json
+   curl -s -X POST -H "X-Api-Key: $K" -H 'Content-Type: application/json' \
+        --data-binary @/tmp/ix.json http://localhost:9696/api/v1/indexer/test   # the real error
+   curl -s -H "X-Api-Key: $K" http://localhost:9696/api/v1/health               # how long it has failed
+   ```
+
+   C411 looked like a ban on 2026-08-21 and was a SOCKS proxy whose credentials had expired.
+3. **Look for the freeleech switch** in its Cardigann definition and turn it on if the ratio is
+   thin, since Prowlarr is the only place that covers every app.
+4. **Add its hostname and rules to `config/trackers/rules.json`**, and its seed goal to
+   `config/qbittorrent/seed-rules.json`, with the hours set above what the site asks for.
+5. **If it has an announce channel**, add it to autobrr with Mechanism `None`, and size the grab
+   rate as a disk budget rather than a preference.
+6. **Add it to cross-seed** (`config/cross-seed/config.js`), because a tracker that has the release
+   you already seed is free ratio.
+7. **Verify, do not assume**: `tracker-stats.py` must come back with the site's own numbers, and
+   `DRY_RUN=1 tracker-control.py` must pick the tier you expect.
+
+## cross-seed, the free ratio
+
+The same bytes, already on this disk, seeded on every private tracker that also has the release.
+Matches are hardlinked, so a cross-seed costs an inode and nothing else, and the torrent starts at
+100% with nothing to download.
+
+What is configured, in `config/cross-seed/config.js`:
+
+| Setting | Value | Why |
+| :--- | :--- | :--- |
+| `torznab` | the private indexers only | there is no account or ratio on a public tracker, so a cross-seed there buys nothing |
+| `torrentDir` | qBittorrent's `BT_backup`, read-only | what the client already holds is the search list |
+| `linkDirs` | `/data/downloads/cross-seed` | must be a path qBittorrent has mounted, and **cannot sit inside `dataDirs`**, which is why there is no `dataDirs` here |
+| `duplicateCategories` | `true` | injects as `<category>.cross-seed`, so Radarr never sees a torrent it cannot import |
+| `skipRecheck` | `false` | a flexible match can be a near miss, and seeding bad data is worse than not seeding |
+| `searchCadence` | `1 day` | 30 s between queries, on trackers with request limits |
+
+Two version facts worth keeping: cross-seed **6.13.2 cannot log into qBittorrent 5.2.3**, because
+that version answers a successful login with `204` and the client code treats it as a failure. 6.13.7
+handles it. And `excludeOlder` takes vercel `ms` strings, so `180d` works and `6 months` does not.
+
+The consequence for deletion is real and deliberate: a cross-seeded file has a link count above one
+while the second torrent exists, so `seed-cleanup.py` reads it as "still in the library" and keeps
+both. Bytes that used to be reclaimed after watching now wait for the cross-seed to finish paying its
+own tracker. That is the price of free ratio, and it is one more reason the deleting side belongs in
+qbit_manage, which understands cross-seeds explicitly.
 
 ## Where upload actually comes from
 
