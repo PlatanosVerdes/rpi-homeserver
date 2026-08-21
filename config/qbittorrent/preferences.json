@@ -5,7 +5,7 @@
   "async_io_threads": 4,
 
   "queueing_enabled": true,
-  "max_active_downloads": 3,
+  "max_active_downloads": 1,
   "max_active_torrents": 100,
   "max_active_uploads": 100,
 
