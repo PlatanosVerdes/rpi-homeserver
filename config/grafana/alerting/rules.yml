@@ -889,7 +889,7 @@ groups:
                 - evaluator: { type: gt, params: [0] }
 
       - uid: homelab-tracker-hnr-stopped
-        title: 'A hit & run obligation with the clock stopped'
+        title: 'A hit and run obligation with the clock stopped'
         condition: C
         # The site counts seeding time from announces, so a torrent that owes hours and is paused,
         # errored or missing its files is not paying anything off. Three uncleared obligations is
