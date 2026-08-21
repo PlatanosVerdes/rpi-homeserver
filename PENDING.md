@@ -350,10 +350,13 @@ wants to maintain it. So, in this order:
    the per-tracker goals (360 h on TorrentLeech, because its clock runs behind the client's), the
    public-tracker rule of dropping a torrent as soon as the library has the file, and the absolute
    one, that nothing is deleted while any tracker is still owed.
-4. **autobrr last**, once the ratio is healthy. It reacts to a tracker's IRC announce in seconds
+4. **autobrr**, planned last but **done first, on 2026-08-21**, because the ratio was the thing
+   under a deadline and this is what fixes it: it reacts to a tracker's IRC announce in seconds
    rather than the minutes an RSS poll costs, which is the difference between being an early seeder
-   and arriving to a swarm that already has thirty. Its filter has to cap concurrency at one while
-   TorrentLeech only grants one download slot.
+   and arriving to a swarm that already has thirty. Concurrency is capped at one download by the
+   client rule, not by the filter. Full configuration and the two API traps are in
+   `docs/private-trackers.md`. What is left is one filter per remaining tracker, which waits on
+   knowing each one's rules.
 
 The one thing `seed-cleanup.py` does that qbit_manage cannot is ask Radarr and Sonarr what a
 download actually produced, which mattered for RAR releases. That reason disappeared on 2026-08-21

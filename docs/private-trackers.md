@@ -99,6 +99,60 @@ everywhere else:
 The bot nick is `<your-username>_bot` and the channel is `#tlannounces`. Verify with
 `/whois <your-username>_bot` from your own client: it should be in that one channel and nowhere else.
 
+### The freeleech grabber, as configured
+
+Running since 2026-08-21. autobrr sits on TorrentLeech's IRC announce channel and pushes freeleech
+releases straight into qBittorrent, so building ratio stops being a bookmark somebody remembers to
+click. What is deployed:
+
+| Piece | Value |
+|---|---|
+| Indexer | TorrentLeech, IRC enabled, nick `<username>_bot`, channel `#tlannounces`, Mechanism **None** |
+| Filter | `TL freeleech grande`: freeleech only, 5 GB to 40 GB, max **2 downloads per day** |
+| Action | qBittorrent, **no category**, tag `ratio` |
+| Client rule | `max_active_downloads = 1`, so a grab never competes with a Radarr download |
+
+**No category is the point.** A category is what makes Radarr adopt a download and then complain it
+cannot import it. These grabs belong to nothing: they exist to be uploaded from, and the `ratio` tag
+is what says so.
+
+#### Why 2 per day and not 1 per hour
+
+Downloading anything on TorrentLeech creates a hit & run obligation: 240 h of seeding, or ratio 1:1,
+per torrent. **A grab therefore cannot be deleted for 10 days**, whatever the disk says. So the
+steady-state disk cost is not the download rate, it is the download rate times ten days:
+
+```
+2 per day x ~20 GB average x 15 days (the seed goal in seed-rules.json) = ~600 GB held
+free space at the time of writing:                                        ~1.3 TB
+```
+
+1 per hour, which is what the autobrr UI suggests, is 24 per day. During a site-wide freeleech
+event, which TorrentLeech does run, that fills the array in a day and every one of those torrents is
+locked for ten days. The rate is a disk budget, not a preference.
+
+#### Two gotchas that cost an hour each
+
+- **In a qBittorrent action, `label` does nothing.** It is Deluge's field. qBittorrent tags come from
+  `tags`. A filter can match, push successfully, and still land untagged, which then falls outside
+  every tag-based rule in `qbit-manage`.
+- **The API refuses a filter that omits its list fields.** `POST /api/filters` fails with
+  `NOT NULL constraint failed: filter.resolutions` unless `resolutions`, `sources`, `codecs`,
+  `containers`, `match_hdr`, `origins` and friends are all present, even as `[]`. Actions and
+  indexers are not stored by that call either: actions go to `POST /api/actions` with `filter_id`,
+  and the indexer link needs a follow-up `PUT /api/filters/{id}` with any `null` field stripped out.
+
+#### What happens to a grab afterwards
+
+Nothing imports it, so `seed-cleanup.py` finds no library copy and no shared inode, falls through to
+the TorrentLeech goal in `seed-rules.json` (360 h or ratio 1.2) and deletes it once that is met,
+which is past the 240 h hit & run window either way. The orphan alerts stay quiet because a live
+torrent claims those bytes; see `arr_orphan_data_bytes` in `scripts/media-metrics.py`.
+
+The configuration itself lives in autobrr's own database under `appdata/autobrr/`, not in this repo,
+because autobrr rewrites it. It is backed up with the rest of appdata; the table above is what to
+re-enter if it is ever lost.
+
 ### Links given by staff
 
 - Common mistakes: <https://wiki.torrentleech.org/doku.php/common_mistakes>
