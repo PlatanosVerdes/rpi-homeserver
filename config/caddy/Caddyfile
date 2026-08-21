@@ -102,6 +102,11 @@ https://torrent.platanosverdes.com {
     import cf_tls
     reverse_proxy qbittorrent:8080
 }
+https://autobrr.platanosverdes.com {
+    log
+    import cf_tls
+    reverse_proxy autobrr:7474
+}
 https://speedtest.platanosverdes.com {
     log
     import cf_tls
@@ -188,6 +193,10 @@ http://flare {
 http://torrent {
     log
     reverse_proxy qbittorrent:8080
+}
+http://autobrr {
+    log
+    reverse_proxy autobrr:7474
 }
 http://speedtest {
     log
