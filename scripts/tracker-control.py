@@ -384,7 +384,14 @@ def main():
         space, floor = free_gb(), config.get("min_free_gb", 0)
         # Hysteresis, or it flaps: space hovers at the floor while seed-cleanup frees torrents, and
         # every crossing would be a write and a Telegram message.
-        paused_now = not bool(grabber_enabled(config["autobrr_filter"]))
+        # A blip talking to autobrr must not take the whole run down: the hysteresis is a nicety,
+        # and assuming the grabber is running only means the floor is applied without the extra
+        # 50 GB, which is the safe direction.
+        try:
+            paused_now = not bool(grabber_enabled(config["autobrr_filter"]))
+        except Exception as exc:
+            failures.append(f"{tracker}: could not read the grabber state: {exc}")
+            paused_now = False
         room = space >= (floor + 50 if paused_now else floor)
         if not room:
             failures.append(f"{tracker}: {space:.0f} GB free, under the {floor} GB floor, "
