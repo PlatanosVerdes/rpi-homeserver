@@ -25,6 +25,7 @@ Run from cron a few minutes after tracker-stats.py (see scripts/crontab).
 
 import json
 import os
+import subprocess
 import sys
 import urllib.error
 import urllib.parse
@@ -165,6 +166,94 @@ def autobrr(path, body=None, method="GET"):
                 body=body, method=method)
 
 
+def bonus_hold(tracker, config, torrents):
+    """Turn spare disk into free downloads, where the tracker pays for holding data.
+
+    DigitalCore gives 1% off everything a download costs against ratio for every 10 GB actively
+    seeded, averaged over a week, and 1 TB seeded is 100%: a site-wide freeleech. Two of its rules
+    decide what is worth holding, and both point away from what TorrentLeech rewards:
+
+      * only 50 GiB per torrent counts, so many medium torrents beat a few enormous ones;
+      * the bonus is scaled by `1 + (1 / seeders)`, so being the only seeder of something scarce
+        pays double.
+
+    So this ranks that tracker's finished torrents by what they actually earn, tags the best ones
+    `keep-bonus` up to a disk budget, and untags the rest. `seed-cleanup.py` never deletes a tagged
+    torrent, so the data stays and the bonus grows; when free space drops towards the floor the
+    budget shrinks, tags come off, and the next cleanup pass reclaims the least valuable first.
+
+    The tag is separate from the plain `keep` a person adds by hand, which this never touches.
+    """
+    settings = config.get("bonus_hold")
+    if not settings:
+        return
+    hosts = set(config.get("tracker_hosts") or [])
+    floor = settings.get("free_gb_floor", 0)
+    ceiling = settings.get("max_hold_gb", 0)
+    tag = settings.get("tag", "keep-bonus")
+
+    def earned(torrent):
+        counted = min(torrent["size"], 50 * 1024 ** 3)
+        seeders = max(torrent.get("num_complete") or 0, 1)
+        return counted * (1 + 1 / seeders)
+
+    candidates = [t for t in torrents
+                  if announce_host(t) in hosts and t.get("progress", 0) >= 1]
+    candidates.sort(key=earned, reverse=True)
+
+    # Below the floor the budget shrinks by exactly what is missing, so the release is proportional
+    # rather than all-or-nothing.
+    budget = max(0.0, ceiling - max(0.0, floor - free_gb()))
+    hold, total = [], 0.0
+    for torrent in candidates:
+        size_gb = torrent["size"] / 1024 ** 3
+        if total + size_gb <= budget:
+            hold.append(torrent)
+            total += size_gb
+
+    wanted = {t["hash"] for t in hold}
+    tagged = {t["hash"] for t in candidates
+              if tag in {x.strip() for x in (t.get("tags") or "").split(",")}}
+    add, drop = wanted - tagged, tagged - wanted
+    if not add and not drop:
+        return
+    if DRY_RUN:
+        changes.append(f"[dry-run] {tracker}: hold {len(wanted)} torrents ({total:.0f} GB) "
+                       f"for the leech bonus (+{len(add)}, -{len(drop)})")
+        return
+    for hashes, endpoint in ((add, "addTags"), (drop, "removeTags")):
+        if hashes:
+            qbit(f"torrents/{endpoint}", {"hashes": "|".join(hashes), "tags": tag})
+    changes.append(f"{tracker}: holding {len(wanted)} torrents ({total:.0f} GB) for the leech "
+                   f"bonus, about {total / 10:.0f}% off every download (+{len(add)}, -{len(drop)})")
+
+
+def announce_host(torrent):
+    url = torrent.get("tracker") or ""
+    return url.split("://", 1)[-1].split("/", 1)[0].split(":", 1)[0]
+
+
+def qbit(endpoint, data):
+    """Same trick the other scripts use: from inside the container the WebUI trusts localhost."""
+    command = ["docker", "exec", "qbittorrent", "curl", "-sf", "--max-time", "30",
+               f"http://localhost:8080/api/v2/{endpoint}"]
+    for key, value in data.items():
+        command += ["--data-urlencode", f"{key}={value}"]
+    result = subprocess.run(command, capture_output=True, text=True, timeout=60)
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr.strip()[:120] or f"{endpoint} failed")
+    return result.stdout
+
+
+def torrents_now():
+    command = ["docker", "exec", "qbittorrent", "curl", "-sf", "--max-time", "30",
+               "http://localhost:8080/api/v2/torrents/info"]
+    result = subprocess.run(command, capture_output=True, text=True, timeout=60)
+    if result.returncode != 0:
+        raise RuntimeError("cannot read qbittorrent")
+    return json.loads(result.stdout)
+
+
 def free_gb():
     stat = os.statvfs(DATA_ROOT)
     return stat.f_bavail * stat.f_frsize / 1024 ** 3
@@ -261,9 +350,20 @@ def main():
              "# TYPE tracker_tier_freeleech_only gauge"]
 
     for tracker, config in rules.items():
+        # Holding data for a bonus needs no account reading, so it runs for any tracker that asks
+        # for it, including the ones with no tiers.
+        try:
+            bonus_hold(tracker, config, torrents_now())
+        except Exception as exc:
+            failures.append(f"{tracker}: bonus hold: {exc}")
+
         # A tracker with no tiers is here for its rules and its hit & run clock, not to be steered:
         # there is nothing to read from it and nothing to switch.
         if not config.get("tiers"):
+            if changes:
+                telegram(f"<b>{tracker}</b>\n" + "\n".join(f"- {line}" for line in changes))
+                print("\n".join(changes))
+                changes.clear()
             continue
         numbers = (state.get("trackers") or {}).get(tracker)
         if not numbers:

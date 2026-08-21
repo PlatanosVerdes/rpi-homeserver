@@ -98,7 +98,13 @@
       "invite": "/msg ENDOR !invite <siteusername> <irckey>",
       "points": "+0.4p per hour idling in #digitalcore, and the site username must match"
     },
-    "api_limits": "A normal API key reaches only /api/v1/torrents, /torrents/download/{id} and /torrents/upload. Profile data is blocked, which is why the account cannot be read automatically."
+    "api_limits": "A normal API key reaches only /api/v1/torrents, /torrents/download/{id} and /torrents/upload. Profile data is blocked, which is why the account cannot be read automatically.",
+    "bonus_hold": {
+      "tag": "keep-bonus",
+      "max_hold_gb": 700,
+      "free_gb_floor": 600,
+      "_note": "Spare disk turned into free downloads. 10 GB seeded here is 1% off everything, so up to 700 GB of this tracker's finished torrents are tagged and kept instead of being reclaimed, ranked by what they actually earn: min(size, 50 GiB) x (1 + 1/seeders). Below 600 GB free the budget shrinks by exactly what is missing, tags come off the least valuable first, and the next cleanup pass frees them. Above it nothing is deleted on this tracker at all, which is the correct answer where holding pays."
+    }
   },
   "retrotoon": {
     "_rules_read": "2026-08-21, from the site's own Rules page",
