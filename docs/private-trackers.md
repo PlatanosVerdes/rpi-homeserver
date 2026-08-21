@@ -315,12 +315,44 @@ re-downloading the `.torrent`, not editing it.
 their 5 days, which is the normal state of anything recent. The site only *lists* a hit and run once
 a torrent stops announcing for an hour, which is exactly what `tracker_hnr_at_risk` watches.
 
+#### The grabber, as configured
+
+Running since 2026-08-21, on their own announce channel:
+
+| Piece | Value | Why |
+| :--- | :--- | :--- |
+| IRC | `irc.digitalcore.club:7000`, TLS, channel `#announce`, announcer `ENDOR` | they support autobrr by name |
+| Nick | **`PlatanosVerdes`**, exactly the site username | their FAQ: the match is case sensitive, and it pays 0.4 points an hour for idling in `#digitalcore` |
+| Bot mode | **on**, so the bot carries usermode `+B` | their IRC rules require a bot to identify itself |
+| Auth | NickServ **empty**, invite through `ENDOR !invite <user> <irckey>` | their rules say a bot authenticates with the site username and IRC key, not NickServ |
+| Filter | `DC freeleech ratio builder`: freeleech, 15 to 30 GB, **1 a day** | see the arithmetic below |
+| Action | qBittorrent, no category, tag `ratio` | same as TorrentLeech: these belong to no *arr |
+
+**Why 1 a day and 15 to 30 GB.** Their hit & run window is 5 days rather than TorrentLeech's ten, so
+a grab here is locked for less than half as long, and the seed goal of 168 h is what actually holds
+it: `1 x ~22 GB x 7 days = ~150 GB` of steady-state disk. The floor of 15 GB is not a preference
+either: **anything 15 GB or larger is automatically freeleech here**, so it is the size at which a
+grab is guaranteed to cost nothing against ratio. The ceiling keeps one release from eating a week of
+the budget, and it also sits under the 50 GiB the leech bonus counts per torrent.
+
+Worth saying plainly: this account does not need the ratio. It sits at 4.21 with 86 GB of headroom,
+so the grabber here buys upload and bonus points rather than solving a problem, and it costs ~150 GB
+of disk that TorrentLeech's grabber could use. At 1 a day that trade is cheap enough to be worth it;
+if disk gets tight, this is the first thing to turn off, not the last.
+
+#### Four API traps, if this is ever rebuilt
+
+- `POST /api/indexer` wants `settings` as an **object**, not a list: a list returns
+  `cannot unmarshal array into Go struct field Indexer.settings`.
+- Creating the indexer does **not** create its IRC network. That is a separate `POST /api/irc`.
+- A channel created that way arrives **disabled**, and a disabled channel is never joined.
+- The network is updated at `PUT /api/irc/network/{id}`, not `/api/irc/{id}`, which answers 404.
+
 ### Still open
 
-Nothing about the rules. What is left is a choice: an announce-channel filter, since they support
-autobrr by name (`irc.digitalcore.club:7000`, channels `#digitalcore`, `#announce`, `#pre`, joined
-with `/msg ENDOR !invite <username> <irckey>`), and the account still cannot be read automatically
-because a normal API key reaches only the torrent endpoints, not profile data.
+Nothing about the rules or the tooling. The account still cannot be read automatically, because a
+normal API key reaches only the torrent endpoints and not profile data, so its ratio and bonus have
+to be read by eye.
 
 ## retrotoon.world
 
