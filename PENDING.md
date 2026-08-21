@@ -321,16 +321,14 @@ with the library and 18% was bought with 179 GB of separate copies, on an accoun
 through hardlinks only, which is what cross-seed produces anyway. The mechanism stays in
 `tracker-control.py`, unconfigured, for the day the arithmetic reverses.
 
-**The half that is left needs two secrets from the site**, because autobrr ships a DigitalCore
-definition (IRC `irc.digitalcore.club:7000`, channel `#announce`, announcer `ENDOR`, and the announce
-line carries a `freeleech` tag):
+**Done on 2026-08-21**: autobrr now watches their `#announce` channel with the nick
+`PlatanosVerdes` and bot mode on, filtering freeleech between 15 and 30 GB at one a day. The passkey
+and IRC key came from the site's own Settings page. Details and the four API traps are in
+[docs/private-trackers.md](docs/private-trackers.md).
 
-- its **passkey**, for the download URL `/api/v1/torrents/download/{id}/{passkey}`;
-- its **IRC key**, for the invite command `/msg ENDOR !invite <username> <irckey>`.
-
-NickServ stays empty, as on TorrentLeech. The nick must match the site username exactly, which also
-earns 0.4 points an hour for idling in `#digitalcore`. autobrr also ships a `retrotoonworld`
-definition; its passkey is already known from its announce URL.
+autobrr also ships a `retrotoonworld` definition and its passkey is already known from the announce
+URL, so that one is a decision rather than a blocker: the site is cartoons only, and its 40-day
+site-wide freeleech is the reason to bother.
 
 ### C411 has 2 GB of headroom and nobody was watching it
 
