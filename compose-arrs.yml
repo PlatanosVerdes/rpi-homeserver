@@ -149,6 +149,31 @@ services:
     networks:
       - media-network
 
+  # Reacts to a tracker's IRC announce channel the second a release is posted, which is the only way
+  # to be an early seeder: an RSS poll arrives minutes later, when the swarm already has thirty
+  # seeds. Measured on 2026-08-21, the difference this makes: a freeleech release two hours old had
+  # uploaded 7.15 GB, while a catalogue torrent seeded for 90 hours had managed 0.24 GB.
+  #
+  # Its own filters cap concurrency, which qBittorrent's RSS cannot: TorrentLeech grants two
+  # download slots and a partially downloaded torrent occupies one, so grabbing five at once jams
+  # the account. Everything else (indexers, IRC credentials, filters) lives in its own database and
+  # is set through the web UI, since it holds per-tracker secrets.
+  autobrr:
+    image: ghcr.io/autobrr/autobrr:${AUTOBRR_VERSION}
+    container_name: autobrr
+    restart: unless-stopped
+    mem_limit: 512m
+    profiles: [media, all]
+    user: "${PUID}:${PGID}"
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      - TZ=${TZ}
+    volumes:
+      - ${APP_CONFIG_PATH}/autobrr:/config
+    networks:
+      - media-network
+
   unpackerr:
     image: ghcr.io/unpackerr/unpackerr:${UNPACKERR_VERSION}
     container_name: unpackerr
