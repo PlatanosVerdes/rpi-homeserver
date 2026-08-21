@@ -261,6 +261,10 @@ def main():
              "# TYPE tracker_tier_freeleech_only gauge"]
 
     for tracker, config in rules.items():
+        # A tracker with no tiers is here for its rules and its hit & run clock, not to be steered:
+        # there is nothing to read from it and nothing to switch.
+        if not config.get("tiers"):
+            continue
         numbers = (state.get("trackers") or {}).get(tracker)
         if not numbers:
             failures.append(f"{tracker}: nothing read")
