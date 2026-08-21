@@ -59,8 +59,11 @@ module.exports = {
     delay: 30,
     searchCadence: "1 day",
     rssCadence: "30 minutes",
+    // Daemon mode enforces a ratio here: excludeOlder has to be 2 to 5 times excludeRecentSearch.
+    // So: only chase releases from the last 180 days, and do not re-search the same torrent more
+    // often than every 45 days. Anything newer than that arrives through rssCadence instead.
     excludeOlder: "180d",
-    excludeRecentSearch: "3 days",
+    excludeRecentSearch: "45d",
 
     apiAuth: false,
     port: 2468,
