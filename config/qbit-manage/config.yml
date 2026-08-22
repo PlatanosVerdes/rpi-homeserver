@@ -1,4 +1,4 @@
-# qbit_manage, running in DRY RUN alongside scripts/seed-cleanup.py until their decisions agree.
+# qbit_manage, running in DRY RUN alongside scripts/trackers/seed-cleanup.py until their decisions agree.
 # See PENDING.md, "Adopt the standard tools and retire the bespoke script".
 #
 # Two things this is here to do that the bespoke script cannot: notice a torrent the tracker no
@@ -83,7 +83,7 @@ share_limits:
   # tracker AND the library no longer shares its file. Share limits on their own ignore hardlinks,
   # and the comparison run on 2026-08-21 caught exactly that: two c411 torrents past ten days of
   # seeding would have been removed while Plex still played the same bytes. Seeding those costs no
-  # disk at all and earns ratio for free, which is why seed-cleanup.py keeps them and why the noHL
+  # disk at all and earns ratio for free, which is why scripts/trackers/seed-cleanup.py keeps them and why the noHL
   # tag has to be part of the filter.
   torrentleech:
     priority: 1

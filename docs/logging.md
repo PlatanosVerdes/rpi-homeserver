@@ -92,7 +92,7 @@ Worth knowing before you go looking for something that was never there:
 
 ## The cron scripts' logs
 
-`apply.sh`, `backup.sh`, `cutoff-search.sh` and friends run from cron and append to files in the
+`scripts/deploy/apply.sh`, `scripts/ops/backup.sh`, `scripts/ops/cutoff-search.sh` and friends run from cron and append to files in the
 repo root rather than printing to a container, so the `docker_logs` source cannot see them. A
 `file` source collects those too, which is how the deploy and backup history got in here at all.
 

@@ -118,7 +118,7 @@ services:
       TZ: ${TZ}
       FTLCONF_webserver_api_password: ${PIHOLE_PASSWORD}
       # Without this the API password session is read-only (app_sudo defaults to false), so
-      # scripts/sync-pihole-dns.sh's writes were being rejected with 403 and silently discarded
+      # scripts/sync/pihole-dns.sh's writes were being rejected with 403 and silently discarded
       # (curl -s -o /dev/null hid it). Regressed by the pihole 2026.02.0 -> 2026.07.2 bump.
       FTLCONF_webserver_api_app_sudo: "true"
       FTLCONF_webserver_port: 8081

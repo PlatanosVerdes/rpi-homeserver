@@ -96,4 +96,4 @@ push_metrics 0 "$SIZE" "$APPDATA_SIZE"
 log "Backup done."
 
 # crontab -e
-# 0 4 * * * /home/raspi/rpi-homeserver/scripts/backup.sh >> /home/raspi/rpi-homeserver/backup.log 2>&1
+# 0 4 * * * /home/raspi/rpi-homeserver/scripts/ops/backup.sh >> /home/raspi/rpi-homeserver/backup.log 2>&1

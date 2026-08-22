@@ -11,7 +11,7 @@ GitHub push ──► https://deploy.<domain>/hooks/deploy
                                                 │  deploy-webhook.py (systemd, user raspi)
                                                 │  verifies X-Hub-Signature-256
                                                 ▼
-                                        scripts/apply.sh  (under flock)
+                                        scripts/deploy/apply.sh  (under flock)
 ```
 
 The cron stays enabled: it restarts anything that died and catches pushes that arrived while the

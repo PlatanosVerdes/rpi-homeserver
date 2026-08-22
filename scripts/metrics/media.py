@@ -360,7 +360,7 @@ def library_sizes():
     """Size per title, with its quality as a label, so the dashboard can answer where the disk went.
 
     Radarr knows both the size and the quality of every file; the disk_file_bytes metric from
-    disk-usage-metrics.sh only knows paths, and guessing quality from a filename is a losing game.
+    scripts/metrics/disk-usage.sh only knows paths, and guessing quality from a filename is a losing game.
     Sonarr series get quality "mixed" (a season is many files, often several qualities).
 
     The plain "how many do I have" counts ride along here rather than being derived from the size
@@ -413,7 +413,7 @@ def maintainerr_pending():
     """Films Maintainerr has queued for deletion: watched, waiting out the grace period.
 
     This is the first stage of the retention policy, and the only one nothing else can see. Radarr
-    still has the film, the torrent is still hardlinked, and seed-cleanup.py will not look at it
+    still has the film, the torrent is still hardlinked, and scripts/trackers/seed-cleanup.py will not look at it
     until Maintainerr deletes the library copy.
 
     The list comes from the paginated media endpoint rather than the `media` array on /api/collections,
@@ -502,7 +502,7 @@ def orphans():
     human, and the *arr only re-announces it when it restarts, so one deletion made while a
     download was in flight raised Telegram alerts eleven days later and nothing else ever said so.
 
-    Data in downloads that no torrent claims is invisible to seed-cleanup.py, which only ever looks
+    Data in downloads that no torrent claims is invisible to scripts/trackers/seed-cleanup.py, which only ever looks
     at torrents that exist. While the library still shares the file it wastes nothing, which is why
     `linked` is a label and not a filter: the day the retention policy deletes the film, that
     leftover name becomes the last reference to bytes nobody will ever reclaim, and it is exactly

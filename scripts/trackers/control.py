@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Move the knobs that decide how hard a tracker is worked, from the one number that matters.
 
-`tracker-stats.py` reads the site and writes the headroom: how many GB of *paid* downloads still fit
+`scripts/trackers/stats.py` reads the site and writes the headroom: how many GB of *paid* downloads still fit
 before the account crosses the ratio the site disables it at. That number picks a tier, and the tier
 sets three things:
 
@@ -20,7 +20,7 @@ Nothing is written when the desired value is already in place, so this is silent
 and only announces the crossings. It refuses to act on a stale reading: acting on last week's ratio
 is worse than not acting.
 
-Run from cron a few minutes after tracker-stats.py (see scripts/crontab).
+Run from cron a few minutes after scripts/trackers/stats.py (see scripts/crontab).
 """
 
 import json
@@ -200,7 +200,7 @@ def bonus_hold(tracker, config, torrents):
         pays double.
 
     So this ranks that tracker's finished torrents by what they actually earn, tags the best ones
-    `keep-bonus` up to a disk budget, and untags the rest. `seed-cleanup.py` never deletes a tagged
+    `keep-bonus` up to a disk budget, and untags the rest. `scripts/trackers/seed-cleanup.py` never deletes a tagged
     torrent, so the data stays and the bonus grows; when free space drops towards the floor the
     budget shrinks, tags come off, and the next cleanup pass reclaims the least valuable first.
 
@@ -356,7 +356,7 @@ def main():
     rules = json.loads(RULES_FILE.read_text())
     state_file = STATE_DIR / "state.json"
     if not state_file.is_file():
-        print("no reading from tracker-stats.py yet", file=sys.stderr)
+        print("no reading from scripts/trackers/stats.py yet", file=sys.stderr)
         return 1
     state = json.loads(state_file.read_text())
     age = datetime.now(timezone.utc).timestamp() - state.get("read_at", 0)

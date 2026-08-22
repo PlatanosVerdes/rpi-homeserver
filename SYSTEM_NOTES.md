@@ -54,7 +54,7 @@ nothing rotates them by default: `apply.log` gains a few lines every deploy, for
 This is **in git** and installed on every deploy, so it comes back with a clone:
 
 **Source:** `config/logrotate/rpi-homeserver` → installed to `/etc/logrotate.d/rpi-homeserver`
-by `scripts/install-logrotate.sh`, which `apply.sh` runs.
+by `scripts/deploy/install-logrotate.sh`, which `scripts/deploy/apply.sh` runs.
 
 It was a hand-written host file until 2026-08-22, documented only here. That meant a rebuilt Pi
 went back to unbounded logs with nothing to say so, and `rpi-services` was never covered: its
@@ -123,7 +123,7 @@ Active cron entries:
 
 ```
 # Auto-deploy: pull git + docker compose up every 15 min
-*/15 * * * * /home/raspi/rpi-homeserver/scripts/apply.sh >> /home/raspi/rpi-homeserver/apply.log 2>&1
+*/15 * * * * /home/raspi/rpi-homeserver/scripts/deploy/apply.sh >> /home/raspi/rpi-homeserver/apply.log 2>&1
 ```
 
 > Tailscale metrics used to be a third cron entry here, a hand-compiled binary writing a `.prom`
@@ -224,7 +224,7 @@ Three places have to agree on that number, and nothing warns when they do not:
 
 | Where | How it gets there |
 | :--- | :--- |
-| qBittorrent's own setting | pushed by `scripts/sync-qbit-config.sh` from `.env` |
+| qBittorrent's own setting | pushed by `scripts/sync/qbit-config.sh` from `.env` |
 | the published container port | `compose-arrs.yml`, `${QBIT_BT_PORT}` tcp **and** udp |
 | the router forward | by hand, to the Pi's static IP, tcp and udp. **Pointless while this line is behind CGNAT**, see [docs/seeding-and-ratio.md](docs/seeding-and-ratio.md) |
 
@@ -264,7 +264,7 @@ The limit is 40 rather than unlimited so a much larger library cannot open hundr
 a Pi.
 
 > Everything in this section and the next now lives in `config/qbittorrent/preferences.json` and is
-> reapplied on every deploy by `scripts/sync-qbit-config.sh`. It used to be appdata-only, which is
+> reapplied on every deploy by `scripts/sync/qbit-config.sh`. It used to be appdata-only, which is
 > why these notes existed at all. **Change the values there, not in the WebUI:** the next deploy
 > converges the app back to whatever is committed. What is written below is the reasoning, which the
 > JSON cannot hold.
@@ -273,7 +273,7 @@ a Pi.
 
 `dl_limit` set to **10 MiB/s** (10485760 B/s) on 2026-08-08. It was unlimited.
 
-Why: that night the 02:00 `cutoff-search.sh` run found upgrades for 7 films at once and handed
+Why: that night the 02:00 `scripts/ops/cutoff-search.sh` run found upgrades for 7 films at once and handed
 qBittorrent ~226 GB. Load average hit **16** on a 4-core Pi and stayed there for 100 minutes, with 8
 processes blocked on I/O. Nothing actually failed — no blackbox probe missed, latency went from 0.03s
 to 0.25s — but everything was sluggish for an hour and a half.
@@ -363,7 +363,7 @@ collection from it, visible on the Plex home, holding whatever is queued for del
     have none (`max_ratio=-1, max_seeding_time=-1` on all of them), so the fallback *is* the rule,
     and 0.5 with two hours of seeding is a hit-and-run on TorrentLeech.
 
-  `scripts/seed-cleanup.py` owns torrent deletion instead, per tracker. See the README.
+  `scripts/trackers/seed-cleanup.py` owns torrent deletion instead, per tracker. See the README.
 - **Fixed a double grace period on the collection.** The rule means "last viewed more than N days
   ago" (an unwatched title has no `lastViewedAt`, so it never matches). The collection
   used to wait a *second* 7 days after the item entered it before deleting, doubling the real delay.
@@ -376,7 +376,7 @@ collection from it, visible on the Plex home, holding whatever is queued for del
   `UNMONITOR_DELETE_ALL`, `radarrSettingsId=1`, both in the `collection` table of
   `appdata/maintainerr/maintainerr.sqlite`). It used to be `arrAction=0` with `radarrSettingsId`
   unset, so Maintainerr had no Radarr instance to act on and fell back to deleting the item through
-  Plex: the file left the disk, but the movie stayed **monitored** in Radarr. `cutoff-search.sh`
+  Plex: the file left the disk, but the movie stayed **monitored** in Radarr. `scripts/ops/cutoff-search.sh`
   then found it in `wanted/missing` at 05:00 and grabbed it again. Cars 3 rode that loop from
   2026-08-11 to 2026-08-19 — deleted around noon, re-downloaded at 05:00, a 5-20 GB Ultra-HD
   release every night, and it left one seeding copy per round in `/mnt/data/downloads`. Unmonitoring
@@ -399,7 +399,7 @@ collection from it, visible on the Plex home, holding whatever is queued for del
   `operator` is `RuleOperators` (0 `AND`). `GET /api/rules/constants` lists every property with its id.
 
 - **Watched means 95% of the film, and Plex is the one that decides it.**
-  `LibraryVideoPlayedThreshold` is `95`, converged by `sync-plex-prefs.sh` because it lives in
+  `LibraryVideoPlayedThreshold` is `95`, converged by `scripts/sync/plex-prefs.sh` because it lives in
   Plex's appdata like the LAN networks. Plex's default is 90%, which is inside the credits, so a
   film abandoned before the end counted as seen and got queued for deletion.
 - **Tautulli is wired (`tautulli_url`, `tautulli_api_key`) with `tautulliWatchedPercentOverride=95`,

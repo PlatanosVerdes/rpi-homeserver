@@ -1,5 +1,5 @@
 #!/bin/bash
-# Report what a rebuilt Pi still needs a human for, after apply.sh has already converged
+# Report what a rebuilt Pi still needs a human for, after scripts/deploy/apply.sh has already converged
 # everything that is derivable from .env (Radarr/Sonarr formats and profiles, Pi-hole DNS, the
 # Overseerr/Bazarr links). Run this after a rebuild to see exactly what is left, instead of
 # rediscovering it by clicking through each app.

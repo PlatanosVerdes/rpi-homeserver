@@ -588,7 +588,7 @@ groups:
         execErrState: KeepLast
         data:
           # No aggregation on purpose: qbit_torrent_progress carries a `name` label per torrent
-          # (media-metrics.py), so each stalled torrent becomes its OWN alert instance with its
+          # (scripts/metrics/media.py), so each stalled torrent becomes its OWN alert instance with its
           # own `for` timer, instead of one nameless blob that also mis-resets when a different
           # torrent starts stalling while another one is already being counted.
           - refId: A
@@ -730,7 +730,7 @@ groups:
           description: >-
             Nothing is lost when this fails, it just stops giving disk back: watched films keep
             seeding and pile up. Check `container:seed-cleanup` in VictoriaLogs, or run
-            `DRY_RUN=1 scripts/seed-cleanup.py` on the Pi to see what it would do.
+            `DRY_RUN=1 scripts/trackers/seed-cleanup.py` on the Pi to see what it would do.
         noDataState: OK
         execErrState: KeepLast
         data:
@@ -834,7 +834,7 @@ groups:
         annotations:
           summary: Bytes in downloads that no torrent claims and the library does not share
           description: >-
-            seed-cleanup.py only ever looks at torrents that exist, so data left behind by a torrent
+            scripts/trackers/seed-cleanup.py only ever looks at torrents that exist, so data left behind by a torrent
             that was removed without its files is reclaimed by nobody. While the library still
             shares the file this stays quiet on purpose (it wastes nothing); it starts firing the
             day the retention policy deletes the film and those bytes become unreachable.
@@ -873,7 +873,7 @@ groups:
           summary: '{{ $labels.tracker }}: under 10 GB of non-freeleech downloads still fit'
           description: >-
             buffer = uploaded - min_ratio x downloaded, and headroom is that buffer divided by
-            min_ratio. tracker-control.py should already have switched the *arrs to freeleech only;
+            min_ratio. scripts/trackers/control.py should already have switched the *arrs to freeleech only;
             if it has not, its own log says why.
         noDataState: OK
         execErrState: KeepLast
@@ -980,7 +980,7 @@ groups:
         annotations:
           summary: No tracker reading in over 2 hours
           description: >-
-            tracker-stats.py runs every 30 minutes. Either cron stopped, the site changed its login,
+            scripts/trackers/stats.py runs every 30 minutes. Either cron stopped, the site changed its login,
             or the stored session cookie no longer works and the password in Prowlarr is stale.
         noDataState: OK
         execErrState: KeepLast

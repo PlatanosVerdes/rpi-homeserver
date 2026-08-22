@@ -443,7 +443,7 @@ def main():
     lines.append(f"tracker_last_run_timestamp {datetime.now(timezone.utc).timestamp():.0f}")
     push("tracker_stats", lines)
     # Pushgateway is replaced on every push and Prometheus is one more thing that can be down, so
-    # the number tracker-control.py acts on is written here, with the time it was read.
+    # the number scripts/trackers/control.py acts on is written here, with the time it was read.
     STATE_DIR.mkdir(parents=True, exist_ok=True)
     (STATE_DIR / "state.json").write_text(json.dumps(state, indent=2) + "\n")
     push("tracker_hnr", detail)

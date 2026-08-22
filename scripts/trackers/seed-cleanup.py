@@ -62,7 +62,7 @@ RULES_FILE = Path(os.environ.get("SEED_RULES", PROJECT_DIR / "config/qbittorrent
 STATE_FILE = Path(os.environ.get("SEED_STATE", PROJECT_DIR / "appdata/seed-cleanup/state.json"))
 DRY_RUN = os.environ.get("DRY_RUN") == "1"
 WAITING_TAG = "waiting-seed"
-# `keep` is the human's escape hatch; `keep-bonus` belongs to tracker-control.py, which adds and
+# `keep` is the human's escape hatch; `keep-bonus` belongs to scripts/trackers/control.py, which adds and
 # removes it on its own. Two names so the automation can never clear a tag a person put there.
 KEEP_TAGS = {"keep", "keep-bonus"}
 CONTAINER_DATA_ROOT = "/data/"
@@ -86,7 +86,7 @@ def env(name, default):
 
 def qbit(endpoint, data=None):
     """The WebUI trusts localhost; from the host it arrives via the Docker gateway, which is not in
-    its AuthSubnetWhitelist and would need credentials. Same trick as media-metrics.py."""
+    its AuthSubnetWhitelist and would need credentials. Same trick as scripts/metrics/media.py."""
     command = ["docker", "exec", "qbittorrent", "curl", "-sf", "--max-time", "30",
                f"http://localhost:8080/api/v2/{endpoint}"]
     for key, value in (data or {}).items():

@@ -1,6 +1,6 @@
 # Backups
 
-Persistent container state lives in `appdata/` (not in git). `scripts/backup.sh` snapshots it
+Persistent container state lives in `appdata/` (not in git). `scripts/ops/backup.sh` snapshots it
 to a compressed, rotated archive on the external disk and reports health to Grafana. It backs
 up **both** `rpi-homeserver/appdata` and `rpi-services/appdata` (the latter holds the AirTag
 keys, cal-bridge tokens, and the Telegram bot DB).
@@ -33,10 +33,10 @@ BACKUP_RCLONE_REMOTE=                    # optional offsite copy, e.g. b2:my-buc
 ## Schedule
 
 Already scheduled, nothing to install. The entry lives in `scripts/crontab`, which is this repo's
-cron fragment, and `scripts/install-crontab.sh` writes it into the host crontab on every deploy:
+cron fragment, and `scripts/deploy/install-crontab.sh` writes it into the host crontab on every deploy:
 
 ```
-0 4 * * * /home/raspi/rpi-homeserver/scripts/backup.sh >> /home/raspi/rpi-homeserver/backup.log 2>&1
+0 4 * * * /home/raspi/rpi-homeserver/scripts/ops/backup.sh >> /home/raspi/rpi-homeserver/backup.log 2>&1
 ```
 
 Change the time there rather than with `crontab -e`, or the next deploy overwrites it.
@@ -55,7 +55,7 @@ docker compose up -d
 
 ## Monitoring
 
-`backup.sh` pushes to Pushgateway (visible in the **Backup Monitor** Grafana dashboard):
+`scripts/ops/backup.sh` pushes to Pushgateway (visible in the **Backup Monitor** Grafana dashboard):
 
 - `backup_last_status` — 0 ok, 1 error
 - `backup_last_run_timestamp` — alert if it goes stale (no backup in >24h)

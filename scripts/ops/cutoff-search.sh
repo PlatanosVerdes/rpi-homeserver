@@ -9,7 +9,7 @@
 #   cutoff   there is a file but below the quality cutoff  -> Cutoff Unmet
 #   missing  monitored with no file at all                 -> Missing
 #
-# Usage: cutoff-search.sh [radarr|sonarr ...]   (default: radarr)
+# Usage: scripts/ops/cutoff-search.sh [radarr|sonarr ...]   (default: radarr)
 #        DRY_RUN=1 reports the pending counts without searching.
 #
 # Schedule via host cron (see scripts/crontab).

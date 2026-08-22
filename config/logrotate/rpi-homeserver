@@ -1,6 +1,6 @@
 # Rotation for the log files the cron scripts append to, in BOTH repos.
 #
-# Installed to /etc/logrotate.d/rpi-homeserver by scripts/install-logrotate.sh, which apply.sh
+# Installed to /etc/logrotate.d/rpi-homeserver by scripts/deploy/install-logrotate.sh, which scripts/deploy/apply.sh
 # runs on every deploy. It used to be a hand-written host file documented only in
 # SYSTEM_NOTES.md, so a rebuilt Pi silently went back to logs that grow forever, and
 # rpi-services was never covered at all: one-pace.log had reached 1.2 MB with nothing rotating it.

@@ -43,7 +43,7 @@ flowchart TB
   end
 
   subgraph HOST["5 · The host, what is not a container"]
-    APPLY["scripts/apply.sh<br/>scripts/sync-*.sh · scripts/install-*.sh"]
+    APPLY["scripts/deploy/apply.sh<br/>scripts/sync-*.sh · scripts/install-*.sh"]
     CRON["scripts/crontab<br/><i>merged with the personal repo's fragment</i>"]
     FS["mergerfs → DATA_ROOT<br/><i>two USB disks, one tree</i>"]
   end
@@ -71,7 +71,7 @@ because it is the LAN's resolver.
 
 ## The convergence loop
 
-Every 30 minutes, and on every push, `apply.sh` pulls both repos and pushes configuration into
+Every 30 minutes, and on every push, `scripts/deploy/apply.sh` pulls both repos and pushes configuration into
 each app. Every one of these arrows exists because that setting lives **only inside its app's
 own `appdata`**: no compose file and no `.env` captures it, so without this a lost disk silently
 loses hours of tuning.
@@ -83,7 +83,7 @@ flowchart LR
   HOOK["GitHub webhook<br/><i>on push</i>"] -.-> APPLY
   CRON["cron<br/><i>every 30 min, safety net</i>"] -.-> APPLY
 
-  APPLY["<b>apply.sh</b><br/>git pull<br/>docker compose up<br/>7 sync scripts<br/><i>one lock, coalescing</i>"]
+  APPLY["<b>scripts/deploy/apply.sh</b><br/>git pull<br/>docker compose up<br/>7 sync scripts<br/><i>one lock, coalescing</i>"]
 
   APPLY ==>|custom formats + quality profiles| ARR["Radarr · Sonarr"]
   APPLY ==>|local DNS derived from Caddy| PH["Pi-hole"]
@@ -103,16 +103,16 @@ during an ARM Go build cost exactly one extra pass.
 
 | Script | When | Writes into | Source of truth |
 | :--- | :--- | :--- | :--- |
-| `sync-arr-config.sh` | every deploy | Radarr, Sonarr | `config/arr/*/*.json` |
-| `sync-qbit-config.sh` | every deploy | qBittorrent | `config/qbittorrent/preferences.json` + `QBIT_BT_PORT` |
-| `sync-plex-prefs.sh` | every deploy | Plex | `PLEX_LAN_NETWORKS`, 95% threshold |
-| `sync-arr-links.sh` | every deploy | Overseerr, Bazarr | `config/overseerr-links.json` |
-| `sync-pihole-dns.sh` | every deploy | Pi-hole | the Caddy config, additive only |
-| `install-crontab.sh` | every deploy | host crontab | both repos' `scripts/crontab` |
-| `install-logrotate.sh` | every deploy | `/etc/logrotate.d` | `config/logrotate/rpi-homeserver` |
-| `tracker-control.py` | :05 and :35 | Prowlarr, Radarr, autobrr | the measured ratio headroom |
-| `seed-cleanup.py` | hourly at :20 | deletes torrents and data | `config/qbittorrent/seed-rules.json` |
-| `cutoff-search.sh` | 05:00 | nothing, triggers a search | Radarr's own Wanted list |
+| `scripts/sync/arr-config.sh` | every deploy | Radarr, Sonarr | `config/arr/*/*.json` |
+| `scripts/sync/qbit-config.sh` | every deploy | qBittorrent | `config/qbittorrent/preferences.json` + `QBIT_BT_PORT` |
+| `scripts/sync/plex-prefs.sh` | every deploy | Plex | `PLEX_LAN_NETWORKS`, 95% threshold |
+| `scripts/sync/arr-links.sh` | every deploy | Overseerr, Bazarr | `config/overseerr-links.json` |
+| `scripts/sync/pihole-dns.sh` | every deploy | Pi-hole | the Caddy config, additive only |
+| `scripts/deploy/install-crontab.sh` | every deploy | host crontab | both repos' `scripts/crontab` |
+| `scripts/deploy/install-logrotate.sh` | every deploy | `/etc/logrotate.d` | `config/logrotate/rpi-homeserver` |
+| `scripts/trackers/control.py` | :05 and :35 | Prowlarr, Radarr, autobrr | the measured ratio headroom |
+| `scripts/trackers/seed-cleanup.py` | hourly at :20 | deletes torrents and data | `config/qbittorrent/seed-rules.json` |
+| `scripts/ops/cutoff-search.sh` | 05:00 | nothing, triggers a search | Radarr's own Wanted list |
 
 **A profile changed through an app's UI and not committed is reverted within 30 minutes.** That is
 the design, not a bug: configuration lives in git, not in `appdata`. Two consequences worth
@@ -127,7 +127,7 @@ so a revert is invisible in `apply.log`.
 ```mermaid
 flowchart TB
   OV["Overseerr<br/><i>you ask</i>"] --> RA
-  CS["cutoff-search.sh<br/><i>05:00, what is still wanted</i>"] --> RA
+  CS["scripts/ops/cutoff-search.sh<br/><i>05:00, what is still wanted</i>"] --> RA
   RA["<b>Radarr</b><br/>decides what qualifies<br/><i>profiles + custom formats</i>"] -->|search| PR["Prowlarr<br/>14 indexers"]
   PR --> QB
   BRR["autobrr<br/><i>IRC announce, seconds</i>"] --> QB
@@ -137,7 +137,7 @@ flowchart TB
   LIB["<b>Library · DATA_ROOT</b><br/><i>imported by hardlink:<br/>same bytes, two names</i>"] --> PX["Plex · Jellyfin"]
   PX --> MT["Maintainerr<br/><i>watched and out of grace</i>"]
   MT -->|"deletes the library copy,<br/>link count back to 1"| LIB
-  LIB --> SC["<b>seed-cleanup.py</b><br/><i>hourly at :20</i>"]
+  LIB --> SC["<b>scripts/trackers/seed-cleanup.py</b><br/><i>hourly at :20</i>"]
   SC -->|"nothing uses it and<br/>the tracker is paid"| QB
 ```
 
@@ -145,7 +145,7 @@ The hardlink count is the signal. Two cases break it, and both are handled:
 
 - **RAR releases.** unpackerr produces new bytes, so the extracted file has a link count of 1 from
   the moment it lands, with the film still in the library. 19 of 71 files arrived that way. This is
-  why `seed-cleanup.py` also asks the arr, by download id, what the download actually produced.
+  why `scripts/trackers/seed-cleanup.py` also asks the arr, by download id, what the download actually produced.
 - **Cross-seeds.** A second torrent on the same files keeps the count above 1, so bytes that used
   to be reclaimed after watching now stay until the cross-seed goes. That is the trade for free
   ratio, and it is one of the reasons the deleting side belongs in qbit_manage, which understands
@@ -162,7 +162,7 @@ flowchart LR
   F["File in the library"] --> G1 & G2
   G1{"Gate 1 · quality<br/>reaches the profile cutoff?"}
   G2{"Gate 2 · score<br/>reaches cutoffFormatScore?"}
-  G1 -->|no| S1["appears in Cutoff Unmet<br/><b>this is what cutoff-search.sh drives</b>"]
+  G1 -->|no| S1["appears in Cutoff Unmet<br/><b>this is what scripts/ops/cutoff-search.sh drives</b>"]
   G2 -->|no| S2["RSS keeps looking for an upgrade<br/><i>paid for in disk: each upgrade leaves<br/>the previous release seeding its debt</i>"]
 ```
 
@@ -193,8 +193,8 @@ open and the whole library in continuous upgrade search. That is what 10000 did 
 
 ```mermaid
 flowchart LR
-  SITE["tracker website<br/><i>stored session cookie</i>"] -->|one page fetch| TS["<b>tracker-stats.py</b><br/><i>every 30 min</i><br/>computes headroom"]
-  TS -->|GB of headroom| TC["<b>tracker-control.py</b><br/><i>5 min later</i><br/><i>refuses a reading over 3h old</i>"]
+  SITE["tracker website<br/><i>stored session cookie</i>"] -->|one page fetch| TS["<b>scripts/trackers/stats.py</b><br/><i>every 30 min</i><br/>computes headroom"]
+  TS -->|GB of headroom| TC["<b>scripts/trackers/control.py</b><br/><i>5 min later</i><br/><i>refuses a reading over 3h old</i>"]
   TC ==>|freeleech-only filter| PR["Prowlarr"]
   TC ==>|requiredFlags| RA["Radarr"]
   TC ==>|grabs per day| BR["autobrr"]
@@ -221,7 +221,7 @@ flowchart LR
     QM["config/qbit-manage/<br/>config.yml"]
   end
   subgraph E["Who applies it"]
-    SC["<b>seed-cleanup.py</b><br/>active, hourly at :20<br/><i>deletes torrent and data</i>"]
+    SC["<b>scripts/trackers/seed-cleanup.py</b><br/>active, hourly at :20<br/><i>deletes torrent and data</i>"]
     QB["qbit-manage<br/>under evaluation<br/><i>tags only</i>"]
   end
   SR --> SC
@@ -266,10 +266,10 @@ Only one of them notices that the producer has died.
 ```mermaid
 flowchart LR
   subgraph A["Route A · file"]
-    S1["zram-metrics.sh<br/>disk-usage-metrics.sh"] -->|.prom| NE["node-exporter<br/><i>textfile collector</i>"]
+    S1["scripts/metrics/zram.sh<br/>scripts/metrics/disk-usage.sh"] -->|.prom| NE["node-exporter<br/><i>textfile collector</i>"]
   end
   subgraph B["Route B · push"]
-    S2["media-metrics.py · tracker-stats.py<br/>seed-cleanup.py · backup.sh<br/>cutoff-search.sh"] -->|POST| PG["Pushgateway"]
+    S2["scripts/metrics/media.py · scripts/trackers/stats.py<br/>scripts/trackers/seed-cleanup.py · scripts/ops/backup.sh<br/>scripts/ops/cutoff-search.sh"] -->|POST| PG["Pushgateway"]
   end
   subgraph C["Route C · scrape"]
     EX["node-exporter · cadvisor · blackbox<br/>pihole-exporter · qbittorrent-exporter<br/>speedtest-tracker · cloudflared<br/><b>tailscale-metrics</b>"]
