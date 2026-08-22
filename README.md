@@ -518,6 +518,7 @@ https://myservice.yourdomain.com {
 
 Caddy picks it up on next restart — no changes needed in this repo.
 
+→ See [docs/architecture.md](docs/architecture.md) for what talks to what, and what may overwrite which app's config
 → See [docs/add-service.md](docs/add-service.md) to add a new service with HTTPS
 
 ### Media Automation (The *arrs Suite)

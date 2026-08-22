@@ -70,6 +70,7 @@ scripts/                    Operational scripts
 
 appdata/                    Persistent container data (NOT in git, lives on disk)
 docs/                       Setup guides
+  architecture.md           What talks to what, and what may overwrite which app's config
 ```
 
 ---
