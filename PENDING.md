@@ -5,8 +5,8 @@
 Tried moving `.env` secrets to [Bitwarden Secrets Manager](https://bitwarden.com/products/secrets-manager/)
 but it did not fit the workflow, so it was abandoned. Secrets stay in `.env` (gitignored).
 
-`scripts/bws-run.py` and [docs/secrets-manager.md](docs/secrets-manager.md) are kept only as
-a reference in case it is revisited. They are NOT wired into deploy.
+The wrapper script and its setup guide were deleted on 2026-08-22: they were wired into
+nothing and read as live documentation. Recover them from git history if this is revisited.
 
 ---
 

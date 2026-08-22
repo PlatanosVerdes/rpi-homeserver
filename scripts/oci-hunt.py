@@ -306,11 +306,11 @@ def main():
         if any(marker in low for marker in CAPACITY_MARKERS):
             # The call went through, which is what resets the throttle ladder.
             clear_throttles(entry["shape"])
-            print(f"{entry['shape']}: sin capacidad")
+            print(f"{entry['shape']}: no capacity")
             continue
         if "429" in low or "too many requests" in low:
             minutes = start_backoff(entry["shape"])
-            print(f"{entry['shape']}: 429, esperando {minutes} min")
+            print(f"{entry['shape']}: 429, waiting {minutes} min")
             break
         print(f"{entry['shape']}: {error}", file=sys.stderr)
 

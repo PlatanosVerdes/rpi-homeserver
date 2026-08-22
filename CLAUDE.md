@@ -64,10 +64,8 @@ scripts/                    Operational scripts
   sync-arr-links.sh         Wires Overseerr and Bazarr to Radarr/Sonarr (on deploy)
   sync-qbit-config.sh       Pushes config/qbittorrent/preferences.json into qBittorrent (on deploy)
   sync-plex-prefs.sh        Plex's LAN Networks and its 95% played threshold (on deploy)
-  mount_setup.sh            One-time external disk mount setup
   rebuild-service.sh        Manual single-service rebuild helper
   recovery-status.sh        After a rebuild: what still needs a human (run by hand, see README)
-  bws-run.py                Bitwarden SM wrapper (dropped, kept for reference only)
 
 appdata/                    Persistent container data (NOT in git, lives on disk)
 docs/                       Setup guides
@@ -84,9 +82,8 @@ docker compose up -d
 ```
 
 > **Bitwarden Secrets Manager was evaluated and dropped.** It did not fit the workflow, so
-> secrets stay in `.env` (gitignored, never committed). `scripts/bws-run.py` and
-> [docs/secrets-manager.md](docs/secrets-manager.md) are kept only as a reference for a
-> possible future attempt — they are NOT wired into deploy. `apply.sh` uses plain `docker compose`.
+> secrets stay in `.env` (gitignored, never committed). `apply.sh` uses plain `docker compose`.
+> See PENDING.md for why, and do not reintroduce it without reading that first.
 
 ---
 

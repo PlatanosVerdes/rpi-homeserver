@@ -530,10 +530,6 @@ Caddy picks it up on next restart — no changes needed in this repo.
 
 → See [docs/add-service.md](docs/add-service.md) to add a new service with HTTPS
 
-### Secrets Management (Bitwarden Secrets Manager)
-`scripts/bws-run.py` is a wrapper that injects secrets from Bitwarden SM before running docker compose. **Currently paused** — secrets live in `.env` for now.
-→ See [docs/secrets-manager.md](docs/secrets-manager.md)
-
 ### Media Automation (The *arrs Suite)
 - **Prowlarr → FlareSolverr:** Settings → Indexers → Add Proxy → `http://flaresolverr:8191`
 - **Prowlarr → Radarr/Sonarr:** Settings → Apps → add each with their API keys
