@@ -137,20 +137,22 @@ Active cron entries:
 # Install
 curl -fsSL https://tailscale.com/install.sh | sh
 
-# Exit node only
-sudo tailscale up --advertise-exit-node --accept-dns=false
+# First login, and the last use of `up` on this box
+sudo tailscale up --accept-dns=false
 
-# Exit node + subnet routing (exposes local LAN 192.168.1.x to Tailscale devices)
-sudo tailscale up \
+# Everything after that: `set` changes only the flags it is given
+sudo tailscale set \
   --advertise-exit-node \
-  --advertise-routes=192.168.1.0/24 \
+  --advertise-routes=192.168.1.180/32,192.168.1.154/32 \
   --accept-dns=false
 ```
 
-`--accept-dns=false` is critical — prevents Tailscale from overwriting `/etc/resolv.conf` and breaking Pi-hole + Docker DNS.
+`--accept-dns=false` is critical — prevents Tailscale from overwriting `/etc/resolv.conf` and breaking Pi-hole + Docker DNS. `up` drops it, and the routes with it, which is why it is never used here after the first login.
+
+The two `/32`s are the Pi's own wlan0 and eth0 addresses, and they are what makes Plex count as local from outside (docs/plex-remote-access.md). Not `192.168.1.0/24`: that would expose the whole house and clash with every network that uses the same range.
 
 Then in [Tailscale admin console](https://login.tailscale.com/admin):
-1. Machines → your Pi → Edit route settings → enable exit node
+1. Machines → your Pi → Edit route settings → enable exit node, approve both `/32` routes
 2. DNS tab → Global Nameservers → custom → Pi's Tailscale IP → Override local DNS
 
 → Full guide: [docs/tailscale.md](docs/tailscale.md)

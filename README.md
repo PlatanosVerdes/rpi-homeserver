@@ -354,10 +354,12 @@ docker compose up -d
 ### 7. Set up Tailscale
 
 ```bash
-sudo tailscale up --advertise-exit-node --accept-dns=false
+sudo tailscale up --accept-dns=false
+sudo tailscale set --advertise-exit-node --advertise-routes=192.168.1.180/32,192.168.1.154/32 --accept-dns=false
 ```
 
-Then approve the exit node in the Tailscale admin console and set Pi-hole as the DNS server.
+Then approve the exit node and both routes in the Tailscale admin console, and set Pi-hole as the
+DNS server.
 → See [docs/tailscale.md](docs/tailscale.md)
 
 ### 8. Configure auto-deployment
@@ -467,25 +469,20 @@ Tailscale provides secure remote access. Pi-hole handles DNS and ad-blocking for
 
 **Start Tailscale on the Pi:**
 
-Only exit node (access Pi services remotely, no other LAN devices exposed):
-```bash
-sudo tailscale up --advertise-exit-node --accept-dns=false
-```
+`tailscale up` is for the first login only. Everything after that is `tailscale set`, which changes
+only the flags it is given; `up` resets the ones it is not told to keep and takes Plex and the
+house's DNS down with it.
 
-Exit node + subnet routing (also reach other LAN devices like a NAS or printer remotely):
 ```bash
-sudo tailscale up \
-  --advertise-exit-node \
-  --advertise-routes=192.168.1.0/24 \
-  --accept-dns=false
+sudo tailscale set --advertise-exit-node --advertise-routes=192.168.1.180/32,192.168.1.154/32 --accept-dns=false
 ```
 
 - `--advertise-exit-node` — lets Tailscale devices route internet traffic through the Pi
-- `--advertise-routes=192.168.1.0/24` — exposes the full local LAN (`192.168.1.x`) to Tailscale devices
+- `--advertise-routes=192.168.1.180/32,192.168.1.154/32` — the Pi's own wlan0 and eth0 addresses, and nothing else on the LAN. This is what makes Plex count as local from outside ([docs/plex-remote-access.md](docs/plex-remote-access.md)). `--advertise-routes` replaces the whole route list, so `--advertise-exit-node` has to travel with it
 - `--accept-dns=false` — critical: prevents Tailscale from overwriting `/etc/resolv.conf` and breaking Pi-hole + Docker DNS
 
 Then in the [Tailscale admin console](https://login.tailscale.com/admin):
-1. **Machines → your Pi → Edit route settings** — enable "Use as exit node" (and approve the subnet if you used `--advertise-routes`)
+1. **Machines → your Pi → Edit route settings** — enable "Use as exit node" and approve both `/32` routes
 2. **DNS tab** → Global Nameservers → Add custom nameserver → enter your `TAILSCALE_IP` → enable "Override local DNS"
 
 Step 2 makes Pi-hole the DNS server for every device in your tailnet, so `*.platanosverdes.com` resolves correctly from anywhere.

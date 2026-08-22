@@ -134,9 +134,10 @@ network), not just watch on the phone itself.
 **Why it's not a simple config toggle (but is NOT flatly impossible either):**
 - The actual cast protocol, once a target's IP is known, is ordinary routable TCP/UDP (ports
   8008/8009 control, 8443 for Google Home, a wide UDP range for the media stream itself) — nothing
-  about the protocol itself requires same-network. This repo's own `docs/tailscale.md` already
-  documents standing up the Pi as a **subnet router** (`--advertise-routes=192.168.1.0/24`), which
-  would make the home LAN's IPs reachable from a remote tailnet device.
+  about the protocol itself requires same-network. The Pi is already a **subnet router**, and
+  widening what it advertises from its own two `/32`s to `192.168.1.0/24` would make the home LAN's
+  IPs reachable from a remote tailnet device (see `docs/tailscale.md` for why it does not do that
+  today).
 - The actual blocker is **discovery**: Chromecast/Plex Companion find each other via mDNS
   (multicast), and Tailscale is a Layer-3 overlay that does not carry multicast/broadcast traffic
   at all, by design — confirmed on Tailscale's own OSI-model docs, and there are still-open feature
