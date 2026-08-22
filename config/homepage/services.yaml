@@ -68,7 +68,7 @@
     - SubDown:
         icon: https://subs.platanosverdes.com/icon.svg
         href: https://subs.platanosverdes.com
-        description: External subtitles, movie by movie
+        description: Subtitles by language, movie by movie
         server: my-docker
         container: subtitle-links
     - Farnsworth:
