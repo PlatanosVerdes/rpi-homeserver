@@ -43,24 +43,27 @@ flowchart TB
   end
 
   subgraph HOST["5 · The host, what is not a container"]
-    APPLY["scripts/deploy/apply.sh<br/>scripts/sync-*.sh · scripts/install-*.sh"]
+    APPLY["scripts/deploy/apply.sh<br/>scripts/sync-*.sh · scripts/install-*.sh<br/><i>writes config into the bands above, see The convergence loop</i>"]
     CRON["scripts/crontab<br/><i>merged with the personal repo's fragment</i>"]
     FS["mergerfs → DATA_ROOT<br/><i>two USB disks, one tree</i>"]
   end
 
   NET --> CADDY
+  NET -->|github push| CFD
   TS --> CADDY
   LAN --> PIHOLE
   IRC --> DECIDE
   CFD --> HOOK
   CADDY --> WORK
-  HOOK --> APPLY
   DECIDE --> GET --> SERVE
   WORK -. metrics and logs .-> OBS
   PUSH --> PROM --> GRAF
   LOGS --> GRAF
-  APPLY ==>|writes config| WORK
+  HOOK --> APPLY
   APPLY ==>|writes| CRON
+
+  %% every arrow points down, so the bands stack 1 to 5 in order
+  GRAF ~~~ APPLY
 ```
 
 41 containers plus one ephemeral at 03:00. All on `media-network` except Plex and Pi-hole, which
