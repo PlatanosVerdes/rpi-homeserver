@@ -34,6 +34,21 @@ because an unpaid torrent turns into a hit & run and three of those disable an a
 **Nothing is ever deleted while a tracker is still owed.** That is the one line in this file with no
 exceptions.
 
+**What each tracker pays for is not the same thing.** The rules decide the economics, so the
+deletion rule reads them rather than applying one number everywhere:
+
+| Tracker | What actually pays | When a torrent may go |
+| :--- | :--- | :--- |
+| TorrentLeech | upload only: no bonus for holding anything | hit & run cleared at 240 h or ratio 1:1, then as soon as it goes quiet |
+| DigitalCore | upload, plus a little for holding (0.5 p/hour/torrent, 1% off downloads per 10 GB) | 120 h or 1:1, so it rotates twice as fast as TorrentLeech |
+| C411 | upload only, with the ratio wall 2 GB away | their hit & run is disabled site-wide, so: as soon as it goes quiet |
+| BTSCHOOL | **everything pays double upload one month after release**, so holding a month multiplies every byte uploaded after it | not worth judging before that month is up |
+| retrotoon | points for seeding, and no ratio rule at all | their 72 h, then as soon as it goes quiet |
+
+The floor for "quiet" is `min_upload_gb_per_day` in `config/qbittorrent/seed-rules.json`, per tracker.
+A torrent with less than 12 hours of upload history is never judged on it, because a release added an
+hour ago has produced no evidence either way.
+
 **The manual override is a tag.** Add `keep` to a torrent in qBittorrent and `seed-cleanup.py` will
 never touch it, whatever the goals say. It needs no deploy and no config change, which is the point:
 it exists for the moment something is about to be removed and the answer is "not yet, explain it

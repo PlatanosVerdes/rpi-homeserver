@@ -1,17 +1,14 @@
 {
   "min_age_hours": 24,
-
   "public": {
     "min_seed_hours": 0,
     "min_ratio": 0,
     "drop_when_imported": true
   },
-
   "private": {
     "min_seed_hours": 240,
     "min_ratio": 1.0
   },
-
   "trackers": {
     "_comment": [
       "Per-tracker overrides. TorrentLeech clears a hit-and-run at 240 h of seeding, but it counts",
@@ -25,11 +22,21 @@
     ],
     "tracker.torrentleech.org": {
       "min_seed_hours": 360,
-      "min_ratio": 1.2
+      "min_ratio": 1.2,
+      "quiet": {
+        "hit_and_run_hours": 240,
+        "hit_and_run_ratio": 1.0,
+        "min_upload_gb_per_day": 0.2
+      }
     },
     "tracker.tleechreload.org": {
       "min_seed_hours": 360,
-      "min_ratio": 1.2
+      "min_ratio": 1.2,
+      "quiet": {
+        "hit_and_run_hours": 240,
+        "hit_and_run_ratio": 1.0,
+        "min_upload_gb_per_day": 0.2
+      }
     },
     "_comment_digitalcore": [
       "DigitalCore clears a hit and run at 5 days of seeding or ratio 1:1, and its FAQ is explicit",
@@ -39,11 +46,21 @@
     ],
     "tracker.digitalcore.club": {
       "min_seed_hours": 168,
-      "min_ratio": 1.0
+      "min_ratio": 1.0,
+      "quiet": {
+        "hit_and_run_hours": 120,
+        "hit_and_run_ratio": 1.0,
+        "min_upload_gb_per_day": 0.2
+      }
     },
     "trackerprxy.digitalcore.club": {
       "min_seed_hours": 168,
-      "min_ratio": 1.0
+      "min_ratio": 1.0,
+      "quiet": {
+        "hit_and_run_hours": 120,
+        "hit_and_run_ratio": 1.0,
+        "min_upload_gb_per_day": 0.2
+      }
     },
     "_comment_retrotoon": [
       "retrotoon asks for 72 h per torrent, reached inside the first 10 days, and calls it its",
@@ -52,7 +69,32 @@
     ],
     "ann.retrotoon.world": {
       "min_seed_hours": 96,
-      "min_ratio": 1.0
+      "min_ratio": 1.0,
+      "quiet": {
+        "hit_and_run_hours": 72,
+        "hit_and_run_ratio": 1.0,
+        "min_upload_gb_per_day": 0.2
+      }
+    },
+    "_comment_quiet": [
+      "`quiet` is where each tracker's economics live. The site's own hit and run rule decides when a",
+      "torrent MAY go; its upload rate decides whether it SHOULD. Measured 2026-08-22: torrents seeded",
+      "40 to 157 h had uploaded 0.00 GB while ones a few hours old were doing 0.13 to 0.82 GB/h, so a",
+      "goal of 'ratio 1.2' was deleting the best earner in the client and keeping the worst.",
+      "min_upload_gb_per_day is the floor below which a torrent is not paying for its disk any more."
+    ],
+    "c411.org": {
+      "_comment": [
+        "Their H&R system is disabled site-wide right now and documented as returning at",
+        "72 h. Kept at their documented number so nothing changes when it comes back."
+      ],
+      "min_seed_hours": 240,
+      "min_ratio": 1.0,
+      "quiet": {
+        "hit_and_run_hours": 72,
+        "hit_and_run_ratio": 1.0,
+        "min_upload_gb_per_day": 0.2
+      }
     }
   }
 }
