@@ -49,22 +49,35 @@ sudo sysctl -p /etc/sysctl.d/99-tailscale.conf
 
 ## Step 3 — Start Tailscale
 
-**Exit node only:**
+`up` is for the first login and nothing else, and it is the last time it should be used on this
+machine:
+
 ```bash
-sudo tailscale up --advertise-exit-node --accept-dns=false
+sudo tailscale up --accept-dns=false
 ```
 
-**Exit node + expose local LAN to Tailscale devices:**
+Everything after that is `set`, which changes only the flags it is given. This is the line the Pi
+is actually running:
+
 ```bash
-sudo tailscale up --advertise-exit-node --advertise-routes=192.168.1.0/24 --accept-lan=true --accept-dns=false
+sudo tailscale set --advertise-exit-node --advertise-routes=192.168.1.180/32,192.168.1.154/32 --accept-dns=false
 ```
+
+| Flag | Why |
+| :--- | :--- |
+| `--advertise-exit-node` | Offers the home connection as an exit node. It has to be repeated in any command that touches `--advertise-routes`, because that flag replaces the whole route list and would otherwise drop it |
+| `--advertise-routes=192.168.1.180/32,192.168.1.154/32` | The Pi's own wlan0 and eth0 addresses, and nothing else on the LAN. These are what keep Plex free from outside (see [plex-remote-access.md](plex-remote-access.md)). A `192.168.1.0/24` here would hand over every device in the house, and collide with every café and hotel network using the same range |
+| `--accept-dns=false` | See below |
 
 > `--accept-dns=false` is **critical**, and specific to this machine. Tailscale normally rewrites
 > `/etc/resolv.conf` so a device uses the tailnet's DNS server. That server *is* this Pi, so letting
 > it happen here points Pi-hole at itself and takes DNS down for the house and for every container.
 >
-> This is also why the rest of these docs insist on `tailscale set` rather than `tailscale up`:
-> `up` resets everything you did not name on the command line, and this flag is the one that hurts.
+> This is also why these docs insist on `tailscale set` rather than `tailscale up`: `up` resets
+> everything you did not name on the command line, and this flag is the one that hurts.
+
+The routes show up in the admin console only after the `set` command has run, and they carry no
+traffic until they are approved there (step 4).
 
 ---
 
