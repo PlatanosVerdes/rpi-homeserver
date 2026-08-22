@@ -1,5 +1,6 @@
-// subtitle-links serves a small page listing every movie/episode that has an external
-// (Bazarr-downloaded) .srt subtitle, with a direct download link per language (and a
+// subtitle-links serves a small page listing every movie/episode that has a text subtitle
+// Jellyfin can hand over as .srt, whether Bazarr downloaded it as a sidecar or the release came
+// with it baked into the container, with a direct download link per track (and a
 // download-all-as-zip option per series), so subtitles can be grabbed by hand onto a device
 // (e.g. to load into VLC alongside an offline-downloaded video) without hand-building URLs.
 package main
@@ -13,13 +14,25 @@ import (
 	"net/http"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 )
 
-const listenPort = "8085"
+const (
+	listenPort = "8085"
+
+	apiTimeout = 15 * time.Second
+	// A sidecar .srt is a file read, but an embedded track has to be demuxed out of the container
+	// first, which on this Pi can take a minute for a 1080p remux. Jellyfin caches the result, so
+	// only the first grab of a given track pays it, but 15s is not enough to get there.
+	subtitleTimeout = 3 * time.Minute
+	// Several extractions at once is what keeps a whole-library zip from dragging out for the best
+	// part of an hour, while staying far enough below the point where they starve playback.
+	zipConcurrency = 4
+)
 
 type config struct {
 	jellyfinURL string
@@ -45,6 +58,7 @@ func loadConfig() config {
 type subtitle struct {
 	Index int    `json:"index"`
 	Lang  string `json:"lang"`
+	Label string `json:"label,omitempty"`
 }
 
 type movie struct {
@@ -68,12 +82,22 @@ type series struct {
 }
 
 func jellyfinGet(cfg config, path string) ([]byte, error) {
+	return jellyfinGetWithin(cfg, path, apiTimeout)
+}
+
+// subtitleBody asks Jellyfin for one track as SRT, converting or demuxing it as needed.
+func subtitleBody(cfg config, itemID string, index int) ([]byte, error) {
+	path := fmt.Sprintf("/Videos/%s/%s/Subtitles/%d/Stream.srt", itemID, itemID, index)
+	return jellyfinGetWithin(cfg, path, subtitleTimeout)
+}
+
+func jellyfinGetWithin(cfg config, path string, timeout time.Duration) ([]byte, error) {
 	req, err := http.NewRequest("GET", cfg.jellyfinURL+path, nil)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("X-Emby-Token", cfg.apiKey)
-	client := &http.Client{Timeout: 15 * time.Second}
+	client := &http.Client{Timeout: timeout}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
@@ -90,28 +114,127 @@ func jellyfinGet(cfg config, path string) ([]byte, error) {
 }
 
 type mediaStream struct {
-	Type       string `json:"Type"`
-	Codec      string `json:"Codec"`
-	Language   string `json:"Language"`
-	Index      int    `json:"Index"`
-	IsExternal bool   `json:"IsExternal"`
+	Type                 string `json:"Type"`
+	Language             string `json:"Language"`
+	Title                string `json:"Title"`
+	Index                int    `json:"Index"`
+	IsTextSubtitleStream bool   `json:"IsTextSubtitleStream"`
+	IsForced             bool   `json:"IsForced"`
+	IsHearingImpaired    bool   `json:"IsHearingImpaired"`
 }
 
-// externalSubs keeps only external, text-based (subrip) subtitle streams: that's exactly what
-// Bazarr manages as sidecar .srt files. Embedded/image-based (e.g. PGS) tracks are skipped, since
-// there's no equivalent plain-file download for those.
-func externalSubs(streams []mediaStream) []subtitle {
+// Jellyfin reports whichever ISO 639-2 variant the container was tagged with, so the same language
+// can arrive under two codes and would then show up as two separate entries in the language filter.
+var langAliases = map[string]string{
+	"fre": "fra", "ger": "deu", "dut": "nld", "chi": "zho", "cze": "ces", "gre": "ell",
+	"ice": "isl", "may": "msa", "per": "fas", "rum": "ron", "slo": "slk", "alb": "sqi",
+	"arm": "hye", "baq": "eus", "geo": "kat", "wel": "cym", "mac": "mkd", "bur": "mya",
+	"nob": "nor", "fil": "tgl", "es": "spa", "en": "eng", "pt": "por",
+}
+
+func canonicalLang(lang string) string {
+	lang = strings.ToLower(strings.TrimSpace(lang))
+	if lang == "" || lang == "und" {
+		return "?"
+	}
+	if c, ok := langAliases[lang]; ok {
+		return c
+	}
+	return lang
+}
+
+// trackLabel names a track within its own language, for the common case of a film carrying several
+// (Castilian and Latin American, plain and SDH). The flag already says which language it is, so a
+// title's parenthetical is the part worth keeping: "Español (España)" reads better as "España".
+func trackLabel(s mediaStream) string {
+	title := strings.TrimSpace(s.Title)
+	if i := strings.Index(title, "("); i >= 0 {
+		if j := strings.LastIndex(title, ")"); j > i {
+			if inner := strings.TrimSpace(title[i+1 : j]); inner != "" {
+				return inner
+			}
+		}
+	}
+	if title != "" {
+		return title
+	}
+	switch {
+	case s.IsHearingImpaired:
+		return "SDH"
+	case s.IsForced:
+		return "forzado"
+	}
+	// No label at all is the right answer for a Bazarr sidecar, which is the only track there is:
+	// it keeps its downloaded filename clean. The page names it when it sits next to others.
+	return ""
+}
+
+// textSubs keeps every text-based subtitle track, embedded ones included: Jellyfin converts any of
+// them to SRT on the fly at the same /Stream.srt URL, so a track baked into the release downloads
+// exactly like a Bazarr sidecar. Image-based tracks (PGS, DVDSUB) have no text form, and
+// IsTextSubtitleStream is Jellyfin's own answer to which is which.
+func textSubs(streams []mediaStream) []subtitle {
 	var subs []subtitle
 	for _, s := range streams {
-		if s.Type == "Subtitle" && s.IsExternal && s.Codec == "subrip" {
-			lang := s.Language
-			if lang == "" {
-				lang = "?"
-			}
-			subs = append(subs, subtitle{Index: s.Index, Lang: lang})
+		if s.Type == "Subtitle" && s.IsTextSubtitleStream {
+			subs = append(subs, subtitle{Index: s.Index, Lang: canonicalLang(s.Language), Label: trackLabel(s)})
 		}
 	}
 	return subs
+}
+
+// langSet reads the ?langs=eng,spa filter the page appends to its zip links, so a download matches
+// what the page was showing. Empty means every language.
+func langSet(r *http.Request) map[string]bool {
+	raw := r.URL.Query().Get("langs")
+	if strings.TrimSpace(raw) == "" {
+		return nil
+	}
+	set := map[string]bool{}
+	for _, l := range strings.Split(raw, ",") {
+		if l = canonicalLang(l); l != "" {
+			set[l] = true
+		}
+	}
+	if len(set) == 0 {
+		return nil
+	}
+	return set
+}
+
+func keepLangs(subs []subtitle, langs map[string]bool) []subtitle {
+	if langs == nil {
+		return subs
+	}
+	var out []subtitle
+	for _, s := range subs {
+		if langs[s.Lang] {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
+// uniqueName keeps a zip from carrying two entries under one name, which several films would
+// otherwise do now that two tracks can share a language.
+func uniqueName(seen map[string]int, name string) string {
+	seen[name]++
+	if n := seen[name]; n > 1 {
+		if i := strings.LastIndex(name, "."); i > 0 {
+			return fmt.Sprintf("%s (%d)%s", name[:i], n, name[i:])
+		}
+		return fmt.Sprintf("%s (%d)", name, n)
+	}
+	return name
+}
+
+// subFilename names a downloaded track: the language alone is ambiguous once a film has two tracks
+// in it, so the label rides along when there is one.
+func subFilename(name string, s subtitle) string {
+	if s.Label != "" {
+		return fmt.Sprintf("%s.%s (%s).srt", name, s.Lang, s.Label)
+	}
+	return fmt.Sprintf("%s.%s.srt", name, s.Lang)
 }
 
 func fetchMovies(cfg config) ([]movie, error) {
@@ -131,7 +254,7 @@ func fetchMovies(cfg config) ([]movie, error) {
 	}
 	var movies []movie
 	for _, it := range resp.Items {
-		if subs := externalSubs(it.MediaStreams); len(subs) > 0 {
+		if subs := textSubs(it.MediaStreams); len(subs) > 0 {
 			movies = append(movies, movie{ID: it.Id, Title: it.Name, Subs: subs})
 		}
 	}
@@ -158,7 +281,7 @@ func fetchEpisodes(cfg config, seriesID string) ([]episode, error) {
 	}
 	var episodes []episode
 	for _, it := range resp.Items {
-		if subs := externalSubs(it.MediaStreams); len(subs) > 0 {
+		if subs := textSubs(it.MediaStreams); len(subs) > 0 {
 			episodes = append(episodes, episode{
 				ID: it.Id, Season: it.ParentIndexNumber, Episode: it.IndexNumber, Title: it.Name, Subs: subs,
 			})
@@ -340,49 +463,105 @@ func downloadHandler(cfg config) http.HandlerFunc {
 			http.NotFound(w, r)
 			return
 		}
-		index := r.URL.Query().Get("index")
-		lang := r.URL.Query().Get("lang")
+		index, err := strconv.Atoi(r.URL.Query().Get("index"))
+		if err != nil {
+			http.Error(w, "bad subtitle index", http.StatusBadRequest)
+			return
+		}
 		name := r.URL.Query().Get("name")
 		if name == "" {
 			name = "subtitle"
 		}
-		body, err := jellyfinGet(cfg, fmt.Sprintf("/Videos/%s/%s/Subtitles/%s/Stream.srt", id, id, index))
+		body, err := subtitleBody(cfg, id, index)
 		if err != nil {
 			log.Printf("download %s: %v", id, err)
 			http.Error(w, "could not fetch subtitle", http.StatusBadGateway)
 			return
 		}
-		filename := fmt.Sprintf("%s (%s).srt", name, lang)
+		filename := subFilename(name, subtitle{
+			Lang:  r.URL.Query().Get("lang"),
+			Label: r.URL.Query().Get("label"),
+		})
 		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", filename))
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.Write(body)
 	}
 }
 
-// zipEpisodes writes every given episode's external subtitle(s) into zw, under dir/ if dir is
-// non-empty (used to nest a series' episodes inside their own folder in the everything-zip).
-func zipEpisodes(cfg config, zw *zip.Writer, dir string, episodes []episode) {
+type zipJob struct {
+	name   string
+	itemID string
+	index  int
+}
+
+// movieJobs and episodeJobs name every track a zip should hold. episodeJobs nests under dir/ when
+// given one, to put a series' episodes in their own folder inside the everything-zip.
+func movieJobs(movies []movie, langs map[string]bool) []zipJob {
+	var jobs []zipJob
+	for _, m := range movies {
+		for _, s := range keepLangs(m.Subs, langs) {
+			jobs = append(jobs, zipJob{name: subFilename(m.Title, s), itemID: m.ID, index: s.Index})
+		}
+	}
+	return jobs
+}
+
+func episodeJobs(dir string, episodes []episode, langs map[string]bool) []zipJob {
+	var jobs []zipJob
 	for _, ep := range episodes {
-		for _, s := range ep.Subs {
-			body, err := jellyfinGet(cfg, fmt.Sprintf("/Videos/%s/%s/Subtitles/%d/Stream.srt", ep.ID, ep.ID, s.Index))
-			if err != nil {
-				log.Printf("zip: episode %s sub %d: %v", ep.ID, s.Index, err)
-				continue
-			}
-			fname := fmt.Sprintf("S%02dE%02d.%s.srt", ep.Season, ep.Episode, s.Lang)
+		for _, s := range keepLangs(ep.Subs, langs) {
+			name := subFilename(fmt.Sprintf("S%02dE%02d", ep.Season, ep.Episode), s)
 			if dir != "" {
-				fname = dir + "/" + fname
+				name = dir + "/" + name
 			}
-			fw, err := zw.Create(fname)
+			jobs = append(jobs, zipJob{name: name, itemID: ep.ID, index: s.Index})
+		}
+	}
+	return jobs
+}
+
+// writeZipJobs fetches in small parallel batches and writes each batch in order. A zip is now
+// dominated by Jellyfin demuxing embedded tracks rather than by reading sidecar files, and one at
+// a time that adds up to most of an hour for a whole library; batching also bounds how many
+// subtitles are held in memory at once, which matters inside a 64 MB container. A track that
+// fails is logged and skipped, so one bad file cannot truncate the rest of the zip.
+func writeZipJobs(cfg config, zw *zip.Writer, jobs []zipJob) {
+	seen := map[string]int{}
+	for start := 0; start < len(jobs); start += zipConcurrency {
+		end := start + zipConcurrency
+		if end > len(jobs) {
+			end = len(jobs)
+		}
+		batch := jobs[start:end]
+		bodies := make([][]byte, len(batch))
+		var wg sync.WaitGroup
+		for i, j := range batch {
+			wg.Add(1)
+			go func(i int, j zipJob) {
+				defer wg.Done()
+				body, err := subtitleBody(cfg, j.itemID, j.index)
+				if err != nil {
+					log.Printf("zip: %s: %v", j.name, err)
+					return
+				}
+				bodies[i] = body
+			}(i, j)
+		}
+		wg.Wait()
+		for i, j := range batch {
+			if bodies[i] == nil {
+				continue
+			}
+			fw, err := zw.Create(uniqueName(seen, j.name))
 			if err != nil {
 				continue
 			}
-			fw.Write(body)
+			fw.Write(bodies[i])
 		}
 	}
 }
 
-// downloadAllHandler zips every episode's external subtitle(s) for one series.
+// downloadAllHandler zips every episode's subtitle(s) for one series.
 func downloadAllHandler(cfg config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := strings.TrimPrefix(r.URL.Path, "/download-all/")
@@ -403,13 +582,13 @@ func downloadAllHandler(cfg config) http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/zip")
 		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", name+".zip"))
 		zw := zip.NewWriter(w)
-		zipEpisodes(cfg, zw, "", episodes)
+		writeZipJobs(cfg, zw, episodeJobs("", episodes, langSet(r)))
 		zw.Close()
 	}
 }
 
-// downloadEverythingHandler zips every movie's and every series' external subtitles in one go:
-// movies at the zip root, each series' episodes nested under a folder named after the series.
+// downloadEverythingHandler zips every movie's and every series' subtitles in one go: movies at the
+// zip root, each series' episodes nested under a folder named after the series.
 func downloadEverythingHandler(cfg config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		items, err := getItems(cfg)
@@ -418,26 +597,15 @@ func downloadEverythingHandler(cfg config) http.HandlerFunc {
 			http.Error(w, "could not reach Jellyfin", http.StatusBadGateway)
 			return
 		}
+		langs := langSet(r)
+		jobs := movieJobs(items.Movies, langs)
+		for _, s := range items.Series {
+			jobs = append(jobs, episodeJobs(s.Title, s.Episodes, langs)...)
+		}
 		w.Header().Set("Content-Type", "application/zip")
 		w.Header().Set("Content-Disposition", `attachment; filename="Subtitulos.zip"`)
 		zw := zip.NewWriter(w)
-		for _, m := range items.Movies {
-			for _, s := range m.Subs {
-				body, err := jellyfinGet(cfg, fmt.Sprintf("/Videos/%s/%s/Subtitles/%d/Stream.srt", m.ID, m.ID, s.Index))
-				if err != nil {
-					log.Printf("download-everything: movie %s sub %d: %v", m.ID, s.Index, err)
-					continue
-				}
-				fw, err := zw.Create(fmt.Sprintf("%s.%s.srt", m.Title, s.Lang))
-				if err != nil {
-					continue
-				}
-				fw.Write(body)
-			}
-		}
-		for _, s := range items.Series {
-			zipEpisodes(cfg, zw, s.Title, s.Episodes)
-		}
+		writeZipJobs(cfg, zw, jobs)
 		zw.Close()
 	}
 }
