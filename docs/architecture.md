@@ -313,3 +313,116 @@ scraped exporter: not tidiness, an alert that did not exist before.
 
 Scrape jobs are in `config/prometheus/prometheus.yml`. `cutoff_search` is currently pushed by
 nobody's request: no dashboard and no alert reads it.
+
+---
+
+## The scripts
+
+Twenty files under `scripts/`, grouped by what they do rather than by a prefix in the filename.
+Measured by lines of code, branches and external calls, three of them earn a drawing and the rest
+earn a sentence. `deploy/apply.sh` is fifth by complexity, not first.
+
+| Script | Code | Functions | Branches | Deletes |
+| :--- | ---: | ---: | ---: | :--- |
+| `metrics/media.py` | 555 | 21 | 132 | |
+| `trackers/seed-cleanup.py` | 477 | 29 | 116 | files |
+| `trackers/stats.py` | 380 | 18 | 75 | |
+| `trackers/control.py` | 378 | 23 | 115 | config |
+| `deploy/apply.sh` | 266 | 6 | 64 | |
+| `ops/oci-hunt.py` | 251 | 14 | 57 | |
+| the other fourteen | <135 | <6 | <13 | |
+
+### trackers/seed-cleanup.py
+
+The only script that deletes data, and the only one whose decision tree was written down nowhere.
+A wrong branch here costs a tracker account.
+
+```mermaid
+flowchart TB
+  T["A torrent<br/><i>hourly at :20</i>"] --> G
+  G{"Any guard tripped?"} -->|yes| KEEP0["Untouched, nothing else is checked"]
+  G -->|no| D1
+  D1{"link count >= 2?"} -->|yes| K1["STAYS<br/><i>the library shares the bytes</i>"]
+  D1 -->|no| D2
+  D2{"does the arr say its import<br/>is still on disk?"} -->|yes| K2["STAYS<br/><i>the RAR case</i>"]
+  D2 -->|no| D3
+  D3{"public tracker?"} -->|yes| R1["DELETE NOW<br/><i>leaving the public swarm matters more</i>"]
+  D3 -->|no| D4
+  D4{"seed goal met?"} -->|yes| R2["DELETE torrent and data"]
+  D4 -->|no| W["Keep seeding, tag it,<br/>look again next hour"]
+```
+
+The guards, all of them absolute: outside qBittorrent's own download folder, the library shares the
+file, the arrs cannot be reached, progress below 100%, checking or moving, a second torrent shares
+the files, or younger than `min_age_hours`. `DRY_RUN=1` prints the decision without acting.
+
+The second question is the one that is not obvious, and the one that stopped live films being
+deleted. Radarr imports by hardlink, but a hardlink needs the same bytes at both ends and a scene
+release packed in RAR does not have them: unpackerr extracts one `.mkv` out of 96 `.rNN` archives,
+and that file is new. 19 of 71 files in the library arrived that way, with a link count of 1 from
+the moment they landed, and trusting the count alone read them as watched and deleted while the
+film sat in the library untouched.
+
+The seed goal comes from `config/qbittorrent/seed-rules.json`, and whether a tracker is private
+comes from qBittorrent itself, so there is no list to keep up to date. The clock is qBittorrent's,
+which only advances while the torrent really seeds: stricter than the tracker's calendar, which is
+the safe direction to be wrong in.
+
+### deploy/apply.sh
+
+Fifth by complexity, and the part that is not obvious is not the flow, which is the convergence
+diagram above. It is the concurrency.
+
+```mermaid
+flowchart LR
+  H["webhook, on push"] --> L
+  C["cron, every 30 min"] --> L
+  L{"flock"} -->|got it| RUN["Runs the deploy"]
+  L -->|busy| M["Leaves .deploy.pending<br/>and exits, does not wait"]
+  RUN --> CHK{"pending marker<br/>on the way out?"}
+  CHK -->|yes| RUN
+  CHK -->|no| DIFF["Restarts only what the diff touched:<br/>caddy, grafana, vector, the webhook unit"]
+  M -.-> CHK
+```
+
+Coalescing, not a queue: ten pushes during an ARM Go build cost exactly one extra pass, not ten.
+The marker exists because dropping the skipped run lost real deploys, a tag in one repo and its
+version bump in the other arriving inside the same window.
+
+### trackers/control.py
+
+Its complexity is a lookup table, not a flow, so it reads better as one. Headroom is how many GB of
+*paid* download still fit before the account crosses the ratio the site disables it at.
+
+| Headroom | Grabs per day | Prowlarr filter |
+| :--- | ---: | :--- |
+| below 25 GB | 3 | freeleech only |
+| below 100 GB | 2 | freeleech only |
+| above | 1 | no filter |
+
+More grabs the less headroom is left, which is the opposite of the intuition: with little headroom
+the account needs to *build* ratio, and freeleech raises the dividend without touching the divisor.
+Below `min_free_gb` the grabber stops entirely, and a reading older than 3h moves nothing.
+
+### The rest, one line each
+
+| Script | What it does |
+| :--- | :--- |
+| `deploy/install-crontab.sh` | Merges both repos' cron fragments, installs only if it differs, prints the diff |
+| `deploy/install-logrotate.sh` | Installs the rotation policy root-owned 0644, because logrotate silently ignores anything else |
+| `deploy/rebuild-service.sh` | Rebuilds one compose service from scratch, by hand |
+| `deploy/recovery-status.sh` | After a rebuild, the three steps no API can do: Plex claim, Jellyfin wizard, Apple 2FA |
+| `sync/arr-config.sh` | Custom formats then quality profiles, in that order: profiles score formats by name and the id only exists once the format does |
+| `sync/arr-links.sh` | Overseerr and Bazarr's connection to the arrs. Bazarr publishes no port, so its call is proxied through the network |
+| `sync/pihole-dns.sh` | Caddy's hosts as local DNS. Additive only: an entry not derived from Caddy is never touched |
+| `sync/plex-prefs.sh` | LAN networks, so tailnet clients are not billed as remote, and the played threshold at 95% |
+| `sync/qbit-config.sh` | Queue limits and BT port. Reads back after writing, because qBittorrent accepts an unknown key and drops it |
+| `metrics/media.py` | The largest, but wide rather than deep: eleven functions of the same shape, fetch, count, push. Answers "which", not "how many" |
+| `metrics/disk-usage.sh` | Biggest files on the data disk, one line per inode so a hardlink is not counted twice. Niced and ionice'd |
+| `metrics/zram.sh` | The real RAM compressed pages occupy, the one number node-exporter cannot tell from disk swap |
+| `trackers/stats.py` | Reads each site with a stored cookie. The complexity is parsing, deliberately dumb about markup so a second site is config, not a selector hunt |
+| `ops/backup.sh` | Compresses appdata, keeps 7, excludes what regenerates (Prometheus TSDB, Plex caches) |
+| `ops/heartbeat.sh` | Tells an outside check the Pi is alive, and deliberately fails when the essentials are not running |
+| `ops/cutoff-search.sh` | Asks Radarr to search for what it already says is missing. Decides nothing |
+| `ops/oci-hunt.py` | Asks Oracle for the free instance every 2 min, signing by hand, and exits for good once one lands |
+| `apply.sh` | **Temporary.** Three-line shim to `deploy/apply.sh` so the live crontab survives the move. Delete after one deploy, see PENDING.md |
