@@ -11,10 +11,10 @@
 #
 # The call goes through the container because qBittorrent's WebUI trusts localhost: from the host it
 # would arrive via the Docker gateway, which is not in its AuthSubnetWhitelist, and would need
-# credentials. Same trick as media-metrics.py.
+# credentials. Same trick as scripts/metrics/media.py.
 set -uo pipefail
 
-PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PREFS_FILE="$PROJECT_DIR/config/qbittorrent/preferences.json"
 ENV_FILE="$PROJECT_DIR/.env"
 API="http://localhost:8080/api/v2"

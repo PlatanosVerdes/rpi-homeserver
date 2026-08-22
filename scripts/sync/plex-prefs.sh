@@ -17,7 +17,7 @@
 # at 90% a film abandoned before the end counts as seen and gets queued. 95% is the whole film.
 set -uo pipefail
 
-PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 set -a; source "$PROJECT_DIR/.env"; set +a
 
 PLEX_BASE="http://localhost:32400"

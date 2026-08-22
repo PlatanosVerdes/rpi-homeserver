@@ -69,7 +69,7 @@ services:
       - --docker_only=true
       # disk/diskIO are the expensive ones (each housekeeping cycle walks every container's
       # filesystem on external/mergerfs storage); we already track disk usage separately via
-      # disk-usage-metrics.sh, so cAdvisor's own per-container copy of that isn't needed.
+      # scripts/metrics/disk-usage.sh, so cAdvisor's own per-container copy of that isn't needed.
       # "accelerator" doesn't exist as a metric kind in v0.60.5 (unlike newer cAdvisor releases)
       # and made the flag parse fail outright, crash-looping the whole container.
       #
@@ -126,7 +126,7 @@ services:
       # silently come back up as admin/admin.
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
       # No Telegram vars here on purpose: the contact point is rendered before startup by
-      # apply.sh, so the token never enters the container's environment
+      # scripts/deploy/apply.sh, so the token never enters the container's environment
       #
       # Every link Grafana puts in a notification is built from this. Without it the default is
       # http://localhost:3000, and Telegram silently refuses to linkify a localhost URL: the
@@ -136,7 +136,7 @@ services:
     volumes:
       - ${APP_CONFIG_PATH}/grafana/data:/var/lib/grafana
       - ${CONFIG_ROOT}/grafana/provisioning:/etc/grafana/provisioning:ro
-      # Alerting is rendered by apply.sh from config/grafana/alerting/ (the bot token
+      # Alerting is rendered by scripts/deploy/apply.sh from config/grafana/alerting/ (the bot token
       # and chat id come from .env), so it is mounted over the empty dir above
       - ${APP_CONFIG_PATH}/grafana-alerting:/etc/grafana/provisioning/alerting:ro
       - ${CONFIG_ROOT}/grafana/dashboards_json:/etc/grafana/dashboards_json:ro
@@ -199,25 +199,32 @@ services:
     networks:
       - media-network
 
-  # --- TAILSCALE EXPORTER (Tailscale device status → Prometheus) ---
-  # Shows all devices in the "Bannet" tailnet: online/offline, IP, OS, last seen.
-  # Requires a Tailscale API key (NOT the auth key):
-  #   → https://login.tailscale.com/admin/settings/keys → "Generate API key"
-  # Add TAILSCALE_API_KEY to .env, then uncomment this service.
-  # Grafana dashboard ID: 17722
+  # --- TAILSCALE METRICS (peer status → Prometheus) ---
+  # Was a Go binary compiled by hand and run from cron every minute, writing into
+  # node-exporter's textfile collector. Nothing in git built it, so a rebuilt Pi lost the
+  # nine panels of the Tailscale dashboard in silence. Now it is built by compose like every
+  # other service here, and its death shows up as up{job="tailscale"} == 0.
   #
-  # tailscale-exporter:
-  #   image: ghcr.io/maauso/tailscale-exporter:latest
-  #   container_name: tailscale-exporter
-  #   restart: unless-stopped
-  #   profiles: [moni, all]
-  #   environment:
-  #     - TAILSCALE_API_KEY=${TAILSCALE_API_KEY}
-  #     - TAILSCALE_TAILNET=-          # "-" = default tailnet for the API key owner
-  #   ports:
-  #     - "9736:9736"
-  #   networks:
-  #     - media-network
+  # It reads tailscaled's LocalAPI over the host socket (world-readable, no privileges needed).
+  # TAILSCALE_API_KEY is optional and only fills tailscale_peer_is_exit_node: without it every
+  # other metric still works. It is an API key, not an auth key:
+  #   https://login.tailscale.com/admin/settings/keys
+  #
+  # No published port: Prometheus scrapes it over media-network.
+  tailscale-metrics:
+    build: ./services/tailscale-metrics
+    container_name: tailscale-metrics
+    restart: unless-stopped
+    mem_limit: 64m
+    memswap_limit: 64m
+    profiles: [moni, all]
+    volumes:
+      - /var/run/tailscale/tailscaled.sock:/var/run/tailscale/tailscaled.sock:ro
+    environment:
+      - TZ=${TZ}
+      - TAILSCALE_API_KEY=${TAILSCALE_API_KEY}
+    networks:
+      - media-network
 
   # --- VICTORIALOGS (Log storage) ---
   victorialogs:

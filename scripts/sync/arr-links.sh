@@ -11,7 +11,7 @@
 # container already on media-network rather than localhost.
 set -uo pipefail
 
-PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 APPDATA_ROOT="/home/raspi/rpi-homeserver/appdata"
 LINKS_FILE="$PROJECT_DIR/config/overseerr-links.json"
 # A service that accepts the connection and then never answers (Bazarr wedged on 2026-08-19) used

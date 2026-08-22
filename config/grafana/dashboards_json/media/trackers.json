@@ -388,7 +388,7 @@
     {
       "type": "stat",
       "title": "Reading age",
-      "description": "tracker-stats.py runs every 30 minutes. A stale reading looks exactly like a healthy account, which is why this is on the front row.",
+      "description": "scripts/trackers/stats.py runs every 30 minutes. A stale reading looks exactly like a healthy account, which is why this is on the front row.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"

@@ -31,10 +31,9 @@ scrape_configs:
     static_configs:
       - targets: ['host.docker.internal:2000']
 
-  # Uncomment when tailscale-exporter is enabled in compose-mon.yml
-  # - job_name: 'tailscale'
-  #   static_configs:
-  #     - targets: ['tailscale-exporter:9736']
+  - job_name: 'tailscale'
+    static_configs:
+      - targets: ['tailscale-metrics:9736']
 
   - job_name: 'qbittorrent'
     static_configs:

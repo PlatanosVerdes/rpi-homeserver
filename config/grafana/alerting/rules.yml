@@ -588,7 +588,7 @@ groups:
         execErrState: KeepLast
         data:
           # No aggregation on purpose: qbit_torrent_progress carries a `name` label per torrent
-          # (media-metrics.py), so each stalled torrent becomes its OWN alert instance with its
+          # (scripts/metrics/media.py), so each stalled torrent becomes its OWN alert instance with its
           # own `for` timer, instead of one nameless blob that also mis-resets when a different
           # torrent starts stalling while another one is already being counted.
           - refId: A
@@ -639,7 +639,7 @@ groups:
               conditions:
                 - evaluator: { type: gt, params: [0] }
       - uid: homelab-used-indexer-down
-        title: 'An indexer you actually use is down'
+        title: 'An indexer is down'
         condition: C
         # 6h, not minutes. An indexer being down is not something you can fix from here: it either
         # comes back on its own or it does not, and Prowlarr keeps retrying either way. The only
@@ -650,9 +650,13 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: 'Indexer {{ $labels.name }} is down and it is one you actually grab from'
+          summary: 'Indexer {{ $labels.name }} is down'
           description: >-
-            Only indexers with at least 3 grabs in the last 90 days are watched here, so the ones that have never worked stay quiet.
+            Every enabled indexer is watched, one alert per indexer. It used to be only the ones
+            with 3+ grabs in 90 days, which was right while every indexer was public and
+            interchangeable and wrong as soon as private ones arrived: a tracker whose account is
+            still in its newbie window has zero grabs by definition and is exactly the one whose
+            failure needs saying out loud. Disabling an indexer in Prowlarr is what silences it now.
             Down means "mostly down over the last hour", not a single failed check — a brief
             recovery blip in the middle of an otherwise-broken indexer no longer resolves and
             re-fires the alert every time.
@@ -666,7 +670,45 @@ groups:
               refId: A
               instant: true
               editorMode: code
-              expr: '(avg_over_time(prowlarr_indexer_up[1h]) < bool 0.5) and on(name) (arr_indexer_grabs_90d >= 3)'
+              expr: 'avg_over_time(prowlarr_indexer_up{enabled="true"}[1h]) < bool 0.5'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+
+      - uid: homelab-indexer-failing-queries
+        title: 'An indexer is failing its searches'
+        condition: C
+        # Separate from "is down" on purpose: Prowlarr only disables an indexer after repeated
+        # failures, so between the first failed search and that point an indexer reads as up while
+        # returning nothing. On a private tracker that gap is usually an expired session or a reset
+        # passkey, which is worth knowing on the day it happens rather than six hours later.
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Indexer {{ $labels.name }} failed searches in the last hour'
+          description: >-
+            The indexer is still enabled and still answering, so the availability timeline shows it
+            green, but searches sent to it are coming back as failures. Check the indexer in
+            Prowlarr: for a private tracker this is usually credentials, a reset passkey or the
+            site being behind a challenge Flaresolverr is not clearing.
+        noDataState: OK
+        execErrState: KeepLast
+        data:
+          - refId: A
+            relativeTimeRange: { from: 3600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: 'increase(prowlarr_indexer_failed_queries_total[1h]) > bool 0'
           - refId: C
             datasourceUid: __expr__
             model:
@@ -688,7 +730,7 @@ groups:
           description: >-
             Nothing is lost when this fails, it just stops giving disk back: watched films keep
             seeding and pile up. Check `container:seed-cleanup` in VictoriaLogs, or run
-            `DRY_RUN=1 scripts/seed-cleanup.py` on the Pi to see what it would do.
+            `DRY_RUN=1 scripts/trackers/seed-cleanup.py` on the Pi to see what it would do.
         noDataState: OK
         execErrState: KeepLast
         data:
@@ -792,7 +834,7 @@ groups:
         annotations:
           summary: Bytes in downloads that no torrent claims and the library does not share
           description: >-
-            seed-cleanup.py only ever looks at torrents that exist, so data left behind by a torrent
+            scripts/trackers/seed-cleanup.py only ever looks at torrents that exist, so data left behind by a torrent
             that was removed without its files is reclaimed by nobody. While the library still
             shares the file this stays quiet on purpose (it wastes nothing); it starts firing the
             day the retention policy deletes the film and those bytes become unreachable.
@@ -831,7 +873,7 @@ groups:
           summary: '{{ $labels.tracker }}: under 10 GB of non-freeleech downloads still fit'
           description: >-
             buffer = uploaded - min_ratio x downloaded, and headroom is that buffer divided by
-            min_ratio. tracker-control.py should already have switched the *arrs to freeleech only;
+            min_ratio. scripts/trackers/control.py should already have switched the *arrs to freeleech only;
             if it has not, its own log says why.
         noDataState: OK
         execErrState: KeepLast
@@ -938,7 +980,7 @@ groups:
         annotations:
           summary: No tracker reading in over 2 hours
           description: >-
-            tracker-stats.py runs every 30 minutes. Either cron stopped, the site changed its login,
+            scripts/trackers/stats.py runs every 30 minutes. Either cron stopped, the site changed its login,
             or the stored session cookie no longer works and the password in Prowlarr is stale.
         noDataState: OK
         execErrState: KeepLast

@@ -75,7 +75,7 @@ The port is the container's **internal** port, not a host port.
 ## Step 3 — DNS (automatic)
 
 Pi-hole is the DNS server for the tailnet, so every subdomain has to resolve to the Pi's Tailscale
-address. Nothing to do by hand: `scripts/sync-pihole-dns.sh` runs on every deploy, reads the
+address. Nothing to do by hand: `scripts/sync/pihole-dns.sh` runs on every deploy, reads the
 hostnames out of the Caddy config from step 2, and writes the missing records into Pi-hole.
 
 It only ever touches records it derived from Caddy, so anything added by hand stays. To check what
@@ -111,7 +111,7 @@ A push to `main` deploys within seconds via the GitHub webhook
 (see [deploy-webhook.md](deploy-webhook.md)). One script handles both repos, so to
 trigger it by hand:
 ```bash
-bash ~/rpi-homeserver/scripts/apply.sh
+bash ~/rpi-homeserver/scripts/deploy/apply.sh
 ```
 
 ### Reload Caddy only (if you only changed a Caddyfile):

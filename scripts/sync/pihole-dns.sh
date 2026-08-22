@@ -13,7 +13,7 @@
 # is never read as "ours" and is never deleted, even if it stops matching anything in Caddy.
 set -uo pipefail
 
-PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 set -a; source "$PROJECT_DIR/.env"; set +a
 
 PIHOLE_BASE="http://localhost:8081/api"

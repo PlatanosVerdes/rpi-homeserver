@@ -19,12 +19,12 @@ PRIVATE tracker     the tracker's rules come first, always.
 
 | Situation | What happens | Who does it |
 | :--- | :--- | :--- |
-| Public, imported into the library | torrent and its download-side name removed at once | `seed-cleanup.py` |
+| Public, imported into the library | torrent and its download-side name removed at once | `scripts/trackers/seed-cleanup.py` |
 | Public, watched | film deleted | Maintainerr, two days after watching |
 | Private, still in the library | keeps seeding: the library shares the same bytes, so it costs no disk | nothing to do |
-| Private, watched, goal met | torrent and data removed on the next hourly pass | `seed-cleanup.py` |
-| Private, watched, goal pending | kept and tagged `waiting-seed`, rechecked hourly, deleted the hour it clears | `seed-cleanup.py` |
-| Private, owing a hit & run | never deleted, whatever else is true | `seed-cleanup.py` |
+| Private, watched, goal met | torrent and data removed on the next hourly pass | `scripts/trackers/seed-cleanup.py` |
+| Private, watched, goal pending | kept and tagged `waiting-seed`, rechecked hourly, deleted the hour it clears | `scripts/trackers/seed-cleanup.py` |
+| Private, owing a hit & run | never deleted, whatever else is true | `scripts/trackers/seed-cleanup.py` |
 
 Why the split: seeding a public torrent buys nothing. There is no account and no ratio requirement,
 so the only thing it produces is this address sitting in a public swarm for weeks. On a private
@@ -49,13 +49,13 @@ The floor for "quiet" is `min_upload_gb_per_day` in `config/qbittorrent/seed-rul
 A torrent with less than 12 hours of upload history is never judged on it, because a release added an
 hour ago has produced no evidence either way.
 
-**The manual override is a tag.** Add `keep` to a torrent in qBittorrent and `seed-cleanup.py` will
+**The manual override is a tag.** Add `keep` to a torrent in qBittorrent and `scripts/trackers/seed-cleanup.py` will
 never touch it, whatever the goals say. It needs no deploy and no config change, which is the point:
 it exists for the moment something is about to be removed and the answer is "not yet, explain it
 first".
 
 Where it lives: goals per tracker in `config/qbittorrent/seed-rules.json`, enforcement in
-`scripts/seed-cleanup.py`, the film side in Maintainerr, and the full lifecycle in the README's
+`scripts/trackers/seed-cleanup.py`, the film side in Maintainerr, and the full lifecycle in the README's
 deletion policy.
 
 ## Three numbers, before touching anything
@@ -134,17 +134,17 @@ curl -s -H "X-Api-Key: $KEY" \
     print(len(d), sum(1 for r in d if r.get("indexerFlags")))'
 
 # what the site says about the account, and what the automation decided
-scripts/tracker-stats.py && cat appdata/tracker-stats/state.json
-DRY_RUN=1 scripts/tracker-control.py
+scripts/trackers/stats.py && cat appdata/tracker-stats/state.json
+DRY_RUN=1 scripts/trackers/control.py
 ```
 
-`sync-arr-config.sh` used to report success while applying nothing; it is fixed, but the habit of
+`scripts/sync/arr-config.sh` used to report success while applying nothing; it is fixed, but the habit of
 reading the value back rather than trusting the exit code is the reason it was found.
 
 ## The control loop
 
-Since 2026-08-21 none of this depends on remembering to check a site. `tracker-stats.py` reads the
-account every 30 minutes, `tracker-control.py` acts on it five minutes later, and the tier comes from
+Since 2026-08-21 none of this depends on remembering to check a site. `scripts/trackers/stats.py` reads the
+account every 30 minutes, `scripts/trackers/control.py` acts on it five minutes later, and the tier comes from
 the headroom:
 
 | Headroom | Prowlarr | Radarr | autobrr |
@@ -161,7 +161,7 @@ Two properties worth knowing:
 - **The grab rate is a disk budget, not a preference.** A grab cannot be deleted until its hit & run
   window closes, so the disk cost is the rate times the retention: 2 a day at ~20 GB over a 15-day
   goal holds ~600 GB. Below `min_free_gb` the grabber is disabled outright whatever the ratio says,
-  with 50 GB of hysteresis so it does not flap while `seed-cleanup.py` frees torrents.
+  with 50 GB of hysteresis so it does not flap while `scripts/trackers/seed-cleanup.py` frees torrents.
 - **Credentials are not duplicated.** They are read from Prowlarr, which already holds them for the
   same site, and the session cookie is kept in `appdata/tracker-stats/` so the site sees about one
   login a day instead of 48.
@@ -203,7 +203,7 @@ Straight from staff in `#tlhelp`, 2026-08-20:
 
 **No category on the grabber's action is deliberate.** A category makes Radarr adopt a download and
 then complain it cannot import it. These grabs belong to nothing: they exist to be uploaded from, and
-the `ratio` tag says so. `seed-cleanup.py` finds no library copy for them and falls through to the
+the `ratio` tag says so. `scripts/trackers/seed-cleanup.py` finds no library copy for them and falls through to the
 TorrentLeech goal, which is past the obligation either way.
 
 Three API traps in autobrr, each of which cost an hour:
@@ -217,7 +217,7 @@ Three API traps in autobrr, each of which cost an hour:
   GET that feeds the update does not return that field. A detached action leaves the filter matching
   releases and pushing nothing, and the only trace is one line in autobrr's log:
   `no active actions found for filter`. It cost four freeleech releases on 2026-08-21, announced in
-  the hour after the action was edited. `tracker-control.py` now asserts
+  the hour after the action was edited. `scripts/trackers/control.py` now asserts
   `actions_enabled_count >= 1` on every run, and the "filter matched" count in autobrr's own log is
   worth comparing against what actually reached the client.
 
@@ -317,7 +317,7 @@ twice over.
 anyone plans it or not, and cross-seeds, which are hardlinks by construction. Both cost nothing and
 neither needs a policy.
 
-`bonus_hold` stays implemented in `tracker-control.py` and unconfigured, for the day this tracker is
+`bonus_hold` stays implemented in `scripts/trackers/control.py` and unconfigured, for the day this tracker is
 leeched from heavily enough for the arithmetic to reverse. What it would do, and its ranking
 `min(size, 50 GiB) x (1 + 1/seeders)`, is in that function's docstring.
 
@@ -501,7 +501,7 @@ this account above its line.
 ### What to do about it
 
 Nothing automatic can help here yet, because the account cannot be read: its Prowlarr entry holds no
-username and password, so `tracker-stats.py` has no way in. Until it does, the rule is manual and
+username and password, so `scripts/trackers/stats.py` has no way in. Until it does, the rule is manual and
 simple: **on C411, freeleech only.** Everything else there is two gigabytes from blocking the
 account's downloads.
 
@@ -532,8 +532,8 @@ then the configuration applied, then why.
    rate as a disk budget rather than a preference.
 6. **Add it to cross-seed** (`config/cross-seed/config.js`), because a tracker that has the release
    you already seed is free ratio.
-7. **Verify, do not assume**: `tracker-stats.py` must come back with the site's own numbers, and
-   `DRY_RUN=1 tracker-control.py` must pick the tier you expect.
+7. **Verify, do not assume**: `scripts/trackers/stats.py` must come back with the site's own numbers, and
+   `DRY_RUN=1 scripts/trackers/control.py` must pick the tier you expect.
 
 ## cross-seed, the free ratio
 
@@ -557,7 +557,7 @@ that version answers a successful login with `204` and the client code treats it
 handles it. And `excludeOlder` takes vercel `ms` strings, so `180d` works and `6 months` does not.
 
 The consequence for deletion is real and deliberate: a cross-seeded file has a link count above one
-while the second torrent exists, so `seed-cleanup.py` reads it as "still in the library" and keeps
+while the second torrent exists, so `scripts/trackers/seed-cleanup.py` reads it as "still in the library" and keeps
 both. Bytes that used to be reclaimed after watching now wait for the cross-seed to finish paying its
 own tracker. That is the price of free ratio, and it is one more reason the deleting side belongs in
 qbit_manage, which understands cross-seeds explicitly.

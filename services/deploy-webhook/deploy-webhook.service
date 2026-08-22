@@ -10,18 +10,18 @@ ExecStart=/usr/bin/python3 /home/raspi/rpi-homeserver/services/deploy-webhook/de
 Restart=always
 RestartSec=5
 # Kill only the main process on stop/restart, not the whole cgroup. The deploy this service
-# spawns is a child in that cgroup, and apply.sh restarts this very unit when the
+# spawns is a child in that cgroup, and scripts/deploy/apply.sh restarts this very unit when the
 # receiver's code changes: with the default KillMode=control-group that restart would kill the
 # deploy that requested it, halfway through.
 KillMode=process
-# Deliberately unhardened. Every sandboxing directive here is inherited by apply.sh,
+# Deliberately unhardened. Every sandboxing directive here is inherited by scripts/deploy/apply.sh,
 # which this service spawns, and each one broke it in a different, silent way:
 #   NoNewPrivileges  -> sudo fails, so the Grafana alerting render was skipped
 #   PrivateTmp       -> the deploy loses /tmp when the service restarts mid-run
 #   ProtectSystem    -> /etc is read-only, so the deploy cannot reinstall this very unit
 # The receiver itself is a ~150-line stdlib HTTP server bound to 127.0.0.1 that runs no payload
 # from the request, so the sandbox bought little; the orchestrator it launches needs root paths.
-# No NoNewPrivileges here: the whole job of this service is to launch apply.sh, which
+# No NoNewPrivileges here: the whole job of this service is to launch scripts/deploy/apply.sh, which
 # needs sudo for a couple of root-owned paths under appdata. The flag is inherited by children,
 # so setting it silently breaks those steps when the deploy comes from the webhook (it still
 # worked from cron, which made it look like a random inconsistency).

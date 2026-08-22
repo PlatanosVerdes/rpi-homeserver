@@ -11,7 +11,7 @@
 # on THIS install is only known after it exists here.
 set -uo pipefail
 
-PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 APPDATA_ROOT="/home/raspi/rpi-homeserver/appdata"
 
 failures=0
@@ -126,7 +126,7 @@ sync_app() {
             }
         fi
 
-        # Read back instead of trusting the 202, the same reason sync-qbit-config.sh does it: this
+        # Read back instead of trusting the 202, the same reason scripts/sync/qbit-config.sh does it: this
         # API accepts changes it never makes, and a sync that claims success while doing nothing is
         # worse than one that fails loudly.
         live=$(call GET "$base/qualityprofile/$profile_id" "$key") || {

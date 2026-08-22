@@ -47,7 +47,7 @@ Nothing is deployed by hand. A push is the only trigger, and the repo is the sou
                               │   deploy-webhook.py verifies the signature
                               ▼
                     ╔═════════════════════╗
-                    ║  apply.sh  ║ ◄──── cron every 30 min
+                    ║  scripts/deploy/apply.sh  ║ ◄──── cron every 30 min
                     ╚═════════════════════╝        (self-heal fallback)
 ```
 
@@ -57,7 +57,7 @@ landed while the Pi or the tunnel was down.
 ### What a deploy actually does
 
 ```
-apply.sh
+scripts/deploy/apply.sh
    │
    ├─ flock ................... another deploy already running? exit
    ├─ git pull rpi-homeserver
@@ -65,7 +65,7 @@ apply.sh
    │                            └─► appdata/grafana-alerting/
    ├─ docker compose up -d --build
    ├─ git pull rpi-services  ──► docker compose up -d --build
-   ├─ install-crontab.sh ...... homeserver fragment + services fragment
+   ├─ scripts/deploy/install-crontab.sh ...... homeserver fragment + services fragment
    │                            └─► host crontab (and undoes any manual drift)
    └─ metrics ──► Pushgateway
                         │
@@ -145,7 +145,7 @@ Plex runs on the Pi, which is weak at video transcoding, so files should
 - **Bazarr** auto-downloads Spanish subtitles for the whole library.
 - **Maintainerr** auto-cleans watched movies (movies library only) to keep the data pool from filling
   up: two days after you watch one it unmonitors it in Radarr and deletes the library copy.
-- **seed-cleanup.py** finishes that job on the torrent side, hourly. Radarr imports by hardlink, so
+- **scripts/trackers/seed-cleanup.py** finishes that job on the torrent side, hourly. Radarr imports by hardlink, so
   every download has two names: the one qBittorrent seeds and the one Plex plays. Maintainerr removes
   the second, and this removes the first once the tracker is paid:
 
@@ -175,7 +175,7 @@ Plex runs on the Pi, which is weak at video transcoding, so files should
 
   **`keep` is the manual override**: tag a torrent `keep` in qBittorrent and this never touches it,
   whatever the goals say. No deploy, no config edit, effective on the next pass. `keep-bonus` is the
-  same brake applied automatically by `tracker-control.py`, for a tracker that pays for holding data.
+  same brake applied automatically by `scripts/trackers/control.py`, for a tracker that pays for holding data.
   It is implemented and deliberately **not** configured: measured on DigitalCore, it bought 18% of
   leech bonus for 179 GB of disk on an account already at ratio 4.21, while the free 9% that comes
   from library hardlinks costs nothing. See [docs/private-trackers.md](docs/private-trackers.md).
@@ -196,7 +196,7 @@ Plex runs on the Pi, which is weak at video transcoding, so files should
   delete torrents for films you have not watched yet. One deleter, one policy. `DRY_RUN=1` prints
   what it would remove and touches nothing; the "Seed cleanup" row of the Disk usage dashboard shows
   the queue.
-- **tracker-stats.py + tracker-control.py** keep the account on the right side of the tracker's
+- **scripts/trackers/stats.py + scripts/trackers/control.py** keep the account on the right side of the tracker's
   ratio rule without anyone watching it. Every half hour the first logs into TorrentLeech and reads
   what the site says (ratio, uploaded, downloaded, points, any active warning); five minutes later
   the second acts on one derived number:
@@ -262,9 +262,9 @@ Two consequences that read like bugs and are not:
   the *arr rebuilds its queue from the download client, so the item is back on the next refresh
   (measured, not assumed). What clears it is **taking the torrent out of the *arr's category** in
   qBittorrent, which is safe while `auto_tmm` is off (it is: nothing moves on disk), stops the *arr
-  from ever seeing it again, and leaves `seed-cleanup.py` finishing the job, because that one asks
+  from ever seeing it again, and leaves `scripts/trackers/seed-cleanup.py` finishing the job, because that one asks
   about hard links and trackers and never about categories. Both this and data a removed torrent left
-  behind are exported by `media-metrics.py` as `arr_orphan_*` every five minutes, and alerted on
+  behind are exported by `scripts/metrics/media.py` as `arr_orphan_*` every five minutes, and alerted on
   ("Download nothing can import", "Data in downloads that nothing owns"), because the *arr's own
   notification only fires when it restarts and is easy to lose among the reboot alerts.
 
@@ -296,9 +296,6 @@ sudo usermod -aG docker $USER
 
 # Install Tailscale
 curl -fsSL https://tailscale.com/install.sh | sh
-
-# Install Go (needed to build tailscale-metrics)
-# https://go.dev/dl/ — download linux/arm64 tarball
 ```
 
 ### 2. Clone the repo
@@ -348,43 +345,38 @@ Prevents the SD card from filling up. Create/edit `/etc/docker/daemon.json`:
 sudo systemctl restart docker
 ```
 
-### 6. Build tailscale-metrics
-
-```bash
-cd ~/rpi-homeserver/services/tailscale-metrics && make build
-cd ~/rpi-homeserver
-```
-
-### 7. Start services
+### 6. Start services
 
 ```bash
 docker compose up -d
 ```
 
-### 8. Set up Tailscale
+### 7. Set up Tailscale
 
 ```bash
-sudo tailscale up --advertise-exit-node --accept-dns=false
+sudo tailscale up --accept-dns=false
+sudo tailscale set --advertise-exit-node --advertise-routes=192.168.1.180/32,192.168.1.154/32 --accept-dns=false
 ```
 
-Then approve the exit node in the Tailscale admin console and set Pi-hole as the DNS server.
+Then approve the exit node and both routes in the Tailscale admin console, and set Pi-hole as the
+DNS server.
 → See [docs/tailscale.md](docs/tailscale.md)
 
-### 9. Configure auto-deployment
+### 8. Configure auto-deployment
 
 Install the crontab from the repo (never with `crontab -e`, the deploy overwrites the live one):
 
 ```bash
-bash ~/rpi-homeserver/scripts/install-crontab.sh
+bash ~/rpi-homeserver/scripts/deploy/install-crontab.sh
 ```
 
 That merges this repo's `scripts/crontab` with a companion repo's fragment if there is one, and
-`apply.sh` re-runs it on every deploy, so committed cron changes apply themselves.
+`scripts/deploy/apply.sh` re-runs it on every deploy, so committed cron changes apply themselves.
 
 For push-triggered deploys instead of waiting for the 30-minute cron, see
 [docs/deploy-webhook.md](docs/deploy-webhook.md).
 
-### 10. Configure Pi-hole DNS records
+### 9. Configure Pi-hole DNS records
 
 For each HTTPS subdomain, add a DNS record in Pi-hole → Local DNS → DNS Records:
 
@@ -395,7 +387,7 @@ For each HTTPS subdomain, add a DNS record in Pi-hole → Local DNS → DNS Reco
 | `grafana.platanosverdes.com` | `<TAILSCALE_IP>` |
 | *(all other subdomains)* | `<TAILSCALE_IP>` |
 
-### 11. Add entries to `/etc/hosts` on client devices
+### 10. Add entries to `/etc/hosts` on client devices
 
 For HTTP short names to work on your laptop/desktop:
 
@@ -407,10 +399,10 @@ For HTTP short names to work on your laptop/desktop:
 <TAILSCALE_IP> raspi homepage jellyfin overseerr plex grafana prometheus push prowlarr radarr sonarr flare torrent speedtest pihole
 ```
 
-### 12. Check what still needs a human
+### 11. Check what still needs a human
 
 ```bash
-bash scripts/recovery-status.sh
+bash scripts/deploy/recovery-status.sh
 ```
 
 The deploy converges everything derivable from `.env`: Radarr and Sonarr's custom formats and
@@ -453,10 +445,15 @@ COMPOSE_PROFILES=essential,acestream
 
 ```
 config/      Static config files (Caddyfile, Prometheus, Grafana dashboards, Homepage)
-services/    Custom services source (acestream-updater, tailscale-metrics)
-scripts/     Operational scripts (deploy, mount, rebuild)
+services/    Custom services source, one Docker image each
+scripts/     Operational scripts, grouped by what they do:
+  deploy/      makes the host match the repos (apply.sh and the installers)
+  sync/        pushes config that lives only in an app's appdata, every deploy
+  metrics/     numbers no exporter provides
+  trackers/    the private-tracker economy: measure, decide, reclaim
+  ops/         everything else on a schedule (backup, heartbeat, searches)
 appdata/     Persistent container data (databases, app state) — not in git
-docs/        Setup guides
+docs/        Setup guides, starting with architecture.md
 ```
 
 ---
@@ -472,25 +469,20 @@ Tailscale provides secure remote access. Pi-hole handles DNS and ad-blocking for
 
 **Start Tailscale on the Pi:**
 
-Only exit node (access Pi services remotely, no other LAN devices exposed):
-```bash
-sudo tailscale up --advertise-exit-node --accept-dns=false
-```
+`tailscale up` is for the first login only. Everything after that is `tailscale set`, which changes
+only the flags it is given; `up` resets the ones it is not told to keep and takes Plex and the
+house's DNS down with it.
 
-Exit node + subnet routing (also reach other LAN devices like a NAS or printer remotely):
 ```bash
-sudo tailscale up \
-  --advertise-exit-node \
-  --advertise-routes=192.168.1.0/24 \
-  --accept-dns=false
+sudo tailscale set --advertise-exit-node --advertise-routes=192.168.1.180/32,192.168.1.154/32 --accept-dns=false
 ```
 
 - `--advertise-exit-node` — lets Tailscale devices route internet traffic through the Pi
-- `--advertise-routes=192.168.1.0/24` — exposes the full local LAN (`192.168.1.x`) to Tailscale devices
+- `--advertise-routes=192.168.1.180/32,192.168.1.154/32` — the Pi's own wlan0 and eth0 addresses, and nothing else on the LAN. This is what makes Plex count as local from outside ([docs/plex-remote-access.md](docs/plex-remote-access.md)). `--advertise-routes` replaces the whole route list, so `--advertise-exit-node` has to travel with it
 - `--accept-dns=false` — critical: prevents Tailscale from overwriting `/etc/resolv.conf` and breaking Pi-hole + Docker DNS
 
 Then in the [Tailscale admin console](https://login.tailscale.com/admin):
-1. **Machines → your Pi → Edit route settings** — enable "Use as exit node" (and approve the subnet if you used `--advertise-routes`)
+1. **Machines → your Pi → Edit route settings** — enable "Use as exit node" and approve both `/32` routes
 2. **DNS tab** → Global Nameservers → Add custom nameserver → enter your `TAILSCALE_IP` → enable "Override local DNS"
 
 Step 2 makes Pi-hole the DNS server for every device in your tailnet, so `*.platanosverdes.com` resolves correctly from anywhere.
@@ -528,11 +520,8 @@ https://myservice.yourdomain.com {
 
 Caddy picks it up on next restart — no changes needed in this repo.
 
+→ See [docs/architecture.md](docs/architecture.md) for what talks to what, and what may overwrite which app's config
 → See [docs/add-service.md](docs/add-service.md) to add a new service with HTTPS
-
-### Secrets Management (Bitwarden Secrets Manager)
-`scripts/bws-run.py` is a wrapper that injects secrets from Bitwarden SM before running docker compose. **Currently paused** — secrets live in `.env` for now.
-→ See [docs/secrets-manager.md](docs/secrets-manager.md)
 
 ### Media Automation (The *arrs Suite)
 - **Prowlarr → FlareSolverr:** Settings → Indexers → Add Proxy → `http://flaresolverr:8191`
@@ -566,24 +555,20 @@ at once. See [docs/watch-next.md](docs/watch-next.md) for the full setup (Tautul
 webhook configuration).
 
 ### Tailscale Metrics
-`services/tailscale-metrics/` is a Go binary that runs as a **host cron job** (not a Docker container). It exports Tailscale peer status to Prometheus via node_exporter's textfile collector.
+`services/tailscale-metrics/` is a Dockerized Go exporter with no published port. Prometheus
+scrapes it at `tailscale-metrics:9736/metrics` over `media-network`.
 
-**Build:**
-```bash
-cd services/tailscale-metrics && make build
-```
+It mounts `/var/run/tailscale/tailscaled.sock` read-only to read peer status from tailscaled's
+LocalAPI, and optionally calls the Tailscale control API with `TAILSCALE_API_KEY` to mark which
+peers are approved exit nodes. Nothing to build by hand: compose builds it like every other
+service in `services/`.
 
-**Cron entry:**
-```
-* * * * * /home/raspi/rpi-homeserver/services/tailscale-metrics/tailscale-metrics >> /home/raspi/rpi-homeserver/tailscale-metrics.log 2>&1
-```
-
-### Auto-Deployment (`apply.sh`)
+### Auto-Deployment (`scripts/deploy/apply.sh`)
 Pulls latest git changes every 15 minutes and rebuilds only when something changed.
 
 ```bash
 # Cron entry (set up during install)
-*/15 * * * * /home/raspi/rpi-homeserver/scripts/apply.sh >> /home/raspi/rpi-homeserver/apply.log 2>&1
+*/15 * * * * /home/raspi/rpi-homeserver/scripts/deploy/apply.sh >> /home/raspi/rpi-homeserver/apply.log 2>&1
 ```
 
 Metrics are pushed to Pushgateway and visible in the **Deploy Monitor** dashboard in Grafana.
@@ -604,7 +589,7 @@ Metrics are pushed to Pushgateway and visible in the **Deploy Monitor** dashboar
 - **No data on a dashboard?** Trigger a run manually:
   ```bash
   docker compose -f compose-media.yml restart acestream-updater
-  bash /home/raspi/rpi-homeserver/scripts/apply.sh
+  bash /home/raspi/rpi-homeserver/scripts/deploy/apply.sh
   ```
 
 ### Logs (VictoriaLogs)
@@ -619,7 +604,7 @@ Browsers cannot play the MPEG-TS these channels arrive as, and the Pi cannot re-
 plays them natively. Full guide: [docs/farnsworth.md](docs/farnsworth.md).
 
 ### Backups & Recovery
-`scripts/backup.sh` (daily cron at 04:00) snapshots `appdata/` to a compressed, rotated
+`scripts/ops/backup.sh` (daily cron at 04:00) snapshots `appdata/` to a compressed, rotated
 archive and pushes health metrics to the **Backup Monitor** Grafana dashboard. Full guide:
 [docs/backups.md](docs/backups.md).
 

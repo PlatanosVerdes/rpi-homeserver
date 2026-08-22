@@ -44,7 +44,7 @@ committed**. Since this repo is public, neither value can sit in a provisioning 
 
 ```
 config/grafana/alerting/          in git: rules, policies, contact-point TEMPLATE
-        │  apply.sh renders it (render_grafana_alerting)
+        │  scripts/deploy/apply.sh renders it (render_grafana_alerting)
         ▼
 appdata/grafana-alerting/         gitignored, what Grafana actually reads
         │  bind-mounted over /etc/grafana/provisioning/alerting
@@ -151,7 +151,7 @@ Every rule above dies with the Pi. A power cut, a dead SD card or an ISP outage 
 and silence looks exactly like "everything is fine". So the logic is inverted: the Pi says "still
 alive" on a schedule, and an **external** service alerts when those pings stop.
 
-`scripts/heartbeat.sh` runs from cron every 5 minutes. It does not ping blindly: if Caddy or
+`scripts/ops/heartbeat.sh` runs from cron every 5 minutes. It does not ping blindly: if Caddy or
 Prometheus are not running it reports a failure instead, so a Pi that is powered on but broken
 cannot keep sending a reassuring heartbeat.
 

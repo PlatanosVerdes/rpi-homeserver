@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""GitHub push webhook receiver: verifies the HMAC signature, then runs apply.sh.
+"""GitHub push webhook receiver: verifies the HMAC signature, then runs scripts/deploy/apply.sh.
 
 Listens on 127.0.0.1 only. The public entrypoint is the Cloudflare tunnel (see
 compose-core.yml `cloudflared` and docs/deploy-webhook.md). The endpoint is reachable
@@ -19,7 +19,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 PROJECT_DIR = os.path.expanduser("~/rpi-homeserver")
-DEPLOY_SCRIPT = f"{PROJECT_DIR}/scripts/apply.sh"
+DEPLOY_SCRIPT = f"{PROJECT_DIR}/scripts/deploy/apply.sh"
 DEPLOY_LOG = f"{PROJECT_DIR}/apply.log"
 ALLOWED_REPOS = {"rpi-homeserver", "rpi-services"}
 BRANCH_REF = "refs/heads/main"
@@ -102,7 +102,7 @@ def signature_ok(header, body):
 def trigger_deploy():
     """Fire and forget: deploy takes minutes, GitHub times out after 10 seconds.
 
-    apply.sh holds an flock, so overlapping pushes cannot run two deploys.
+    scripts/deploy/apply.sh holds an flock, so overlapping pushes cannot run two deploys.
     """
     logfile = open(DEPLOY_LOG, "a")
     env = {**os.environ, "DEPLOY_TRIGGER": "webhook"}

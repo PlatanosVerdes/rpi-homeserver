@@ -42,7 +42,7 @@ type config struct {
 // either resets misleadingly on every deploy or gets stuck forever on a stale value once a label
 // combo stops recurring. A bounded, timestamped event log sidesteps both: age/count are computed
 // at query time (e.g. `count(... > time() - 86400)`), the same pattern already used for
-// arr_quality_change_timestamp in scripts/media-metrics.py.
+// arr_quality_change_timestamp in scripts/metrics/media.py.
 const recentLimit = 20
 
 type recentAction struct {

@@ -94,7 +94,7 @@ local":
 ```
 
 Here that value is `PLEX_LAN_NETWORKS` in `.env`, pushed to Plex on every deploy by
-`scripts/sync-plex-prefs.sh`. It has to be a script because **no Plex Docker image can set this
+`scripts/sync/plex-prefs.sh`. It has to be a script because **no Plex Docker image can set this
 from the compose file**:
 
 | Image | What it can set |
@@ -166,7 +166,7 @@ curl -s -o /dev/null -w '%{http_code}\n' http://192.168.1.180:32400/identity
   told to keep: the routes are gone and so is `--accept-dns=false`. Re-run the `tailscale set` line
   from step 1, then check `/etc/resolv.conf` still points at `127.0.0.1`.
 - **LAN Networks is empty again.** The container rewrites its preferences file when it shuts down.
-  `bash scripts/sync-plex-prefs.sh` puts it back, and any deploy does that automatically.
+  `bash scripts/sync/plex-prefs.sh` puts it back, and any deploy does that automatically.
 
 ## References
 

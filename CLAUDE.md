@@ -2,15 +2,15 @@
 
 ## What this project is
 
-A modular Docker-based home server running on a Raspberry Pi. All services run as Docker containers managed by Docker Compose. The repo is the source of truth: a push to `main` deploys within seconds via a GitHub webhook, with a cron every 30 minutes as the fallback (`apply.sh` handles both).
+A modular Docker-based home server running on a Raspberry Pi. All services run as Docker containers managed by Docker Compose. The repo is the source of truth: a push to `main` deploys within seconds via a GitHub webhook, with a cron every 30 minutes as the fallback (`scripts/deploy/apply.sh` handles both).
 
 **Two-repo architecture:** Both repos are public. The split is *generic vs personal*, not private vs public: this repo is meant to be clonable and useful to anyone, so nothing personal lives here. Personal/custom services (Telegram bot, calendar bridge, AirTag tracker) live in [`rpi-services`](https://github.com/PlatanosVerdes/rpi-services). Both run on the same Pi, share `media-network`, are deployed by the same script, and extend the same Caddy instance via the services import mechanism (see Networking section below).
 
 **Conventions both repos must follow** (they are one system, so drift hurts):
 - Image/app versions in a committed `versions.env`, never `:latest` and never inline in compose.
-- One deploy script, `rpi-homeserver/scripts/apply.sh`, which deploys both repos.
+- One deploy script, `rpi-homeserver/scripts/deploy/apply.sh`, which deploys both repos.
 - Cron: each repo owns its own `scripts/crontab` **fragment**, holding only its own jobs.
-  `scripts/install-crontab.sh` merges them and installs the result on every deploy (the
+  `scripts/deploy/install-crontab.sh` merges them and installs the result on every deploy (the
   rpi-services fragment is optional), the same way Caddy imports `config/caddy/services/`.
 - Secrets in each repo's own `.env`, gitignored, mirrored in `.env.example`.
 
@@ -39,38 +39,52 @@ config/                     Static config files committed to git
   homepage/                 Dashboard YAML configs
   vector/vector.yaml        What Vector collects and where it ships it
   arr/radarr, arr/sonarr    Custom formats + quality profiles, pushed into each app on deploy
-                            (sync-arr-config.sh) — otherwise they only exist in appdata
+                            (scripts/sync/arr-config.sh) — otherwise they only exist in appdata
 
 services/                   Source code for custom services built in this repo
   acestream-updater/        Go service — fetches IPFS channel lists, writes .m3u for Jellyfin
-  tailscale-metrics/        Go binary (cron) — exports Tailscale peer metrics to node_exporter
+  tailscale-metrics/        Go service, Dockerized — Tailscale peer metrics for Prometheus
   deploy-webhook/           Python receiver (systemd) — deploys on GitHub push via Cloudflare tunnel
   watch-next/               Go service: monitors + searches the next Sonarr episode(s) on watch
   subtitle-links/           Go service: page listing movies/episodes with a downloadable text subtitle
 
-scripts/                    Operational scripts
-  crontab                   This repo's host cron jobs (a fragment; see install-crontab.sh)
-  install-crontab.sh        Merges both repos' crontab fragments and installs them (on deploy)
-  apply.sh                  Makes the host match the repos (webhook on push + cron fallback)
-  backup.sh                 Daily appdata backup (cron), pushes metrics to Grafana
-  heartbeat.sh              Dead man's switch ping to an external check (cron, every minute)
-  cutoff-search.sh          Nightly *arr search for missing and below-cutoff items (cron)
-  media-metrics.py          Upgrades, torrents, indexer status/usage -> Pushgateway (cron)
-  seed-cleanup.py           Drops a torrent once its film left the library and the tracker is paid (cron)
-  disk-usage-metrics.sh     Biggest files/dirs on the data disk -> node_exporter (cron)
-  zram-metrics.sh           What the compressed swap really costs in RAM -> node_exporter (cron)
-  sync-arr-config.sh        Pushes config/arr/*/*.json into Radarr/Sonarr (on deploy)
-  sync-pihole-dns.sh        Pushes Caddy's *.platanosverdes.com hosts into Pi-hole (on deploy)
-  sync-arr-links.sh         Wires Overseerr and Bazarr to Radarr/Sonarr (on deploy)
-  sync-qbit-config.sh       Pushes config/qbittorrent/preferences.json into qBittorrent (on deploy)
-  sync-plex-prefs.sh        Plex's LAN Networks and its 95% played threshold (on deploy)
-  mount_setup.sh            One-time external disk mount setup
-  rebuild-service.sh        Manual single-service rebuild helper
-  recovery-status.sh        After a rebuild: what still needs a human (run by hand, see README)
-  bws-run.py                Bitwarden SM wrapper (dropped, kept for reference only)
+scripts/                    Operational scripts, grouped by what they do
+  crontab                   This repo's cron fragment, merged with the other repo's on deploy
+  apply.sh                  TEMPORARY shim -> deploy/apply.sh, delete after one deploy (PENDING.md)
+
+  deploy/                   Making the host match the repos
+    apply.sh                The orchestrator: pull, compose, then every sync below. Webhook + cron
+    install-crontab.sh      Merges both repos' crontab fragments and installs them
+    install-logrotate.sh    Installs the log rotation policy for both repos
+    rebuild-service.sh      Rebuild one compose service from scratch (by hand)
+    recovery-status.sh      After a rebuild: what still needs a human (by hand)
+
+  sync/                     Config that lives only in an app's appdata, pushed from git each deploy
+    arr-config.sh           Custom formats and quality profiles -> Radarr/Sonarr
+    arr-links.sh            Wires Overseerr and Bazarr to Radarr/Sonarr
+    pihole-dns.sh           Caddy's *.platanosverdes.com hosts -> Pi-hole custom DNS
+    plex-prefs.sh           Plex LAN networks and the 95% played threshold
+    qbit-config.sh          qBittorrent queue limits, upload cap and BT port
+
+  metrics/                  Numbers no exporter provides
+    media.py                Upgrades, torrents, indexer status and usage -> Pushgateway
+    disk-usage.sh           Biggest files/dirs on the data disk -> node_exporter textfile
+    zram.sh                 What the compressed swap really costs in RAM -> node_exporter
+
+  trackers/                 The private-tracker economy: measure, decide, reclaim
+    stats.py                Reads each site and computes the ratio headroom
+    control.py              Moves the freeleech and grab-rate levers from that headroom
+    seed-cleanup.py         Drops a torrent once its film left the library and the tracker is paid
+
+  ops/                      Everything else on a schedule
+    backup.sh               Daily appdata backup, pushes metrics to Grafana
+    heartbeat.sh            Dead man's switch ping to an external check, every minute
+    cutoff-search.sh        Nightly *arr search for missing and below-cutoff items
+    oci-hunt.py             Keeps asking Oracle for the free instance until capacity exists
 
 appdata/                    Persistent container data (NOT in git, lives on disk)
 docs/                       Setup guides
+  architecture.md           What talks to what, and what may overwrite which app's config
 ```
 
 ---
@@ -84,15 +98,14 @@ docker compose up -d
 ```
 
 > **Bitwarden Secrets Manager was evaluated and dropped.** It did not fit the workflow, so
-> secrets stay in `.env` (gitignored, never committed). `scripts/bws-run.py` and
-> [docs/secrets-manager.md](docs/secrets-manager.md) are kept only as a reference for a
-> possible future attempt — they are NOT wired into deploy. `apply.sh` uses plain `docker compose`.
+> secrets stay in `.env` (gitignored, never committed). `scripts/deploy/apply.sh` uses plain `docker compose`.
+> See PENDING.md for why, and do not reintroduce it without reading that first.
 
 ---
 
 ## How auto-deploy works
 
-`scripts/apply.sh` runs on every GitHub push (webhook) and every 30 minutes via cron:
+`scripts/deploy/apply.sh` runs on every GitHub push (webhook) and every 30 minutes via cron:
 1. `git pull origin main`
 2. **Renders Grafana's alerting config** (`render_grafana_alerting`): compose only interpolates
    `${VAR}` inside its own YAML, never inside a config file, so something has to combine the
@@ -101,10 +114,10 @@ docker compose up -d
    is what Grafana actually mounts. See [docs/alerting.md](docs/alerting.md).
 3. If HEAD changed → `docker compose up -d --build --remove-orphans`
 4. If no change → `docker compose up -d --remove-orphans` (ensures containers are running)
-5. Installs the merged host crontab (`install-crontab.sh`)
-6. Converges Radarr/Sonarr's custom formats and quality profiles (`sync-arr-config.sh`),
-   Pi-hole's `*.platanosverdes.com` DNS records (`sync-pihole-dns.sh`) and Plex's LAN Networks
-   (`sync-plex-prefs.sh`) to what is committed — the apps must already be up, hence running
+5. Installs the merged host crontab (`scripts/deploy/install-crontab.sh`)
+6. Converges Radarr/Sonarr's custom formats and quality profiles (`scripts/sync/arr-config.sh`),
+   Pi-hole's `*.platanosverdes.com` DNS records (`scripts/sync/pihole-dns.sh`) and Plex's LAN Networks
+   (`scripts/sync/plex-prefs.sh`) to what is committed — the apps must already be up, hence running
    after compose rather than before
 7. Pushes metrics to Pushgateway (visible in Grafana "Deploy Monitor" dashboard)
 
@@ -119,7 +132,7 @@ The cron stays as the self-heal net.
 
 **Cron entry on the host:**
 ```
-*/30 * * * * /home/raspi/rpi-homeserver/scripts/apply.sh >> /home/raspi/rpi-homeserver/apply.log 2>&1
+*/30 * * * * /home/raspi/rpi-homeserver/scripts/deploy/apply.sh >> /home/raspi/rpi-homeserver/apply.log 2>&1
 ```
 
 ---
@@ -196,19 +209,17 @@ docker compose -f compose-media.yml up -d --build acestream-updater
 ```
 
 ### tailscale-metrics
-Go binary that runs as a **host cron job** (not a Docker container). Calls `tailscale status --json` and the Tailscale API, writes a `.prom` file for node_exporter's textfile collector.
+Go service, Dockerized, no published port. Prometheus scrapes `tailscale-metrics:9736/metrics`
+over `media-network` (job `tailscale`).
 
-Build:
-```bash
-cd services/tailscale-metrics && make build
-```
+Reads two sources: tailscaled's LocalAPI over the host socket, mounted read-only, for who is
+online and the bytes per peer; and the Tailscale control API, for which peers are *approved*
+exit nodes. `TAILSCALE_API_KEY` is optional and only fills `tailscale_peer_is_exit_node`.
 
-The compiled binary is NOT committed to git. Run `make build` after cloning.
-
-Cron entry:
-```
-* * * * * /home/raspi/rpi-homeserver/services/tailscale-metrics/tailscale-metrics >> /home/raspi/rpi-homeserver/tailscale-metrics.log 2>&1
-```
+It used to be a hand-compiled binary run from cron every minute, writing into node_exporter's
+textfile collector. Nothing in git built it, so a rebuilt Pi lost the nine panels of the
+Tailscale dashboard with no error anywhere. Being scraped rather than pushed also means its
+death is visible: `up{job="tailscale"}` goes to 0.
 
 ### watch-next
 Go service, Dockerized, no published port (reached by Tautulli/Jellyfin over `media-network` by
@@ -233,7 +244,7 @@ DATA_DB_ROOT                   # DB subdirectory
 CONFIG_ROOT=./config
 APP_CONFIG_PATH=./appdata
 CF_API_TOKEN                   # Cloudflare DNS token for HTTPS certs
-TAILSCALE_API_KEY              # Read directly by tailscale-metrics binary
+TAILSCALE_API_KEY              # Optional, only for tailscale_peer_is_exit_node
 PLEX_LAN_NETWORKS              # Networks Plex treats as local (see Networking)
 ```
 
@@ -330,13 +341,13 @@ docker compose -f compose-core.yml restart caddy
 docker logs -f <container-name>
 
 # Trigger deploy manually
-bash scripts/apply.sh
+bash scripts/deploy/apply.sh
 
 # Rebuild from scratch (single service)
-bash scripts/rebuild-service.sh <service-name>
+bash scripts/deploy/rebuild-service.sh <service-name>
 
 # Run a backup manually
-bash scripts/backup.sh
+bash scripts/ops/backup.sh
 ```
 
 ## Image versions — centralized in `versions.env`
@@ -351,13 +362,13 @@ as a build arg.
 `versions.env` holds only versions (no secrets) so it IS tracked in git (`.gitignore` has a
 `!versions.env` exception to the `*.env` rule).
 
-**Loading:** compose reads it via `COMPOSE_ENV_FILES=versions.env,.env`. `apply.sh`
-and `rebuild-service.sh` set this automatically. To run compose manually:
+**Loading:** compose reads it via `COMPOSE_ENV_FILES=versions.env,.env`. `scripts/deploy/apply.sh`
+and `scripts/deploy/rebuild-service.sh` set this automatically. To run compose manually:
 ```bash
 export COMPOSE_ENV_FILES=versions.env,.env
 docker compose up -d
 ```
 
 **To update a service:** bump its version in `versions.env`, commit, and let the auto-deploy
-apply it (or `bash scripts/rebuild-service.sh <service>`). Check the running version first with
+apply it (or `bash scripts/deploy/rebuild-service.sh <service>`). Check the running version first with
 `docker inspect --format '{{.Config.Image}}' <container>`.

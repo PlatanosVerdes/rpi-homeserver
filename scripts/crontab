@@ -1,31 +1,28 @@
 # Host crontab fragment for rpi-homeserver — generic jobs only.
 #
-# This file is NOT installed on its own. `scripts/install-crontab.sh` merges it with
+# This file is NOT installed on its own. `scripts/deploy/install-crontab.sh` merges it with
 # rpi-services/scripts/crontab (optional, skipped if that repo is not present) and installs the
 # result, the same way Caddy imports config/caddy/services/. Personal jobs belong in the other
 # repo's fragment, never here.
 #
-# apply.sh runs the installer on every deploy, so committing a change here applies it.
+# scripts/deploy/apply.sh runs the installer on every deploy, so committing a change here applies it.
 # Do NOT edit the live crontab with `crontab -e`: it gets overwritten on the next deploy.
 # Show current:  crontab -l
 
 # Auto-deploy: pull both repos and apply. The GitHub webhook (services/deploy-webhook)
 # deploys on push, so this is now the every-30-min self-heal net: it restarts anything that
 # died and covers pushes that arrived while the Pi or the tunnel was down.
-*/30 * * * * /home/raspi/rpi-homeserver/scripts/apply.sh >> /home/raspi/rpi-homeserver/apply.log 2>&1
+*/30 * * * * /home/raspi/rpi-homeserver/scripts/deploy/apply.sh >> /home/raspi/rpi-homeserver/apply.log 2>&1
 
 # zram cost -> node-exporter textfile collector, every minute. node_exporter cannot tell swap on a
 # disk from swap in compressed RAM, so its SWAP gauge sits red at 87% while nothing is wrong. This
 # exports the number it is missing: the real RAM those pages occupy. One sysfs read.
-* * * * * /home/raspi/rpi-homeserver/scripts/zram-metrics.sh
-
-# Tailscale peer metrics -> node-exporter textfile collector, every minute
-* * * * * /home/raspi/rpi-homeserver/services/tailscale-metrics/tailscale-metrics
+* * * * * /home/raspi/rpi-homeserver/scripts/metrics/zram.sh
 
 # Largest files/dirs on the data disk -> node-exporter textfile collector, hourly.
 # It was every 6h on the assumption that walking the disk is expensive; measured at 0.64s, so the
 # only thing 6h bought was a panel showing files that had already been deleted.
-0 * * * * /home/raspi/rpi-homeserver/scripts/disk-usage-metrics.sh >> /home/raspi/rpi-homeserver/disk-usage-metrics.log 2>&1
+0 * * * * /home/raspi/rpi-homeserver/scripts/metrics/disk-usage.sh >> /home/raspi/rpi-homeserver/disk-usage-metrics.log 2>&1
 
 # Radarr: search for anything missing or below its quality cutoff, nightly at 05:00.
 # RSS already catches new releases within 30 min; this is for releases that scrolled out of the
@@ -36,24 +33,24 @@
 # 2026-08-09, that costs 0.4 cores and 52 MB/s of *reads* with almost no writes. Downloads are the
 # opposite shape, sustained writes, and both land on the same two USB platters. Starting the search
 # as Plex finishes keeps the head doing one job at a time instead of seeking between two.
-0 5 * * * /home/raspi/rpi-homeserver/scripts/cutoff-search.sh >> /home/raspi/rpi-homeserver/cutoff-search.log 2>&1
+0 5 * * * /home/raspi/rpi-homeserver/scripts/ops/cutoff-search.sh >> /home/raspi/rpi-homeserver/cutoff-search.log 2>&1
 
 # Daily appdata backup at 04:00
-0 4 * * * /home/raspi/rpi-homeserver/scripts/backup.sh >> /home/raspi/rpi-homeserver/backup.log 2>&1
+0 4 * * * /home/raspi/rpi-homeserver/scripts/ops/backup.sh >> /home/raspi/rpi-homeserver/backup.log 2>&1
 
 # Dead man's switch: heartbeat to an external check every minute, so someone outside notices
 # within a few minutes if the Pi goes dark. Costs ~0.2s of CPU per run (0.3% of one core) and no
 # disk writes. No-op unless HEALTHCHECK_URL is set in .env. See docs/alerting.md.
-* * * * * /home/raspi/rpi-homeserver/scripts/heartbeat.sh
+* * * * * /home/raspi/rpi-homeserver/scripts/ops/heartbeat.sh
 
 # Seed-aware torrent cleanup, hourly at :20. Removes a torrent and its data once the film has left
 # the library (hardlink count back to 1) and its tracker is paid. Nothing to do most hours, and a
-# no-op is two API calls. See scripts/seed-cleanup.py; DRY_RUN=1 to see what it would remove.
-20 * * * * /home/raspi/rpi-homeserver/scripts/seed-cleanup.py >> /home/raspi/rpi-homeserver/seed-cleanup.log 2>&1
+# no-op is two API calls. See scripts/trackers/seed-cleanup.py; DRY_RUN=1 to see what it would remove.
+20 * * * * /home/raspi/rpi-homeserver/scripts/trackers/seed-cleanup.py >> /home/raspi/rpi-homeserver/seed-cleanup.log 2>&1
 
 # Media stack "which one" metrics -> Pushgateway (quality upgrades, torrents by name, indexer
-# status and usage) for the Media Pipeline dashboard. Read-only. See scripts/media-metrics.py.
-*/5 * * * * /home/raspi/rpi-homeserver/scripts/media-metrics.py >> /home/raspi/rpi-homeserver/media-metrics.log 2>&1
+# status and usage) for the Media Pipeline dashboard. Read-only. See scripts/metrics/media.py.
+*/5 * * * * /home/raspi/rpi-homeserver/scripts/metrics/media.py >> /home/raspi/rpi-homeserver/media-metrics.log 2>&1
 
 # Oracle's Always Free shapes in Madrid are permanently full, and a free tenancy cannot query
 # capacity in advance, so the only way in is to keep asking. Every two minutes, one launch call per
@@ -61,18 +58,18 @@
 # limit that matters is Oracle's own 429 on the attempts themselves, not this interval, so the
 # script backs off (10 min, doubling to an hour) whenever it trips it and resets when a call goes
 # through. Exits immediately once the instance exists, so this is safe to leave in forever.
-# See scripts/oci-hunt.py.
-*/2 * * * * /home/raspi/rpi-homeserver/scripts/oci-hunt.py >> /home/raspi/rpi-homeserver/oci-hunt.log 2>&1
+# See scripts/ops/oci-hunt.py.
+*/2 * * * * /home/raspi/rpi-homeserver/scripts/ops/oci-hunt.py >> /home/raspi/rpi-homeserver/oci-hunt.log 2>&1
 
 # What the tracker itself says about the account, every half hour: ratio, uploaded, downloaded, and
 # the number that decides everything, the headroom of paid downloads left before the site disables
 # the account. One page fetch per run, reusing a stored session cookie, because this is a tracker
-# that bans for hammering. See scripts/tracker-stats.py.
-*/30 * * * * /home/raspi/rpi-homeserver/scripts/tracker-stats.py >> /home/raspi/rpi-homeserver/tracker-stats.log 2>&1
+# that bans for hammering. See scripts/trackers/stats.py.
+*/30 * * * * /home/raspi/rpi-homeserver/scripts/trackers/stats.py >> /home/raspi/rpi-homeserver/tracker-stats.log 2>&1
 
 # Acts on that reading five minutes later: Radarr freeleech-only or not, the Sonarr indexer on or
 # off (it has no freeleech flag, so the indexer is the switch), and the autobrr grab rate, which is
 # a disk budget because a grab cannot be deleted until its hit & run window closes. Writes nothing
 # when the values already match, refuses to act on a reading over 3 h old, and pauses the grabber
-# below the free-space floor. See scripts/tracker-control.py; DRY_RUN=1 to see what it would change.
-5,35 * * * * /home/raspi/rpi-homeserver/scripts/tracker-control.py >> /home/raspi/rpi-homeserver/tracker-control.log 2>&1
+# below the free-space floor. See scripts/trackers/control.py; DRY_RUN=1 to see what it would change.
+5,35 * * * * /home/raspi/rpi-homeserver/scripts/trackers/control.py >> /home/raspi/rpi-homeserver/tracker-control.log 2>&1

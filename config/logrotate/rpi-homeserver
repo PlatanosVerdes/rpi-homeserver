@@ -1,0 +1,27 @@
+# Rotation for the log files the cron scripts append to, in BOTH repos.
+#
+# Installed to /etc/logrotate.d/rpi-homeserver by scripts/deploy/install-logrotate.sh, which scripts/deploy/apply.sh
+# runs on every deploy. It used to be a hand-written host file documented only in
+# SYSTEM_NOTES.md, so a rebuilt Pi silently went back to logs that grow forever, and
+# rpi-services was never covered at all: one-pace.log had reached 1.2 MB with nothing rotating it.
+#
+# copytruncate is not optional: the cron jobs hold these files open with `>>`, so rotating by
+# rename would leave them writing into a deleted inode and the new file would stay empty forever.
+#
+# maxsize, not just weekly: logrotate runs daily here (logrotate.timer), and apply.log alone
+# gains a few lines every 30 minutes.
+#
+# Dry run: sudo logrotate -d /etc/logrotate.d/rpi-homeserver
+
+/home/raspi/rpi-homeserver/*.log
+/home/raspi/rpi-services/*.log {
+    weekly
+    rotate 4
+    maxsize 5M
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+    su raspi raspi
+}

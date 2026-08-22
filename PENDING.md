@@ -1,12 +1,27 @@
 # Pending tasks
 
+## Delete the apply.sh shim
+
+`scripts/apply.sh` is three lines that exec `scripts/deploy/apply.sh`. It exists only to survive
+the deploy that moved the scripts into folders: the live crontab called the old path, and the pull
+that lands the move deletes it, so without the shim cron fails every 30 minutes and never reaches
+the new `scripts/deploy/install-crontab.sh` that would repoint it.
+
+Delete it once `crontab -l` on the Pi shows the new paths. Verify with:
+
+```bash
+crontab -l | grep -c 'scripts/deploy/apply.sh'   # 1 means the shim has done its job
+```
+
+---
+
 ## ❌ Bitwarden Secrets Manager — dropped
 
 Tried moving `.env` secrets to [Bitwarden Secrets Manager](https://bitwarden.com/products/secrets-manager/)
 but it did not fit the workflow, so it was abandoned. Secrets stay in `.env` (gitignored).
 
-`scripts/bws-run.py` and [docs/secrets-manager.md](docs/secrets-manager.md) are kept only as
-a reference in case it is revisited. They are NOT wired into deploy.
+The wrapper script and its setup guide were deleted on 2026-08-22: they were wired into
+nothing and read as live documentation. Recover them from git history if this is revisited.
 
 ---
 
@@ -58,7 +73,7 @@ API call — this snapshot took multiple registries/APIs to get right:
   about whether it is safe.
 
 **Approach when implemented:**
-1. A script (bash+jq, matching `sync-arr-config.sh`) that, for each `versions.env` entry with a
+1. A script (bash+jq, matching `scripts/sync/arr-config.sh`) that, for each `versions.env` entry with a
    known GitHub repo, walks every release between the pinned tag and latest via
    `gh api repos/<repo>/releases` (or plain `curl` if `gh` is not available on the Pi — check),
    greps each body for "breaking", and pushes
@@ -119,9 +134,10 @@ network), not just watch on the phone itself.
 **Why it's not a simple config toggle (but is NOT flatly impossible either):**
 - The actual cast protocol, once a target's IP is known, is ordinary routable TCP/UDP (ports
   8008/8009 control, 8443 for Google Home, a wide UDP range for the media stream itself) — nothing
-  about the protocol itself requires same-network. This repo's own `docs/tailscale.md` already
-  documents standing up the Pi as a **subnet router** (`--advertise-routes=192.168.1.0/24`), which
-  would make the home LAN's IPs reachable from a remote tailnet device.
+  about the protocol itself requires same-network. The Pi is already a **subnet router**, and
+  widening what it advertises from its own two `/32`s to `192.168.1.0/24` would make the home LAN's
+  IPs reachable from a remote tailnet device (see `docs/tailscale.md` for why it does not do that
+  today).
 - The actual blocker is **discovery**: Chromecast/Plex Companion find each other via mDNS
   (multicast), and Tailscale is a Layer-3 overlay that does not carry multicast/broadcast traffic
   at all, by design — confirmed on Tailscale's own OSI-model docs, and there are still-open feature
@@ -186,7 +202,7 @@ does not need.
 | `/etc/docker/daemon.json` | Ignored. Podman logs to journald, so the `10m x 3` cap described in SYSTEM_NOTES stops existing and the journal cap becomes the only thing standing between the logs and the SD card |
 | PUID/PGID on every linuxserver image | Rootless Podman maps UIDs into a subordinate range, which collides with the ownership of files on the external disk. Running Podman rootful avoids it and throws away the main reason to switch |
 | `network_mode: host` on 5 services, Caddy on 80/443 | Rootless cannot bind below 1024 without extra configuration |
-| 8 distinct `docker` subcommands across `scripts/`, plus `apply.sh` | Mostly an alias away, mostly |
+| 8 distinct `docker` subcommands across `scripts/`, plus `scripts/deploy/apply.sh` | Mostly an alias away, mostly |
 
 ### What it would buy
 
@@ -236,7 +252,7 @@ efficiently is a worse answer than not transcoding.
 ## The retention policy does not cover series (not implemented)
 
 Films have the full cycle: Maintainerr deletes the library copy two days after you watch one, and
-`scripts/seed-cleanup.py` drops the torrent once its tracker is paid. Series have neither half.
+`scripts/trackers/seed-cleanup.py` drops the torrent once its tracker is paid. Series have neither half.
 
 Maintainerr's only collection is `type: movie` on library `1` (Películas), so **nothing ever deletes
 a watched episode**. And the cleanup only ever acts once the library has let go of a file, which for
@@ -285,7 +301,7 @@ Two things the C411 diagnosis added to the method, both worth doing before assum
 
 **Read on 2026-08-21: DigitalCore, retrotoon.world, BTSCHOOL and C411**, all four written up in
 [docs/private-trackers.md](docs/private-trackers.md) with their rules, what is configured for them
-and why. Their rules of record are in `config/trackers/rules.json`, and `tracker-stats.py` now
+and why. Their rules of record are in `config/trackers/rules.json`, and `scripts/trackers/stats.py` now
 measures the hit & run clock for every tracker in that file, not only the one it can log into.
 
 What each one still owes:
@@ -319,7 +335,7 @@ implemented, measured and turned off: of a 27% bonus, 9% comes free from torrent
 with the library and 18% was bought with 179 GB of separate copies, on an account already at ratio
 4.21 with 86 GB of headroom. That disk is worth more to the TorrentLeech grabber. The bonus grows
 through hardlinks only, which is what cross-seed produces anyway. The mechanism stays in
-`tracker-control.py`, unconfigured, for the day the arithmetic reverses.
+`scripts/trackers/control.py`, unconfigured, for the day the arithmetic reverses.
 
 **Done on 2026-08-21**: autobrr now watches their `#announce` channel with the nick
 `PlatanosVerdes` and bot mode on, filtering freeleech between 15 and 30 GB at one a day. The passkey
@@ -341,7 +357,7 @@ really uploaded. The credit is a one-off and does not grow back.
 
 Nothing automatic can help until the account can be read, and its Prowlarr entry holds no username
 and password. Two things to do, in this order: fix the SOCKS credentials so search works again, then
-decide whether to store site credentials for it so `tracker-stats.py` can watch it like
+decide whether to store site credentials for it so `scripts/trackers/stats.py` can watch it like
 TorrentLeech. Until then the rule is manual: **on C411, freeleech only.**
 
 ### BTSCHOOL is about to fail its probation, and that is a decision
@@ -385,7 +401,7 @@ The rules from (1) belong in configuration, not in anyone's memory. Where things
 | retrotoon.world (Generic Torznab) | open | open |
 
 **The freeleech-only flag was never a decision, it was a control loop, and it is one now.**
-`tracker-control.py` moves it, the Sonarr indexer and the autobrr grab rate from a single number, the
+`scripts/trackers/control.py` moves it, the Sonarr indexer and the autobrr grab rate from a single number, the
 headroom (`buffer / min_ratio`, the GB of non-freeleech downloads that still fit above the line).
 Tiers live in `config/trackers/rules.json`; see the section in
 [docs/private-trackers.md](docs/private-trackers.md).
@@ -408,7 +424,7 @@ be read the same way.
 Still open per tracker: what each one actually demands, before its seed goal can be set honestly
 rather than guessed.
 
-**The trap to remember when editing any of this:** `sync-arr-config.sh` reports success and applies
+**The trap to remember when editing any of this:** `scripts/sync/arr-config.sh` reports success and applies
 nothing when Radarr holds a custom format the repo does not list. Measured on 2026-08-21 with 13
 formats live against 12 in the repo: the profile PUT returned 202 and changed neither the scores nor
 `cutoffFormatScore`. Deleting the stray format made the same sync work. Worth hardening so the
@@ -417,7 +433,7 @@ counting processed profiles.
 
 ### 3. Alerts and a Grafana row for the tracker numbers
 
-**Done for TorrentLeech on 2026-08-21**, by `scripts/tracker-stats.py`: `tracker_ratio`,
+**Done for TorrentLeech on 2026-08-21**, by `scripts/trackers/stats.py`: `tracker_ratio`,
 `tracker_buffer_bytes`, `tracker_headroom_bytes`, `tracker_points`, `tracker_warning_seconds`,
 `tracker_hnr_pending`, `tracker_hnr_at_risk` and a per-torrent `tracker_hnr_torrent_hours_left`,
 with four alerts on top (headroom under 10 GB, ratio below the line, an obligation whose clock is
@@ -432,13 +448,13 @@ per-site work rather than one generic exporter.
 
 What is left: a Grafana row for these series (the alerts exist, the panels do not), and the same
 treatment for the other four sites, each of which needs its login form and profile shape checked
-once. The parsing in `tracker-stats.py` is deliberately dumb about markup (strip the tags, read the
+once. The parsing in `scripts/trackers/stats.py` is deliberately dumb about markup (strip the tags, read the
 value on the line after its label) precisely so a second site is a config entry rather than a
 selector hunt.
 
 ### 4. Adopt the standard tools and retire the bespoke script
 
-Decided on 2026-08-21, and it reverses an earlier position: keeping `seed-cleanup.py` was defended
+Decided on 2026-08-21, and it reverses an earlier position: keeping `scripts/trackers/seed-cleanup.py` was defended
 on the grounds that it works and is understood, but the day produced two silent failures in
 home-made scripts (the arr-config sync above, and the client-versus-tracker clock gap that was three
 hours from deleting a torrent that still owed 88 hours). Bespoke code **is** the mess when nobody
@@ -447,7 +463,7 @@ wants to maintain it. So, in this order:
 1. **cross-seed first.** Free ratio and not one extra byte: it finds the same content on other
    trackers and seeds the same files there via hardlinks. Talks to Prowlarr (one Torznab URL per
    indexer, with the API key) and injects directly into qBittorrent. Nothing here has to change to
-   make room for it, and `seed-cleanup.py` already refuses to touch a path shared by more than one
+   make room for it, and `scripts/trackers/seed-cleanup.py` already refuses to touch a path shared by more than one
    torrent, so cross-seeds are protected from day one.
 2. **qbit_manage, in evaluation since 2026-08-21.** Running hourly and writing **tags only**:
    `tag_update`, `tag_tracker_error`, `tag_nohardlinks`. Everything that deletes is off
@@ -457,10 +473,10 @@ wants to maintain it. So, in this order:
    **Approved on 2026-08-21, so no need to ask again.** The evaluation, and what to do on or after
    2026-08-28:
 
-   1. Compare a week of both tools on the same torrents. `seed-cleanup.py` reports its decisions in
+   1. Compare a week of both tools on the same torrents. `scripts/trackers/seed-cleanup.py` reports its decisions in
       `seed-cleanup.log` and the Retention dashboard; qbit_manage's are in `docker logs qbit-manage`.
       What has to agree: which torrents are `noHL` (the library no longer holds them) against what
-      `seed-cleanup.py` calls "film gone from the library", and which are tagged `issue` against
+      `scripts/trackers/seed-cleanup.py` calls "film gone from the library", and which are tagged `issue` against
       what it treats as unregistered.
    2. Turn on `rem_unregistered` first, on its own. It is the reason to adopt the tool: a reset
       passkey makes every torrent announce `unregistered torrent pass`, and this catches it on the
@@ -470,7 +486,7 @@ wants to maintain it. So, in this order:
       because share limits **cannot see the library**: `include_all_tags: [torrentleech, noHL]` is
       what stops it deleting a torrent whose bytes Plex is still sharing. Verify that on real data
       before trusting it.
-   4. Only after both have run for a week does `seed-cleanup.py` come out of cron. Three rules must
+   4. Only after both have run for a week does `scripts/trackers/seed-cleanup.py` come out of cron. Three rules must
       survive the move: the per-tracker goals (360 h on TorrentLeech, because its clock runs behind
       the client's), the public-tracker rule of dropping a torrent as soon as the library has the
       file, and the absolute one, that nothing is deleted while any tracker is still owed.
@@ -484,7 +500,7 @@ wants to maintain it. So, in this order:
    allowed to delete anything.
 
 3. **What cross-seed changes about deletion**, now that it runs: a cross-seeded file has a link
-   count above one for as long as the second torrent exists, and `seed-cleanup.py` reads that as
+   count above one for as long as the second torrent exists, and `scripts/trackers/seed-cleanup.py` reads that as
    "the library still holds it" and keeps both forever. Nothing is lost and nothing is over-deleted,
    but bytes that used to be reclaimed after watching now stay until the cross-seed goes. That is
    the trade for free ratio, and it is another reason the deleting side belongs in qbit_manage,
@@ -497,7 +513,7 @@ wants to maintain it. So, in this order:
    `docs/private-trackers.md`. What is left is one filter per remaining tracker, which waits on
    knowing each one's rules.
 
-The one thing `seed-cleanup.py` does that qbit_manage cannot is ask Radarr and Sonarr what a
+The one thing `scripts/trackers/seed-cleanup.py` does that qbit_manage cannot is ask Radarr and Sonarr what a
 download actually produced, which mattered for RAR releases. That reason disappeared on 2026-08-21
 when RAR packs became a hard reject.
 
