@@ -43,7 +43,7 @@ config/                     Static config files committed to git
 
 services/                   Source code for custom services built in this repo
   acestream-updater/        Go service — fetches IPFS channel lists, writes .m3u for Jellyfin
-  tailscale-metrics/        Go binary (cron) — exports Tailscale peer metrics to node_exporter
+  tailscale-metrics/        Go service, Dockerized — Tailscale peer metrics for Prometheus
   deploy-webhook/           Python receiver (systemd) — deploys on GitHub push via Cloudflare tunnel
   watch-next/               Go service: monitors + searches the next Sonarr episode(s) on watch
   subtitle-links/           Go service: page listing movies with a downloadable external subtitle
@@ -64,6 +64,7 @@ scripts/                    Operational scripts
   sync-arr-links.sh         Wires Overseerr and Bazarr to Radarr/Sonarr (on deploy)
   sync-qbit-config.sh       Pushes config/qbittorrent/preferences.json into qBittorrent (on deploy)
   sync-plex-prefs.sh        Plex's LAN Networks and its 95% played threshold (on deploy)
+  install-logrotate.sh      Installs the logrotate policy for both repos' logs (on deploy)
   rebuild-service.sh        Manual single-service rebuild helper
   recovery-status.sh        After a rebuild: what still needs a human (run by hand, see README)
 
@@ -193,19 +194,17 @@ docker compose -f compose-media.yml up -d --build acestream-updater
 ```
 
 ### tailscale-metrics
-Go binary that runs as a **host cron job** (not a Docker container). Calls `tailscale status --json` and the Tailscale API, writes a `.prom` file for node_exporter's textfile collector.
+Go service, Dockerized, no published port. Prometheus scrapes `tailscale-metrics:9736/metrics`
+over `media-network` (job `tailscale`).
 
-Build:
-```bash
-cd services/tailscale-metrics && make build
-```
+Reads two sources: tailscaled's LocalAPI over the host socket, mounted read-only, for who is
+online and the bytes per peer; and the Tailscale control API, for which peers are *approved*
+exit nodes. `TAILSCALE_API_KEY` is optional and only fills `tailscale_peer_is_exit_node`.
 
-The compiled binary is NOT committed to git. Run `make build` after cloning.
-
-Cron entry:
-```
-* * * * * /home/raspi/rpi-homeserver/services/tailscale-metrics/tailscale-metrics >> /home/raspi/rpi-homeserver/tailscale-metrics.log 2>&1
-```
+It used to be a hand-compiled binary run from cron every minute, writing into node_exporter's
+textfile collector. Nothing in git built it, so a rebuilt Pi lost the nine panels of the
+Tailscale dashboard with no error anywhere. Being scraped rather than pushed also means its
+death is visible: `up{job="tailscale"}` goes to 0.
 
 ### watch-next
 Go service, Dockerized, no published port (reached by Tautulli/Jellyfin over `media-network` by
@@ -230,7 +229,7 @@ DATA_DB_ROOT                   # DB subdirectory
 CONFIG_ROOT=./config
 APP_CONFIG_PATH=./appdata
 CF_API_TOKEN                   # Cloudflare DNS token for HTTPS certs
-TAILSCALE_API_KEY              # Read directly by tailscale-metrics binary
+TAILSCALE_API_KEY              # Optional, only for tailscale_peer_is_exit_node
 PLEX_LAN_NETWORKS              # Networks Plex treats as local (see Networking)
 ```
 

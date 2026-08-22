@@ -21,13 +21,9 @@ TOTAL_RUNS=$((TOTAL_RUNS + 1))
 
 log() { echo "$(date '+%Y-%m-%d %H:%M:%S') - $1"; }
 
-# Cron used to truncate this log on every run; now cron and the webhook both append to it,
-# so keep it bounded. Truncate in place (not mv) or the open redirect writes to a dead inode.
-LOG_FILE="$PROJECT_DIR/apply.log"
-if [[ -f "$LOG_FILE" ]] && [[ "$(stat -c%s "$LOG_FILE" 2>/dev/null || echo 0)" -gt 5242880 ]]; then
-    tail -n 500 "$LOG_FILE" > "$LOG_FILE.tmp" && cat "$LOG_FILE.tmp" > "$LOG_FILE"
-    rm -f "$LOG_FILE.tmp"
-fi
+# Bounding apply.log is logrotate's job (config/logrotate/rpi-homeserver, installed below).
+# This used to truncate to the last 500 lines at 5 MB, which kept the file small by throwing the
+# history away; logrotate keeps four compressed rounds of it instead.
 
 # Cron and the webhook receiver can both fire this; never let two deploys overlap.
 #
@@ -390,6 +386,9 @@ fi
 
 # Keep the host crontab in sync with both repos' fragments
 bash "$PROJECT_DIR/scripts/install-crontab.sh" 2>&1 | while IFS= read -r line; do log "[cron] $line"; done
+
+# And the logrotate policy that keeps the logs those cron jobs write from filling the disk
+bash "$PROJECT_DIR/scripts/install-logrotate.sh" 2>&1 | while IFS= read -r line; do log "[logrotate] $line"; done
 
 # Converge Radarr/Sonarr custom formats and quality profiles to config/arr/. These are built by
 # hand through each app's own UI and live only in its appdata database, so without this a lost

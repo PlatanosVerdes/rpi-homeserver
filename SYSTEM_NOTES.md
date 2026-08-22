@@ -48,25 +48,17 @@ journalctl --disk-usage
 
 ### The repo's own log files
 
-The cron scripts append to `apply.log`, `backup.log` and friends in the repo root, and nothing
-rotates them by default: `apply.log` gains a few lines every deploy, forever. A host file, not in
-git:
+The cron scripts append to `apply.log`, `backup.log` and friends in both repos' roots, and
+nothing rotates them by default: `apply.log` gains a few lines every deploy, forever.
 
-**File:** `/etc/logrotate.d/rpi-homeserver`
+This is **in git** and installed on every deploy, so it comes back with a clone:
 
-```
-/home/raspi/rpi-homeserver/*.log {
-    weekly
-    rotate 4
-    maxsize 20M
-    compress
-    delaycompress
-    missingok
-    notifempty
-    copytruncate
-    su raspi raspi
-}
-```
+**Source:** `config/logrotate/rpi-homeserver` → installed to `/etc/logrotate.d/rpi-homeserver`
+by `scripts/install-logrotate.sh`, which `apply.sh` runs.
+
+It was a hand-written host file until 2026-08-22, documented only here. That meant a rebuilt Pi
+went back to unbounded logs with nothing to say so, and `rpi-services` was never covered: its
+`one-pace.log` had reached 1.2 MB with nothing rotating it. Both repos are in the policy now.
 
 `copytruncate` is not optional: the cron jobs hold these files open with `>>`, so rotating by
 rename would leave them writing into a deleted inode and the new file would stay empty forever.
@@ -132,12 +124,10 @@ Active cron entries:
 ```
 # Auto-deploy: pull git + docker compose up every 15 min
 */15 * * * * /home/raspi/rpi-homeserver/scripts/apply.sh >> /home/raspi/rpi-homeserver/apply.log 2>&1
-
-# Tailscale metrics: write .prom file every minute for node_exporter
-* * * * * /home/raspi/rpi-homeserver/services/tailscale-metrics/tailscale-metrics >> /home/raspi/rpi-homeserver/tailscale-metrics.log 2>&1
 ```
 
-> The `tailscale-metrics` binary must be compiled first: `cd services/tailscale-metrics && make build`
+> Tailscale metrics used to be a third cron entry here, a hand-compiled binary writing a `.prom`
+> file. It is a Dockerized exporter now, scraped by Prometheus; see CLAUDE.md.
 
 ---
 

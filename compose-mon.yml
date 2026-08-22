@@ -199,25 +199,32 @@ services:
     networks:
       - media-network
 
-  # --- TAILSCALE EXPORTER (Tailscale device status → Prometheus) ---
-  # Shows all devices in the "Bannet" tailnet: online/offline, IP, OS, last seen.
-  # Requires a Tailscale API key (NOT the auth key):
-  #   → https://login.tailscale.com/admin/settings/keys → "Generate API key"
-  # Add TAILSCALE_API_KEY to .env, then uncomment this service.
-  # Grafana dashboard ID: 17722
+  # --- TAILSCALE METRICS (peer status → Prometheus) ---
+  # Was a Go binary compiled by hand and run from cron every minute, writing into
+  # node-exporter's textfile collector. Nothing in git built it, so a rebuilt Pi lost the
+  # nine panels of the Tailscale dashboard in silence. Now it is built by compose like every
+  # other service here, and its death shows up as up{job="tailscale"} == 0.
   #
-  # tailscale-exporter:
-  #   image: ghcr.io/maauso/tailscale-exporter:latest
-  #   container_name: tailscale-exporter
-  #   restart: unless-stopped
-  #   profiles: [moni, all]
-  #   environment:
-  #     - TAILSCALE_API_KEY=${TAILSCALE_API_KEY}
-  #     - TAILSCALE_TAILNET=-          # "-" = default tailnet for the API key owner
-  #   ports:
-  #     - "9736:9736"
-  #   networks:
-  #     - media-network
+  # It reads tailscaled's LocalAPI over the host socket (world-readable, no privileges needed).
+  # TAILSCALE_API_KEY is optional and only fills tailscale_peer_is_exit_node: without it every
+  # other metric still works. It is an API key, not an auth key:
+  #   https://login.tailscale.com/admin/settings/keys
+  #
+  # No published port: Prometheus scrapes it over media-network.
+  tailscale-metrics:
+    build: ./services/tailscale-metrics
+    container_name: tailscale-metrics
+    restart: unless-stopped
+    mem_limit: 64m
+    memswap_limit: 64m
+    profiles: [moni, all]
+    volumes:
+      - /var/run/tailscale/tailscaled.sock:/var/run/tailscale/tailscaled.sock:ro
+    environment:
+      - TZ=${TZ}
+      - TAILSCALE_API_KEY=${TAILSCALE_API_KEY}
+    networks:
+      - media-network
 
   # --- VICTORIALOGS (Log storage) ---
   victorialogs:

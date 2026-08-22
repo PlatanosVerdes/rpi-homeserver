@@ -296,9 +296,6 @@ sudo usermod -aG docker $USER
 
 # Install Tailscale
 curl -fsSL https://tailscale.com/install.sh | sh
-
-# Install Go (needed to build tailscale-metrics)
-# https://go.dev/dl/ — download linux/arm64 tarball
 ```
 
 ### 2. Clone the repo
@@ -348,20 +345,13 @@ Prevents the SD card from filling up. Create/edit `/etc/docker/daemon.json`:
 sudo systemctl restart docker
 ```
 
-### 6. Build tailscale-metrics
-
-```bash
-cd ~/rpi-homeserver/services/tailscale-metrics && make build
-cd ~/rpi-homeserver
-```
-
-### 7. Start services
+### 6. Start services
 
 ```bash
 docker compose up -d
 ```
 
-### 8. Set up Tailscale
+### 7. Set up Tailscale
 
 ```bash
 sudo tailscale up --advertise-exit-node --accept-dns=false
@@ -370,7 +360,7 @@ sudo tailscale up --advertise-exit-node --accept-dns=false
 Then approve the exit node in the Tailscale admin console and set Pi-hole as the DNS server.
 → See [docs/tailscale.md](docs/tailscale.md)
 
-### 9. Configure auto-deployment
+### 8. Configure auto-deployment
 
 Install the crontab from the repo (never with `crontab -e`, the deploy overwrites the live one):
 
@@ -384,7 +374,7 @@ That merges this repo's `scripts/crontab` with a companion repo's fragment if th
 For push-triggered deploys instead of waiting for the 30-minute cron, see
 [docs/deploy-webhook.md](docs/deploy-webhook.md).
 
-### 10. Configure Pi-hole DNS records
+### 9. Configure Pi-hole DNS records
 
 For each HTTPS subdomain, add a DNS record in Pi-hole → Local DNS → DNS Records:
 
@@ -395,7 +385,7 @@ For each HTTPS subdomain, add a DNS record in Pi-hole → Local DNS → DNS Reco
 | `grafana.platanosverdes.com` | `<TAILSCALE_IP>` |
 | *(all other subdomains)* | `<TAILSCALE_IP>` |
 
-### 11. Add entries to `/etc/hosts` on client devices
+### 10. Add entries to `/etc/hosts` on client devices
 
 For HTTP short names to work on your laptop/desktop:
 
@@ -407,7 +397,7 @@ For HTTP short names to work on your laptop/desktop:
 <TAILSCALE_IP> raspi homepage jellyfin overseerr plex grafana prometheus push prowlarr radarr sonarr flare torrent speedtest pihole
 ```
 
-### 12. Check what still needs a human
+### 11. Check what still needs a human
 
 ```bash
 bash scripts/recovery-status.sh
@@ -562,17 +552,13 @@ at once. See [docs/watch-next.md](docs/watch-next.md) for the full setup (Tautul
 webhook configuration).
 
 ### Tailscale Metrics
-`services/tailscale-metrics/` is a Go binary that runs as a **host cron job** (not a Docker container). It exports Tailscale peer status to Prometheus via node_exporter's textfile collector.
+`services/tailscale-metrics/` is a Dockerized Go exporter with no published port. Prometheus
+scrapes it at `tailscale-metrics:9736/metrics` over `media-network`.
 
-**Build:**
-```bash
-cd services/tailscale-metrics && make build
-```
-
-**Cron entry:**
-```
-* * * * * /home/raspi/rpi-homeserver/services/tailscale-metrics/tailscale-metrics >> /home/raspi/rpi-homeserver/tailscale-metrics.log 2>&1
-```
+It mounts `/var/run/tailscale/tailscaled.sock` read-only to read peer status from tailscaled's
+LocalAPI, and optionally calls the Tailscale control API with `TAILSCALE_API_KEY` to mark which
+peers are approved exit nodes. Nothing to build by hand: compose builds it like every other
+service in `services/`.
 
 ### Auto-Deployment (`apply.sh`)
 Pulls latest git changes every 15 minutes and rebuilds only when something changed.

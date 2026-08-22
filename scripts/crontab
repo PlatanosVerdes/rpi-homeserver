@@ -19,9 +19,6 @@
 # exports the number it is missing: the real RAM those pages occupy. One sysfs read.
 * * * * * /home/raspi/rpi-homeserver/scripts/zram-metrics.sh
 
-# Tailscale peer metrics -> node-exporter textfile collector, every minute
-* * * * * /home/raspi/rpi-homeserver/services/tailscale-metrics/tailscale-metrics
-
 # Largest files/dirs on the data disk -> node-exporter textfile collector, hourly.
 # It was every 6h on the assumption that walking the disk is expensive; measured at 0.64s, so the
 # only thing 6h bought was a panel showing files that had already been deleted.
