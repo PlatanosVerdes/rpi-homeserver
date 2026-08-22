@@ -156,8 +156,9 @@ Plex runs on the Pi, which is weak at video transcoding, so files should
   | library has its own copy | goal met | download copy removed, film untouched, duplicate reclaimed |
   | library has its own copy | goal pending | keeps seeding until the debt is paid, then as above |
   | film gone from the library | public | torrent and data removed on the next pass |
-  | film gone from the library | private, goal met | torrent and data removed on the next pass |
-  | film gone from the library | private, goal pending | keeps seeding, tagged `waiting-seed`, rechecked hourly |
+  | film gone from the library | private, owes its hit & run | keeps seeding, tagged `waiting-seed`, rechecked hourly |
+  | film gone from the library | private, hit & run paid, **still uploading** | keeps seeding: it is producing the ratio the account needs |
+  | film gone from the library | private, hit & run paid and **gone quiet** | torrent and data removed on the next pass |
 
   Whether the library still holds a film is asked of the hard link count first and of the *arr second.
   The second question exists because of RAR releases: a hardlink needs the same bytes at both ends,
@@ -178,6 +179,16 @@ Plex runs on the Pi, which is weak at video transcoding, so files should
   It is implemented and deliberately **not** configured: measured on DigitalCore, it bought 18% of
   leech bonus for 179 GB of disk on an account already at ratio 4.21, while the free 9% that comes
   from library hardlinks costs nothing. See [docs/private-trackers.md](docs/private-trackers.md).
+
+  **What decides is the upload rate, not the goal.** Measured on 2026-08-22: torrents that had been
+  seeding 40 to 157 hours had uploaded exactly 0.00 GB, while ones a few hours old were doing 0.13 to
+  0.82 GB an hour. Upload only happens while somebody still wants the file, so a rule of "remove once
+  ratio 1.2 is reached" was deleting the best earner in the client (0.82 GB/h, due in 0.8 days) and
+  keeping the worst (0.13 GB/h, due in 12.7). Now each tracker's own hit & run rule decides when a
+  torrent *may* go and its upload over the last day decides whether it *should*: still paying means it
+  stays, past the goal or not, and quiet means it goes as soon as nothing is owed, freeing the disk
+  for a release somebody actually wants. The floor is `min_upload_gb_per_day` per tracker, and a
+  torrent with less than 12 hours of history is never judged on it.
 
   Goals live in `config/qbittorrent/seed-rules.json` (240 h seeding or ratio 1.0 for private, nothing
   for public). Whether a tracker is private comes from qBittorrent, so there is no list to maintain.

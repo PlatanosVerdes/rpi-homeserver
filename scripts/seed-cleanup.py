@@ -118,7 +118,8 @@ def read_state():
     try:
         return json.loads(STATE_FILE.read_text())
     except (OSError, ValueError):
-        return {"removed_total": 0, "freed_bytes_total": 0, "waiting_since": {}}
+        return {"removed_total": 0, "freed_bytes_total": 0, "waiting_since": {},
+                "upload_samples": {}}
 
 
 def write_state(state):
@@ -129,6 +130,83 @@ def write_state(state):
         STATE_FILE.write_text(json.dumps(state, indent=1))
     except OSError as exc:
         failures.append(f"state file: {exc}")
+
+
+SAMPLE_WINDOW_HOURS = 60      # how much upload history to keep per torrent
+MIN_SPAN_HOURS = 12           # below this there is not enough history to judge a rate
+
+
+def record_uploads(torrents, state, now):
+    """Keep enough upload history per torrent to answer "is this still earning anything".
+
+    qBittorrent only reports a running total, so a rate needs two readings. Samples older than the
+    window are dropped, and so are hashes that have left the client: this file is state, not an
+    archive.
+    """
+    samples = state.setdefault("upload_samples", {})
+    cutoff = now - SAMPLE_WINDOW_HOURS * 3600
+    alive = set()
+    for torrent in torrents:
+        alive.add(torrent["hash"])
+        series = [s for s in samples.get(torrent["hash"], []) if s[0] >= cutoff]
+        if not series or series[-1][1] != torrent.get("uploaded", 0):
+            series.append([now, torrent.get("uploaded", 0)])
+        samples[torrent["hash"]] = series[-30:]
+    for stale in set(samples) - alive:
+        del samples[stale]
+
+
+def upload_rate_gb_day(torrent, state, now):
+    """GB a day over the longest span there is history for, or None when there is not enough yet.
+
+    Returning None matters: a torrent added an hour ago has produced no evidence either way, and
+    guessing "quiet" would delete it before it ever had a chance to upload.
+    """
+    series = (state.get("upload_samples") or {}).get(torrent["hash"]) or []
+    if len(series) < 2:
+        return None
+    first, last = series[0], series[-1]
+    span_hours = (last[0] - first[0]) / 3600
+    if span_hours < MIN_SPAN_HOURS:
+        return None
+    grown = max(0, last[1] - first[1])
+    return grown / 1024 ** 3 / (span_hours / 24)
+
+
+def decide(torrent, goal, state, now):
+    """Whether a torrent has finished earning, per the rules of the tracker it belongs to.
+
+    The old rule was "remove once the seed goal is met", which asks the wrong question. What pays a
+    thin ratio is upload, and upload only happens while somebody still wants the file. Measured here
+    on 2026-08-22: torrents seeded 40 to 157 hours had uploaded exactly 0.00 GB, while ones a few
+    hours old were doing 0.13 to 0.82 GB an hour. Deleting at ratio 1.2 therefore removed the best
+    earner in the client (0.82 GB/h, due in 0.8 days) and kept the worst (0.13 GB/h, due in 12.7).
+
+    So: the tracker's own hit & run rule decides when a torrent *may* go, and its upload rate decides
+    whether it *should*. A torrent still paying is kept past the goal; one that has gone quiet goes
+    as soon as it owes nothing, which frees the disk for a release somebody actually wants.
+
+    Falls back to the goal when the tracker has no `quiet` policy, or when there is not enough
+    history to judge a rate.
+    """
+    quiet = goal.get("quiet")
+    if not quiet:
+        return ("remove", "tracker paid") if goal_met(torrent, goal) else ("wait", "seed goal pending")
+
+    hours = torrent.get("seeding_time", 0) / 3600
+    owed = not (hours >= quiet.get("hit_and_run_hours", 0)
+                or torrent.get("ratio", 0) >= quiet.get("hit_and_run_ratio", 1.0))
+    if owed:
+        return "wait", f"owes its hit and run, {quiet.get('hit_and_run_hours', 0) - hours:.0f} h to go"
+
+    rate = upload_rate_gb_day(torrent, state, now)
+    floor = quiet.get("min_upload_gb_per_day", 0)
+    if rate is None:
+        return ("remove", "hit and run paid, no upload history yet") if goal_met(torrent, goal) \
+            else ("wait", "not enough upload history to judge")
+    if rate >= floor:
+        return "wait", f"still paying, {rate:.2f} GB/day"
+    return "remove", f"hit and run paid and quiet, {rate:.2f} GB/day"
 
 
 def host_path(content_path, data_root):
@@ -248,7 +326,7 @@ def too_young(torrent, min_age_hours):
     return (time.time() - finished) < min_age_hours * 3600
 
 
-def classify(torrents, rules, data_root):
+def classify(torrents, rules, data_root, state, now):
     """Split into (remove, waiting, duplicates, in_library, keep), with the reason for each.
 
     Being in the library is decided before the guards, so a film imported an hour ago still counts as
@@ -306,10 +384,12 @@ def classify(torrents, rules, data_root):
             continue
         if any(os.path.exists(host_path(p, data_root)) for p in imported):
             entry["duplicate"] = True
-            if t["progress"] >= 1 and t["state"] not in BUSY_STATES and goal_met(t, goal):
-                remove.append({**entry, "why": "duplicate copy, tracker paid"})
+            ready = t["progress"] >= 1 and t["state"] not in BUSY_STATES
+            verdict, why = decide(t, goal, state, now) if ready else ("wait", "still busy")
+            if verdict == "remove":
+                remove.append({**entry, "why": f"duplicate copy, {why}"})
             else:
-                duplicates.append({**entry, "why": "duplicate copy, seed goal pending"})
+                duplicates.append({**entry, "why": f"duplicate copy, {why}"})
                 keep.append(duplicates[-1])
             continue
 
@@ -326,10 +406,11 @@ def classify(torrents, rules, data_root):
             keep.append({**entry, "why": "files not readable from the host"})
             continue
 
-        if goal_met(t, goal):
-            remove.append({**entry, "why": "watched and tracker paid"})
+        verdict, why = decide(t, goal, state, now)
+        if verdict == "remove":
+            remove.append({**entry, "why": why})
         else:
-            waiting.append({**entry, "why": "watched, seed goal pending"})
+            waiting.append({**entry, "why": why})
 
     return remove, waiting, duplicates, in_library, keep
 
@@ -385,6 +466,11 @@ def metrics(remove, waiting, duplicates, in_library, freed, status, state, torre
         return out
 
     lines = []
+    lines += gauge("seed_cleanup_upload_gb_per_day",
+                   "What each torrent is still uploading, which is what decides whether it stays",
+                   [(f'name="{escape(t["name"])[:90]}",tracker="{escape(tracker_host(t))}"', rate)
+                    for t, rate in ((t, upload_rate_gb_day(t, state, int(time.time())))
+                                    for t in torrents) if rate is not None])
     lines += gauge("seed_cleanup_last_run_timestamp", "When the cleanup last ran",
                    [(None, int(time.time()))])
     lines += gauge("seed_cleanup_last_status", "Last run status (0=ok, 1=error)",
@@ -483,8 +569,13 @@ def main():
         metrics([], [], [], [], 0, 1, state, [], rules)
         sys.exit(f"qbittorrent: {exc}")
 
+    # Upload history has to be recorded before anything is judged on it, and before anything is
+    # deleted: a torrent that leaves the client takes its samples with it.
+    now = int(time.time())
+    record_uploads(torrents, state, now)
+
     remove, waiting, duplicates, in_library, _ = classify(
-        torrents, rules, env("DATA_ROOT", "/mnt/data"))
+        torrents, rules, env("DATA_ROOT", "/mnt/data"), state, now)
 
     report("would remove" if DRY_RUN else "removing", remove)
     report("waiting on seed", waiting)
@@ -497,7 +588,6 @@ def main():
 
     # First time each one is seen owing seed time, so the dashboard can say how long it has been
     # stuck. Hashes that stopped waiting are dropped rather than kept forever.
-    now = int(time.time())
     state["waiting_since"] = {t["hash"]: state["waiting_since"].get(t["hash"], now)
                               for t in waiting}
     if freed:
