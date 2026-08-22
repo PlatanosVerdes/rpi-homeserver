@@ -639,7 +639,7 @@ groups:
               conditions:
                 - evaluator: { type: gt, params: [0] }
       - uid: homelab-used-indexer-down
-        title: 'An indexer you actually use is down'
+        title: 'An indexer is down'
         condition: C
         # 6h, not minutes. An indexer being down is not something you can fix from here: it either
         # comes back on its own or it does not, and Prowlarr keeps retrying either way. The only
@@ -650,9 +650,13 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: 'Indexer {{ $labels.name }} is down and it is one you actually grab from'
+          summary: 'Indexer {{ $labels.name }} is down'
           description: >-
-            Only indexers with at least 3 grabs in the last 90 days are watched here, so the ones that have never worked stay quiet.
+            Every enabled indexer is watched, one alert per indexer. It used to be only the ones
+            with 3+ grabs in 90 days, which was right while every indexer was public and
+            interchangeable and wrong as soon as private ones arrived: a tracker whose account is
+            still in its newbie window has zero grabs by definition and is exactly the one whose
+            failure needs saying out loud. Disabling an indexer in Prowlarr is what silences it now.
             Down means "mostly down over the last hour", not a single failed check — a brief
             recovery blip in the middle of an otherwise-broken indexer no longer resolves and
             re-fires the alert every time.
@@ -666,7 +670,45 @@ groups:
               refId: A
               instant: true
               editorMode: code
-              expr: '(avg_over_time(prowlarr_indexer_up[1h]) < bool 0.5) and on(name) (arr_indexer_grabs_90d >= 3)'
+              expr: 'avg_over_time(prowlarr_indexer_up{enabled="true"}[1h]) < bool 0.5'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+
+      - uid: homelab-indexer-failing-queries
+        title: 'An indexer is failing its searches'
+        condition: C
+        # Separate from "is down" on purpose: Prowlarr only disables an indexer after repeated
+        # failures, so between the first failed search and that point an indexer reads as up while
+        # returning nothing. On a private tracker that gap is usually an expired session or a reset
+        # passkey, which is worth knowing on the day it happens rather than six hours later.
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Indexer {{ $labels.name }} failed searches in the last hour'
+          description: >-
+            The indexer is still enabled and still answering, so the availability timeline shows it
+            green, but searches sent to it are coming back as failures. Check the indexer in
+            Prowlarr: for a private tracker this is usually credentials, a reset passkey or the
+            site being behind a challenge Flaresolverr is not clearing.
+        noDataState: OK
+        execErrState: KeepLast
+        data:
+          - refId: A
+            relativeTimeRange: { from: 3600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: 'increase(prowlarr_indexer_failed_queries_total[1h]) > bool 0'
           - refId: C
             datasourceUid: __expr__
             model:

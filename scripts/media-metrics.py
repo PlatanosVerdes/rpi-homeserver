@@ -11,6 +11,8 @@ Three things the existing exporters cannot answer:
   arr_media_audio        which audio tracks each film actually has, one series per language
   arr_waiting            everything Radarr waits for: downloading, missing or below cutoff
   prowlarr_indexer_up    which indexers are failing right now, over time
+  prowlarr_indexer_*_total  queries, grabs and failures per indexer, so "is it being used"
+                         is answerable separately from "is it up"
   maintainerr_pending_*  which films are watched and waiting out the grace period before deletion
   arr_orphan_*           what nothing is managing: unimportable queue items, unclaimed data
 
@@ -599,6 +601,46 @@ def prowlarr_indexers():
     push("prowlarr_indexers", lines)
 
 
+def prowlarr_indexer_activity():
+    """Queries, grabs and failures per indexer, as counters, so Grafana can show WHEN an indexer is
+    being used rather than only whether it answers.
+
+    `prowlarr_indexer_up` says an indexer is reachable. It says nothing about whether anything is
+    being asked of it, which is the question that matters for a private tracker: an indexer that is
+    up, queried 997 times and has never returned a grab is a different problem from one that is
+    down, and the availability timeline shows them identically.
+
+    /api/v1/indexerstats with no date range returns all-time totals, which is what makes these
+    counters rather than gauges: increase() over a window gives the rate, and a Prowlarr history
+    prune shows up as a counter reset, which rate() already handles. Passing a date range instead
+    would hand Prometheus a pre-averaged number over a window it did not choose.
+    """
+    try:
+        stats = get("http://localhost:9696/api/v1/indexerstats", api_key("prowlarr"))
+    except Exception as exc:
+        failures.append(f"prowlarr stats: {exc}")
+        return
+
+    queries = ["# HELP prowlarr_indexer_queries_total Searches sent to this indexer, all time",
+               "# TYPE prowlarr_indexer_queries_total counter"]
+    grabs = ["# HELP prowlarr_indexer_grabs_total Grabs taken from this indexer, all time",
+             "# TYPE prowlarr_indexer_grabs_total counter"]
+    failed = ["# HELP prowlarr_indexer_failed_queries_total Searches this indexer failed, all time",
+              "# TYPE prowlarr_indexer_failed_queries_total counter"]
+    slow = ["# HELP prowlarr_indexer_response_ms Average response time this indexer answers in",
+            "# TYPE prowlarr_indexer_response_ms gauge"]
+
+    for i in stats.get("indexers", []):
+        label = f'{{name="{escape(i["indexerName"])}"}}'
+        queries.append(f'prowlarr_indexer_queries_total{label} {i.get("numberOfQueries", 0)}')
+        grabs.append(f'prowlarr_indexer_grabs_total{label} {i.get("numberOfGrabs", 0)}')
+        failed.append(f'prowlarr_indexer_failed_queries_total{label} '
+                      f'{i.get("numberOfFailedQueries", 0)}')
+        slow.append(f'prowlarr_indexer_response_ms{label} {i.get("averageResponseTime", 0)}')
+
+    push("prowlarr_indexer_activity", queries + grabs + failed + slow)
+
+
 if __name__ == "__main__":
     quality_changes()
     qbit_torrents()
@@ -607,6 +649,7 @@ if __name__ == "__main__":
     media_audio()
     waiting_on()
     prowlarr_indexers()
+    prowlarr_indexer_activity()
     maintainerr_pending()
     orphans()
     if failures:

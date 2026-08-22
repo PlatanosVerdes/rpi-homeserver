@@ -122,6 +122,37 @@ so a revert is invisible in `apply.log`.
 
 ---
 
+## A film, end to end
+
+```mermaid
+flowchart TB
+  OV["Overseerr<br/><i>you ask</i>"] --> RA
+  CS["cutoff-search.sh<br/><i>05:00, what is still wanted</i>"] --> RA
+  RA["<b>Radarr</b><br/>decides what qualifies<br/><i>profiles + custom formats</i>"] -->|search| PR["Prowlarr<br/>14 indexers"]
+  PR --> QB
+  BRR["autobrr<br/><i>IRC announce, seconds</i>"] --> QB
+  QB["<b>qBittorrent</b><br/>downloads and seeds"] --> UP["unpackerr<br/><i>extracts the mkv from the RAR</i>"]
+  UP -->|Radarr imports| LIB
+  QB -->|Radarr imports| LIB
+  LIB["<b>Library · DATA_ROOT</b><br/><i>imported by hardlink:<br/>same bytes, two names</i>"] --> PX["Plex · Jellyfin"]
+  PX --> MT["Maintainerr<br/><i>watched and out of grace</i>"]
+  MT -->|"deletes the library copy,<br/>link count back to 1"| LIB
+  LIB --> SC["<b>seed-cleanup.py</b><br/><i>hourly at :20</i>"]
+  SC -->|"nothing uses it and<br/>the tracker is paid"| QB
+```
+
+The hardlink count is the signal. Two cases break it, and both are handled:
+
+- **RAR releases.** unpackerr produces new bytes, so the extracted file has a link count of 1 from
+  the moment it lands, with the film still in the library. 19 of 71 files arrived that way. This is
+  why `seed-cleanup.py` also asks the arr, by download id, what the download actually produced.
+- **Cross-seeds.** A second torrent on the same files keeps the count above 1, so bytes that used
+  to be reclaimed after watching now stay until the cross-seed goes. That is the trade for free
+  ratio, and it is one of the reasons the deleting side belongs in qbit_manage, which understands
+  cross-seeds explicitly. See PENDING.md.
+
+---
+
 ## How Radarr decides a film is finished
 
 Two independent gates. They are easy to confuse because the UI calls both of them a cutoff.
@@ -155,37 +186,6 @@ other two, `cutoffFormatScore` 2200 on all three.
 
 Setting `cutoffFormatScore` above anything a release can actually score leaves gate 2 permanently
 open and the whole library in continuous upgrade search. That is what 10000 did before #42.
-
----
-
-## A film, end to end
-
-```mermaid
-flowchart TB
-  OV["Overseerr<br/><i>you ask</i>"] --> RA
-  CS["cutoff-search.sh<br/><i>05:00, what is still wanted</i>"] --> RA
-  RA["<b>Radarr</b><br/>decides what qualifies<br/><i>profiles + custom formats</i>"] -->|search| PR["Prowlarr<br/>14 indexers"]
-  PR --> QB
-  BRR["autobrr<br/><i>IRC announce, seconds</i>"] --> QB
-  QB["<b>qBittorrent</b><br/>downloads and seeds"] --> UP["unpackerr<br/><i>extracts the mkv from the RAR</i>"]
-  UP -->|Radarr imports| LIB
-  QB -->|Radarr imports| LIB
-  LIB["<b>Library · DATA_ROOT</b><br/><i>imported by hardlink:<br/>same bytes, two names</i>"] --> PX["Plex · Jellyfin"]
-  PX --> MT["Maintainerr<br/><i>watched and out of grace</i>"]
-  MT -->|"deletes the library copy,<br/>link count back to 1"| LIB
-  LIB --> SC["<b>seed-cleanup.py</b><br/><i>hourly at :20</i>"]
-  SC -->|"nothing uses it and<br/>the tracker is paid"| QB
-```
-
-The hardlink count is the signal. Two cases break it, and both are handled:
-
-- **RAR releases.** unpackerr produces new bytes, so the extracted file has a link count of 1 from
-  the moment it lands, with the film still in the library. 19 of 71 files arrived that way. This is
-  why `seed-cleanup.py` also asks the arr, by download id, what the download actually produced.
-- **Cross-seeds.** A second torrent on the same files keeps the count above 1, so bytes that used
-  to be reclaimed after watching now stay until the cross-seed goes. That is the trade for free
-  ratio, and it is one of the reasons the deleting side belongs in qbit_manage, which understands
-  cross-seeds explicitly. See PENDING.md.
 
 ---
 
@@ -279,6 +279,29 @@ flowchart LR
   EX --> PROM
   PROM["Prometheus<br/><i>scrapes every 15s</i>"] --> GR["Grafana<br/><i>17 dashboards</i>"]
 ```
+
+### Is an indexer being used, or just up
+
+`prowlarr_indexer_up` answers "does it answer". It does not answer "is anything being asked of
+it", which is the question that matters for a private tracker: an indexer that is up, has been
+queried 997 times and has never returned a grab is a different problem from one that is down, and
+the availability timeline draws them identically.
+
+`prowlarr_indexer_activity` closes that, from `/api/v1/indexerstats`, as counters so `increase()`
+gives the rate over whatever window the panel asks for:
+
+| Metric | Answers |
+| :--- | :--- |
+| `prowlarr_indexer_queries_total` | is anything searching it |
+| `prowlarr_indexer_grabs_total` | does searching it ever produce a download |
+| `prowlarr_indexer_failed_queries_total` | is it answering but failing |
+| `prowlarr_indexer_response_ms` | is it the one slowing every search down |
+
+Three alerts sit on top, all to Telegram: every indexer down, **any enabled indexer** down for 6h,
+and any indexer failing searches for 30m. The middle one used to watch only indexers with 3+ grabs
+in 90 days, which was right while every indexer was public and interchangeable and wrong as soon as
+private ones arrived: a tracker still inside its newbie window has zero grabs by definition and is
+exactly the one whose failure needs saying out loud.
 
 Routes A and B both keep serving a stale value after the producer dies: node-exporter goes on
 publishing the `.prom` file, and Pushgateway expires nothing. Two `cutoff_search{app="sonarr"}`
