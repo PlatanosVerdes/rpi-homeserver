@@ -125,9 +125,9 @@ sensible threshold. Configured via their API, visible in each app under Settings
 
 `includeHealthWarnings` is **off**. It was on at first, so that a failing indexer would notify, and
 that turned out to be the wrong place for it: every flaky indexer produced a message from all three
-apps, including indexers that have never grabbed anything. Indexer health moved to Grafana instead,
-where the threshold can be "one you actually use" (see the two indexer rules and
-`arr_indexer_grabs_90d`). What the apps still notify is error-level health, like an indexer whose
+apps, so a single flaky indexer produced three copies of the same news. Indexer health moved to
+Grafana instead, where one rule owns it and the threshold is time rather than a single failed check
+(see the two indexer rules). What the apps still notify is error-level health, like an indexer whose
 definition no longer exists, which does need a human.
 
 Not enabled: On Grab and On Download. Every single import would be a message.
