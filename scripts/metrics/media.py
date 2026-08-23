@@ -176,9 +176,10 @@ def qbit_torrents():
 
 
 def indexer_usage():
-    """Grabs per indexer over the last 90 days. This is what makes "an indexer is down" alertable:
-    without it every flaky indexer pages you, including the ones that have never grabbed anything.
-    The label is `name`, matching prowlarr_indexer_up, so the two can be joined in PromQL."""
+    """Grabs per indexer over the last 90 days: which ones are actually earning their place, on the
+    Indexers dashboard. The alert no longer filters on this, since a private tracker still inside its
+    newbie window has zero grabs and is exactly the one whose failure matters. The label is `name`,
+    matching prowlarr_indexer_up, so the two can be joined in PromQL."""
     from collections import Counter
     cut = datetime.now(timezone.utc) - timedelta(days=90)
     counts = Counter()

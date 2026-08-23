@@ -646,20 +646,24 @@ groups:
         # version of this worth a message is "it has been gone long enough that you should pick a
         # different one", so nothing under most of a day gets to interrupt. Combined with the 1h
         # average in the expression, this needs ~7h of being mostly down before it says anything.
+        #
+        # Every enabled indexer is watched, one alert per indexer. It used to be only the ones with
+        # 3+ grabs in 90 days, which was right while every indexer was public and interchangeable
+        # and wrong as soon as private ones arrived: a tracker whose account is still in its newbie
+        # window has zero grabs by definition and is exactly the one whose failure needs saying out
+        # loud. Disabling an indexer in Prowlarr is what silences it now.
+        #
+        # The 1h average, rather than the instant value, is what keeps a brief recovery blip in the
+        # middle of an otherwise-broken indexer from resolving the alert and re-firing it every time.
         for: 6h
         labels:
           severity: warning
         annotations:
           summary: 'Indexer {{ $labels.name }} is down'
           description: >-
-            Every enabled indexer is watched, one alert per indexer. It used to be only the ones
-            with 3+ grabs in 90 days, which was right while every indexer was public and
-            interchangeable and wrong as soon as private ones arrived: a tracker whose account is
-            still in its newbie window has zero grabs by definition and is exactly the one whose
-            failure needs saying out loud. Disabling an indexer in Prowlarr is what silences it now.
-            Down means "mostly down over the last hour", not a single failed check — a brief
-            recovery blip in the middle of an otherwise-broken indexer no longer resolves and
-            re-fires the alert every time.
+            Failing most of its checks for the last hour, so searches are going out without it.
+            Prowlarr keeps retrying on its own and backs off up to a day between attempts, so a
+            site that has recovered can still read as down until the next attempt lands.
         noDataState: OK
         execErrState: KeepLast
         data:
