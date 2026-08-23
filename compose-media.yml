@@ -65,8 +65,10 @@ services:
     profiles: [acestream, all]
     network_mode: host
     restart: unless-stopped
-    mem_limit: 256m
-    memswap_limit: 256m
+    # Raised after 2026-08-23: the engine buffers the live stream in RAM and fills a 1 GB cache, so
+    # the old 256m cap had the kernel OOM-killing it every 10-15 min of streaming. Peak is 1.153 GB.
+    mem_limit: 1600m
+    memswap_limit: 1600m
     environment:
       - TZ=${TZ}
 
