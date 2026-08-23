@@ -524,11 +524,12 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(increase(container_oom_events_total[24h])) or vector(0)",
+          "expr": "sum(max by (name) (max_over_time(container_oom_events_total{name!=\"\"}[24h]))) or vector(0)",
           "instant": true,
           "refId": "A"
         }
-      ]
+      ],
+      "description": "Counter resets whenever a container is recreated, and a deploy recreates them routinely, so increase() over 24h loses the history and reads zero. max_over_time per name keeps the worst run instead. It undercounts a container recreated between two kills, which beats reporting none."
     },
     {
       "id": 110,
@@ -1136,7 +1137,7 @@
           "range": true
         }
       ],
-      "description": "CPU % is user + system (kernel) time combined (container_cpu_usage_seconds_total), not just application code time. That matters for I/O-heavy containers (torrenting, transcoding, network-facing apps): a real chunk of their CPU cost is kernel-side \u2014 syscalls, network stack, disk I/O \u2014 not user-space, so a user-time-only metric would understate them. Docker monitoring used to query container_cpu_user_seconds_total (user-only) and showed lower numbers for exactly this reason; it's been switched to the same full metric as this panel."
+      "description": "CPU % is user + system (kernel) time combined (container_cpu_usage_seconds_total), not just application code time. That matters for I/O-heavy containers (torrenting, transcoding, network-facing apps): a real chunk of their CPU cost is kernel-side — syscalls, network stack, disk I/O — not user-space, so a user-time-only metric would understate them. Docker monitoring used to query container_cpu_user_seconds_total (user-only) and showed lower numbers for exactly this reason; it's been switched to the same full metric as this panel."
     },
     {
       "id": 122,
@@ -1200,6 +1201,157 @@
       ]
     },
     {
+      "id": 124,
+      "type": "timeseries",
+      "title": "Memory against its own limit (%)",
+      "description": "The warning aceserve never gave on 2026-08-23: it sat at 96% of a 256m cap for minutes before the kernel killed it, three times. Only containers with mem_limit appear here; Plex and Jellyfin are deliberately unbounded, so their ceiling is the host RAM gauge above.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 16,
+        "x": 0,
+        "y": 19
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "showPoints": "never",
+            "axisPlacement": "auto",
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 80
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "12.3.3",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "topk(10, container_memory_working_set_bytes{name!=\"\",name!~\".*POD.*\"} / (container_spec_memory_limit_bytes{name!=\"\",name!~\".*POD.*\"} > 0) * 100)",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{name}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 125,
+      "type": "bargauge",
+      "title": "OOM kills by container (24h)",
+      "description": "Which container the kernel killed, not just how many. Empty is the healthy state. Docker reports ExitCode=0 OOMKilled=false for these, because the kernel kills a child process and not PID 1, so this metric is the only place they show up.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 19
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "mappings": [],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "pluginVersion": "12.3.3",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "max by (name) (max_over_time(container_oom_events_total{name!=\"\"}[24h])) > 0",
+          "instant": true,
+          "legendFormat": "{{name}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
       "id": 123,
       "type": "timeseries",
       "title": "Network throughput",
@@ -1211,7 +1363,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 19
+        "y": 27
       },
       "fieldConfig": {
         "defaults": {
@@ -1280,7 +1432,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 26
+        "y": 34
       },
       "panels": []
     },
@@ -1296,7 +1448,7 @@
         "h": 16,
         "w": 8,
         "x": 0,
-        "y": 27
+        "y": 35
       },
       "targets": [
         {
@@ -1384,7 +1536,7 @@
         }
       },
       "pluginVersion": "12.3.3",
-      "description": "CPU % is user + system (kernel) time combined (container_cpu_usage_seconds_total), not just application code time. That matters for I/O-heavy containers (torrenting, transcoding, network-facing apps): a real chunk of their CPU cost is kernel-side \u2014 syscalls, network stack, disk I/O \u2014 not user-space, so a user-time-only metric would understate them. Docker monitoring used to query container_cpu_user_seconds_total (user-only) and showed lower numbers for exactly this reason; it's been switched to the same full metric as this panel."
+      "description": "CPU % is user + system (kernel) time combined (container_cpu_usage_seconds_total), not just application code time. That matters for I/O-heavy containers (torrenting, transcoding, network-facing apps): a real chunk of their CPU cost is kernel-side — syscalls, network stack, disk I/O — not user-space, so a user-time-only metric would understate them. Docker monitoring used to query container_cpu_user_seconds_total (user-only) and showed lower numbers for exactly this reason; it's been switched to the same full metric as this panel."
     },
     {
       "id": 132,
@@ -1398,7 +1550,7 @@
         "h": 16,
         "w": 8,
         "x": 8,
-        "y": 27
+        "y": 35
       },
       "targets": [
         {
@@ -1500,7 +1652,7 @@
         "h": 16,
         "w": 8,
         "x": 16,
-        "y": 27
+        "y": 35
       },
       "fieldConfig": {
         "defaults": {
