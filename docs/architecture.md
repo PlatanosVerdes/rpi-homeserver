@@ -123,6 +123,40 @@ knowing: profiles are matched **by name**, so renaming one creates a second prof
 updating the first; and the sync logs the same "N applied" line whether or not anything changed,
 so a revert is invisible in `apply.log`.
 
+### What git does not have
+
+The table above is what git pushes into the apps. This is the other half, and the one that decides
+how bad a dead SD card is: what each tool keeps that no file in this repo describes.
+
+| Tool | In git | Only in `appdata`, so only in the backup |
+| :--- | :--- | :--- |
+| qbit-manage | **everything.** `config/qbit-manage/config.yml`, copied into `appdata` by every deploy | nothing |
+| cross-seed | **everything.** `config/cross-seed/config.js`, secrets from the environment | nothing |
+| Tracker economy | **everything.** `config/trackers/*.json`, `config/qbittorrent/seed-rules.json` | nothing |
+| Grafana | dashboards and alerting, provisioned from `config/grafana/` | starred dashboards, users, silences |
+| Radarr, Sonarr | custom formats and quality profiles, pushed by `scripts/sync/arr-config.sh` | indexers, root folders, the library index, history, and the API key everything else authenticates with |
+| qBittorrent | preferences and BT port, pushed by `scripts/sync/qbit-config.sh` | categories, tags, and **`BT_backup`, which is every torrent it holds**. Losing that is re-adding 45 torrents by hand and starting every seed clock at zero |
+| Plex | LAN networks and the 95% threshold, pushed by `scripts/sync/plex-prefs.sh` | libraries, watch history, and the claim token |
+| Prowlarr | **nothing** | every indexer, and each one's API key or passkey, which is why it cannot be in a public repo |
+| autobrr | **nothing** | the three filters, the IRC network and nick, and the download client entry |
+| Maintainerr | **nothing** | the rule group and its collection |
+
+So three tools live entirely in the nightly archive. Two of them have no choice: Prowlarr and autobrr
+hold credentials. Maintainerr does not, and its two rules could be pushed from git the way the arrs'
+profiles are, which is written down in PENDING.md rather than done.
+
+**The backup is a hot copy, and that is the part to know before trusting it.**
+`scripts/ops/backup.sh` tars `appdata` nightly at 04:00 while every container is running, keeps
+seven, and pushes `backup_last_status` so a failure alerts. Verified on the 2026-08-24 archive: it
+contains `prowlarr.db`, `autobrr.db`, `maintainerr.sqlite`, `radarr.db`, `sonarr.db`,
+`qbit-manage/config.yml`, `qBittorrent.conf` and `grafana.db`. Every one of those is SQLite being
+written to as tar reads it, and the `-wal` and `-shm` files come along, so a restore usually
+recovers cleanly rather than certainly. Nothing here stops the containers first, and that is a
+deliberate trade for a backup that never needs a maintenance window.
+
+After a restore, `scripts/deploy/recovery-status.sh` reports what no archive can put back: Plex's
+claim token, Jellyfin's setup wizard, and the AirTag 2FA code.
+
 ---
 
 ## A film, end to end

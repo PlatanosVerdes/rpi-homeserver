@@ -404,6 +404,19 @@ deploy that rebuilds it. So it sent a message about an unfixable thing on a sche
 you learn to ignore costs more than a public indexer that Nyaa.si already covers. Health is clean
 now, no warnings at all. The definition file is still on disk if it is ever wanted back.
 
+### Maintainerr's rules are the last config that could be in git and is not
+
+Three tools keep their whole configuration in `appdata`, so only the nightly archive has it:
+Prowlarr, autobrr and Maintainerr. The first two have no choice, since their config holds passkeys
+and IRC credentials and this repo is public. Maintainerr holds neither: one rule group, two rules,
+one collection. Deleting a film after it has been watched for two days is the single most visible
+behaviour on the box, and it exists nowhere in git.
+
+It wants the same shape as `scripts/sync/arr-config.sh`: the rule group as JSON in `config/`, pushed
+through Maintainerr's API on every deploy. Its API is on 127.0.0.1:6246 inside the container and
+`scripts/metrics/media.py` already reads it, so the access pattern is known. See the table in
+[docs/architecture.md](docs/architecture.md) for what else is backup-only.
+
 ### 2. Put the right setup on each tracker
 
 The rules from (1) belong in configuration, not in anyone's memory. Where things stand:
