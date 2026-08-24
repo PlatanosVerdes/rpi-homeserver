@@ -611,13 +611,17 @@ groups:
       - uid: homelab-torrent-announce-silent
         title: 'A torrent is seeding to nobody'
         condition: C
-        # Two hours, because a tracker between announces reads the same as a tracker refusing them.
+        # 30m, not the 2h this started at, because `rem_unregistered` runs hourly and deletes a
+        # disowned torrent on its next pass: at 2h the alert matured after the thing it describes
+        # had already gone. A tracker between announces does not trip this, since "no working
+        # tracker" persists between them rather than flickering.
+        #
         # This is the cause of every seed-goal margin in seed-rules.json and in the qbit-manage
         # groups: qBittorrent counts seeding time while announces are rejected and the site does not,
         # so the client's clock drifts ahead and a goal met here can still owe hours there. Knowing
         # it happened beats guessing the margin, and it is the same signal on every tracker, so a
         # site whose own seed time cannot be read is covered too.
-        for: 2h
+        for: 30m
         labels:
           severity: warning
         annotations:
@@ -626,7 +630,8 @@ groups:
             It is seeding locally and the tracker is not accepting the announce, so the site is
             crediting none of it while qBittorrent keeps counting. Usually a reset passkey, an
             account suspended, or the site being blocked from here. Until it clears, that torrent's
-            seeding time is fiction.
+            seeding time is fiction. If the tracker has disowned it outright, qbit-manage removes it
+            on its next hourly pass and the data waits 7 days in the recycle bin.
         noDataState: OK
         execErrState: KeepLast
         data:
