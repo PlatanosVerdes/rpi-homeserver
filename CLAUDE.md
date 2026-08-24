@@ -113,7 +113,12 @@ docker compose up -d
    template in git with the secrets in `.env` before Grafana starts. That is this step. It writes
    `config/grafana/alerting/*` into `appdata/grafana-alerting/` with the values filled in, which
    is what Grafana actually mounts. See [docs/alerting.md](docs/alerting.md).
-3. If HEAD changed → `docker compose up -d --build --remove-orphans`
+3. If HEAD changed → `docker compose up -d --remove-orphans`, with `--build` **only** when the
+   diff touches something an image is built from: a local build context (read from compose, so
+   `services/*` here and `config/caddy/` for Caddy), `versions.env`, or a compose file. `--build`
+   recreates every locally built container even when its image is identical, and a recreate cuts
+   what that container was serving — Caddy's live connections, the live stream Jellyfin is
+   reading from `acestream-proxy`. A Grafana or docs commit must not do that.
 4. If no change → `docker compose up -d --remove-orphans` (ensures containers are running)
 5. Installs the merged host crontab (`scripts/deploy/install-crontab.sh`)
 6. Converges Radarr/Sonarr's custom formats and quality profiles (`scripts/sync/arr-config.sh`),

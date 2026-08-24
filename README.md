@@ -63,8 +63,9 @@ scripts/deploy/apply.sh
    ├─ git pull rpi-homeserver
    ├─ render alerting ......... template (git) + secrets (.env)
    │                            └─► appdata/grafana-alerting/
-   ├─ docker compose up -d --build
-   ├─ git pull rpi-services  ──► docker compose up -d --build
+   ├─ docker compose up -d ..... --build only if a build context, versions.env
+   │                              or a compose file changed
+   ├─ git pull rpi-services  ──► docker compose up -d (same rule)
    ├─ scripts/deploy/install-crontab.sh ...... homeserver fragment + services fragment
    │                            └─► host crontab (and undoes any manual drift)
    └─ metrics ──► Pushgateway

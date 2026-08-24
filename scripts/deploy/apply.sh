@@ -172,6 +172,44 @@ render_grafana_alerting() {
     sudo chmod 600 "$dst/contact-points.yml"
 }
 
+# build_triggers is the alternation of paths that make a rebuild necessary, read from compose
+# itself so neither repo needs a hand-kept list: a service's build context is where its image
+# comes from. versions.env and the compose files are in it unconditionally — the first pins image
+# tags and even a remote build context, the second can move a build section. Remote contexts
+# (rpi-services builds every app from a pinned git URL) are left out on purpose: a local diff
+# cannot change them, versions.env is what moves those.
+build_triggers() {
+    local config paths triggers
+    config=$(docker compose config --format json 2>/dev/null)
+    if [[ -z "$config" ]]; then
+        # Unreadable config is the one case worth rebuilding blindly: a rebuild that was not
+        # needed costs a restart, one that was skipped ships stale code.
+        log "[$label] WARNING: cannot read the compose config, rebuilding to be safe"
+        echo '.*'
+        return
+    fi
+    paths=$(printf '%s' "$config" | python3 -c '
+import json, os, sys
+try:
+    config = json.load(sys.stdin)
+except Exception:
+    sys.exit(0)
+root = os.getcwd()
+for service in (config.get("services") or {}).values():
+    context = (service.get("build") or {}).get("context")
+    if not context or "://" in context:
+        continue
+    relative = os.path.relpath(context, root)
+    if not relative.startswith(".."):
+        print(relative.rstrip("/") + "/")
+' | sort -u | tr '\n' '|')
+    triggers='versions\.env|docker-compose\.yml|compose-[^/]*\.yml'
+    # Never leave a trailing separator: an empty alternative matches every line, which would
+    # silently turn this back into rebuilding always.
+    [[ -n "${paths%|}" ]] && triggers="${triggers}|${paths%|}"
+    echo "$triggers"
+}
+
 deploy_repo() {
     local dir=$1
     local label=$2
@@ -346,12 +384,17 @@ for svc in (doc.get("services") or {}).values():
     fi
 
     if [ "$before" != "$after" ]; then
-        # Docs-only commits (e.g. PENDING.md, README.md) touch nothing Docker reads, so skip the
-        # rebuild — a `.md`-only diff would otherwise still trigger a full `--build` pass.
-        local changed
+        # `--build` recreates every locally built container whether or not anything it is built
+        # from changed, and a recreate cuts what that container was serving: caddy drops every
+        # live HTTP connection, acestream-proxy kills the stream Jellyfin is reading. On
+        # 2026-08-24 a diff of Grafana rules, tracker config, docs and the crontab recreated
+        # seven containers mid-match with the images provably unchanged. So build only when the
+        # diff touches something an image actually comes from.
+        local changed rebuild_when
         changed=$(git diff --name-only "$before" "$after")
-        if [[ -n "$changed" ]] && ! grep -qvE '\.md$' <<<"$changed"; then
-            log "[$label] Only *.md files changed, skipping rebuild..."
+        rebuild_when=$(build_triggers)
+        if [[ -n "$changed" ]] && ! grep -qE "^(${rebuild_when})" <<<"$changed"; then
+            log "[$label] Nothing an image is built from changed, skipping rebuild..."
             docker compose up -d --remove-orphans 2>/dev/null
             return 2  # no-op, nothing to rebuild
         fi
