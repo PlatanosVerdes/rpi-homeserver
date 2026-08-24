@@ -147,11 +147,16 @@ share_limits:
     cleanup: true
     resume_torrent_after_change: false
 
-  # 120 h owed, and left at 240 on purpose. Their FAQ is explicit that the site is the only source
-  # of truth for seed time, because it counts only what it saw announced, so the client's counter
-  # says nothing here. The gap between the two clocks has only ever been measured on TorrentLeech,
-  # where it ran from 26 to 118 h. Measure it here on the site's own per-torrent seed time before
-  # cutting this number, and then 180 h is the target.
+  # 120 h owed, and 180 here. Their FAQ is right that the site is the only source of truth for seed
+  # time, so it was measured: their My Seeds page shows a Seed Time and a Seed Time Left per torrent,
+  # and on 2026-08-24 the site's clock was behind the client's by 12, 23, 9, 13 and 20 hours across
+  # five torrents. 60 h of margin is nearly triple the worst of those. It was 240 h, which held
+  # `The.Furious.2025` for 72 h after the site itself said Done.
+  #
+  # Cross-seeds are the exception and the reason not to cut this further: the DigitalCore copy of
+  # `Marty.Supreme` showed 2 days credited against 163 h in the client, because the site only starts
+  # counting when it first sees an announce and the data arrived from another tracker. Those torrents
+  # sit in `cross-seed-link`, which no group matches, so none of them is at risk from this number.
   digitalcore:
     priority: 4
     include_all_tags:
@@ -159,7 +164,7 @@ share_limits:
     include_any_tags:
       - noHL
       - ratio
-    max_seeding_time: 240h
+    max_seeding_time: 180h
     max_ratio: 1.0
     min_last_active: 1d
     cleanup: true

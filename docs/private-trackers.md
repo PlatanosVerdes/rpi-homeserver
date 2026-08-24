@@ -376,6 +376,22 @@ so the grabber here buys upload and bonus points rather than solving a problem, 
 of disk that TorrentLeech's grabber could use. At 1 a day that trade is cheap enough to be worth it;
 if disk gets tight, this is the first thing to turn off, not the last.
 
+#### Their clock, and where to read it
+
+**`My Seeds` is the page that settles any argument about seed time.** It lists every torrent with
+`Seed Time`, `Seed Time Left` and an `HnR` column, which is the site's own accounting rather than a
+guess from the client. Nothing else on the site shows it: not the profile, not the Transfers tab.
+
+Measured there on 2026-08-24, the site's clock ran behind qBittorrent's by 9 to 23 hours across five
+torrents (12, 23, 9, 13 and 20). That is what sets the 180 h in the qbit-manage group against their
+120 h requirement. TorrentLeech's gap was 26 to 118 hours, but that was measured while its account
+was disabled and its announces were being rejected, so it is a worst case rather than a baseline.
+
+The exception is a cross-seed: `Marty.Supreme` showed 2 days credited against 163 hours in the
+client, because their clock starts when they first see an announce and the data came from another
+tracker. Those live in the `cross-seed-link` category, which no share-limits group matches, so the
+number above cannot touch them.
+
 #### Four API traps, if this is ever rebuilt
 
 - `POST /api/indexer` wants `settings` as an **object**, not a list: a list returns
