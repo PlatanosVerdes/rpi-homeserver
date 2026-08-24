@@ -7,6 +7,8 @@ services:
       args:
         CADDY_VERSION: ${CADDY_VERSION}
     container_name: caddy
+    labels:
+      prometheus.probe: "http://caddy:80/"
     restart: unless-stopped
     mem_limit: 128m
     memswap_limit: 128m
@@ -38,6 +40,8 @@ services:
   homepage:
     image: ghcr.io/gethomepage/homepage:${HOMEPAGE_VERSION}
     container_name: homepage
+    labels:
+      prometheus.probe: "http://homepage:3000/"
     restart: unless-stopped
     mem_limit: 256m
     memswap_limit: 256m
@@ -77,6 +81,8 @@ services:
   speedtest-tracker:
     image: lscr.io/linuxserver/speedtest-tracker:${SPEEDTEST_TRACKER_VERSION}
     container_name: speedtest-tracker
+    labels:
+      prometheus.probe: "http://speedtest-tracker:80/"
     restart: unless-stopped
     mem_limit: 256m
     memswap_limit: 256m
@@ -106,6 +112,8 @@ services:
   # --- PiHole -AdBlock ---
   pihole:
     container_name: pihole
+    labels:
+      prometheus.probe: "http://host.docker.internal:8081/"
     image: pihole/pihole:${PIHOLE_VERSION}
     restart: unless-stopped
     mem_limit: 256m

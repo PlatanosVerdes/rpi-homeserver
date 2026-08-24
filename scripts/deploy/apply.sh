@@ -383,6 +383,31 @@ for svc in (doc.get("services") or {}).values():
         fi
     fi
 
+    # Fifth of the same, and it had been silent the longest: Prometheus and the blackbox exporter
+    # read their bind-mounted config once at startup and neither has `--web.enable-lifecycle`, so
+    # SIGHUP is the way in. The `tailscale` job committed on 22 Aug was still missing from the
+    # running config two days later for exactly this reason.
+    if [[ "$label" == "homeserver" && "$before" != "$after" ]]; then
+        local changed_config
+        changed_config=$(git diff --name-only "$before" "$after")
+        if grep -q '^config/prometheus/' <<<"$changed_config" &&
+            docker ps --format '{{.Names}}' | grep -qx prometheus; then
+            if docker kill -s HUP prometheus >/dev/null 2>&1; then
+                log "[$label] prometheus.yml changed, Prometheus reloaded"
+            else
+                log "[$label] WARNING: prometheus.yml changed but the reload signal failed"
+            fi
+        fi
+        if grep -q '^config/blackbox/' <<<"$changed_config" &&
+            docker ps --format '{{.Names}}' | grep -qx blackbox-exporter; then
+            if docker kill -s HUP blackbox-exporter >/dev/null 2>&1; then
+                log "[$label] blackbox modules changed, exporter reloaded"
+            else
+                log "[$label] WARNING: blackbox config changed but the reload signal failed"
+            fi
+        fi
+    fi
+
     if [ "$before" != "$after" ]; then
         # `--build` recreates every locally built container whether or not anything it is built
         # from changed, and a recreate cuts what that container was serving: caddy drops every

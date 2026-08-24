@@ -33,7 +33,7 @@ config/                     Static config files committed to git
   caddy/services/           Extra route files for this repo (auto-imported by Caddy)
   caddy/ext-services/       Mount point for a companion repo's routes (see EXT_CADDY_PATH)
   vector/ext-logs/          Mount point for a companion repo's cron logs (see EXT_LOGS_PATH)
-  prometheus/prometheus.yml Scrape targets
+  prometheus/prometheus.yml Scrape jobs (the blackbox targets come from Docker labels)
   grafana/                  Provisioned datasources + dashboard JSONs
   grafana/alerting/         Alert rules, policy, contact-point template (rendered on deploy)
   homepage/                 Dashboard YAML configs
@@ -197,7 +197,9 @@ Main Pi: `COMPOSE_PROFILES=all`. Secondary Pi: e.g. `COMPOSE_PROFILES=essential,
 ## Adding a new service
 
 See [docs/add-service.md](docs/add-service.md) for the step-by-step guide. Short version:
-1. Add service to the appropriate `compose-*.yml`
+1. Add service to the appropriate `compose-*.yml`, with a `prometheus.probe` label holding the
+   URL its liveness probe should hit (that label is the whole monitoring setup; leave it out only
+   if the service serves no HTTP)
 2. Add HTTPS route to `config/caddy/Caddyfile`
 3. Add DNS record in Pi-hole pointing to `TAILSCALE_IP`
 4. Add to Homepage `config/homepage/services.yaml` (optional)

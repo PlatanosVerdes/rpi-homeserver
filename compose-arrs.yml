@@ -4,6 +4,8 @@ services:
   qbittorrent:
     image: lscr.io/linuxserver/qbittorrent:${QBITTORRENT_VERSION}
     container_name: qbittorrent
+    labels:
+      prometheus.probe: "http://qbittorrent:8080/"
     restart: unless-stopped
     profiles: [media, all]
     environment:
@@ -38,6 +40,8 @@ services:
   flaresolverr:
     image: ghcr.io/flaresolverr/flaresolverr:${FLARESOLVERR_VERSION}
     container_name: flaresolverr
+    labels:
+      prometheus.probe: "http://flaresolverr:8191/"
     restart: unless-stopped
     mem_limit: 768m
     memswap_limit: 768m
@@ -57,6 +61,8 @@ services:
   prowlarr:
     image: lscr.io/linuxserver/prowlarr:${PROWLARR_VERSION}
     container_name: prowlarr
+    labels:
+      prometheus.probe: "http://prowlarr:9696/"
     restart: unless-stopped
     profiles: [media, all]
     dns:
@@ -77,6 +83,8 @@ services:
   radarr:
     image: lscr.io/linuxserver/radarr:${RADARR_VERSION}
     container_name: radarr
+    labels:
+      prometheus.probe: "http://radarr:7878/"
     restart: unless-stopped
     profiles: [media, all]
     dns:
@@ -101,6 +109,8 @@ services:
   sonarr:
     image: lscr.io/linuxserver/sonarr:${SONARR_VERSION}
     container_name: sonarr
+    labels:
+      prometheus.probe: "http://sonarr:8989/"
     restart: unless-stopped
     profiles: [media, all]
     dns:
@@ -161,6 +171,8 @@ services:
   autobrr:
     image: ghcr.io/autobrr/autobrr:${AUTOBRR_VERSION}
     container_name: autobrr
+    labels:
+      prometheus.probe: "http://autobrr:7474/"
     restart: unless-stopped
     mem_limit: 512m
     profiles: [media, all]
@@ -185,6 +197,8 @@ services:
   cross-seed:
     image: ghcr.io/cross-seed/cross-seed:${CROSS_SEED_VERSION}
     container_name: cross-seed
+    labels:
+      prometheus.probe: "http://cross-seed:2468/"
     restart: unless-stopped
     mem_limit: 1g
     profiles: [media, all]

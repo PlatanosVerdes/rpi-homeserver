@@ -44,9 +44,25 @@ FILEBROWSER_VERSION=v2.32.0
       - ${DATA_ROOT}:/srv
     networks:
       - media-network
+    labels:
+      prometheus.probe: "http://filebrowser:80/"
 ```
 
 > Do NOT add `ports:` for services that go through Caddy — Caddy reaches them by container name over `media-network`. Only add `ports:` if you need direct host access.
+
+The `prometheus.probe` label is the whole monitoring setup: Prometheus asks Docker for the
+containers carrying it and probes that URL every 15s, so the service appears in the **Service
+probes** dashboard and in the "Service not answering" alert without anyone editing
+`config/prometheus/prometheus.yml`. It works the same from either repo.
+
+Give it a URL that a healthy app answers and a dead one does not, on the container's own port:
+`/health`, `/healthz` or `/` are all fine, and any status up to 404 counts as alive (the module in
+`config/blackbox/blackbox.yml` says which). A service on the host network is probed through
+`http://host.docker.internal:<port>/` instead, because it has no name on `media-network`.
+
+Leave the label out only when the service serves no HTTP at all — a bot, a cron worker, an
+exporter. Those are covered by their own scrape job or, failing that, by the container being
+alive, which is the "Not probed" table on the same dashboard.
 
 ---
 
@@ -132,6 +148,7 @@ docker exec caddy caddy reload --config /etc/caddy/Caddyfile
 ## Checklist
 
 - [ ] Service added to correct compose file with `networks: media-network`
+- [ ] `prometheus.probe` label set, or the service genuinely serves no HTTP
 - [ ] HTTPS route added (Caddyfile or rpi-services `*.caddy`)
 - [ ] Version pinned in `versions.env`, image referenced as `${SERVICE_VERSION}`
 - [ ] Secrets added to `.env` and `.env.example`

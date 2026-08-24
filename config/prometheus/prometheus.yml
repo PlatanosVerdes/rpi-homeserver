@@ -40,36 +40,36 @@ scrape_configs:
       - targets: ['qbittorrent-exporter:17871']
 
   # Liveness probes for services without an exporter (see config/blackbox/blackbox.yml).
-  # The relabeling makes `instance` the probed service, so an alert says "jellyfin", not
-  # "blackbox-exporter:9115".
+  #
+  # There is no list of targets here on purpose. Docker is asked instead: a container carrying the
+  # label `prometheus.probe` is probed at that URL, so a service is monitored by the compose file
+  # that creates it and stops being monitored when it goes away. Nothing to keep in sync, and a
+  # service added by the companion repo needs no change here.
+  #
+  # The URL is the whole address and not just a port because the fair answer differs per app:
+  # /health on Jellyfin, /healthz on laliga-fantasy, / on the *arrs, and Plex and Pi-hole are on
+  # the host network so they are probed through the host gateway instead of by container name.
+  #
+  # The relabeling makes `instance` the probed URL and `service` the container name, which is what
+  # the dashboards and the alert rules read.
   - job_name: 'blackbox'
     metrics_path: /probe
     params:
       module: [http_alive]
-    static_configs:
-      - targets:
-          - http://jellyfin:8096/health
-          - http://host.docker.internal:32400/identity
-          - http://radarr:7878/
-          - http://sonarr:8989/
-          - http://prowlarr:9696/
-          - http://bazarr:6767/
-          - http://overseerr:5055/
-          - http://qbittorrent:8080/
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 30s
     relabel_configs:
-      - source_labels: [__address__]
+      - source_labels: [__meta_docker_container_label_prometheus_probe]
+        regex: '(.+)'
+        action: keep
+      - source_labels: [__meta_docker_container_label_prometheus_probe]
         target_label: __param_target
       - source_labels: [__param_target]
         target_label: instance
-      # Short name for dashboards and alerts: the host part of the probed URL
-      - source_labels: [__param_target]
-        regex: 'https?://([^:/]+).*'
+      - source_labels: [__meta_docker_container_name]
+        regex: '/?(.+)'
         target_label: service
         replacement: '${1}'
-      # Plex is probed through the host gateway, so the host part is not its name
-      - source_labels: [__param_target]
-        regex: '.*:32400.*'
-        target_label: service
-        replacement: 'plex'
       - target_label: __address__
         replacement: blackbox-exporter:9115
