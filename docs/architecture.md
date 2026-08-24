@@ -333,7 +333,7 @@ earn a sentence. `deploy/apply.sh` is sixth by complexity, not first.
 
 | Script | Code | Functions | Branches | Deletes |
 | :--- | ---: | ---: | ---: | :--- |
-| `services/pi-metrics/media.py` | 555 | 21 | 132 | |
+| `services/pi-metrics/media.go` | 610 | 10 | 140 | |
 | `trackers/seed-cleanup.py` | 477 | 29 | 116 | files |
 | `trackers/stats.py` | 380 | 18 | 75 | |
 | `trackers/control.py` | 378 | 23 | 115 | config |
@@ -427,9 +427,9 @@ Below `min_free_gb` the grabber stops entirely, and a reading older than 3h move
 | `sync/pihole-dns.sh` | Caddy's hosts as local DNS. Additive only: an entry not derived from Caddy is never touched |
 | `sync/plex-prefs.sh` | LAN networks, so tailnet clients are not billed as remote, and the played threshold at 95% |
 | `sync/qbit-config.sh` | Queue limits and BT port. Reads back after writing, because qBittorrent accepts an unknown key and drops it |
-| `services/pi-metrics/media.py` | The largest, but wide rather than deep: ten collectors of the same shape, fetch, count, emit. Answers "which", not "how many" |
-| `services/pi-metrics/host.py` | Where the disk went and what zram costs. One walk answers both the largest files and the per-folder totals, counting a hardlinked inode once |
-| `services/pi-metrics/main.py` | Serves both from a snapshot refreshed in the background, and exports when each collector last succeeded |
+| `services/pi-metrics/media.go` | The largest, but wide rather than deep: ten collectors of the same shape, fetch, count, emit. Answers "which", not "how many" |
+| `services/pi-metrics/host.go` | Where the disk went and what zram costs. One walk answers both the largest files and the per-folder totals, counting a hardlinked inode once |
+| `services/pi-metrics/main.go` | Serves both from a snapshot refreshed in the background, and exports when each collector last succeeded |
 | `trackers/stats.py` | Reads each site with a stored cookie. The complexity is parsing, deliberately dumb about markup so a second site is config, not a selector hunt |
 | `ops/backup.sh` | Compresses appdata, keeps 7, excludes what regenerates (Prometheus TSDB, Plex caches) |
 | `ops/heartbeat.sh` | Tells an outside check the Pi is alive, and deliberately fails when the essentials are not running |

@@ -47,7 +47,7 @@ services/                   Source code for custom services built in this repo
   deploy-webhook/           Python receiver (systemd) — deploys on GitHub push via Cloudflare tunnel
   watch-next/               Go service: monitors + searches the next Sonarr episode(s) on watch
   subtitle-links/           Go service: page listing movies/episodes with a downloadable text subtitle
-  pi-metrics/               Python exporter: the numbers no exporter provides (upgrades, torrents,
+  pi-metrics/               Go exporter: the numbers no exporter provides (upgrades, torrents,
                             indexer usage, where the disk went, what zram costs). Was three crons
 
 scripts/                    Operational scripts, grouped by what they do

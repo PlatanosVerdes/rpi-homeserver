@@ -165,8 +165,8 @@ services:
     build: ./services/pi-metrics
     container_name: pi-metrics
     restart: unless-stopped
-    mem_limit: 192m
-    memswap_limit: 192m
+    mem_limit: 64m
+    memswap_limit: 64m
     profiles: [moni, all]
     environment:
       - TZ=${TZ}

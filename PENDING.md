@@ -628,7 +628,8 @@ The question was whether the cron scripts under `scripts/metrics` and `scripts/t
 services. Read on 2026-08-24 with that in mind, and the answer differed per script.
 
 **Done: `metrics/media.py`, `metrics/zram.sh` and `metrics/disk-usage.sh` are now `pi-metrics`.**
-Prometheus's own guidance is that the Pushgateway is for batch jobs, and its named cost is that you
+Written in Go like every other long-lived service here, after a first pass in Python that was kept
+only long enough to diff against. Prometheus's own guidance is that the Pushgateway is for batch jobs, and its named cost is that you
 lose `up` and that a pushed series outlives whatever pushed it: a broken `media.py` left every panel
 looking normal and showing anteayer's numbers. The two shell scripts went in with it rather than
 staying on node-exporter's textfile collector, which is the canonical place for host cron metrics,

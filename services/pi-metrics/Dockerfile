@@ -1,8 +1,12 @@
-FROM python:3.13-alpine
+FROM golang:1.22-alpine AS builder
+WORKDIR /src
+COPY go.mod ./
+RUN go mod download
+COPY *.go ./
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /pi-metrics .
 
-WORKDIR /app
-COPY main.py media.py host.py ./
-
-# Standard library only, on purpose: no pip install, no wheel to rebuild on ARM.
+FROM alpine:latest
+RUN apk add --no-cache ca-certificates tzdata
+COPY --from=builder /pi-metrics /usr/local/bin/pi-metrics
 EXPOSE 9110
-CMD ["python3", "-u", "main.py"]
+ENTRYPOINT ["pi-metrics"]
