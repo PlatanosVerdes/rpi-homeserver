@@ -1,9 +1,9 @@
 #!/bin/bash
 # Force an indexer search for everything the *arrs are still waiting for.
 #
-# They only query indexers when an item is added or when you hit search by hand. Otherwise a
-# release has to show up in the RSS window, which rolls over (the feed only carries the last N
-# uploads), so a better release can exist on the indexer and never be grabbed. This closes that.
+# They query indexers when an item is added or when someone hits search. Otherwise a release has
+# to appear inside the RSS window, which rolls over, so a better one can sit on the indexer
+# unnoticed. This closes that.
 #
 # Two separate lists, both covered here, because the *arrs treat them independently:
 #   cutoff   there is a file but below the quality cutoff  -> Cutoff Unmet

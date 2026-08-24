@@ -1,8 +1,7 @@
 # Ships every container's stdout/stderr to VictoriaLogs.
 #
-# The docker_logs source reads the Docker socket read-only, the same access cAdvisor and Homepage
-# already have, so it adds no new privilege to the host. It is used only to enumerate containers
-# and follow their logs; `docker logs` keeps working because the json-file driver is untouched.
+# docker_logs reads the socket read-only, only to enumerate containers and follow them. `docker
+# logs` keeps working: the json-file driver is untouched.
 
 data_dir: /vector-data
 
@@ -13,14 +12,10 @@ sources:
     exclude_containers:
       - vector
 
-  # The cron scripts append to files in the repo root rather than printing to a container, so
-  # docker_logs never saw them and deploys, backups and the nightly search stayed out of the log
-  # store entirely. read_from: beginning imports the existing history once; Vector checkpoints in
-  # /vector-data, so a restart resumes rather than re-reading.
-  #
-  # One directory per repo under /host-logs (see compose-mon.yml), so the companion repo's logs
-  # arrive without this repo knowing where it lives. The stream name is the file's basename, so two
-  # repos must not both own a log with the same name or they would merge into one stream.
+  # The cron scripts append to files in the repo root instead of printing to a container, so
+  # docker_logs cannot see them. read_from: beginning imports the existing history once, and Vector
+  # checkpoints in /vector-data so a restart resumes. One directory per repo under /host-logs, and
+  # the stream name is the file's basename: two repos must not own a log with the same name.
   cron_logs:
     type: file
     include:

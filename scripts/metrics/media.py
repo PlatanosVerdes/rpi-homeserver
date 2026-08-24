@@ -16,12 +16,12 @@ Three things the existing exporters cannot answer:
   maintainerr_pending_*  which films are watched and waiting out the grace period before deletion
   arr_orphan_*           what nothing is managing: unimportable queue items, unclaimed data
 
-All three use labels to carry identity, which is not what Prometheus is for. It is a deliberate
-trade: the alternative is the Infinity datasource querying each API live, which means a Grafana
-plugin plus every app's API key stored in Grafana. Each group is bounded (tens of series) and pushed
-with PUT, so it replaces itself instead of growing.
+Labels carry identity here, which is not what Prometheus is for. The trade is deliberate: the
+alternative is Grafana's Infinity datasource querying each API live, which means a plugin plus every
+app's API key stored in Grafana. Each group is bounded to tens of series and pushed with PUT, so it
+replaces itself instead of growing.
 
-Run from cron (see scripts/crontab). Silent unless something fails; a failure in one group does not
+Run from cron (see scripts/crontab). Silent unless something fails, and one group failing does not
 stop the others.
 """
 
@@ -302,14 +302,9 @@ def when_better(movie, today):
 
 
 def waiting_on():
-    """Everything Radarr is waiting for, in one list, with what it is waiting for.
-
-      downloading  in the queue right now, so the answer to "when" is an ETA
-      missing       monitored with no file at all
-      upgrade       has a file, but below the profile cutoff
-
-    "When" for the last two is not a date anyone can give: it depends on a release appearing. What
-    can be given is when the film is even available in that quality, which is what when_better does.
+    """Everything Radarr waits for: downloading (an ETA), missing (no file) or upgrade (below the
+    profile cutoff). For the last two there is no date to give, only when the film becomes available
+    in that quality, which is what when_better answers.
     """
     lines = ["# HELP arr_waiting 1 for a title Radarr is waiting on; kind says what it is waiting for",
              "# TYPE arr_waiting gauge"]
@@ -380,15 +375,10 @@ def waiting_on():
 
 
 def library_sizes():
-    """Size per title, with its quality as a label, so the dashboard can answer where the disk went.
-
-    Radarr knows both the size and the quality of every file; the disk_file_bytes metric from
-    scripts/metrics/disk-usage.sh only knows paths, and guessing quality from a filename is a losing game.
-    Sonarr series get quality "mixed" (a season is many files, often several qualities).
-
-    The plain "how many do I have" counts ride along here rather than being derived from the size
-    series: counting those would silently answer "titles that happen to have a file", so a movie
-    Radarr is still hunting for would go missing from the total without anything looking wrong.
+    """Size per title with its quality as a label, which disk-usage.sh cannot give: it only knows
+    paths, and guessing quality from a filename is a losing game. Series are "mixed", since a season
+    is many files. The library counts ride along here rather than being derived from the size series,
+    which would silently answer "titles that happen to have a file".
     """
     lines = ["# HELP arr_media_size_bytes Size on disk per title, with its quality",
              "# TYPE arr_media_size_bytes gauge"]
@@ -433,18 +423,12 @@ def library_sizes():
 
 
 def maintainerr_pending():
-    """Films Maintainerr has queued for deletion: watched, waiting out the grace period.
+    """Films Maintainerr has queued for deletion: watched, waiting out the grace period. The first
+    stage of the retention policy and the only one nothing else can see.
 
-    This is the first stage of the retention policy, and the only one nothing else can see. Radarr
-    still has the film, the torrent is still hardlinked, and scripts/trackers/seed-cleanup.py will not look at it
-    until Maintainerr deletes the library copy.
-
-    The list comes from the paginated media endpoint rather than the `media` array on /api/collections,
-    which is capped: with three films queued it returned two, so the count was wrong and one title was
-    missing. Each row carries its own `mediaData`, so titles need no lookup anywhere else.
-
-    Its port is not published, so the call goes through the container, and its own server listens on
-    IPv4 only: localhost inside there resolves to ::1 and is refused.
+    From the paginated media endpoint, not the `media` array on /api/collections, which is capped and
+    returned two of three. The call goes through the container (no published port) and its server is
+    IPv4 only: localhost in there resolves to ::1 and is refused.
     """
     def api(path):
         result = subprocess.run(
@@ -519,17 +503,13 @@ def tree_bytes_and_links(path):
 
 
 def orphans():
-    """The two ways media ends up managed by nothing at all.
+    """The two ways media ends up managed by nothing: a queue item the arr cannot attribute to
+    anything, which never imports and is only re-announced when the arr restarts, and data in
+    downloads that no torrent claims.
 
-    A queue item the *arr cannot attribute to a movie or series never imports. It waits for a
-    human, and the *arr only re-announces it when it restarts, so one deletion made while a
-    download was in flight raised Telegram alerts eleven days later and nothing else ever said so.
-
-    Data in downloads that no torrent claims is invisible to scripts/trackers/seed-cleanup.py, which only ever looks
-    at torrents that exist. While the library still shares the file it wastes nothing, which is why
-    `linked` is a label and not a filter: the day the retention policy deletes the film, that
-    leftover name becomes the last reference to bytes nobody will ever reclaim, and it is exactly
-    then that it starts counting under linked="no".
+    `linked` is a label and not a filter: while the library shares those bytes they cost nothing, and
+    the day the retention policy deletes the film that leftover name is the last reference to bytes
+    nobody will reclaim.
     """
     queue_rows = []
     for app, port, id_field, unknown_arg in QUEUES:
@@ -625,17 +605,12 @@ def prowlarr_indexers():
 
 
 def prowlarr_indexer_activity():
-    """Queries, grabs and failures per indexer, as counters, so Grafana can show WHEN an indexer is
-    being used rather than only whether it answers.
+    """Queries, grabs and failures per indexer, so "is anything being asked of it" is answerable
+    separately from `prowlarr_indexer_up`. An indexer queried 997 times with no grab is a different
+    problem from one that is down, and an availability timeline shows them the same.
 
-    `prowlarr_indexer_up` says an indexer is reachable. It says nothing about whether anything is
-    being asked of it, which is the question that matters for a private tracker: an indexer that is
-    up, queried 997 times and has never returned a grab is a different problem from one that is
-    down, and the availability timeline shows them identically.
-
-    /api/v1/indexerstats with no date range returns all-time totals, which is what makes these
-    counters rather than gauges: increase() over a window gives the rate, and a Prowlarr history
-    prune shows up as a counter reset, which rate() already handles. Passing a date range instead
+    Counters and not gauges because /api/v1/indexerstats with no date range returns all-time totals:
+    increase() gives the rate and a history prune reads as a counter reset. A date range instead
     would hand Prometheus a pre-averaged number over a window it did not choose.
     """
     try:

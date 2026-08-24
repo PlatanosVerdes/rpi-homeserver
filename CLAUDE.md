@@ -10,7 +10,7 @@ A modular Docker-based home server running on a Raspberry Pi. All services run a
 - Image/app versions in a committed `versions.env`, never `:latest` and never inline in compose.
 - One deploy script, `rpi-homeserver/scripts/deploy/apply.sh`, which deploys both repos.
 - Cron: each repo owns its own `scripts/crontab` **fragment**, holding only its own jobs.
-  `scripts/deploy/install-crontab.sh` merges them and installs the result on every deploy (the
+  `scripts/setup/install-crontab.sh` merges them and installs the result on every deploy (the
   rpi-services fragment is optional), the same way Caddy imports `config/caddy/services/`.
 - Secrets in each repo's own `.env`, gitignored, mirrored in `.env.example`.
 
@@ -51,12 +51,16 @@ services/                   Source code for custom services built in this repo
 scripts/                    Operational scripts, grouped by what they do
   crontab                   This repo's cron fragment, merged with the other repo's on deploy
 
-  deploy/                   Making the host match the repos
+  deploy/                   Runs on every push and every 30 min
     apply.sh                The orchestrator: pull, compose, then every sync below. Webhook + cron
+
+  setup/                    Host state apply.sh converges on each pass: cron and log rotation
     install-crontab.sh      Merges both repos' crontab fragments and installs them
     install-logrotate.sh    Installs the log rotation policy for both repos
-    rebuild-service.sh      Rebuild one compose service from scratch (by hand)
-    recovery-status.sh      After a rebuild: what still needs a human (by hand)
+
+  recovery/                 Run by hand, after something broke
+    rebuild-service.sh      Rebuild one compose service from scratch
+    recovery-status.sh      After a rebuild: what still needs a human
 
   sync/                     Config that lives only in an app's appdata, pushed from git each deploy
     arr-config.sh           Custom formats and quality profiles -> Radarr/Sonarr
@@ -120,7 +124,7 @@ docker compose up -d
    what that container was serving — Caddy's live connections, the live stream Jellyfin is
    reading from `acestream-proxy`. A Grafana or docs commit must not do that.
 4. If no change → `docker compose up -d --remove-orphans` (ensures containers are running)
-5. Installs the merged host crontab (`scripts/deploy/install-crontab.sh`)
+5. Installs the merged host crontab (`scripts/setup/install-crontab.sh`)
 6. Converges Radarr/Sonarr's custom formats and quality profiles (`scripts/sync/arr-config.sh`),
    Pi-hole's `*.platanosverdes.com` DNS records (`scripts/sync/pihole-dns.sh`) and Plex's LAN Networks
    (`scripts/sync/plex-prefs.sh`) to what is committed — the apps must already be up, hence running
@@ -352,7 +356,7 @@ docker logs -f <container-name>
 bash scripts/deploy/apply.sh
 
 # Rebuild from scratch (single service)
-bash scripts/deploy/rebuild-service.sh <service-name>
+bash scripts/recovery/rebuild-service.sh <service-name>
 
 # Run a backup manually
 bash scripts/ops/backup.sh
@@ -371,12 +375,12 @@ as a build arg.
 `!versions.env` exception to the `*.env` rule).
 
 **Loading:** compose reads it via `COMPOSE_ENV_FILES=versions.env,.env`. `scripts/deploy/apply.sh`
-and `scripts/deploy/rebuild-service.sh` set this automatically. To run compose manually:
+and `scripts/recovery/rebuild-service.sh` set this automatically. To run compose manually:
 ```bash
 export COMPOSE_ENV_FILES=versions.env,.env
 docker compose up -d
 ```
 
 **To update a service:** bump its version in `versions.env`, commit, and let the auto-deploy
-apply it (or `bash scripts/deploy/rebuild-service.sh <service>`). Check the running version first with
+apply it (or `bash scripts/recovery/rebuild-service.sh <service>`). Check the running version first with
 `docker inspect --format '{{.Config.Image}}' <container>`.

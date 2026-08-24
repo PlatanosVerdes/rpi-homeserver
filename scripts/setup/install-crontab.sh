@@ -8,7 +8,7 @@
 # the personal one schedules. Idempotent, only touches the live crontab when the merged result
 # differs, and prints the diff so the deploy log shows what changed.
 #
-# Called from scripts/deploy/apply.sh. To run by hand: bash scripts/deploy/install-crontab.sh
+# Called from scripts/deploy/apply.sh. To run by hand: bash scripts/setup/install-crontab.sh
 
 set -euo pipefail
 

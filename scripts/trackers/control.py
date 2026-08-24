@@ -1,24 +1,20 @@
 #!/usr/bin/env python3
 """Move the knobs that decide how hard a tracker is worked, from the one number that matters.
 
-`scripts/trackers/stats.py` reads the site and writes the headroom: how many GB of *paid* downloads still fit
-before the account crosses the ratio the site disables it at. That number picks a tier, and the tier
-sets three things:
+stats.py writes the headroom; that number picks a tier, and the tier sets three things:
 
   Prowlarr  the indexer's own "Search freeleech only" filter, which every app inherits
   Radarr    requiredFlags = [1] (freeleech only) or [] (anything)
   autobrr   how many freeleech grabs a day the ratio builder may take
 
-**The filter belongs in Prowlarr, not in the *arrs.** `requiredFlags` exists on Radarr's Torznab
-indexer and not on Sonarr's, so filtering there would leave series unprotected: with 19 GB of
-headroom one 20 GB season pack that is not freeleech is the difference between ratio 0.52 and 0.397,
-and 0.397 is a disabled account. TorrentLeech's Cardigann definition carries a `freeleech` checkbox
-that adds the site's own FREELEECH facet to every query, so switching it there covers Radarr, Sonarr
-and anything else that searches through Prowlarr, and nobody loses an indexer.
+The filter belongs in Prowlarr and not in the arrs: `requiredFlags` exists on Radarr's Torznab
+indexer and not on Sonarr's, so filtering there leaves series unprotected, and one 20 GB season pack
+that is not freeleech is the difference between a working account and a disabled one. The tracker's
+Cardigann definition has a `freeleech` checkbox that adds the site's own facet to every query, so
+switching it there covers everything that searches through Prowlarr.
 
-Nothing is written when the desired value is already in place, so this is silent on almost every run
-and only announces the crossings. It refuses to act on a stale reading: acting on last week's ratio
-is worse than not acting.
+Nothing is written when the value is already in place, so this is silent except on the crossings, and
+it refuses to act on a reading older than MAX_READING_AGE. The tier table: docs/architecture.md.
 
 Run from cron a few minutes after scripts/trackers/stats.py (see scripts/crontab).
 """
@@ -191,20 +187,15 @@ def grabber_metrics(tracker, config):
 def bonus_hold(tracker, config, torrents):
     """Turn spare disk into free downloads, where the tracker pays for holding data.
 
-    DigitalCore gives 1% off everything a download costs against ratio for every 10 GB actively
-    seeded, averaged over a week, and 1 TB seeded is 100%: a site-wide freeleech. Two of its rules
-    decide what is worth holding, and both point away from what TorrentLeech rewards:
+    DigitalCore gives 1% off what a download costs against ratio per 10 GB actively seeded, and 1 TB
+    is a site-wide freeleech. Two of its rules decide what is worth holding: only 50 GiB per torrent
+    counts, so many medium torrents beat a few enormous ones, and the bonus is scaled by
+    `1 + (1 / seeders)`, so being the only seeder of something scarce pays double.
 
-      * only 50 GiB per torrent counts, so many medium torrents beat a few enormous ones;
-      * the bonus is scaled by `1 + (1 / seeders)`, so being the only seeder of something scarce
-        pays double.
-
-    So this ranks that tracker's finished torrents by what they actually earn, tags the best ones
-    `keep-bonus` up to a disk budget, and untags the rest. `scripts/trackers/seed-cleanup.py` never deletes a tagged
-    torrent, so the data stays and the bonus grows; when free space drops towards the floor the
-    budget shrinks, tags come off, and the next cleanup pass reclaims the least valuable first.
-
-    The tag is separate from the plain `keep` a person adds by hand, which this never touches.
+    This ranks that tracker's finished torrents by what they earn and tags the best `keep-bonus` up
+    to a disk budget, shrinking the budget as free space drops. Nothing honours the tag right now:
+    the deleter that skipped tagged torrents is parked, and no share-limit group excludes it. See
+    PENDING.md. The tag is separate from the plain `keep` a person adds by hand.
     """
     settings = config.get("bonus_hold")
     if not settings:

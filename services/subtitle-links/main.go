@@ -345,15 +345,12 @@ type itemsResponse struct {
 	Series []series `json:"series"`
 }
 
-// Nobody waits for Jellyfin. A goroutine keeps a snapshot of the library fresh and every request
-// is answered from it, because walking the library is expensive and the old TTL cache made a
-// visitor pay for it: ~0.7s for the movie list (Fields=MediaStreams costs 69x the same query
-// without it) plus ~2s for One Pace's episodes alone, on every load past the TTL. The page itself
-// has always rendered in 0.02s; this is what the browser was waiting on afterwards.
+// Nobody waits for Jellyfin: a goroutine keeps a snapshot and every request is answered from it.
+// Walking the library costs ~0.7s for the movies (Fields=MediaStreams is 69x the same query
+// without it) plus ~2s for One Pace alone, against 0.02s to render the page.
 //
-// The tick is a floor, not the mechanism. This page gets opened rarely, so a short tick would
-// spend nearly all of its walks on nobody: hourly bounds how stale the snapshot can get, while a
-// visit is what actually triggers a refresh — in the background, so the visitor still waits 0s.
+// The tick is a floor, not the mechanism: this page is opened rarely, so hourly bounds how stale
+// the snapshot can get while a visit is what triggers the refresh, in the background.
 const (
 	itemsRefreshEvery = time.Hour
 	itemsStaleAfter   = 2 * time.Minute

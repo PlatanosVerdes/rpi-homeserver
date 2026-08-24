@@ -1,14 +1,5 @@
-# qbit_manage, running in DRY RUN alongside scripts/trackers/seed-cleanup.py until their decisions agree.
-# See PENDING.md, "Adopt the standard tools and retire the bespoke script".
-#
-# Two things this is here to do that the bespoke script cannot: notice a torrent the tracker no
-# longer recognises (a reset passkey went unnoticed for four days on 2026-08-16), and understand
-# cross-seeds, which is a prerequisite for adding cross-seed at all.
-
-# Evaluation phase: this writes TAGS and nothing else. Every command that deletes a torrent, or
-# that writes a share limit into qBittorrent, is off. Tags are needed for real (dry_run skips them,
-# and then the share_limits groups match nothing and report zeros, which is useless for comparing),
-# and they are reversible in one click.
+# qbit_manage owns tagging and deletion since 2026-08-24. What each tag means and why every group
+# asks for more seeding than its site does: docs/lifecycle.md.
 commands:
   dry_run: false
   cat_update: false        # categories are Radarr's and Sonarr's business, not this tool's
@@ -32,12 +23,12 @@ settings:
   tracker_error_tag: issue
   nohardlinks_tag: noHL
   private_tag: private
-  public_tag: public
-  ignoreTags_OnUpdate:
-    - noHL
-    - issue
-    - ratio
-    - waiting-seed
+
+# Deleting moves files here instead of removing them. Without empty_after_x_days nothing ever
+# clears it: the default is "keep forever".
+recyclebin:
+  enabled: true
+  empty_after_x_days: 7
 
 directory:
   # The same path qBittorrent reports, because hardlink counting compares the two views
@@ -72,30 +63,11 @@ tracker:
   other:
     tag: other-tracker
 
+# Lower priority wins, so a site with its own rule is evaluated before the generic private group.
+# Two tags have to agree before a limit is written: include_all_tags is whose rules apply,
+# include_any_tags is whether anything still needs the bytes. Share limits ignore hardlinks on
+# their own, so without that second condition a torrent Plex is still playing would be deleted.
 share_limits:
-  # Lower priority number wins, so a tracker with its own rule is evaluated before the generic
-  # private group. The numbers mirror config/qbittorrent/seed-rules.json on purpose, so the dry run
-  # compares like with like.
-  #
-  # Two separate questions have to be answered before a limit is written, and each is a tag:
-  #
-  #   include_all_tags   which tracker it belongs to, so its rule applies and not another site's.
-  #   include_any_tags   whether anything here still needs the bytes. Either the library has let go
-  #                      of the file (noHL) or it was never in the library at all (ratio, which
-  #                      autobrr puts on everything it grabs to build ratio). That second tag is
-  #                      the only way those torrents are visible here: they carry no category, so
-  #                      tag_nohardlinks never inspects them and they can never be tagged noHL.
-  #
-  # Share limits on their own ignore hardlinks, and the comparison run on 2026-08-21 caught exactly
-  # that: two c411 torrents past ten days of seeding would have been removed while Plex still played
-  # the same bytes. Seeding those costs no disk at all and earns ratio for free.
-  #
-  # min_last_active is the third condition, and the one that keeps a freeleech grab alive: a torrent
-  # still moving bytes is still paying whatever its ratio says, and on a freeleech the download
-  # never counted, so every byte up is profit. It is coarser than the 0.2 GB/day floor
-  # scripts/trackers/seed-cleanup.py uses, because any activity at all resets it, so a torrent that
-  # trickles is kept indefinitely. The free-space floor in config/trackers/rules.json is what stops
-  # the grabber if that ever costs real disk.
   torrentleech:
     priority: 1
     include_all_tags:
@@ -103,19 +75,17 @@ share_limits:
     include_any_tags:
       - noHL
       - ratio
-    # 360 h rather than the tracker's own 240 h, because qBittorrent's clock runs ahead of the
-    # tracker's: it counts while announces are being rejected. Measured gap on 2026-08-21 across
-    # 14 torrents: 26 to 118 hours. See config/qbittorrent/seed-rules.json for the full reasoning.
-    max_seeding_time: 15d
+    exclude_any_tags:            # the manual override: this is what makes a tag protect a torrent
+      - keep
+      - keep-bonus
+    max_seeding_time: 15d          # 240 h asked, 120 h of margin for the clock gap
     max_ratio: 1.2
     min_last_active: 1d
     cleanup: true            # deletes into the recycle bin, kept 7 days
     resume_torrent_after_change: false
 
-  # Its own group, above `private`, for one reason: retrotoon's rules page states no ratio rule at
-  # all, so reaching 1:1 clears nothing there and only the 72 h of seeding does. Left in the generic
-  # group below, one of their torrents reaching ratio 1.0 early would be deleted still owing time,
-  # which is a hit and run on the site that calls this its strictest rule with no exceptions.
+  # Its own group above `private` because retrotoon states no ratio rule at all: reaching 1:1 there
+  # clears nothing, so a generic ratio limit would delete a torrent still owing time.
   retrotoon:
     priority: 2
     include_all_tags:
@@ -123,17 +93,16 @@ share_limits:
     include_any_tags:
       - noHL
       - ratio
-    # 120 h against the 72 h they ask, so 48 h of margin. The generic 10 d it sat under was 168 h
-    # of margin on a site whose only rule is time, which is disk held for nothing.
-    max_seeding_time: 120h
+    exclude_any_tags:            # the manual override: this is what makes a tag protect a torrent
+      - keep
+      - keep-bonus
+    max_seeding_time: 120h         # 72 h asked, 48 h of margin
     max_ratio: -1            # -1 is "no ratio limit": time is the only thing that clears here
     min_last_active: 1d
     cleanup: true
     resume_torrent_after_change: false
 
-  # 96 h owed, not 72: their clock starts 24 h after the download and the client's starts at
-  # completion, so 150 h here is 54 h of margin. Their H&R system is disabled site-wide right now,
-  # which is the reason this one can afford a thinner margin than DigitalCore's.
+  # 96 h owed, not 72: their clock starts 24 h after the download and the client's at completion.
   c411:
     priority: 3
     include_all_tags:
@@ -141,22 +110,17 @@ share_limits:
     include_any_tags:
       - noHL
       - ratio
+    exclude_any_tags:            # the manual override: this is what makes a tag protect a torrent
+      - keep
+      - keep-bonus
     max_seeding_time: 150h
     max_ratio: 1.0
     min_last_active: 1d
     cleanup: true
     resume_torrent_after_change: false
 
-  # 120 h owed, and 180 here. Their FAQ is right that the site is the only source of truth for seed
-  # time, so it was measured: their My Seeds page shows a Seed Time and a Seed Time Left per torrent,
-  # and on 2026-08-24 the site's clock was behind the client's by 12, 23, 9, 13 and 20 hours across
-  # five torrents. 60 h of margin is nearly triple the worst of those. It was 240 h, which held
-  # `The.Furious.2025` for 72 h after the site itself said Done.
-  #
-  # Cross-seeds are the exception and the reason not to cut this further: the DigitalCore copy of
-  # `Marty.Supreme` showed 2 days credited against 163 h in the client, because the site only starts
-  # counting when it first sees an announce and the data arrived from another tracker. Those torrents
-  # sit in `cross-seed-link`, which no group matches, so none of them is at risk from this number.
+  # 120 h owed, 180 here. Their site is the only source of truth for seed time and it runs behind
+  # the client's by 9 to 23 h, so this is nearly triple the worst gap seen.
   digitalcore:
     priority: 4
     include_all_tags:
@@ -164,15 +128,16 @@ share_limits:
     include_any_tags:
       - noHL
       - ratio
+    exclude_any_tags:            # the manual override: this is what makes a tag protect a torrent
+      - keep
+      - keep-bonus
     max_seeding_time: 180h
     max_ratio: 1.0
     min_last_active: 1d
     cleanup: true
     resume_torrent_after_change: false
 
-  # Anything private with no group of its own, which today is nothing: every private tracker here
-  # has one. It stays as the floor so a new site is covered from its first torrent, at the generic
-  # goal, until it earns its own numbers.
+  # The floor, so a new site is covered from its first torrent until it earns its own numbers.
   private:
     priority: 5
     include_all_tags:
@@ -180,25 +145,28 @@ share_limits:
     include_any_tags:
       - noHL
       - ratio
+    exclude_any_tags:            # the manual override: this is what makes a tag protect a torrent
+      - keep
+      - keep-bonus
     max_seeding_time: 10d
     max_ratio: 1.0
     min_last_active: 1d
     cleanup: true
     resume_torrent_after_change: false
 
-  # No noHL and no ratio here, deliberately: a public torrent is dropped even while the library
-  # shares its file, because the point is getting this address out of public swarms rather than
-  # saving disk. No min_last_active either, for the same reason: still being useful to a public
-  # swarm is not a reason to stay in it.
+  # "Public" is the absence of the private tag, not a tag of its own: qbit_manage only ever writes
+  # private_tag. Selecting on a `public` tag matched nothing, so no public torrent had a limit.
+  #
+  # No noHL, no ratio and no min_last_active, deliberately: a public torrent is dropped even while
+  # the library shares its file, because the point is leaving public swarms, not saving disk.
   public:
     priority: 6
-    include_any_tags:
-      - public
-    # The bespoke script drops a public torrent as soon as the library has the file, to get this
-    # address out of public swarms. There is no "delete once hardlinked" rule here, so the closest
-    # equivalent is time: an import takes minutes, so two hours is generous, and the library copy
-    # survives because deleting the download side only removes one of the two names.
-    # min_seeding_time is deliberately absent: this tool refuses it unless max_ratio is above 0.
+    exclude_any_tags:
+      - private
+      - keep
+      - keep-bonus
+    # There is no "delete once hardlinked" rule here, so time is the closest equivalent: an import
+    # takes minutes. min_seeding_time is absent because this tool refuses it unless max_ratio > 0.
     max_seeding_time: 2h
     max_ratio: -1
     cleanup: true

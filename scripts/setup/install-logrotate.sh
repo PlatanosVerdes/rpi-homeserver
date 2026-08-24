@@ -1,11 +1,11 @@
 #!/bin/bash
 # Install the logrotate policy for both repos' cron logs from the copy in git.
 #
-# Same idea as scripts/deploy/install-crontab.sh: the thing that keeps the Pi's logs bounded should come back
+# Same idea as scripts/setup/install-crontab.sh: the thing that keeps the Pi's logs bounded should come back
 # with a `git clone`, not from a note in SYSTEM_NOTES.md. Idempotent, only writes when the
 # installed file differs, and prints what changed so the deploy log shows it.
 #
-# Called from scripts/deploy/apply.sh. To run by hand: bash scripts/deploy/install-logrotate.sh
+# Called from scripts/deploy/apply.sh. To run by hand: bash scripts/setup/install-logrotate.sh
 
 set -euo pipefail
 

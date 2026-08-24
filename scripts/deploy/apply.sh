@@ -22,26 +22,16 @@ TOTAL_RUNS=$((TOTAL_RUNS + 1))
 log() { echo "$(date '+%Y-%m-%d %H:%M:%S') - $1"; }
 
 # Bounding apply.log is logrotate's job (config/logrotate/rpi-homeserver, installed below).
-# This used to truncate to the last 500 lines at 5 MB, which kept the file small by throwing the
-# history away; logrotate keeps four compressed rounds of it instead.
 
-# Cron and the webhook receiver can both fire this; never let two deploys overlap.
-#
-# The skipped run used to be dropped, and that lost real deploys: a Go build on ARM holds the
-# lock for minutes, and two pushes in that window (a tag in one repo, its version bump in the
-# other) meant the second change waited for the next cron sweep half an hour later. So the one
-# that cannot get in leaves a note, and whoever holds the lock takes one more pass before
-# leaving. Coalescing, not a queue: ten pushes during a build still cost exactly one extra run.
+# Cron and the webhook receiver can both fire this; never let two deploys overlap. Whoever cannot
+# get in leaves a marker and the holder takes one more pass on the way out: coalescing, not a
+# queue, so a burst of pushes costs one extra run. See docs/architecture.md.
 PENDING_MARKER="$PROJECT_DIR/.deploy.pending"
 LOCK_FILE="$PROJECT_DIR/.deploy.lock"
-# A normal run takes about a minute and a Go build on ARM about five, so anything past this is
-# not slow, it is stuck. It happened: a `docker exec` into an unresponsive container hung for
-# an hour holding the lock, and every deploy after it was skipped -- the log said "already
-# running" forty times and nobody deployed anything.
+# A normal run takes a minute and an ARM Go build five, so past this it is stuck, not slow.
 STUCK_AFTER=${DEPLOY_STUCK_AFTER:-2700}
 
-# Append, not truncate: `9>` empties the file on open, so the one arriving would wipe the pid
-# of the one working and then read it back empty. flock does not care which mode it is.
+# Append, not truncate: `9>` empties the file on open, wiping the working deploy's pid.
 exec 9>>"$LOCK_FILE"
 if ! flock -n 9; then
     holder=$(head -1 "$LOCK_FILE" 2>/dev/null || true)
@@ -49,16 +39,13 @@ if ! flock -n 9; then
     [[ "$holder" =~ ^[0-9]+$ ]] && age=$(ps -o etimes= -p "$holder" 2>/dev/null | tr -d " ")
     if [[ -n "$age" ]] && (( age > STUCK_AFTER )); then
         log "Deploy $holder has been running ${age}s and is stuck; taking over."
-        # Let go of our own descriptor first: the sweep below kills by open file, and that
-        # would otherwise include us.
+        # Drop our own descriptor first: the sweep below kills by open file.
         exec 9>&-
         kill -TERM "$holder" 2>/dev/null || true
         sleep 5
         kill -KILL "$holder" 2>/dev/null || true
-        # Killing the script is not enough. Its children inherited the lock descriptor, and
-        # once the parent dies they are orphans, so no -P sweep finds them: the lock stays held
-        # by a `sleep` or a hung `docker exec` with no visible owner. Kill by who holds the
-        # file, which is the only thing that is actually true.
+        # Kill by who holds the file: children inherit the descriptor and outlive the parent, so
+        # a -P sweep never finds the orphan still holding the lock.
         fuser -k -KILL "$LOCK_FILE" 2>/dev/null || true
         sleep 1
         exec 9>>"$LOCK_FILE"
@@ -69,18 +56,15 @@ if ! flock -n 9; then
         exit 0
     fi
 fi
-# Whoever holds the lock says so, so the next one can tell "busy" from "stuck". Written through
-# its own descriptor to replace the previous holder's pid; truncating the file does not drop the
-# lock, which lives on the open descriptor.
+# The holder's pid, so the next one can tell "busy" from "stuck". Truncating does not drop the
+# lock: it lives on the open descriptor.
 printf '%s\n' "$$" > "$LOCK_FILE"
 # Claimed: anything asked for before now is about to be applied anyway.
 rm -f "$PENDING_MARKER"
 
-# RERUNS bounds the chain. Two extra passes absorb a burst of pushes; beyond that the cron
-# sweep can have it, because something is pushing faster than the Pi can build.
+# Two extra passes absorb a burst of pushes; past that the cron sweep can have it.
 RERUNS=${DEPLOY_RERUNS:-0}
-# Kept in an array because inside a function "$@" would be the function's arguments, not the
-# script's, and the re-run has to be the same invocation.
+# An array: inside a function "$@" would be the function's arguments, not the script's.
 SCRIPT_ARGS=("$@")
 rerun_if_pending() {
     if [[ -f "$PENDING_MARKER" ]] && (( RERUNS < 2 )); then
@@ -125,8 +109,8 @@ EOF
 
 push_repo_metrics() {
     local repo=$1 rc=$2 ts=$3
-    # Normalize deploy_repo() return code (0=changed, 1=error, 2=no_change) to the
-    # standard status code used everywhere else (0=no_change, 1=changed, 2=error).
+    # deploy_repo() returns 0=changed, 1=error, 2=no_change; the metrics use 0=no_change,
+    # 1=changed, 2=error.
     local status
     case "$rc" in
         0) status=1 ;;
@@ -145,19 +129,17 @@ EOF
 }
 
 render_grafana_alerting() {
-    # Grafana reads its alerting config from appdata (see compose-mon.yml), not straight from
-    # git, because the Telegram token and chat id must not be committed. Rules and policies are
-    # copied as-is; the contact point is rendered from its .tmpl with values from .env.
+    # Grafana reads alerting from appdata and not from git, because the Telegram token must not be
+    # committed: rules copied as-is, the contact point rendered from its .tmpl with .env values.
     local src="$PROJECT_DIR/config/grafana/alerting"
     local dst="$APPDATA/grafana-alerting"
     [[ -d "$src" ]] || return 0
 
-    # sudo throughout: Docker creates bind-mount targets under appdata as root, so this
-    # directory is root-owned whether or not the script got there first.
+    # sudo throughout: Docker creates bind-mount targets under appdata as root.
     sudo mkdir -p "$dst"
 
-    # No bot configured: leave the directory empty. A policy pointing at a contact point that
-    # does not exist fails provisioning, and that takes all of Grafana down.
+    # No bot configured: leave it empty. A policy pointing at a missing contact point fails
+    # provisioning, which takes all of Grafana down.
     if [[ -z "${TELEGRAM_ALERT_BOT_TOKEN:-}" || -z "${TELEGRAM_ALERT_CHAT_ID:-}" ]]; then
         sudo rm -f "$dst"/*.yml
         log "Grafana alerting: no Telegram credentials in .env, alerting left unprovisioned"
@@ -172,18 +154,15 @@ render_grafana_alerting() {
     sudo chmod 600 "$dst/contact-points.yml"
 }
 
-# build_triggers is the alternation of paths that make a rebuild necessary, read from compose
-# itself so neither repo needs a hand-kept list: a service's build context is where its image
-# comes from. versions.env and the compose files are in it unconditionally — the first pins image
-# tags and even a remote build context, the second can move a build section. Remote contexts
-# (rpi-services builds every app from a pinned git URL) are left out on purpose: a local diff
-# cannot change them, versions.env is what moves those.
+# The paths that make a rebuild necessary, read from compose itself so neither repo keeps a list:
+# every local build context, plus versions.env and the compose files. Remote contexts are left out
+# on purpose, only versions.env can move those.
 build_triggers() {
     local config paths triggers
     config=$(docker compose config --format json 2>/dev/null)
     if [[ -z "$config" ]]; then
-        # Unreadable config is the one case worth rebuilding blindly: a rebuild that was not
-        # needed costs a restart, one that was skipped ships stale code.
+        # Unreadable config is worth rebuilding blindly: a needless rebuild costs a restart, a
+        # skipped one ships stale code.
         log "[$label] WARNING: cannot read the compose config, rebuilding to be safe"
         echo '.*'
         return
@@ -204,8 +183,7 @@ for service in (config.get("services") or {}).values():
         print(relative.rstrip("/") + "/")
 ' | sort -u | tr '\n' '|')
     triggers='versions\.env|docker-compose\.yml|compose-[^/]*\.yml'
-    # Never leave a trailing separator: an empty alternative matches every line, which would
-    # silently turn this back into rebuilding always.
+    # Never leave a trailing separator: an empty alternative matches every line.
     [[ -n "${paths%|}" ]] && triggers="${triggers}|${paths%|}"
     echo "$triggers"
 }
@@ -231,12 +209,9 @@ deploy_repo() {
     local before after
     before=$(git rev-parse HEAD 2>/dev/null || echo "none")
 
-    # --no-rebase, not bare `git pull`. With no strategy configured git refuses outright the
-    # moment the branches diverge ("Need to specify how to reconcile"), and a commit made on the
-    # Pi while another was pushed from a laptop is enough to do it. That aborts the pull, so the
-    # deploy silently stops applying anything until someone reconciles by hand. Merging is right
-    # here and rebasing is not: local commits may be someone else's work in flight, and rewriting
-    # their SHAs underneath them is worse than a merge commit.
+    # --no-rebase, not bare `git pull`: with no strategy configured git refuses outright once the
+    # branches diverge, which aborts the pull and stops the deploy applying anything. Merging and
+    # not rebasing, because local commits may be someone else's work in flight.
     log "[$label] Pulling..."
     if ! git pull --no-rebase origin main 2>&1 | while IFS= read -r line; do log "[$label] $line"; done; then
         log "[$label] Git pull failed (repo may not be pushed yet), ensuring containers are running..."
@@ -245,8 +220,8 @@ deploy_repo() {
     fi
     after=$(git rev-parse HEAD 2>/dev/null || echo "none")
 
-    # Merging on its own would hide the real risk: the Pi keeps deploying happily while commits
-    # made here exist nowhere else. Say so, because an SD card is the one copy that dies.
+    # The Pi keeps deploying happily while commits made here exist nowhere else, and an SD card
+    # is the one copy that dies.
     local unpushed
     unpushed=$(git rev-list --count origin/main..HEAD 2>/dev/null || echo 0)
     if [[ "$unpushed" -gt 0 ]]; then
@@ -256,18 +231,9 @@ deploy_repo() {
     # Must happen after the pull and before compose can restart Grafana
     [[ "$label" == "homeserver" ]] && render_grafana_alerting
 
-    # qbit_manage rewrites its own config on every run, adding whatever defaults its version wants,
-    # so it cannot be handed the git copy: the working tree would be permanently dirty and the next
-    # pull would abort with "local changes would be overwritten". The committed file is the source
-    # and this is the working copy it is free to scribble on.
-    # Docker creates a missing bind-mount target as root, which locks out every container that runs
-    # as PUID:PGID: autobrr crash-looped on "permission denied" creating its own database, and
-    # qbit-manage before it could not be handed its config. So pre-create those directories, and
-    # only those: appdata holds ten directories that are legitimately root-owned because their
-    # container runs as root, and chowning those would break them instead.
-    #
-    # The list comes from the resolved compose config rather than a hand-kept one here, so a new
-    # service is covered the day it is added and nobody has to remember this comment exists.
+    # Docker creates a missing bind-mount target as root, which locks out any container running as
+    # PUID:PGID. Pre-create only those: appdata also holds ten that are legitimately root-owned. The
+    # list comes from the resolved compose config, so a new service is covered without editing this.
     if [[ "$label" == "homeserver" ]]; then
         local appdata_dirs
         appdata_dirs=$(cd "$PROJECT_DIR" && docker compose --profile all config --format json 2>/dev/null |
@@ -294,10 +260,8 @@ for svc in (doc.get("services") or {}).values():
         done <<< "$appdata_dirs"
     fi
 
-    # qbit_manage rewrites its own config on every run, adding whatever defaults its version wants,
-    # so it cannot be handed the git copy: the working tree would be permanently dirty and the next
-    # pull would abort with "local changes would be overwritten". The committed file is the source
-    # and this is the working copy it is free to scribble on.
+    # qbit_manage rewrites its own config on every run, so it cannot be handed the git copy: the
+    # working tree would stay dirty and the next pull would abort.
     if [[ "$label" == "homeserver" && -f "$PROJECT_DIR/config/qbit-manage/config.yml" ]]; then
         if ! cmp -s "$PROJECT_DIR/config/qbit-manage/config.yml" \
             "$PROJECT_DIR/appdata/qbit-manage/config.yml"; then
@@ -307,9 +271,8 @@ for svc in (doc.get("services") or {}).values():
         fi
     fi
 
-    # The webhook receiver is a host systemd service, so a pull updates its files while the old
-    # process keeps serving. Apply them here or the change is silently ignored. Safe to restart
-    # from inside a deploy this same service may have spawned, thanks to KillMode=process.
+    # A host systemd service: a pull updates its files while the old process keeps serving, so
+    # apply them here. Safe to restart from inside its own deploy, thanks to KillMode=process.
     if [[ "$label" == "homeserver" && "$before" != "$after" ]] &&
         git diff --name-only "$before" "$after" | grep -q '^services/deploy-webhook/'; then
         local unit=/etc/systemd/system/deploy-webhook.service
@@ -328,8 +291,9 @@ for svc in (doc.get("services") or {}).values():
         fi
     fi
 
-    # Grafana reads alerting provisioning ONLY at startup. Dashboards reload on their own (their
-    # file provider polls), alert rules do not, so a committed rule would sit there doing nothing.
+    # Five config files are bind mounts read once at startup, so committing a change to any of them
+    # does nothing until its container is told. Grafana: dashboards reload on their own, alert rules
+    # do not.
     if [[ "$label" == "homeserver" && "$before" != "$after" ]] &&
         git diff --name-only "$before" "$after" | grep -q '^config/grafana/alerting/' &&
         docker ps --format '{{.Names}}' | grep -qx grafana; then
@@ -340,10 +304,7 @@ for svc in (doc.get("services") or {}).values():
         fi
     fi
 
-    # Same trap as the alerting config above: the Caddyfile is a bind mount, so changing it never
-    # makes compose recreate the container, and Caddy only reads it at startup. Every routing change
-    # committed here has silently needed a manual restart to take effect.
-    # `caddy reload` and not `docker restart`: it swaps the config in place without dropping
+    # `caddy reload` and not `docker restart`: it swaps the config in place without dropping live
     # connections or re-reading the certificate store.
     if [[ "$label" == "homeserver" && "$before" != "$after" ]] &&
         git diff --name-only "$before" "$after" | grep -q '^config/caddy/' &&
@@ -355,10 +316,8 @@ for svc in (doc.get("services") or {}).values():
         fi
     fi
 
-    # Third instance of the same trap, and the most misleading one. Homepage watches services.yaml
-    # and bookmarks.yaml and picks those up live, so config changes appear to apply — but
-    # settings.yaml is read once at startup, and that is where `layout:` lives, which is what
-    # actually orders the groups on the page. Reordering therefore looked like it did nothing.
+    # Homepage picks up services.yaml and bookmarks.yaml live, which makes this look unnecessary,
+    # but `layout:` lives in settings.yaml and that one is read once.
     if [[ "$label" == "homeserver" && "$before" != "$after" ]] &&
         git diff --name-only "$before" "$after" | grep -qE '^config/homepage/settings\.ya?ml$' &&
         docker ps --format '{{.Names}}' | grep -qx homepage; then
@@ -369,10 +328,8 @@ for svc in (doc.get("services") or {}).values():
         fi
     fi
 
-    # Fourth of the same, and the one that hid best. Vector reads its config once at startup, and
-    # the file is a bind mount, so compose never recreates the container for it. Worse, git replaces
-    # the file rather than editing it, so the running container keeps the old inode: host and
-    # container had different checksums for the same path. A plain restart re-resolves the mount.
+    # A restart and not a reload: git replaces the file rather than editing it, so a single-file
+    # bind mount keeps the old inode and the container never sees the new content.
     if [[ "$label" == "homeserver" && "$before" != "$after" ]] &&
         git diff --name-only "$before" "$after" | grep -q '^config/vector/' &&
         docker ps --format '{{.Names}}' | grep -qx vector; then
@@ -383,12 +340,8 @@ for svc in (doc.get("services") or {}).values():
         fi
     fi
 
-    # Fifth of the same, and it had been silent the longest: Prometheus and the blackbox exporter
-    # read their bind-mounted config once at startup, so the `tailscale` job committed on 22 Aug was
-    # still missing from the running config two days later.
-    # A restart and not a signal, for the reason Vector taught above: git replaces the file, the
-    # container keeps the old inode, and both of these answer a SIGHUP with "no changes detected"
-    # while reading the file they were started with. Only a restart re-resolves the mount.
+    # Restart and not SIGHUP, same inode reason as Vector above: both of these answer a signal with
+    # "no changes detected" while still reading the file they started with.
     if [[ "$label" == "homeserver" && "$before" != "$after" ]]; then
         local changed_config
         changed_config=$(git diff --name-only "$before" "$after")
@@ -411,12 +364,9 @@ for svc in (doc.get("services") or {}).values():
     fi
 
     if [ "$before" != "$after" ]; then
-        # `--build` recreates every locally built container whether or not anything it is built
-        # from changed, and a recreate cuts what that container was serving: caddy drops every
-        # live HTTP connection, acestream-proxy kills the stream Jellyfin is reading. On
-        # 2026-08-24 a diff of Grafana rules, tracker config, docs and the crontab recreated
-        # seven containers mid-match with the images provably unchanged. So build only when the
-        # diff touches something an image actually comes from.
+        # `--build` recreates every locally built container even when its image is identical, and a
+        # recreate cuts what it was serving: Caddy's live connections, the stream Jellyfin is
+        # reading from acestream-proxy. So build only when the diff touches a build input.
         local changed rebuild_when
         changed=$(git diff --name-only "$before" "$after")
         rebuild_when=$(build_triggers)
@@ -455,10 +405,10 @@ if [ -d "$SERVICES_DIR" ]; then
 fi
 
 # Keep the host crontab in sync with both repos' fragments
-bash "$PROJECT_DIR/scripts/deploy/install-crontab.sh" 2>&1 | while IFS= read -r line; do log "[cron] $line"; done
+bash "$PROJECT_DIR/scripts/setup/install-crontab.sh" 2>&1 | while IFS= read -r line; do log "[cron] $line"; done
 
 # And the logrotate policy that keeps the logs those cron jobs write from filling the disk
-bash "$PROJECT_DIR/scripts/deploy/install-logrotate.sh" 2>&1 | while IFS= read -r line; do log "[logrotate] $line"; done
+bash "$PROJECT_DIR/scripts/setup/install-logrotate.sh" 2>&1 | while IFS= read -r line; do log "[logrotate] $line"; done
 
 # Converge Radarr/Sonarr custom formats and quality profiles to config/arr/. These are built by
 # hand through each app's own UI and live only in its appdata database, so without this a lost

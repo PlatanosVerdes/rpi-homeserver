@@ -593,3 +593,51 @@ when RAR packs became a hard reject.
 
 And Jackett is deliberately **not** part of this: it is Prowlarr's predecessor, Prowlarr is already
 here, and both cross-seed and autobrr integrate with Prowlarr directly.
+
+---
+
+## ✅ The recycle bin, the `keep` tag and the `public` group — FIXED 2026-08-24
+
+Three things that were config rather than code, all found by diffing `config/qbit-manage/config.yml`
+against the schema the installed v4.12.0 actually reads:
+
+1. No `recyclebin` section, so `empty_after_x_days` was unset and nothing would ever empty
+   `/data/downloads/.RecycleBin`. The 7 days in the file belonged to `orphaned`. Now 7 days here too.
+2. No group carried `exclude_any_tags`, so the documented `keep` override did nothing, and neither
+   did the `keep-bonus` tag `trackers/control.py` writes to hold DigitalCore's bonus. Both are
+   excluded in all six groups now.
+3. `settings.public_tag` and `settings.ignoreTags_OnUpdate` are not keys this version reads: it only
+   ever writes `private_tag`, and it no longer strips foreign tags on re-tag, which is why the second
+   one disappeared upstream. Unknown keys are ignored silently, which is why neither was noticed. The
+   consequence was real: the `public` group selected on a tag nothing writes, so it matched nothing
+   and no public torrent ever got a limit. It now selects as "not tagged private".
+
+Verified with the tool's own `--dry-run` against the new file before committing: same six groups,
+same 15/3/0/6/0/0 assignment, so nothing changes for what is in the client today.
+
+## ops/cutoff-search.sh is being retired
+
+Commented out of the crontab on 2026-08-24 at Jorge's call, script kept. What still needs writing
+down is the reason and what covers the gap: the nightly search existed for releases that scrolled
+out of the RSS window, so if nothing replaces it, that case stops being covered. Decide, write it
+here, and then delete the script and its cron line together.
+
+## Two scripts that want to be a service
+
+Read on 2026-08-24 with this question in mind. The verdict per script, so the next attempt does not
+start from scratch:
+
+- **`metrics/media.py` (567 lines) is worth converting.** It is read-only: it queries Radarr,
+  Sonarr, Prowlarr, qBittorrent and Maintainerr every five minutes and pushes twelve metric groups
+  to Pushgateway. Pushing is what makes its death invisible, because the last value it pushed stays
+  there forever; scraped, `up` says it stopped. The metric names would not change, but the `job`
+  label would, so the dashboard queries that filter on `job` have to be checked first.
+- **`trackers/stats.py` + `trackers/control.py` should be one script, not a daemon.** They already
+  talk through a `state.json` on disk, so the coupling is cheap. What the split costs is the
+  `MAX_READING_AGE` guard and the cron choreography (`:00/:30` then `:05/:35`), both of which exist
+  only because they are two processes. Merging them removes that; daemonising an actuator that
+  writes to Prowlarr, Radarr, autobrr and qBittorrent adds risk a single cron run does not have.
+- **`metrics/zram.sh` and `metrics/disk-usage.sh` should stay as they are.** 34 and 33 lines
+  reading host sysfs and walking the data disk into node-exporter's textfile collector, which is
+  the mechanism built for exactly that. A container would need `/sys` and the disk mounted and buys
+  nothing.

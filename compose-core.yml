@@ -105,9 +105,7 @@ services:
       - "8443:80"
     networks:
       - media-network
-  # Temp credentials
-  # Email: admin@example.com
-  # Pass: password
+  # First login is speedtest-tracker's default: admin@example.com / password
 
   # --- PiHole -AdBlock ---
   pihole:
@@ -125,9 +123,8 @@ services:
     environment:
       TZ: ${TZ}
       FTLCONF_webserver_api_password: ${PIHOLE_PASSWORD}
-      # Without this the API password session is read-only (app_sudo defaults to false), so
-      # scripts/sync/pihole-dns.sh's writes were being rejected with 403 and silently discarded
-      # (curl -s -o /dev/null hid it). Regressed by the pihole 2026.02.0 -> 2026.07.2 bump.
+      # app_sudo defaults to false, which makes an API password session read-only and gets
+      # scripts/sync/pihole-dns.sh's writes rejected with a 403 nobody sees.
       FTLCONF_webserver_api_app_sudo: "true"
       FTLCONF_webserver_port: 8081
       WEBPASSWORD: ${PIHOLE_PASSWORD}
@@ -137,9 +134,9 @@ services:
     network_mode: host
 
   # --- CLOUDFLARED (tunnel — publishes ONLY the GitHub deploy webhook) ---
-  # Host network so it can reach the webhook receiver on 127.0.0.1:9000 (systemd unit in
-  # services/deploy-webhook/). What is actually public is decided by the tunnel's public
-  # hostname config in the Cloudflare dashboard. See docs/deploy-webhook.md.
+  # Host network to reach the webhook receiver on 127.0.0.1:9000 (systemd unit in
+  # services/deploy-webhook/). What is public is the tunnel's hostname config in Cloudflare's
+  # dashboard, not this. See docs/deploy-webhook.md.
   cloudflared:
     image: cloudflare/cloudflared:${CLOUDFLARED_VERSION}
     container_name: cloudflared

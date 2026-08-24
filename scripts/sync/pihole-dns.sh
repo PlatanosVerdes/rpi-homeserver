@@ -1,16 +1,12 @@
 #!/bin/bash
 # Push every https://*.platanosverdes.com host declared in Caddy into Pi-hole's custom DNS.
 #
-# Pi-hole's custom DNS records live only in its own appdata, so the entire *.platanosverdes.com
-# mapping described in CLAUDE.md existed only by hand-editing the Pi-hole UI. This derives the
-# hostname list from the Caddy config instead of keeping a second list that could drift from it:
-# this repo's Caddyfile + config/caddy/services/*.caddy, plus rpi-services' own fragment at
-# EXT_CADDY_PATH if that repo is present.
+# The hostname list is derived from the Caddy config rather than kept here, so the two cannot
+# drift: this repo's Caddyfile, config/caddy/services/*.caddy, and rpi-services' fragment at
+# EXT_CADDY_PATH when that repo is present.
 #
-# Additive only, via Pi-hole's array-item endpoints (PUT/DELETE one entry at a time): a hostname
-# is only touched if it is one we derived from Caddy, and only written when its IP is stale. A
-# hand-added entry unrelated to any service here (another Tailscale node, a personal bookmark)
-# is never read as "ours" and is never deleted, even if it stops matching anything in Caddy.
+# Additive only: a hostname is touched only if it was derived from Caddy, and only when its IP is
+# stale. An entry added by hand for something else is never read as ours and never deleted.
 set -uo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"

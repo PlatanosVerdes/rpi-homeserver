@@ -33,7 +33,7 @@ BACKUP_RCLONE_REMOTE=                    # optional offsite copy, e.g. b2:my-buc
 ## Schedule
 
 Already scheduled, nothing to install. The entry lives in `scripts/crontab`, which is this repo's
-cron fragment, and `scripts/deploy/install-crontab.sh` writes it into the host crontab on every deploy:
+cron fragment, and `scripts/setup/install-crontab.sh` writes it into the host crontab on every deploy:
 
 ```
 0 4 * * * /home/raspi/rpi-homeserver/scripts/ops/backup.sh >> /home/raspi/rpi-homeserver/backup.log 2>&1

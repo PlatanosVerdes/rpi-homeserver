@@ -37,12 +37,9 @@ type config struct {
 	pushgatewayURL string
 }
 
-// Deliberately NOT running totals: those reset to 0 on every restart/deploy (in-memory state),
-// but Pushgateway only overwrites label combinations it's told about, so an incrementing counter
-// either resets misleadingly on every deploy or gets stuck forever on a stale value once a label
-// combo stops recurring. A bounded, timestamped event log sidesteps both: age/count are computed
-// at query time (e.g. `count(... > time() - 86400)`), the same pattern already used for
-// arr_quality_change_timestamp in scripts/metrics/media.py.
+// A bounded, timestamped event log and not running totals: this state is in memory, so a counter
+// would reset on every deploy, and Pushgateway only overwrites the label combinations it is told
+// about, so a stale one would sit there forever. Age and count are computed at query time.
 const recentLimit = 20
 
 type recentAction struct {

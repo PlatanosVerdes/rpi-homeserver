@@ -43,7 +43,7 @@ flowchart TB
   end
 
   subgraph HOST["5 · The host, what is not a container"]
-    APPLY["scripts/deploy/apply.sh<br/>scripts/sync-*.sh · scripts/install-*.sh<br/><i>writes config into the bands above, see The convergence loop</i>"]
+    APPLY["scripts/deploy/apply.sh<br/>scripts/sync/*.sh · scripts/setup/*.sh<br/><i>writes config into the bands above, see The convergence loop</i>"]
     CRON["scripts/crontab<br/><i>merged with the personal repo's fragment</i>"]
     FS["mergerfs → DATA_ROOT<br/><i>two USB disks, one tree</i>"]
   end
@@ -111,10 +111,10 @@ during an ARM Go build cost exactly one extra pass.
 | `scripts/sync/plex-prefs.sh` | every deploy | Plex | `PLEX_LAN_NETWORKS`, 95% threshold |
 | `scripts/sync/arr-links.sh` | every deploy | Overseerr, Bazarr | `config/overseerr-links.json` |
 | `scripts/sync/pihole-dns.sh` | every deploy | Pi-hole | the Caddy config, additive only |
-| `scripts/deploy/install-crontab.sh` | every deploy | host crontab | both repos' `scripts/crontab` |
-| `scripts/deploy/install-logrotate.sh` | every deploy | `/etc/logrotate.d` | `config/logrotate/rpi-homeserver` |
+| `scripts/setup/install-crontab.sh` | every deploy | host crontab | both repos' `scripts/crontab` |
+| `scripts/setup/install-logrotate.sh` | every deploy | `/etc/logrotate.d` | `config/logrotate/rpi-homeserver` |
 | `scripts/trackers/control.py` | :05 and :35 | Prowlarr, Radarr, autobrr | the measured ratio headroom |
-| `scripts/trackers/seed-cleanup.py` | hourly at :20 | deletes torrents and data | `config/qbittorrent/seed-rules.json` |
+| qbit-manage | hourly | tags, share limits, deletes into the recycle bin | `config/qbit-manage/config.yml` |
 | `scripts/ops/cutoff-search.sh` | 05:00 | nothing, triggers a search | Radarr's own Wanted list |
 
 **A profile changed through an app's UI and not committed is reverted within 30 minutes.** That is
@@ -162,39 +162,17 @@ written to as tar reads it, and the `-wal` and `-shm` files come along, so a res
 recovers cleanly rather than certainly. Nothing here stops the containers first, and that is a
 deliberate trade for a backup that never needs a maintenance window.
 
-After a restore, `scripts/deploy/recovery-status.sh` reports what no archive can put back: Plex's
+After a restore, `scripts/recovery/recovery-status.sh` reports what no archive can put back: Plex's
 claim token, Jellyfin's setup wizard, and the AirTag 2FA code.
 
 ---
 
 ## A film, end to end
 
-```mermaid
-flowchart TB
-  OV["Overseerr<br/><i>you ask</i>"] --> RA
-  CS["scripts/ops/cutoff-search.sh<br/><i>05:00, what is still wanted</i>"] --> RA
-  RA["<b>Radarr</b><br/>decides what qualifies<br/><i>profiles + custom formats</i>"] -->|search| PR["Prowlarr<br/>13 indexers"]
-  PR --> QB
-  BRR["autobrr<br/><i>IRC announce, seconds</i>"] --> QB
-  QB["<b>qBittorrent</b><br/>downloads and seeds"] --> UP["unpackerr<br/><i>extracts the mkv from the RAR</i>"]
-  UP -->|Radarr imports| LIB
-  QB -->|Radarr imports| LIB
-  LIB["<b>Library · DATA_ROOT</b><br/><i>imported by hardlink:<br/>same bytes, two names</i>"] --> PX["Plex · Jellyfin"]
-  PX --> MT["Maintainerr<br/><i>watched and out of grace</i>"]
-  MT -->|"deletes the library copy,<br/>link count back to 1"| LIB
-  LIB --> SC["<b>scripts/trackers/seed-cleanup.py</b><br/><i>hourly at :20</i>"]
-  SC -->|"nothing uses it and<br/>the tracker is paid"| QB
-```
-
-The hardlink count is the signal. Two cases break it, and both are handled:
-
-- **RAR releases.** unpackerr produces new bytes, so the extracted file has a link count of 1 from
-  the moment it lands, with the film still in the library. 19 of 71 files arrived that way. This is
-  why `scripts/trackers/seed-cleanup.py` also asks the arr, by download id, what the download actually produced.
-- **Cross-seeds.** A second torrent on the same files keeps the count above 1, so bytes that used
-  to be reclaimed after watching now stay until the cross-seed goes. That is the trade for free
-  ratio, and it is one of the reasons the deleting side belongs in qbit_manage, which understands
-  cross-seeds explicitly. See PENDING.md.
+Moved to [lifecycle.md](lifecycle.md), which follows one file from the indexer that announces it to
+the recycle bin, for a film and for an episode, and carries the per-tracker seeding table. What was
+here said the hourly `trackers/seed-cleanup.py` does the deleting, and that has been qbit-manage's
+job since 2026-08-24.
 
 ---
 
@@ -262,46 +240,20 @@ The ratio loop governs the intake. This governs the release. Different mechanism
 
 ```mermaid
 flowchart LR
-  subgraph P["Policy, in git"]
-    SR["config/qbittorrent/<br/>seed-rules.json"]
-    QM["config/qbit-manage/<br/>config.yml"]
-  end
-  subgraph E["Who applies it"]
-    SC["<b>scripts/trackers/seed-cleanup.py</b><br/>active, hourly at :20<br/><i>deletes torrent and data</i>"]
-    QB["qbit-manage<br/>under evaluation<br/><i>tags only</i>"]
-  end
-  SR --> SC
-  QM --> QB
-  SC --> Q1 & Q2
-  Q1{"MAY it go?<br/><i>the site's hit-and-run rule,<br/>and hardlink count back to 1</i>"}
-  Q2{"SHOULD it go?<br/><i>min_upload_gb_per_day</i>"}
+  QM["config/qbit-manage/<br/>config.yml<br/><i>policy, in git</i>"] --> QB
+  QB["<b>qbit-manage</b><br/><i>owns deletion since 2026-08-24</i>"] --> Q1 & Q2
+  Q1{"WHOSE rules?<br/><i>the tracker tag picks<br/>the share-limit group</i>"}
+  Q2{"MAY it go?<br/><i>noHL or ratio tag, and<br/>a day with no activity</i>"}
+  SR["config/qbittorrent/<br/>seed-rules.json"] -.->|"parked, see PENDING.md"| SC["trackers/seed-cleanup.py"]
 ```
 
-| Tracker | Seed goal | Ratio | What the site asks | Upload floor |
-| :--- | ---: | ---: | :--- | ---: |
-| `torrentleech.org`, `tleechreload.org` | 360 h | 1.2 | 240 h or ratio 1.0 | 0.2 GB/day |
-| `digitalcore.club`, `trackerprxy.digitalcore.club` | 168 h | 1.0 | 120 h or ratio 1.0 | 0.2 GB/day |
-| `ann.retrotoon.world` | 96 h | 1.0 | 72 h, its strictest rule | 0.2 GB/day |
-| `c411.org` | 240 h | 1.0 | 72 h, H&R disabled site-wide now | 0.2 GB/day |
-| private, default | 240 h | 1.0 | anything without its own entry | none |
-| public | 0 h | 0 | dropped once the library holds the file | none |
+Per tracker: what the site asks, what is configured against it and why the difference, in
+[lifecycle.md](lifecycle.md#what-each-tracker-asks-and-what-is-configured). Two conditions have to
+agree before anything is deleted, and the second one is the interesting half: a tracker group only
+matches a torrent the library has let go of (`noHL`) or that was never in it (`ratio`).
 
-**The applied goal is deliberately above what the site asks.** qBittorrent's clock runs ahead of
-the tracker's, which only counts the hours it saw announced. Measured on 2026-08-21 across the 14
-torrents on the H&R list, the gap ran from 26 to 118 hours, and one film was 3 hours from deletion
-at 237 h local while the tracker had credited 152.
-
-The `quiet` block is the part that saves the most. Measured on 2026-08-22, torrents seeded for 40
-to 157 h had uploaded 0.00 GB while ones a few hours old were doing 0.13 to 0.82 GB/h, so a plain
-"ratio 1.2" goal was deleting the best earner and keeping the worst.
-
-Guards, evaluated before any deletion: never outside qBittorrent's own download folder, never
-while the library shares the file, never when the arrs cannot be reached, never below 100%
-progress, never while checking or moving, never when a second torrent shares the files, and never
-within `min_age_hours`.
-
-Anything not in the `trackers` map falls into the generic 240 h private default, roughly double
-what most sites ask, so adding a tracker there is what frees disk.
+Deletion moves the data to the recycle bin rather than removing it, and nothing empties that
+directory today.
 
 ---
 
@@ -315,7 +267,7 @@ flowchart LR
     S1["scripts/metrics/zram.sh<br/>scripts/metrics/disk-usage.sh"] -->|.prom| NE["node-exporter<br/><i>textfile collector</i>"]
   end
   subgraph B["Route B · push"]
-    S2["scripts/metrics/media.py · scripts/trackers/stats.py<br/>scripts/trackers/seed-cleanup.py · scripts/ops/backup.sh<br/>scripts/ops/cutoff-search.sh"] -->|POST| PG["Pushgateway"]
+    S2["scripts/metrics/media.py · scripts/trackers/stats.py<br/>scripts/trackers/control.py · scripts/ops/backup.sh<br/>scripts/ops/cutoff-search.sh"] -->|POST| PG["Pushgateway"]
   end
   subgraph C["Route C · scrape"]
     EX["node-exporter · cadvisor · blackbox<br/>pihole-exporter · qbittorrent-exporter<br/>speedtest-tracker · cloudflared<br/><b>tailscale-metrics</b>"]
@@ -378,10 +330,11 @@ earn a sentence. `deploy/apply.sh` is sixth by complexity, not first.
 | `deploy/apply.sh` | 266 | 6 | 64 | |
 | the other fifteen | <135 | <6 | <13 | |
 
-### trackers/seed-cleanup.py
+### trackers/seed-cleanup.py — parked since 2026-08-24
 
-The only script that deletes data, and the only one whose decision tree was written down nowhere.
-A wrong branch here costs a tracker account.
+Not running: qbit-manage owns deletion now, and two deleters with different rules is worse than
+either alone. Kept because going back is uncommenting one cron line, and its decision tree is the
+reference for what a deleter has to check. See PENDING.md for what has to hold before it goes.
 
 ```mermaid
 flowchart TB
@@ -454,10 +407,10 @@ Below `min_free_gb` the grabber stops entirely, and a reading older than 3h move
 
 | Script | What it does |
 | :--- | :--- |
-| `deploy/install-crontab.sh` | Merges both repos' cron fragments, installs only if it differs, prints the diff |
-| `deploy/install-logrotate.sh` | Installs the rotation policy root-owned 0644, because logrotate silently ignores anything else |
-| `deploy/rebuild-service.sh` | Rebuilds one compose service from scratch, by hand |
-| `deploy/recovery-status.sh` | After a rebuild, the three steps no API can do: Plex claim, Jellyfin wizard, Apple 2FA |
+| `setup/install-crontab.sh` | Merges both repos' cron fragments, installs only if it differs, prints the diff |
+| `setup/install-logrotate.sh` | Installs the rotation policy root-owned 0644, because logrotate silently ignores anything else |
+| `recovery/rebuild-service.sh` | Rebuilds one compose service from scratch, by hand |
+| `recovery/recovery-status.sh` | After a rebuild, the three steps no API can do: Plex claim, Jellyfin wizard, Apple 2FA |
 | `sync/arr-config.sh` | Custom formats then quality profiles, in that order: profiles score formats by name and the id only exists once the format does |
 | `sync/arr-links.sh` | Overseerr and Bazarr's connection to the arrs. Bazarr publishes no port, so its call is proxied through the network |
 | `sync/pihole-dns.sh` | Caddy's hosts as local DNS. Additive only: an entry not derived from Caddy is never touched |

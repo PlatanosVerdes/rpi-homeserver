@@ -266,10 +266,9 @@ function byLanguage(subs) {
   return order.map(function (lang) { return { lang: lang, tracks: tracks[lang] }; });
 }
 
-// One chip per language, whatever the file carries: a release with four English tracks (plain,
-// forced, SDH, British) used to spread four chips across the row and push the title out of its own
-// card. A language with more than one track opens them underneath instead, where there is room to
-// name each one, and a language with just one still downloads on a single tap.
+// One chip per language, not per track: four English tracks (plain, forced, SDH, British) spread
+// four chips across the row and pushed the title out of its card. More than one track opens them
+// underneath, where there is room to name each; a single one still downloads on one tap.
 function subsMarkup(id, name, subs) {
   var groups = byLanguage(subs);
   var chips = groups.map(function (g) {

@@ -1,17 +1,12 @@
 #!/bin/bash
 # Converge qBittorrent's tuning to config/qbittorrent/preferences.json.
 #
-# Same problem the other sync scripts solve: these were set by hand through the WebUI (or its API)
-# and live only in appdata/qbittorrent/qBittorrent.conf, so a lost or rebuilt Pi silently goes back
-# to unlimited downloads and default queue limits. SYSTEM_NOTES.md used to carry them as "remember
-# to set these again"; this makes them reproducible instead.
+# These live only in appdata/qbittorrent/qBittorrent.conf, so a rebuilt Pi goes back to unlimited
+# downloads and default queue limits. Only the keys present in the JSON are touched; nothing here
+# is a secret.
 #
-# Only the keys present in the JSON are touched, so everything not listed there (WebUI credentials,
-# categories, connection settings) stays whatever the app already had. Nothing here is a secret.
-#
-# The call goes through the container because qBittorrent's WebUI trusts localhost: from the host it
-# would arrive via the Docker gateway, which is not in its AuthSubnetWhitelist, and would need
-# credentials. Same trick as scripts/metrics/media.py.
+# The call goes through the container because qBittorrent trusts localhost: from the host it would
+# arrive via the Docker gateway, which is not in its AuthSubnetWhitelist.
 set -uo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"

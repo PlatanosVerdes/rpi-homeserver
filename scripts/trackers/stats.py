@@ -1,27 +1,21 @@
 #!/usr/bin/env python3
 """Read what a private tracker says about the account, which is the only number that decides anything.
 
-The client's own byte counters are not the account. They reset when a torrent is removed, they know
-nothing about freeleech, and trusting them is what made DigitalCore look doomed on a day its site
-showed ratio 2.76. So this logs in and reads the site.
+The client's byte counters are not the account: they reset when a torrent is removed and know
+nothing about freeleech. So this logs in and reads the site.
 
-TorrentLeech disables an account whose global ratio drops under 0.4: the warning gives seven days
-and then an automatic re-check. The useful number is therefore not the ratio, which says nothing
-about how much room is left, but the headroom before that line:
+What matters is not the ratio but the room left before the site acts on it:
 
     buffer   = uploaded - min_ratio x downloaded
     headroom = buffer / min_ratio        # GB of non-freeleech downloads that still fit
 
-Freeleech never moves `downloaded`, which is why the grabber can run at any ratio and why headroom,
-not ratio, is what decides whether the *arrs may take a paid torrent.
+Freeleech never moves `downloaded`, which is why headroom and not ratio decides whether the arrs may
+take a paid torrent. Hit & run is measured from the client rather than scraped, because
+`torrents/info` has the seed time and ratio before the site recomputes them.
 
-Hit & run is measured here instead of scraped, because the client knows it sooner: a torrent clears
-by seeding 240 h or reaching ratio 1.0, and both are in `torrents/info` before the site recomputes.
-
-Credentials come from Prowlarr, which already holds them for the same site, so no secret is
-duplicated. The session cookie is kept on disk and only replaced when it stops working: this is a
-tracker that banned 500 users for hammering its IRC, and there is no reason to hand it 48 logins a
-day for a number that moves in gigabytes.
+Credentials come from Prowlarr, which already holds them, so no secret is duplicated. The session
+cookie is kept on disk and only replaced when it stops working: these sites ban for hammering, and
+48 logins a day for a number that moves in gigabytes is asking for it.
 
 Run from cron every 30 minutes (see scripts/crontab). Silent unless something fails.
 """
@@ -173,21 +167,12 @@ def qbit(endpoint):
 
 def hit_and_run(config, torrents):
     """Per torrent, not per account: one uncleared torrent is a warning, three is a disabled account.
+    What is owed is the hours still to go on the torrents that have neither the seed time nor the
+    ratio. Three parts of the rule differ per site: `starts_at_progress` (when the obligation begins,
+    10% on DigitalCore rather than completion), `grace_hours` (added to what is required, since the
+    local counter runs through them) and `min_ratio` (null where only time clears anything).
 
-    A torrent clears by seeding min_seed_hours or reaching min_ratio, so what is owed is the hours
-    still to go on the ones that have neither. Three parts of that come from each site's own rule
-    and are not the same everywhere:
-
-      starts_at_progress  when the obligation begins. Most sites start it at completion, so
-                          something still downloading owes nothing; DigitalCore's FAQ starts it at
-                          10% downloaded.
-      grace_hours         hours the site waits before starting its clock. Added to what is
-                          required, because the local counter has been running through them.
-      min_ratio           null on a site with no ratio rule, like retrotoon, where time is the
-                          only thing that clears an obligation.
-
-    Exemptions are deliberately not implemented: C411 exempts a global ratio of 2.0, the first
-    three torrents and anything under 100 MB. They only ever reduce what is owed, and owing more
+    Exemptions are deliberately not implemented. They only ever reduce what is owed, and owing more
     than the site thinks is the safe direction for a number whose job is to prevent a ban.
     """
     rule = config.get("hit_and_run") or {}
@@ -222,17 +207,12 @@ def tracker_host(torrent):
 
 
 def client_side(config, torrents):
-    """What the client knows per tracker, which is every tracker, not only the ones that log in.
+    """What the client knows per tracker, which is every tracker and not only the ones that log in:
+    three of the five accounts cannot be read at all (an API key that blocks profile data, a captcha,
+    a site in maintenance). None of it is the tracker's own accounting, hence `source="client"`.
 
-    Three of the five accounts here cannot be read (an API key that blocks profile data, a captcha,
-    a site in maintenance), so without this a dashboard has one populated row and four empty ones.
-    None of these numbers is the tracker's own accounting, and they are labelled `source="client"`
-    for exactly that reason.
-
-    The leech-bonus estimate applies DigitalCore's published formula to what is actually seeding:
-    1% per 10 GB, only 50 GiB counted per torrent, scaled by `1 + (1/seeders)` for scarcity. It is an
-    estimate of a number only that site can compute, and it is the only way to see the effect of a
-    cross-seed the day it lands.
+    The leech-bonus estimate applies DigitalCore's published formula to what is actually seeding, and
+    is the only way to see the effect of a cross-seed the day it lands.
     """
     hosts = set(config.get("tracker_hosts") or [])
     rows = [t for t in torrents if tracker_host(t) in hosts]

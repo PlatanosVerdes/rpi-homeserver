@@ -16,11 +16,9 @@ services:
     dns:
       - 8.8.8.8
       - 1.1.1.1
-    # Hardening, because this is the one container the internet can reach directly once the
-    # BitTorrent port is forwarded. It only ever writes to downloads (all 64 torrents have
-    # save_path /data/downloads), so the library is not mounted here at all: whatever comes
-    # through that port lands somewhere that cannot see films/ or series/. The *arrs keep the
-    # full /data, which is what their hardlinks need.
+    # The one container the internet reaches directly, so the library is not mounted here at all:
+    # whatever arrives through the BitTorrent port lands where it cannot see films/ or series/. The
+    # arrs keep the full /data, which is what their hardlinks need.
     security_opt:
       - no-new-privileges:true
     mem_limit: 3g
@@ -29,9 +27,9 @@ services:
       - ${DATA_ROOT}/downloads:/data/downloads
     ports:
       - "${QBIT_WEBUI_PORT}:${QBIT_WEBUI_PORT}"
-      # Deliberately not 6881: that range is the obvious one to throttle. The value lives in .env
-      # so a public repo does not advertise it, and scripts/sync/qbit-config.sh pushes the same number into
-      # qBittorrent, because a listen port the container does not publish means zero inbound peers.
+      # Not 6881: that range is the obvious one to throttle. In .env so a public repo does not
+      # advertise it, and scripts/sync/qbit-config.sh pushes the same number into qBittorrent, or the
+      # published port and the one it listens on disagree and no peer ever connects.
       - "${QBIT_BT_PORT}:${QBIT_BT_PORT}"
       - "${QBIT_BT_PORT}:${QBIT_BT_PORT}/udp"
     networks:
@@ -129,9 +127,8 @@ services:
       - media-network
 
   # --- UNPACKERR (unrars scene releases so Radarr/Sonarr can import them) ---
-  # Torrent lifecycle: tags by tracker, applies a seed goal per tracker, and notices a torrent the
-  # tracker no longer recognises. Running in DRY RUN alongside scripts/trackers/seed-cleanup.py until their
-  # decisions agree, then it replaces it. See PENDING.md and config/qbit-manage/config.yml.
+  # Tags by tracker, applies that tracker's seed goal, and notices a torrent the site no longer
+  # recognises. It owns deletion: docs/lifecycle.md, config/qbit-manage/config.yml.
   qbit-manage:
     image: ghcr.io/stuffanthings/qbit_manage:${QBIT_MANAGE_VERSION}
     container_name: qbit-manage
@@ -149,25 +146,19 @@ services:
       - QBT_SCHEDULE=${QBIT_MANAGE_SCHEDULE}
       - QBT_LOG_LEVEL=INFO
     volumes:
-      # appdata, not config/: this tool rewrites its own config file on every run, filling in the
-      # defaults it wants, which would leave the git working tree dirty and block the deploy's pull.
-      # config/qbit-manage/config.yml is the source, scripts/deploy/apply.sh copies it in when it changes.
+      # appdata and not config/: this tool rewrites its own config on every run, which would leave
+      # the git tree dirty and block the deploy's pull. apply.sh copies the committed file in.
       - ${APP_CONFIG_PATH}/qbit-manage:/config
-      # Only downloads: hardlink counting needs the download side, and the library is none of its
-      # business, the same reasoning as qBittorrent's own mount
+      # Only downloads: hardlink counting needs that side, same reasoning as qBittorrent's mount.
       - ${DATA_ROOT}/downloads:/data/downloads
     networks:
       - media-network
 
-  # Reacts to a tracker's IRC announce channel the second a release is posted, which is the only way
-  # to be an early seeder: an RSS poll arrives minutes later, when the swarm already has thirty
-  # seeds. Measured on 2026-08-21, the difference this makes: a freeleech release two hours old had
-  # uploaded 7.15 GB, while a catalogue torrent seeded for 90 hours had managed 0.24 GB.
-  #
-  # Its own filters cap concurrency, which qBittorrent's RSS cannot: TorrentLeech grants two
-  # download slots and a partially downloaded torrent occupies one, so grabbing five at once jams
-  # the account. Everything else (indexers, IRC credentials, filters) lives in its own database and
-  # is set through the web UI, since it holds per-tracker secrets.
+  # Reacts to a tracker's IRC announce the second a release is posted, which is what being an early
+  # seeder needs: a two-hour-old freeleech uploaded 7.15 GB here against 0.24 GB from a 90-hour-old
+  # catalogue torrent. Its filters also cap concurrency, which qBittorrent's RSS cannot, and that
+  # matters because a tracker grants a couple of download slots and a partial torrent occupies one.
+  # Indexers, IRC credentials and filters live in its own database, set through the web UI.
   autobrr:
     image: ghcr.io/autobrr/autobrr:${AUTOBRR_VERSION}
     container_name: autobrr
@@ -186,14 +177,10 @@ services:
     networks:
       - media-network
 
-  # The only free ratio there is: the same bytes already on this disk, seeded on every private
-  # tracker that also has the release. Matches are hardlinked, so a cross-seed costs an inode and no
-  # space, and the torrent starts at 100% with nothing to download.
-  #
-  # It reads what qBittorrent already holds (its BT_backup folder, read-only) rather than keeping its
-  # own list, searches the private indexers through Prowlarr, and injects matches back. Public
-  # indexers are deliberately absent: there is no account or ratio on a public tracker, so a
-  # cross-seed there would only add one more public swarm holding this address.
+  # The only free ratio there is: bytes already on this disk, seeded on every private tracker that
+  # also has the release. A match is hardlinked, so it costs an inode and starts at 100%. It reads
+  # what qBittorrent holds from BT_backup rather than keeping its own list, and searches only the
+  # private indexers: a public cross-seed would add a swarm holding this address for no ratio.
   cross-seed:
     image: ghcr.io/cross-seed/cross-seed:${CROSS_SEED_VERSION}
     container_name: cross-seed

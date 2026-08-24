@@ -66,7 +66,7 @@ scripts/deploy/apply.sh
    ├─ docker compose up -d ..... --build only if a build context, versions.env
    │                              or a compose file changed
    ├─ git pull rpi-services  ──► docker compose up -d (same rule)
-   ├─ scripts/deploy/install-crontab.sh ...... homeserver fragment + services fragment
+   ├─ scripts/setup/install-crontab.sh ...... homeserver fragment + services fragment
    │                            └─► host crontab (and undoes any manual drift)
    └─ metrics ──► Pushgateway
                         │
@@ -146,7 +146,8 @@ Plex runs on the Pi, which is weak at video transcoding, so files should
 - **Bazarr** auto-downloads Spanish subtitles for the whole library.
 - **Maintainerr** auto-cleans watched movies (movies library only) to keep the data pool from filling
   up: two days after you watch one it unmonitors it in Radarr and deletes the library copy.
-- **scripts/trackers/seed-cleanup.py** finishes that job on the torrent side, hourly. Radarr imports by hardlink, so
+- **qbit-manage** finishes that job on the torrent side, hourly, with a share-limit group per
+  tracker ([docs/lifecycle.md](docs/lifecycle.md)). Radarr imports by hardlink, so
   every download has two names: the one qBittorrent seeds and the one Plex plays. Maintainerr removes
   the second, and this removes the first once the tracker is paid:
 
@@ -246,6 +247,9 @@ The rule of record. Everything above is its implementation, and any doubt is set
    has given back 240 hours or ratio 1.0, whichever arrives first, because leaving early is how an
    account gets banned. Disk pressure is never a reason to pay less.
 
+The whole path, from the indexer that announces a release to the recycle bin, with what each
+tracker asks for and what is configured against it, is in [docs/lifecycle.md](docs/lifecycle.md).
+
 Two consequences that read like bugs and are not:
 
 - **A film that is still seeding is normally still in Plex, and costs nothing extra for it.** Radarr
@@ -263,7 +267,7 @@ Two consequences that read like bugs and are not:
   the *arr rebuilds its queue from the download client, so the item is back on the next refresh
   (measured, not assumed). What clears it is **taking the torrent out of the *arr's category** in
   qBittorrent, which is safe while `auto_tmm` is off (it is: nothing moves on disk), stops the *arr
-  from ever seeing it again, and leaves `scripts/trackers/seed-cleanup.py` finishing the job, because that one asks
+  from ever seeing it again, and leaves qbit-manage finishing the job, because it asks
   about hard links and trackers and never about categories. Both this and data a removed torrent left
   behind are exported by `scripts/metrics/media.py` as `arr_orphan_*` every five minutes, and alerted on
   ("Download nothing can import", "Data in downloads that nothing owns"), because the *arr's own
@@ -375,7 +379,7 @@ DNS server.
 Install the crontab from the repo (never with `crontab -e`, the deploy overwrites the live one):
 
 ```bash
-bash ~/rpi-homeserver/scripts/deploy/install-crontab.sh
+bash ~/rpi-homeserver/scripts/setup/install-crontab.sh
 ```
 
 That merges this repo's `scripts/crontab` with a companion repo's fragment if there is one, and
@@ -410,7 +414,7 @@ For HTTP short names to work on your laptop/desktop:
 ### 11. Check what still needs a human
 
 ```bash
-bash scripts/deploy/recovery-status.sh
+bash scripts/recovery/recovery-status.sh
 ```
 
 The deploy converges everything derivable from `.env`: Radarr and Sonarr's custom formats and
@@ -455,13 +459,16 @@ COMPOSE_PROFILES=essential,acestream
 config/      Static config files (Caddyfile, Prometheus, Grafana dashboards, Homepage)
 services/    Custom services source, one Docker image each
 scripts/     Operational scripts, grouped by what they do:
-  deploy/      makes the host match the repos (apply.sh and the installers)
+  deploy/      apply.sh, the orchestrator the webhook and the cron call
+  setup/       host state apply.sh converges on each pass: cron and log rotation
+  recovery/    run by hand after something broke: rebuild a service, see what a human still owes
   sync/        pushes config that lives only in an app's appdata, every deploy
   metrics/     numbers no exporter provides
   trackers/    the private-tracker economy: measure, decide, reclaim
   ops/         everything else on a schedule (backup, heartbeat, searches)
 appdata/     Persistent container data (databases, app state) — not in git
-docs/        Setup guides, starting with architecture.md
+docs/        Setup guides: architecture.md for what talks to what, lifecycle.md for what
+             happens to one torrent from the indexer to the recycle bin
 ```
 
 ---

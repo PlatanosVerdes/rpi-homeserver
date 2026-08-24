@@ -4,24 +4,20 @@
 Most of this repo pushes configuration into the apps (scripts/sync/*). This does the opposite, for
 the two whose settings are pure logic with no credentials in them and which no file here described:
 
-  autobrr      its filters: what is worth grabbing, the size band, the daily cap. Written by hand
-               in its UI, held in autobrr.db, and until now only in the nightly archive.
-  maintainerr  its rule group: watched more than two days ago, then delete. The single most visible
-               behaviour on the box, and it existed nowhere in git.
+  autobrr      its filters: what is worth grabbing, the size band, the daily cap
+  maintainerr  its rule group: watched more than two days ago, then delete
 
-Deliberately one-way. `scripts/sync/arr-config.sh` pushes git into an app and reverts a UI change
-within 30 minutes; this only reads, because the failure modes are not comparable. A wrong autobrr
-filter grabs the wrong thing and costs disk; a wrong Maintainerr rule deletes films. Pushing a
-deletion rule from a file nobody reviewed is not a trade worth making, so what this offers instead
-is `--check`, which apply.sh runs on every deploy to say out loud that the two have drifted apart.
+Deliberately one-way, unlike the sync scripts that push git into an app: a wrong autobrr filter
+costs disk, a wrong Maintainerr rule deletes films, so pushing a deletion rule from a file nobody
+reviewed is not a trade worth making. What it offers instead is `--check`, which apply.sh runs on
+every deploy to say out loud that git and the app have drifted apart.
 
   config-export.py            write the files, for a human to read and commit
   config-export.py --check    exit 1 and print what differs, changing nothing
 
-Prowlarr and its indexers stay out on purpose: every one of them carries a passkey or an API key,
-and this repo is public. autobrr does that redaction itself: its API answers an indexer's `rsskey`
-with the literal string `<redacted>`, so what lands here is the shape of the setup and not the way
-in. A rebuild reads the filters from git and types the keys again.
+Prowlarr stays out on purpose: every indexer carries a passkey and this repo is public. autobrr
+redacts its own: the API answers an indexer's `rsskey` with the literal `<redacted>`, so what lands
+here is the shape of the setup and not the way in.
 """
 
 import difflib

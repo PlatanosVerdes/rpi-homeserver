@@ -1,20 +1,17 @@
 #!/bin/bash
-# Tell Plex which networks count as local, so tailnet clients are not billed as remote.
+# Tell Plex which networks count as local, so tailnet clients are not billed as remote, and where
+# it marks a film as watched.
 #
-# Since April 2025 Plex charges for remote playback of personal media (Plex Pass on the owner, or
-# a Remote Watch Pass per viewer). "Remote" is decided by the *source IP* of the connection: a
-# client is local only if its IP falls inside the server's own subnet or inside the LAN Networks
-# list. Plex runs on the host network here and its tailscale0 address is a /32, so every peer
-# coming in over Tailscale (100.x) looks external and hits the paywall, even though the traffic
-# never leaves the tunnel. `allowedNetworks` does not help: that one only skips authentication.
+# Plex decides local from the connection's source IP, and its tailscale0 address is a /32, so every
+# 100.x peer looks external and hits the remote-playback paywall. `allowedNetworks` does not help:
+# that one only skips authentication. Why it cannot be fixed with a proxy instead:
+# docs/plex-remote-access.md.
 #
-# The value lives only in Plex's appdata (Preferences.xml), which the container rewrites on
-# shutdown, so it cannot be committed as a file. This pushes PLEX_LAN_NETWORKS through Plex's own
-# API instead, and only when the running value differs.
+# The played threshold goes from 90% to 95% because Maintainerr deletes what Plex calls watched,
+# and 90% is inside the credits: a film abandoned before the end would be queued for deletion.
 #
-# It also sets the played threshold, for the same appdata-only reason. Plex marks a film as watched
-# at 90% by default, which is inside the credits, and Maintainerr deletes what Plex says is watched:
-# at 90% a film abandoned before the end counts as seen and gets queued. 95% is the whole film.
+# Both live only in Preferences.xml, which the container rewrites on shutdown, so they are pushed
+# through Plex's own API and only when the running value differs.
 set -uo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"

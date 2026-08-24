@@ -1,19 +1,14 @@
 #!/usr/bin/env python3
 """Clear Prowlarr's failure backoff on an indexer whose site is answering again.
 
-Prowlarr backs a failing indexer off for up to 24 hours. That is right when a site is genuinely
-gone, and wrong when the outage was a 40-minute block from the ISP: the site comes back, nothing
-searches it until the backoff expires, and `prowlarr_indexer_up` reads that same `disabledTill`, so
-the "an indexer is down" alert keeps firing over a site that works. On 2026-08-23 C411 sat unusable
-for six hours after its site had recovered, and clearing it was a manual indexer test.
+Prowlarr backs a failing indexer off for up to 24 h, which is right when a site is gone and wrong
+when the outage was a 40-minute ISP block: nothing searches it until the backoff expires, and the
+"indexer is down" alert reads the same `disabledTill`, so it fires over a site that works.
 
-The site is reached for first, and Prowlarr is only asked to test the indexer once the site answers
-over a certificate that validates. A tracker that is really down therefore costs one cheap HTTPS
-request per run instead of a search, which matters on a private tracker: they ban for hammering.
-
-The probe goes out directly, while Prowlarr may reach the same site through a proxy or
-FlareSolverr. An indexer configured that way can be usable to Prowlarr while this sees nothing, and
-then this waits rather than testing. That is the safe direction to be wrong in.
+The site is probed first and Prowlarr is only asked to test once it answers over a valid
+certificate, so a tracker that is really down costs one HTTPS request per run and never a search:
+they ban for hammering. The probe goes out directly while Prowlarr may use a proxy or FlareSolverr,
+so an indexer configured that way waits rather than being tested, which is the safe way to be wrong.
 
 Run from cron (see scripts/crontab). Silent unless something happened.
 """

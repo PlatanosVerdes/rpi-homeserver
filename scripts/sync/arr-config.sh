@@ -1,14 +1,9 @@
 #!/bin/bash
 # Converge Radarr/Sonarr custom formats and quality profiles to config/arr/<app>/*.json.
 #
-# These were built by hand through each app's own UI (language scoring, the 4K/good/wasteful/
-# unwanted split, which qualities each profile allows) and live only in that app's own database
-# under appdata/ -- nothing in a compose file or .env captures them, so losing appdata silently
-# loses hours of tuning. Matched by name, so re-running this on every deploy is a no-op unless
-# the committed JSON changed.
-#
-# Custom formats must sync first: quality profiles score them by name, and the id a format gets
-# on THIS install is only known after it exists here.
+# They live only in each app's own database, so losing appdata loses them. Matched by name, so a
+# re-run is a no-op unless the committed JSON changed. Custom formats must sync before profiles:
+# profiles score formats by name, and a format's id only exists once it does.
 set -uo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"

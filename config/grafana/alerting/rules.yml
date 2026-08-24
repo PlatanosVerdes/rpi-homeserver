@@ -7,10 +7,9 @@ apiVersion: 1
 # What is NOT covered here, by design: the Pi being dead. Grafana dies with it, so that one
 # needs the external dead man's switch (see docs/alerting.md).
 #
-# execErrState is KeepLast everywhere, NOT Error. With Error, a query that merely fails to run
-# raises a DatasourceError alert with no labels ("source [no value] is failing"), so restarting
-# Prometheus pages you about a service that is perfectly fine. KeepLast holds the previous state
-# instead. The trade-off is that a permanently broken expression stays quiet, so check
+# execErrState is KeepLast everywhere and never Error: with Error, a query that merely fails to run
+# raises a labelless DatasourceError, so restarting Prometheus pages you about a healthy service.
+# The trade is that a permanently broken expression stays quiet, so check
 # `docker logs grafana | grep provision` after editing this file.
 
 groups:
@@ -611,16 +610,13 @@ groups:
       - uid: homelab-torrent-announce-silent
         title: 'A torrent is seeding to nobody'
         condition: C
-        # 30m, not the 2h this started at, because `rem_unregistered` runs hourly and deletes a
-        # disowned torrent on its next pass: at 2h the alert matured after the thing it describes
-        # had already gone. A tracker between announces does not trip this, since "no working
-        # tracker" persists between them rather than flickering.
+        # 30m, because `rem_unregistered` runs hourly and deletes a disowned torrent on its next
+        # pass: at 2h the alert matured after the thing it describes had gone. A tracker between
+        # announces does not trip it, since "no working tracker" persists rather than flickering.
         #
-        # This is the cause of every seed-goal margin in seed-rules.json and in the qbit-manage
-        # groups: qBittorrent counts seeding time while announces are rejected and the site does not,
-        # so the client's clock drifts ahead and a goal met here can still owe hours there. Knowing
-        # it happened beats guessing the margin, and it is the same signal on every tracker, so a
-        # site whose own seed time cannot be read is covered too.
+        # This is the reason every share-limit group carries a margin: qBittorrent counts seeding
+        # time while announces are rejected and the site does not, so a goal met here can still owe
+        # hours there. See docs/lifecycle.md.
         for: 30m
         labels:
           severity: warning
@@ -721,25 +717,18 @@ groups:
       - uid: homelab-used-indexer-down
         title: 'An indexer is down'
         condition: C
-        # 6h, not minutes. An indexer being down is not something you can fix from here: it either
-        # comes back on its own or it does not, and Prowlarr keeps retrying either way. The only
-        # version of this worth a message is "it has been gone long enough that you should pick a
-        # different one", so nothing under most of a day gets to interrupt. Combined with the 1h
-        # average in the expression, this needs ~7h of being mostly down before it says anything.
+        # 6h, not minutes: an indexer being down is not fixable from here, so the only version worth
+        # a message is "gone long enough to pick a different one". With the 1h average in the
+        # expression that is ~7h of being mostly down, and the average is also what stops a recovery
+        # blip resolving the alert and re-firing it.
         #
-        # Every enabled indexer is watched, one alert per indexer. It used to be only the ones with
-        # 3+ grabs in 90 days, which was right while every indexer was public and interchangeable
-        # and wrong as soon as private ones arrived: a tracker whose account is still in its newbie
-        # window has zero grabs by definition and is exactly the one whose failure needs saying out
-        # loud. Disabling an indexer in Prowlarr is what silences it now.
+        # Every enabled indexer, one alert each, including a private tracker with zero grabs: an
+        # account still in its newbie window has none by definition and is exactly the one worth
+        # hearing about. Disabling the indexer in Prowlarr is what silences it.
         #
-        # The 1h average, rather than the instant value, is what keeps a brief recovery blip in the
-        # middle of an otherwise-broken indexer from resolving the alert and re-firing it every time.
-        #
-        # scripts/ops/indexer-retry.py clears Prowlarr's backoff within 15 min of the site answering
-        # again, so this no longer fires over a site that recovered hours ago. What it does still fire
-        # over is a site only reachable through a proxy or FlareSolverr, which that script cannot
-        # probe. See docs/alerting.md.
+        # scripts/ops/indexer-retry.py clears the backoff within 15 min of the site answering, so
+        # this no longer fires over a site that recovered. It still fires over one reachable only
+        # through a proxy or FlareSolverr, which that script cannot probe. See docs/alerting.md.
         for: 6h
         labels:
           severity: warning

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Rebuild a docker compose service from scratch
-# Usage: ./scripts/deploy/rebuild-service.sh <service-name>
+# Usage: ./scripts/recovery/rebuild-service.sh <service-name>
 
 set -e
 
@@ -10,7 +10,7 @@ export COMPOSE_ENV_FILES=versions.env,.env
 
 if [ -z "$1" ]; then
     echo "Error: service name required"
-    echo "Usage: ./scripts/deploy/rebuild-service.sh <service-name>"
+    echo "Usage: ./scripts/recovery/rebuild-service.sh <service-name>"
     echo ""
     echo "Available services:"
     docker compose config --services

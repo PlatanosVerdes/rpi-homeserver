@@ -54,7 +54,7 @@ nothing rotates them by default: `apply.log` gains a few lines every deploy, for
 This is **in git** and installed on every deploy, so it comes back with a clone:
 
 **Source:** `config/logrotate/rpi-homeserver` → installed to `/etc/logrotate.d/rpi-homeserver`
-by `scripts/deploy/install-logrotate.sh`, which `scripts/deploy/apply.sh` runs.
+by `scripts/setup/install-logrotate.sh`, which `scripts/deploy/apply.sh` runs.
 
 It was a hand-written host file until 2026-08-22, documented only here. That meant a rebuilt Pi
 went back to unbounded logs with nothing to say so, and `rpi-services` was never covered: its

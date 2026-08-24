@@ -1,21 +1,17 @@
 #!/bin/bash
 # Push Radarr/Sonarr's connection into Overseerr and Bazarr.
 #
-# Both were linked by hand through their own UI (paste the *arr API key, pick a quality profile
-# and root folder) and that link lives only in each app's own appdata, not in any compose file or
-# .env. Radarr/Sonarr's API keys are read live from their config.xml and never written to git;
-# the only thing tracked here is config/overseerr-links.json, which holds preferences (which
-# quality profile, which root folder), not secrets.
+# That link lives only in each app's appdata. The arr API keys are read live from config.xml and
+# never written to git; config/overseerr-links.json holds only preferences, no secrets.
 #
-# Bazarr has no host-published port (see compose-media.yml), so its call is proxied through a
-# container already on media-network rather than localhost.
+# Bazarr publishes no port, so its call is proxied through a container already on media-network.
 set -uo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 APPDATA_ROOT="/home/raspi/rpi-homeserver/appdata"
 LINKS_FILE="$PROJECT_DIR/config/overseerr-links.json"
-# A service that accepts the connection and then never answers (Bazarr wedged on 2026-08-19) used
-# to hang this script, and with it the deploy lock, forever.
+# Every call is capped: a service that accepts the connection and then never answers would hang
+# this script, and the deploy lock with it.
 CURL_LIMITS="--connect-timeout 5 --max-time 30"
 
 failures=0

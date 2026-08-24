@@ -24,12 +24,12 @@ rather than gone. What it decided, the groups now decide, and PENDING.md holds w
 
 | Situation | What happens | Who does it |
 | :--- | :--- | :--- |
-| Public, imported into the library | torrent and its download-side name removed at once | `scripts/trackers/seed-cleanup.py` |
+| Public, imported into the library | torrent and its download-side name removed at once | qbit-manage, group `public` (2 h) |
 | Public, watched | film deleted | Maintainerr, two days after watching |
 | Private, still in the library | keeps seeding: the library shares the same bytes, so it costs no disk | nothing to do |
-| Private, watched, goal met | torrent and data removed on the next hourly pass | `scripts/trackers/seed-cleanup.py` |
-| Private, watched, goal pending | kept and tagged `waiting-seed`, rechecked hourly, deleted the hour it clears | `scripts/trackers/seed-cleanup.py` |
-| Private, owing a hit & run | never deleted, whatever else is true | `scripts/trackers/seed-cleanup.py` |
+| Private, watched, goal met | torrent and data moved to the recycle bin on the next hourly pass | qbit-manage, the tracker's group |
+| Private, watched, goal pending | kept and tagged `waiting-seed`, rechecked hourly, deleted the hour it clears | qbit-manage, the tracker's group |
+| Private, owing a hit & run | never deleted, whatever else is true | the margin in every group's `max_seeding_time` |
 
 Why the split: seeding a public torrent buys nothing. There is no account and no ratio requirement,
 so the only thing it produces is this address sitting in a public swarm for weeks. On a private
@@ -49,18 +49,18 @@ deletion rule reads them rather than applying one number everywhere:
 | C411 | upload only, with the ratio wall 2 GB away | their hit & run is disabled site-wide, so: as soon as it goes quiet |
 | retrotoon | points for seeding, and no ratio rule at all | their 72 h, then as soon as it goes quiet |
 
-The floor for "quiet" is `min_upload_gb_per_day` in `config/qbittorrent/seed-rules.json`, per tracker.
-A torrent with less than 12 hours of upload history is never judged on it, because a release added an
-hour ago has produced no evidence either way.
+The floor for "quiet" is now `min_last_active: 1d` on every private group: any activity at all
+resets it, so a torrent that trickles is kept indefinitely. It is coarser than the 0.2 GB/day the
+parked script measured, and what stops it costing real disk is the free-space floor that pauses the
+grabber.
 
-**The manual override is a tag.** Add `keep` to a torrent in qBittorrent and `scripts/trackers/seed-cleanup.py` will
-never touch it, whatever the goals say. It needs no deploy and no config change, which is the point:
-it exists for the moment something is about to be removed and the answer is "not yet, explain it
-first".
+**The manual override is a tag.** Add `keep` to a torrent in qBittorrent and no share-limit group
+will touch it, whatever its goal says: every group carries `exclude_any_tags: [keep, keep-bonus]`.
+It needs no deploy and no config change, which is the point: it exists for the moment something is
+about to be removed and the answer is "not yet, explain it first".
 
-Where it lives: goals per tracker in `config/qbittorrent/seed-rules.json`, enforcement in
-`scripts/trackers/seed-cleanup.py`, the film side in Maintainerr, and the full lifecycle in the README's
-deletion policy.
+Where it lives: goals per tracker in `config/qbit-manage/config.yml`, the film side in Maintainerr,
+and the whole path from indexer to recycle bin in [lifecycle.md](lifecycle.md).
 
 ## Three numbers, before touching anything
 
@@ -182,7 +182,7 @@ Two properties worth knowing:
 - **The grab rate is a disk budget, not a preference.** A grab cannot be deleted until its hit & run
   window closes, so the disk cost is the rate times the retention: 2 a day at ~20 GB over a 15-day
   goal holds ~600 GB. Below `min_free_gb` the grabber is disabled outright whatever the ratio says,
-  with 50 GB of hysteresis so it does not flap while `scripts/trackers/seed-cleanup.py` frees torrents.
+  with 50 GB of hysteresis so it does not flap while qbit-manage frees torrents.
 - **Credentials are not duplicated.** They are read from Prowlarr, which already holds them for the
   same site, and the session cookie is kept in `appdata/tracker-stats/` so the site sees about one
   login a day instead of 48.
@@ -224,8 +224,8 @@ Straight from staff in `#tlhelp`, 2026-08-20:
 
 **No category on the grabber's action is deliberate.** A category makes Radarr adopt a download and
 then complain it cannot import it. These grabs belong to nothing: they exist to be uploaded from, and
-the `ratio` tag says so. `scripts/trackers/seed-cleanup.py` finds no library copy for them and falls through to the
-TorrentLeech goal, which is past the obligation either way.
+the `ratio` tag says so, which is also what makes them visible to a share-limit group: they carry no
+category, so the hardlink check never inspects them and they could never be tagged `noHL`.
 
 Three API traps in autobrr, each of which cost an hour:
 
@@ -612,7 +612,7 @@ that version answers a successful login with `204` and the client code treats it
 handles it. And `excludeOlder` takes vercel `ms` strings, so `180d` works and `6 months` does not.
 
 The consequence for deletion is real and deliberate: a cross-seeded file has a link count above one
-while the second torrent exists, so `scripts/trackers/seed-cleanup.py` reads it as "still in the library" and keeps
+while the second torrent exists, so the hardlink check reads it as "still in the library" and keeps
 both. Bytes that used to be reclaimed after watching now wait for the cross-seed to finish paying its
 own tracker. That is the price of free ratio, and it is one more reason the deleting side belongs in
 qbit_manage, which understands cross-seeds explicitly.
