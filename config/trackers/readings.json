@@ -8,13 +8,13 @@
     "Sizes are GiB, matching what the sites display. Update whenever a profile page is in front of you."
   ],
   "digitalcore": {
-    "read_at": "2026-08-21",
-    "ratio": 4.22,
-    "uploaded_gb": 49.26,
+    "read_at": "2026-08-24",
+    "ratio": 6.75,
+    "uploaded_gb": 78.83,
     "downloaded_gb": 11.68,
-    "points": 726,
+    "points": 1202.5,
     "hit_and_run": 0,
-    "note": "leech bonus shown as 12%, class Rogue, daily login streak day 2 of 7"
+    "note": "buffer 67.15 GiB, leech bonus 19%, class Sentinel, 11 torrents seeding, no hit and run. Counted 78.83 GiB up against 53.83 GiB really uploaded (their upload multipliers) and 11.68 GiB counted down against 351.97 GiB really downloaded. The signup freeleech expired on 2026-08-14 and the counted figure has not moved since, because everything grabbed after it was 15 GiB or larger, which their rules make free anyway."
   },
   "c411": {
     "read_at": "2026-08-21",
