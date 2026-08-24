@@ -58,12 +58,54 @@ services:
       - media-network
 
 
+  # --- Acestream's VPN ---
+  # The engine sits inside this namespace, so what leaves the Pi for the swarm leaves from
+  # NordVPN. That is the whole point: the ISP stops seeing which streams are being pulled, and
+  # the TLS interception that takes the trackers down during football windows is tunnelled past.
+  #
+  # Nord forwards no port (it refuses as policy), so the engine is outbound-only in the swarm.
+  # For watching, that works; it is why the warmup proxy exists and it may need a longer window.
+  gluetun-ace:
+    image: qmcgaw/gluetun:${GLUETUN_VERSION}
+    container_name: gluetun-ace
+    profiles: [acestream, all]
+    restart: unless-stopped
+    mem_limit: 128m
+    memswap_limit: 128m
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      - TZ=${TZ}
+      - VPN_SERVICE_PROVIDER=${VPN_SERVICE_PROVIDER}
+      - VPN_TYPE=${VPN_TYPE}
+      # Read for VPN_TYPE=openvpn, ignored for wireguard, and the other way round below.
+      - OPENVPN_USER=${NORDVPN_USER}
+      - OPENVPN_PASSWORD=${NORDVPN_PASS}
+      - OPENVPN_PROTOCOL=${VPN_PROTOCOL}
+      - WIREGUARD_PRIVATE_KEY=${WIREGUARD_PRIVATE_KEY}
+      - SERVER_COUNTRIES=${VPN_COUNTRY}
+      # Without this the firewall drops what arrives for aceserve: a port published here is
+      # still an inbound connection as far as gluetun is concerned.
+      - FIREWALL_INPUT_PORTS=6878
+    # Published here, not on aceserve: a container in this namespace owns no ports of its own.
+    # Keeping 6878 on the host is what leaves farnsworth's STREAM_BASE working unchanged.
+    ports:
+      - "6878:6878"
+    networks:
+      - media-network
+
   # --- Acestream ---
   aceserve:
     image: jopsis/aceserve@${ACESERVE_DIGEST}
     container_name: aceserve
     profiles: [acestream, all]
-    network_mode: host
+    # Was host networking. Now it has no network of its own: it lives in gluetun's namespace,
+    # so it cannot reach the internet if the tunnel is down. That is the kill switch.
+    network_mode: "service:gluetun-ace"
+    depends_on:
+      - gluetun-ace
     restart: unless-stopped
     # Raised after 2026-08-23: the engine buffers the live stream in RAM and fills a 1 GB cache, so
     # the old 256m cap had the kernel OOM-killing it every 10-15 min of streaming. Peak is 1.153 GB.
@@ -83,7 +125,7 @@ services:
     memswap_limit: 64m
     profiles: [acestream, all]
     environment:
-      - ACESERVE_BASE_URL=http://172.19.0.1:6878
+      - ACESERVE_BASE_URL=http://gluetun-ace:6878
       - LISTEN_ADDR=:6879
       - PLAYLIST_PATH=/playlists/channels_ace.m3u
     volumes:
@@ -112,7 +154,7 @@ services:
       - TZ=${TZ}
       - OUTPUT_FILE=/data/channels_ace.m3u
       - SOURCE_URLS=https://k51qzi5uqu5di462t7j4vu4akwfhvtjhy88qbupktvoacqfqe9uforjvhyi4wr.ipns.dweb.link/hashes_acestream.m3u,https://ipfs.io/ipns/k51qzi5uqu5di462t7j4vu4akwfhvtjhy88qbupktvoacqfqe9uforjvhyi4wr/hashes_acestream.m3u,https://dweb.link/ipns/k51qzi5uqu5di462t7j4vu4akwfhvtjhy88qbupktvoacqfqe9uforjvhyi4wr/hashes_acestream.m3u
-      - ACESERVE_URL=http://172.19.0.1:6878/ace/getstream?id=
+      - ACESERVE_URL=http://gluetun-ace:6878/ace/getstream?id=
       - STREAM_BASE_URL=http://acestream-proxy:6879/ace/getstream?id=
       - PUSHGATEWAY_URL=http://pushgateway:9091
       - JELLYFIN_URL=http://jellyfin:8096

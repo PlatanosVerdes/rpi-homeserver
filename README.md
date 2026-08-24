@@ -532,6 +532,8 @@ Caddy picks it up on next restart — no changes needed in this repo.
 ### Acestream Live TV
 The `acestream-updater` (Go service in `services/acestream-updater/`) fetches IPFS channel lists, deduplicates them by acestream hash, writes a `.m3u` for Jellyfin, and runs concurrent health checks to verify each channel is actually serving bytes. It refreshes Jellyfin automatically when the playlist changes.
 
+The engine itself runs inside `gluetun-ace`, so the swarm traffic leaves through NordVPN and the line's TLS interception is tunnelled past. Its port lives on the tunnel, not on the engine: [docs/acestream-vpn.md](docs/acestream-vpn.md).
+
 Jellyfin setup: Dashboard → Live TV → Add Tuner (M3U) → path `/data/channels_ace.m3u`
 
 **After changing Go source code** (rebuild required):

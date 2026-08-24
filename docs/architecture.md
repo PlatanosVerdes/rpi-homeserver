@@ -32,7 +32,7 @@ flowchart TB
     GET["Download<br/>qbittorrent · unpackerr<br/>qbit-manage"]
     SERVE["Serve and reclaim<br/>plex · jellyfin · tautulli<br/>bazarr · maintainerr<br/>subtitle-links · watch-next · farnsworth"]
     PERS["Personal services<br/><i>rpi-services, separate repo</i>"]
-    ACE["Acestream<br/>aceserve · acestream-proxy · acestream-updater"]
+    ACE["Acestream<br/>aceserve <i>(in gluetun-ace)</i><br/>acestream-proxy · acestream-updater"]
   end
 
   subgraph OBS["4 · What watches it"]
