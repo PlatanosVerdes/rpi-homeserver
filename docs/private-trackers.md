@@ -524,6 +524,23 @@ then the configuration applied, then why.
    ```
 
    C411 looked like a ban on 2026-08-21 and was a SOCKS proxy whose credentials had expired.
+
+   **A proxy is the one thing that cannot be checked through Prowlarr's API.** It returns an indexer
+   proxy's password as eight asterisks, so comparing it against anything says nothing, and a
+   GET-modify-PUT round trip writes the mask in as the real password. Ask the SOCKS server itself
+   instead, which is the only test that exercises the credentials:
+
+   ```bash
+   curl -x socks5h://USER:PASS@nl.socks.nordhold.net:1080 \
+        -s -o /dev/null -w '%{http_code}\n' https://<the site>/
+   # any HTTP code means it authenticated and got out
+   # curl: (97) User was rejected by the SOCKS5 server  means the pair is dead
+   ```
+
+   The pair is NordVPN's **service credentials**, not the account login: Nord Account, NordVPN,
+   Advanced settings, Manual setup. `NORDVPN_USER` and `NORDVPN_PASS` in `.env` are a record of them
+   and nothing reads those variables, so a change there does not reach Prowlarr, which keeps its own
+   copy in `appdata`.
 3. **Look for the freeleech switch** in its Cardigann definition and turn it on if the ratio is
    thin, since Prowlarr is the only place that covers every app.
 4. **Add its hostname and rules to `config/trackers/rules.json`**, and its seed goal to
