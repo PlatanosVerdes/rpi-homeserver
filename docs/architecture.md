@@ -472,4 +472,3 @@ Below `min_free_gb` the grabber stops entirely, and a reading older than 3h move
 | `ops/cutoff-search.sh` | Asks Radarr to search for what it already says is missing. Decides nothing |
 | `ops/oci-hunt.py` | Asks Oracle for the free instance every minute, which is its measured rate limit, signing by hand. Counts the runs and logs one summary an hour rather than a line each, and exits for good once one lands |
 | `ops/indexer-retry.py` | Probes a backed-off indexer's site and clears Prowlarr's 24 h backoff when it answers, so an hour of blocking does not cost a day |
-| `apply.sh` | **Temporary.** Three-line shim to `deploy/apply.sh` so the live crontab survives the move. Delete after one deploy, see PENDING.md |

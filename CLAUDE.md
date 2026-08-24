@@ -50,7 +50,6 @@ services/                   Source code for custom services built in this repo
 
 scripts/                    Operational scripts, grouped by what they do
   crontab                   This repo's cron fragment, merged with the other repo's on deploy
-  apply.sh                  TEMPORARY shim -> deploy/apply.sh, delete after one deploy (PENDING.md)
 
   deploy/                   Making the host match the repos
     apply.sh                The orchestrator: pull, compose, then every sync below. Webhook + cron

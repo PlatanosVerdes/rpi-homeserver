@@ -1,20 +1,5 @@
 # Pending tasks
 
-## Delete the apply.sh shim
-
-`scripts/apply.sh` is three lines that exec `scripts/deploy/apply.sh`. It exists only to survive
-the deploy that moved the scripts into folders: the live crontab called the old path, and the pull
-that lands the move deletes it, so without the shim cron fails every 30 minutes and never reaches
-the new `scripts/deploy/install-crontab.sh` that would repoint it.
-
-Delete it once `crontab -l` on the Pi shows the new paths. Verify with:
-
-```bash
-crontab -l | grep -c 'scripts/deploy/apply.sh'   # 1 means the shim has done its job
-```
-
----
-
 ## ❌ Bitwarden Secrets Manager — dropped
 
 Tried moving `.env` secrets to [Bitwarden Secrets Manager](https://bitwarden.com/products/secrets-manager/)
