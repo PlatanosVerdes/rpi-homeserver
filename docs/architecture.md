@@ -138,12 +138,20 @@ how bad a dead SD card is: what each tool keeps that no file in this repo descri
 | qBittorrent | preferences and BT port, pushed by `scripts/sync/qbit-config.sh` | categories, tags, and **`BT_backup`, which is every torrent it holds**. Losing that is re-adding 45 torrents by hand and starting every seed clock at zero |
 | Plex | LAN networks and the 95% threshold, pushed by `scripts/sync/plex-prefs.sh` | libraries, watch history, and the claim token |
 | Prowlarr | **nothing** | every indexer, and each one's API key or passkey, which is why it cannot be in a public repo |
-| autobrr | **nothing** | the three filters, the IRC network and nick, and the download client entry |
-| Maintainerr | **nothing** | the rule group and its collection |
+| autobrr | **its three filters**, exported to `config/autobrr/filters.json` | the IRC network and nick, and the download client entry with its password |
+| Maintainerr | **its rule group**, exported to `config/maintainerr/rules.json` | nothing that matters: the collection is rebuilt from the rule |
 
-So three tools live entirely in the nightly archive. Two of them have no choice: Prowlarr and autobrr
-hold credentials. Maintainerr does not, and its two rules could be pushed from git the way the arrs'
-profiles are, which is written down in PENDING.md rather than done.
+So one tool still lives entirely in the nightly archive, and it has no choice: every Prowlarr
+indexer carries a passkey or an API key and this repo is public. autobrr and Maintainerr used to be
+there too, until `scripts/ops/config-export.py` pulled the parts of them that are logic rather than
+credentials into `config/`.
+
+That script reads and never writes back, which is the opposite of everything in `scripts/sync/`. The
+reason is the blast radius: pushing a filter from a file grabs the wrong thing and costs disk, while
+pushing a deletion rule from a file deletes films. So a deploy runs it with `--check` and logs
+`[config-drift]` when the live config and the committed copy have parted ways, and a human decides
+which one is right. autobrr redacts its own indexer keys in its API (`"rsskey": "<redacted>"`), so
+what is committed is the shape of the setup and not the way in.
 
 **The backup is a hot copy, and that is the part to know before trusting it.**
 `scripts/ops/backup.sh` tars `appdata` nightly at 04:00 while every container is running, keeps

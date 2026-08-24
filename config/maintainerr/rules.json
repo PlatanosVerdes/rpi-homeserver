@@ -1,0 +1,62 @@
+[
+  {
+    "collection": {
+      "arrAction": 1,
+      "cleanupLeftoverFolders": true,
+      "deleteAfterDays": 0,
+      "description": "",
+      "forceSeerr": false,
+      "id": 1,
+      "isActive": true,
+      "keepLogsForMonths": 6,
+      "libraryId": "1",
+      "listExclusions": false,
+      "manualCollection": false,
+      "manualCollectionName": "",
+      "mediaServerId": null,
+      "mediaServerSort": null,
+      "mediaServerType": "plex",
+      "overlayEnabled": false,
+      "overlayTemplateId": null,
+      "radarrQualityProfileId": null,
+      "radarrSettingsId": 1,
+      "sonarrQualityProfileId": null,
+      "sonarrSettingsId": null,
+      "sortTitle": null,
+      "sportarrQualityProfileId": null,
+      "sportarrSettingsId": null,
+      "tagInArr": false,
+      "tautulliWatchedPercentOverride": 95,
+      "title": "Pending deletion",
+      "type": "movie",
+      "visibleOnHome": true,
+      "visibleOnRecommended": true
+    },
+    "collectionId": 1,
+    "dataType": "movie",
+    "description": "",
+    "id": 1,
+    "isActive": true,
+    "libraryId": "1",
+    "name": "Pending deletion",
+    "notifications": [],
+    "ruleHandlerCronSchedule": null,
+    "rules": [
+      {
+        "id": 2,
+        "isActive": true,
+        "ruleGroupId": 1,
+        "ruleJson": "{\"customVal\": {\"ruleTypeId\": 0, \"value\": \"172800\"}, \"operator\": null, \"firstVal\": [0, 7], \"action\": 5, \"section\": 0}",
+        "section": 0
+      },
+      {
+        "id": 3,
+        "isActive": true,
+        "ruleGroupId": 1,
+        "ruleJson": "{\"customVal\": {\"ruleTypeId\": 0, \"value\": \"0\"}, \"operator\": 0, \"firstVal\": [0, 5], \"action\": 0, \"section\": 0}",
+        "section": 0
+      }
+    ],
+    "useRules": true
+  }
+]

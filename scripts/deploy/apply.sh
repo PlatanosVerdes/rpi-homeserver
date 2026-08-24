@@ -438,6 +438,12 @@ bash "$PROJECT_DIR/scripts/deploy/install-logrotate.sh" 2>&1 | while IFS= read -
 # Pi silently loses them. Needs both apps up, hence running here rather than before compose.
 bash "$PROJECT_DIR/scripts/sync/arr-config.sh" 2>&1 | while IFS= read -r line; do log "[arr-config] $line"; done
 
+# The other direction, for the two apps whose settings are logic rather than credentials: autobrr's
+# filters and Maintainerr's rule. Both are written by hand in a UI and held in a database, so git
+# only has them because they were exported. This reports drift rather than pushing, because a wrong
+# Maintainerr rule deletes films. See scripts/ops/config-export.py.
+"$PROJECT_DIR/scripts/ops/config-export.py" --check 2>&1 | while IFS= read -r line; do log "[config-drift] $line"; done
+
 # Converge Pi-hole's custom DNS to the *.platanosverdes.com hosts declared in Caddy. Additive
 # only (see the script), so it never touches an entry it did not derive from Caddy.
 bash "$PROJECT_DIR/scripts/sync/pihole-dns.sh" 2>&1 | while IFS= read -r line; do log "[pihole-dns] $line"; done

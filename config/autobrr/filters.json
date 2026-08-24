@@ -1,0 +1,131 @@
+[
+  {
+    "actions": [
+      {
+        "client_id": 1,
+        "enabled": true,
+        "id": 1,
+        "name": "a qBittorrent sin categoria",
+        "tags": "ratio",
+        "type": "QBITTORRENT"
+      }
+    ],
+    "announce_types": [
+      "NEW"
+    ],
+    "enabled": true,
+    "freeleech": true,
+    "id": 1,
+    "indexers": [
+      {
+        "base_url": "https://www.torrentleech.org/",
+        "enabled": true,
+        "id": 1,
+        "identifier": "torrentleech",
+        "identifier_external": "TorrentLeech (Prowlarr)",
+        "implementation": "",
+        "name": "TorrentLeech",
+        "proxy": null,
+        "proxy_id": 0,
+        "settings": {
+          "rsskey": "<redacted>"
+        },
+        "use_proxy": false
+      }
+    ],
+    "is_auto_updated": false,
+    "max_downloads": 1,
+    "max_downloads_unit": "DAY",
+    "max_size": "40GB",
+    "min_size": "5GB",
+    "name": "TL freeleech ratio builder",
+    "priority": 30,
+    "release_profile_duplicate": null,
+    "smart_episode": false
+  },
+  {
+    "actions": [
+      {
+        "client_id": 1,
+        "enabled": true,
+        "id": 2,
+        "name": "a qBittorrent sin categoria",
+        "tags": "ratio",
+        "type": "QBITTORRENT"
+      }
+    ],
+    "announce_types": [
+      "NEW"
+    ],
+    "enabled": true,
+    "freeleech": true,
+    "id": 2,
+    "indexers": [
+      {
+        "enabled": true,
+        "id": 2,
+        "identifier": "digitalcore",
+        "identifier_external": "DigitalCore",
+        "implementation": "",
+        "name": "DigitalCore",
+        "proxy": null,
+        "proxy_id": 0,
+        "settings": {
+          "passkey": "<redacted>"
+        },
+        "use_proxy": false
+      }
+    ],
+    "is_auto_updated": false,
+    "max_downloads": 1,
+    "max_downloads_unit": "DAY",
+    "max_size": "30GB",
+    "min_size": "15GB",
+    "name": "DC freeleech ratio builder",
+    "priority": 20,
+    "release_profile_duplicate": null,
+    "smart_episode": false
+  },
+  {
+    "actions": [
+      {
+        "client_id": 1,
+        "enabled": true,
+        "id": 3,
+        "name": "to qBittorrent, no category",
+        "tags": "ratio",
+        "type": "QBITTORRENT"
+      }
+    ],
+    "announce_types": [
+      "NEW"
+    ],
+    "enabled": true,
+    "id": 3,
+    "indexers": [
+      {
+        "enabled": true,
+        "id": 3,
+        "identifier": "retrotoonworld",
+        "identifier_external": "RetroToon World",
+        "implementation": "",
+        "name": "RetroToon World",
+        "proxy": null,
+        "proxy_id": 0,
+        "settings": {
+          "passkey": "<redacted>"
+        },
+        "use_proxy": false
+      }
+    ],
+    "is_auto_updated": false,
+    "max_downloads": 1,
+    "max_downloads_unit": "DAY",
+    "max_size": "25GB",
+    "min_size": "5GB",
+    "name": "RetroToon cartoons",
+    "priority": 10,
+    "release_profile_duplicate": null,
+    "smart_episode": false
+  }
+]

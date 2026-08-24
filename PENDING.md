@@ -404,18 +404,20 @@ deploy that rebuilds it. So it sent a message about an unfixable thing on a sche
 you learn to ignore costs more than a public indexer that Nyaa.si already covers. Health is clean
 now, no warnings at all. The definition file is still on disk if it is ever wanted back.
 
-### Maintainerr's rules are the last config that could be in git and is not
+### Maintainerr's rule and autobrr's filters are in git now, one way only
 
-Three tools keep their whole configuration in `appdata`, so only the nightly archive has it:
-Prowlarr, autobrr and Maintainerr. The first two have no choice, since their config holds passkeys
-and IRC credentials and this repo is public. Maintainerr holds neither: one rule group, two rules,
-one collection. Deleting a film after it has been watched for two days is the single most visible
-behaviour on the box, and it exists nowhere in git.
+Both were in `appdata` alone, so the nightly archive was the only copy of them: three autobrr
+filters that decide what gets grabbed, and the Maintainerr rule that deletes a film two days after
+it is watched. `scripts/ops/config-export.py` pulls both into `config/`, and a deploy runs it with
+`--check` and logs `[config-drift]` when the live config and the committed copy differ.
 
-It wants the same shape as `scripts/sync/arr-config.sh`: the rule group as JSON in `config/`, pushed
-through Maintainerr's API on every deploy. Its API is on 127.0.0.1:6246 inside the container and
-`scripts/metrics/media.py` already reads it, so the access pattern is known. See the table in
-[docs/architecture.md](docs/architecture.md) for what else is backup-only.
+It does not push, and that is deliberate rather than unfinished. `scripts/sync/arr-config.sh` can
+push because a wrong quality profile downloads the wrong file; a wrong Maintainerr rule deletes the
+library. If pushing is ever wanted, autobrr is the safe half to start with, since its API takes a
+whole filter on `PUT /api/filters/{id}` and the worst case is a grab nobody asked for.
+
+Still `appdata` only, with no way around it: Prowlarr, because every indexer it holds carries a
+passkey or an API key and this repo is public.
 
 ### 2. Put the right setup on each tracker
 

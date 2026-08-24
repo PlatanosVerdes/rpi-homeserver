@@ -82,6 +82,7 @@ scripts/                    Operational scripts, grouped by what they do
     cutoff-search.sh        Nightly *arr search for missing and below-cutoff items
     oci-hunt.py             Keeps asking Oracle for the free instance until capacity exists
     indexer-retry.py        Clears Prowlarr's backoff once a blocked indexer's site answers again
+    config-export.py        Pulls autobrr's filters and Maintainerr's rule into git; --check on deploy
 
 appdata/                    Persistent container data (NOT in git, lives on disk)
 docs/                       Setup guides
