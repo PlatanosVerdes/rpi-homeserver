@@ -529,7 +529,7 @@
           "refId": "A"
         }
       ],
-      "description": "Counter resets whenever a container is recreated, and a deploy recreates them routinely, so increase() over 24h loses the history and reads zero. max_over_time per name keeps the worst run instead. It undercounts a container recreated between two kills, which beats reporting none."
+      "description": "Total across all containers. Uses max_over_time and not increase(): the counter belongs to a container instance, so a recreate ends the series and increase() over 24h then reads zero. Undercounts a container recreated between two kills."
     },
     {
       "id": 110,
@@ -1204,14 +1204,14 @@
       "id": 124,
       "type": "timeseries",
       "title": "Memory against its own limit (%)",
-      "description": "The warning aceserve never gave on 2026-08-23: it sat at 96% of a 256m cap for minutes before the kernel killed it, three times. Only containers with mem_limit appear here; Plex and Jellyfin are deliberately unbounded, so their ceiling is the host RAM gauge above.",
+      "description": "Each container against its own mem_limit, not against the Pi's total RAM. Reaching 100% means the kernel kills it, so anything sitting above the 80% line needs a bigger cap or a look at what it is holding. Containers without mem_limit report a limit of 0 and are filtered out: their real ceiling is host RAM, on the RAM used gauge above.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
-        "w": 16,
+        "w": 8,
         "x": 0,
         "y": 19
       },
@@ -1284,10 +1284,73 @@
       ]
     },
     {
+      "id": 126,
+      "type": "timeseries",
+      "title": "Memory as a share of the Pi (%)",
+      "description": "The same containers measured against the Pi's total RAM instead of their own cap. Read it beside the panel on the left: a container can sit near its own limit while barely denting the host, and the other way round. Containers without mem_limit appear here and cannot appear on the left, so this is the only per-container view that includes Plex and Jellyfin.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 19
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "showPoints": "never",
+            "axisPlacement": "auto"
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "12.3.3",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "topk(10, container_memory_working_set_bytes{name!=\"\",name!~\".*POD.*\"} / scalar(node_memory_MemTotal_bytes) * 100)",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{name}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
       "id": 125,
       "type": "bargauge",
       "title": "OOM kills by container (24h)",
-      "description": "Which container the kernel killed, not just how many. Empty is the healthy state. Docker reports ExitCode=0 OOMKilled=false for these, because the kernel kills a child process and not PID 1, so this metric is the only place they show up.",
+      "description": "Containers the kernel killed for going over their memory cap. Empty is the healthy state. Docker is no help here: it records ExitCode=0 and OOMKilled=false, because the kernel kills a process inside the container and not PID 1, so the container looks like it exited cleanly. The counter restarts with the container, so this is the worst single run rather than a running total.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
