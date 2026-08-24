@@ -270,11 +270,17 @@ Two consequences that read like bugs and are not:
 
 ### Indexers / trackers
 
-Current: public (**1337x, YTS, The Pirate Bay, LimeTorrents, Nyaa.si** for anime/JP cinema), Spanish
-(**Elitetorrent, MoviesDVDR, Frozen Layer**), plus four private sites: **TorrentLeech**,
+Current: eight public (**1337x, The Pirate Bay, YTS, LimeTorrents, Knaben, NoNaMe Club,
+BigFANGroup**, and **Nyaa.si** for anime), plus four private sites: **TorrentLeech**,
 **DigitalCore**, **C411** and **retrotoon.world**. Their rules, seed goals and wiring live in
 [docs/private-trackers.md](docs/private-trackers.md), which is the source of truth for anything
 tracker-shaped; nothing about a private tracker belongs only here.
+
+Elitetorrent, MoviesDVDR and Frozen Layer were here and are not any more. The last of them went on
+2026-08-24: its Cardigann definition had been deleted upstream, so Prowlarr reported
+`Indexers have no definition and will not work` on every start, and that is an error-level health
+issue, which its Telegram connection forwards. A permanent alert about something unfixable is worse
+than a missing indexer, and Nyaa.si covers the same ground.
 
 **Next tier**, pending to evaluate:
 - General / joinable now: **IPTorrents**, **FileList**.

@@ -393,11 +393,16 @@ Still open on this site: a way to read the account, which needs a stored site lo
 API key the definition uses, and the freeleech-only filter, which its definition does not expose at
 all.
 
-**Frozen Layer** still reports `Indexers have no definition and will not work`. The definition was
-removed upstream (nothing named `frozen` is left in `Prowlarr/Indexers`), and what keeps it working
-is a local copy in `/config/Definitions` last touched on 1 April, pinning a certificate fingerprint
-that expired in February. Searching it returns results today, so this is a decision about whether an
-unmaintained definition is worth carrying, not an outage.
+**Frozen Layer is gone, on 2026-08-24.** It reported `Indexers have no definition and will not work`
+because its definition had been deleted upstream: nothing named `frozen` is left in
+`Prowlarr/Indexers`, and what kept it searching was a local copy in `/config/Definitions` last
+touched on 1 April, pinning a certificate fingerprint that expired in February.
+
+What decided it was not the definition but the noise: Prowlarr's Telegram connection has
+`onHealthIssue` on, this was error level rather than a warning, and Prowlarr restarts on every
+deploy that rebuilds it. So it sent a message about an unfixable thing on a schedule, and an alert
+you learn to ignore costs more than a public indexer that Nyaa.si already covers. Health is clean
+now, no warnings at all. The definition file is still on disk if it is ever wanted back.
 
 ### 2. Put the right setup on each tracker
 
