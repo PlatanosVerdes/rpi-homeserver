@@ -1210,8 +1210,8 @@
         "uid": "prometheus"
       },
       "gridPos": {
-        "h": 8,
-        "w": 8,
+        "h": 9,
+        "w": 12,
         "x": 0,
         "y": 19
       },
@@ -1293,9 +1293,9 @@
         "uid": "prometheus"
       },
       "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
+        "h": 9,
+        "w": 12,
+        "x": 12,
         "y": 19
       },
       "fieldConfig": {
@@ -1347,74 +1347,6 @@
       ]
     },
     {
-      "id": 125,
-      "type": "bargauge",
-      "title": "OOM kills by container (24h)",
-      "description": "Containers the kernel killed for going over their memory cap. Empty is the healthy state. Docker is no help here: it records ExitCode=0 and OOMKilled=false, because the kernel kills a process inside the container and not PID 1, so the container looks like it exited cleanly. The counter restarts with the container, so this is the worst single run rather than a running total.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 19
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "decimals": 0,
-          "min": 0,
-          "mappings": [],
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 1
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "displayMode": "gradient",
-        "orientation": "horizontal",
-        "showUnfilled": true,
-        "valueMode": "color",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "pluginVersion": "12.3.3",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "max by (name) (max_over_time(container_oom_events_total{name!=\"\"}[24h])) > 0",
-          "instant": true,
-          "legendFormat": "{{name}}",
-          "refId": "A"
-        }
-      ]
-    },
-    {
       "id": 123,
       "type": "timeseries",
       "title": "Network throughput",
@@ -1426,7 +1358,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 27
+        "y": 28
       },
       "fieldConfig": {
         "defaults": {
@@ -1495,7 +1427,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 34
+        "y": 35
       },
       "panels": []
     },
@@ -1511,7 +1443,7 @@
         "h": 16,
         "w": 8,
         "x": 0,
-        "y": 35
+        "y": 36
       },
       "targets": [
         {
@@ -1613,7 +1545,7 @@
         "h": 16,
         "w": 8,
         "x": 8,
-        "y": 35
+        "y": 36
       },
       "targets": [
         {
@@ -1715,7 +1647,7 @@
         "h": 16,
         "w": 8,
         "x": 16,
-        "y": 35
+        "y": 36
       },
       "fieldConfig": {
         "defaults": {
