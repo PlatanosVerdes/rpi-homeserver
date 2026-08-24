@@ -1211,7 +1211,7 @@
       },
       "gridPos": {
         "h": 9,
-        "w": 12,
+        "w": 24,
         "x": 0,
         "y": 19
       },
@@ -1276,69 +1276,6 @@
           },
           "editorMode": "code",
           "expr": "topk(10, container_memory_working_set_bytes{name!=\"\",name!~\".*POD.*\"} / (container_spec_memory_limit_bytes{name!=\"\",name!~\".*POD.*\"} > 0) * 100)",
-          "instant": false,
-          "range": true,
-          "legendFormat": "{{name}}",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "id": 126,
-      "type": "timeseries",
-      "title": "Memory as a share of the Pi (%)",
-      "description": "The same containers measured against the Pi's total RAM instead of their own cap. Read it beside the panel on the left: a container can sit near its own limit while barely denting the host, and the other way round. Containers without mem_limit appear here and cannot appear on the left, so this is the only per-container view that includes Plex and Jellyfin.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 12,
-        "y": 19
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percent",
-          "min": 0,
-          "custom": {
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "lineWidth": 1,
-            "showPoints": "never",
-            "axisPlacement": "auto"
-          },
-          "color": {
-            "mode": "palette-classic"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "showLegend": true,
-          "displayMode": "table",
-          "placement": "bottom",
-          "calcs": [
-            "lastNotNull",
-            "max"
-          ]
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "pluginVersion": "12.3.3",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "topk(10, container_memory_working_set_bytes{name!=\"\",name!~\".*POD.*\"} / scalar(node_memory_MemTotal_bytes) * 100)",
           "instant": false,
           "range": true,
           "legendFormat": "{{name}}",
