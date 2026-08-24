@@ -634,7 +634,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Compose containers with no `prometheus.probe` label, so nothing checks that they answer: for these, being alive means the container is running and cAdvisor still sees it. Add the label in their compose file and they move to the probes above. Last seen is how long ago cAdvisor read them, normally under a minute.",
+      "description": "Compose containers with no `prometheus.probe` label: nothing checks that they answer, so all you get is that the container exists and cAdvisor still sees it. The exporters in this list do report `up` (panel on the left); the rest serve no HTTP at all, which is why they cannot be probed. Anything here that does serve HTTP is simply missing its label: add it in the compose file and it moves up to the probes. Last seen is how long ago cAdvisor read it, normally under a minute.",
       "gridPos": {
         "h": 8,
         "w": 8,
