@@ -47,6 +47,8 @@ services/                   Source code for custom services built in this repo
   deploy-webhook/           Python receiver (systemd) — deploys on GitHub push via Cloudflare tunnel
   watch-next/               Go service: monitors + searches the next Sonarr episode(s) on watch
   subtitle-links/           Go service: page listing movies/episodes with a downloadable text subtitle
+  pi-metrics/               Python exporter: the numbers no exporter provides (upgrades, torrents,
+                            indexer usage, where the disk went, what zram costs). Was three crons
 
 scripts/                    Operational scripts, grouped by what they do
   crontab                   This repo's cron fragment, merged with the other repo's on deploy
@@ -68,11 +70,6 @@ scripts/                    Operational scripts, grouped by what they do
     pihole-dns.sh           Caddy's *.platanosverdes.com hosts -> Pi-hole custom DNS
     plex-prefs.sh           Plex LAN networks and the 95% played threshold
     qbit-config.sh          qBittorrent queue limits, upload cap and BT port
-
-  metrics/                  Numbers no exporter provides
-    media.py                Upgrades, torrents, indexer status and usage -> Pushgateway
-    disk-usage.sh           Biggest files/dirs on the data disk -> node_exporter textfile
-    zram.sh                 What the compressed swap really costs in RAM -> node_exporter
 
   trackers/                 The private-tracker economy: measure, decide, reclaim
     stats.py                Reads each site and computes the ratio headroom

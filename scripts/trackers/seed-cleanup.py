@@ -86,7 +86,7 @@ def env(name, default):
 
 def qbit(endpoint, data=None):
     """The WebUI trusts localhost; from the host it arrives via the Docker gateway, which is not in
-    its AuthSubnetWhitelist and would need credentials. Same trick as scripts/metrics/media.py."""
+    its AuthSubnetWhitelist and would need credentials."""
     command = ["docker", "exec", "qbittorrent", "curl", "-sf", "--max-time", "30",
                f"http://localhost:8080/api/v2/{endpoint}"]
     for key, value in (data or {}).items():

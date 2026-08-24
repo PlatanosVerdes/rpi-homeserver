@@ -507,6 +507,42 @@ groups:
               conditions:
                 - evaluator: { type: gt, params: [0] }
 
+      # A collector can be stuck while the process is alive, and up == 0 would say nothing about
+      # that. The interval is exported next to the timestamp so this needs no threshold per
+      # collector: four missed passes is late whatever its schedule is.
+      - uid: homelab-metrics-collector-overdue
+        title: 'A pi-metrics collector is overdue'
+        condition: C
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: '{{ $labels.collector }} has not produced a snapshot in four of its intervals'
+          description: >-
+            The panels fed by this collector are showing the last snapshot it managed, which is not
+            the same as nothing: they look normal and are stale. The service itself is up, or the
+            "exporter down" rule would have fired instead.
+        noDataState: OK
+        execErrState: KeepLast
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: '(time() - pi_metrics_last_success_timestamp_seconds) > bool (4 * pi_metrics_collection_interval_seconds)'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+
       - uid: homelab-service-not-answering
         title: 'Service not answering'
         condition: C
@@ -587,7 +623,7 @@ groups:
         execErrState: KeepLast
         data:
           # No aggregation on purpose: qbit_torrent_progress carries a `name` label per torrent
-          # (scripts/metrics/media.py), so each stalled torrent becomes its OWN alert instance with its
+          # (services/pi-metrics), so each stalled torrent becomes its OWN alert instance with its
           # own `for` timer, instead of one nameless blob that also mis-resets when a different
           # torrent starts stalling while another one is already being counted.
           - refId: A

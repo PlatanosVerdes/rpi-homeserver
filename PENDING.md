@@ -622,22 +622,33 @@ down is the reason and what covers the gap: the nightly search existed for relea
 out of the RSS window, so if nothing replaces it, that case stops being covered. Decide, write it
 here, and then delete the script and its cron line together.
 
-## Two scripts that want to be a service
+## ✅ pi-metrics — DONE 2026-08-24. The tracker pair is next
 
-Read on 2026-08-24 with this question in mind. The verdict per script, so the next attempt does not
-start from scratch:
+The question was whether the cron scripts under `scripts/metrics` and `scripts/trackers` want to be
+services. Read on 2026-08-24 with that in mind, and the answer differed per script.
 
-- **`metrics/media.py` (567 lines) is worth converting.** It is read-only: it queries Radarr,
-  Sonarr, Prowlarr, qBittorrent and Maintainerr every five minutes and pushes twelve metric groups
-  to Pushgateway. Pushing is what makes its death invisible, because the last value it pushed stays
-  there forever; scraped, `up` says it stopped. The metric names would not change, but the `job`
-  label would, so the dashboard queries that filter on `job` have to be checked first.
-- **`trackers/stats.py` + `trackers/control.py` should be one script, not a daemon.** They already
-  talk through a `state.json` on disk, so the coupling is cheap. What the split costs is the
-  `MAX_READING_AGE` guard and the cron choreography (`:00/:30` then `:05/:35`), both of which exist
-  only because they are two processes. Merging them removes that; daemonising an actuator that
-  writes to Prowlarr, Radarr, autobrr and qBittorrent adds risk a single cron run does not have.
-- **`metrics/zram.sh` and `metrics/disk-usage.sh` should stay as they are.** 34 and 33 lines
-  reading host sysfs and walking the data disk into node-exporter's textfile collector, which is
-  the mechanism built for exactly that. A container would need `/sys` and the disk mounted and buys
-  nothing.
+**Done: `metrics/media.py`, `metrics/zram.sh` and `metrics/disk-usage.sh` are now `pi-metrics`.**
+Prometheus's own guidance is that the Pushgateway is for batch jobs, and its named cost is that you
+lose `up` and that a pushed series outlives whatever pushed it: a broken `media.py` left every panel
+looking normal and showing anteayer's numbers. The two shell scripts went in with it rather than
+staying on node-exporter's textfile collector, which is the canonical place for host cron metrics,
+because a file cannot say the thing that writes it has died either, and one container answering all
+three is cheaper than a container plus two crons.
+
+What that took, for the next time: the collectors were left alone and only `push()` changed, from a
+PUT to appending to a buffer. The three things that tied them to the host were the `localhost:PORT`
+URLs (now container names on media-network), the two `docker exec` calls (now direct HTTP, which
+means qBittorrent needs a login because its AuthSubnetWhitelist does not cover the Docker bridge),
+and the API keys read from `appdata/<app>/config.xml` (now three read-only mounts, so no secret is
+duplicated into `.env`).
+
+**Still to do: `trackers/stats.py` + `trackers/control.py` want to be one process.** They already
+talk through a `state.json` on disk, so what the split costs is the `MAX_READING_AGE` guard and the
+cron choreography (`:00/:30` then `:05/:35`), both of which exist only because they are two
+processes. The reason to be careful is that `control.py` writes to Prowlarr, Radarr, autobrr and
+qBittorrent: keep `DRY_RUN`, keep the Telegram announcements, and export a last-successful-loop
+timestamp so a wedged loop is visible the way a wedged cron never was.
+
+**Not converting**: `ops/heartbeat.sh` (a container cannot report that Docker is down, which is its
+whole job), `ops/backup.sh` (a daily batch job, the sanctioned Pushgateway case), `ops/oci-hunt.py`
+(temporary, exits for good once it wins) and `ops/config-export.py` (a deploy step, not a schedule).

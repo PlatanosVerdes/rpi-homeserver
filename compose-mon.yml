@@ -68,7 +68,7 @@ services:
       - --housekeeping_interval=30s
       - --docker_only=true
       # disk/diskIO walk every container's filesystem on external storage each cycle, and
-      # scripts/metrics/disk-usage.sh already covers that. referenced_memory reads /proc/<pid>/smaps
+      # pi-metrics already covers that. referenced_memory reads /proc/<pid>/smaps
       # per process and logs a warning for each one it cannot read: 66 log lines per 80 s here, and
       # nothing graphs it. "accelerator" is not a metric kind in v0.60.5 and crash-loops the flag
       # parse, so do not add it.
@@ -154,6 +154,34 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - ${CONFIG_ROOT}/blackbox/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
+    networks:
+      - media-network
+
+  # --- PI-METRICS (the numbers no exporter provides) ---
+  # Was three cron scripts pushing to Pushgateway and writing node_exporter textfiles. Scraped
+  # instead, so its death is visible: a pushed metric outlives the thing that pushed it.
+  # Collects in the background and answers the last snapshot, see services/pi-metrics/main.py.
+  pi-metrics:
+    build: ./services/pi-metrics
+    container_name: pi-metrics
+    restart: unless-stopped
+    mem_limit: 192m
+    memswap_limit: 192m
+    profiles: [moni, all]
+    environment:
+      - TZ=${TZ}
+      # qBittorrent's AuthSubnetWhitelist does not cover the Docker bridge, so it logs in
+      - QBIT_USER=${QBIT_USER}
+      - QBIT_PASSWORD=${QBIT_PASSWORD}
+    volumes:
+      # The arrs' API keys live in their config.xml and nowhere else, so they are read rather than
+      # duplicated into .env. Whole directories and not the single file: git and the apps replace
+      # that file, and a single-file bind mount would keep pointing at the old inode.
+      - ${APP_CONFIG_PATH}/radarr:/appdata/radarr:ro
+      - ${APP_CONFIG_PATH}/sonarr:/appdata/sonarr:ro
+      - ${APP_CONFIG_PATH}/prowlarr:/appdata/prowlarr:ro
+      # Read-only, for the disk walk and for spotting downloads no torrent claims
+      - ${DATA_ROOT}:/mnt/data:ro
     networks:
       - media-network
 

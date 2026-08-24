@@ -1086,7 +1086,7 @@
         ]
       },
       "pluginVersion": "12.3.3",
-      "description": "The same files as the panel above, with their full path, and filtered by the **Folder** dropdown.\n\nWritten periodically by `scripts/metrics/disk-usage.sh`, so a file deleted moments ago can still appear here\nuntil the next run.\n\nOne line per inode: the *arrs hardlink on import, so a grabbed file and its library copy are the same\nbytes under two paths. Counting both would double the footer total."
+      "description": "The same files as the panel above, with their full path, and filtered by the **Folder** dropdown.\n\nWalked hourly by the `pi-metrics` service, so a file deleted moments ago can still appear here until the next walk.\n\nOne line per inode: the *arrs hardlink on import, so a grabbed file and its library copy are the same\nbytes under two paths. Counting both would double the footer total."
     },
     {
       "id": 300,

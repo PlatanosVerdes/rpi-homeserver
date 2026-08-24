@@ -259,24 +259,35 @@ directory today.
 
 ## Three routes to Grafana
 
-Only one of them notices that the producer has died.
+Only one of them notices that the producer has died, which is why things keep moving towards it.
 
 ```mermaid
 flowchart LR
   subgraph A["Route A · file"]
-    S1["scripts/metrics/zram.sh<br/>scripts/metrics/disk-usage.sh"] -->|.prom| NE["node-exporter<br/><i>textfile collector</i>"]
+    S1["nothing left here<br/><i>zram and disk moved to pi-metrics</i>"] -->|.prom| NE["node-exporter<br/><i>textfile collector</i>"]
   end
   subgraph B["Route B · push"]
-    S2["scripts/metrics/media.py · scripts/trackers/stats.py<br/>scripts/trackers/control.py · scripts/ops/backup.sh<br/>scripts/ops/cutoff-search.sh"] -->|POST| PG["Pushgateway"]
+    S2["scripts/trackers/stats.py<br/>scripts/trackers/control.py<br/>scripts/ops/backup.sh"] -->|POST| PG["Pushgateway"]
   end
   subgraph C["Route C · scrape"]
-    EX["node-exporter · cadvisor · blackbox<br/>pihole-exporter · qbittorrent-exporter<br/>speedtest-tracker · cloudflared<br/><b>tailscale-metrics</b>"]
+    EX["node-exporter · cadvisor · blackbox<br/>pihole-exporter · qbittorrent-exporter<br/>speedtest-tracker · cloudflared<br/>tailscale-metrics · <b>pi-metrics</b>"]
   end
   NE --> PROM
   PG --> PROM
   EX --> PROM
   PROM["Prometheus<br/><i>scrapes every 15s</i>"] --> GR["Grafana<br/><i>17 dashboards</i>"]
 ```
+
+Prometheus's own guidance is that the Pushgateway is for **batch jobs**: something that starts,
+computes and exits. Its named cost is exactly the one that matters here, that you lose `up` and that
+a pushed series is served forever whether or not anything is still producing it. So route B keeps
+only what is genuinely a batch job, the daily backup and the tracker pair, and everything that runs
+on a schedule forever has moved to route C.
+
+`pi-metrics` is that move: the media, zram and disk numbers, collected in the background and served
+from a snapshot because one media pass takes ~7s against five APIs and a 15s scrape cannot wait for
+it. `up` says the process lives and `pi_metrics_last_success_timestamp_seconds` says the data is
+fresh, which are two different failures and now two different alerts.
 
 ### Is an indexer being used, or just up
 
@@ -322,7 +333,7 @@ earn a sentence. `deploy/apply.sh` is sixth by complexity, not first.
 
 | Script | Code | Functions | Branches | Deletes |
 | :--- | ---: | ---: | ---: | :--- |
-| `metrics/media.py` | 555 | 21 | 132 | |
+| `services/pi-metrics/media.py` | 555 | 21 | 132 | |
 | `trackers/seed-cleanup.py` | 477 | 29 | 116 | files |
 | `trackers/stats.py` | 380 | 18 | 75 | |
 | `trackers/control.py` | 378 | 23 | 115 | config |
@@ -416,9 +427,9 @@ Below `min_free_gb` the grabber stops entirely, and a reading older than 3h move
 | `sync/pihole-dns.sh` | Caddy's hosts as local DNS. Additive only: an entry not derived from Caddy is never touched |
 | `sync/plex-prefs.sh` | LAN networks, so tailnet clients are not billed as remote, and the played threshold at 95% |
 | `sync/qbit-config.sh` | Queue limits and BT port. Reads back after writing, because qBittorrent accepts an unknown key and drops it |
-| `metrics/media.py` | The largest, but wide rather than deep: eleven functions of the same shape, fetch, count, push. Answers "which", not "how many" |
-| `metrics/disk-usage.sh` | Biggest files on the data disk, one line per inode so a hardlink is not counted twice. Niced and ionice'd |
-| `metrics/zram.sh` | The real RAM compressed pages occupy, the one number node-exporter cannot tell from disk swap |
+| `services/pi-metrics/media.py` | The largest, but wide rather than deep: ten collectors of the same shape, fetch, count, emit. Answers "which", not "how many" |
+| `services/pi-metrics/host.py` | Where the disk went and what zram costs. One walk answers both the largest files and the per-folder totals, counting a hardlinked inode once |
+| `services/pi-metrics/main.py` | Serves both from a snapshot refreshed in the background, and exports when each collector last succeeded |
 | `trackers/stats.py` | Reads each site with a stored cookie. The complexity is parsing, deliberately dumb about markup so a second site is config, not a selector hunt |
 | `ops/backup.sh` | Compresses appdata, keeps 7, excludes what regenerates (Prometheus TSDB, Plex caches) |
 | `ops/heartbeat.sh` | Tells an outside check the Pi is alive, and deliberately fails when the essentials are not running |

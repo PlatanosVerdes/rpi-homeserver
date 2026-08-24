@@ -31,6 +31,12 @@ scrape_configs:
     static_configs:
       - targets: ['host.docker.internal:2000']
 
+  # The numbers no exporter provides: which film was upgraded, which torrent is stalled, where the
+  # disk went. It answers from a snapshot, so this scrape is milliseconds whatever it collects.
+  - job_name: 'pi-metrics'
+    static_configs:
+      - targets: ['pi-metrics:9110']
+
   - job_name: 'tailscale'
     static_configs:
       - targets: ['tailscale-metrics:9736']

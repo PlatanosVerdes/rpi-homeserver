@@ -27,15 +27,26 @@ stop the others.
 
 import json
 import os
-import subprocess
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-PROJECT_DIR = Path(os.path.expanduser("~/rpi-homeserver"))
-PUSHGATEWAY = "http://localhost:9091"
+APPDATA = Path(os.environ.get("APPDATA_PATH", "/appdata"))
+
+# Where each app answers. Container names on media-network, not published ports: this runs as a
+# service now, so localhost is its own loopback and nothing else.
+RADARR = os.environ.get("RADARR_URL", "http://radarr:7878")
+SONARR = os.environ.get("SONARR_URL", "http://sonarr:8989")
+PROWLARR = os.environ.get("PROWLARR_URL", "http://prowlarr:9696")
+QBIT = os.environ.get("QBIT_URL", "http://qbittorrent:8080")
+MAINTAINERR = os.environ.get("MAINTAINERR_URL", "http://maintainerr:6246")
+
+# Filled by push(), drained by the service. A collector still calls push() per group, so the
+# grouping the Pushgateway used to give is preserved as the order of the output.
+OUTPUT = []
 KEEP_UPGRADES = 25
 PAIR_WINDOW = 120  # seconds between the delete and the import to call it the same upgrade
 
@@ -58,11 +69,14 @@ ARRS = [
      lambda r: (r.get("series") or {}).get("title", "?")),
 ]
 
+ARR_URL = {7878: RADARR, 8989: SONARR}
+
 failures = []
+qbit_cookie = ""
 
 
 def api_key(app):
-    text = (PROJECT_DIR / "appdata" / app / "config.xml").read_text(errors="ignore")
+    text = (APPDATA / app / "config.xml").read_text(errors="ignore")
     start = text.index("<ApiKey>") + len("<ApiKey>")
     return text[start:text.index("</ApiKey>", start)]
 
@@ -74,13 +88,7 @@ def get(url, key):
 
 
 def push(job, lines):
-    payload = "\n".join(lines) + "\n"
-    request = urllib.request.Request(f"{PUSHGATEWAY}/metrics/job/{job}",
-                                    data=payload.encode(), method="PUT")
-    try:
-        urllib.request.urlopen(request, timeout=10).close()
-    except (urllib.error.URLError, OSError) as exc:
-        failures.append(f"{job}: pushgateway unreachable: {exc}")
+    OUTPUT.extend(lines)
 
 
 def escape(value):
@@ -100,7 +108,7 @@ def quality_changes():
     rows = []
     for app, port, api, deleted_event, extra, title_of in ARRS:
         try:
-            records = get(f"http://localhost:{port}/api/{api}/history"
+            records = get(f"{ARR_URL[port]}/api/{api}/history"
                           f"?pageSize=200&sortKey=date&sortDirection=descending&{extra}",
                           api_key(app))["records"]
         except Exception as exc:
@@ -135,21 +143,45 @@ def quality_changes():
     push("arr_history", lines)
 
 
-def qbit_list():
-    """Read from inside the container: the WebUI trusts localhost, the host arrives via the Docker
-    gateway which is not in its AuthSubnetWhitelist, so this needs no credentials.
+def qbit_get(path):
+    """The WebUI's AuthSubnetWhitelist does not cover the Docker bridge, so this logs in like any
+    other client and keeps the cookie for the process's life.
+    """
+    global qbit_cookie
+    for attempt in (1, 2):
+        request = urllib.request.Request(f"{QBIT}/api/v2/{path}")
+        if qbit_cookie:
+            request.add_header("Cookie", qbit_cookie)
+        try:
+            with urllib.request.urlopen(request, timeout=20) as resp:
+                return json.loads(resp.read())
+        except urllib.error.HTTPError as exc:
+            if exc.code != 403 or attempt == 2:
+                raise
+            qbit_login()
+    return None
 
-    None means "could not ask", which is not the same as "no torrents": orphan detection has to
+
+def qbit_login():
+    global qbit_cookie
+    body = urllib.parse.urlencode({"username": os.environ.get("QBIT_USER", ""),
+                                   "password": os.environ.get("QBIT_PASSWORD", "")}).encode()
+    request = urllib.request.Request(f"{QBIT}/api/v2/auth/login", data=body,
+                                     headers={"Referer": QBIT})
+    with urllib.request.urlopen(request, timeout=20) as resp:
+        cookie = resp.headers.get("Set-Cookie", "")
+    # qBittorrent 5 names it QBT_SID_<port>, 4.x named it SID: take whatever it sent.
+    qbit_cookie = cookie.split(";")[0] if "=" in cookie else ""
+    if not qbit_cookie:
+        raise RuntimeError("qBittorrent refused the login")
+
+
+def qbit_list():
+    """None means "could not ask", which is not the same as "no torrents": orphan detection has to
     tell those apart or a qBittorrent that is merely down turns every download into an orphan.
     """
     try:
-        result = subprocess.run(
-            ["docker", "exec", "qbittorrent", "curl", "-sf",
-             "http://localhost:8080/api/v2/torrents/info"],
-            capture_output=True, text=True, timeout=30)
-        if result.returncode != 0:
-            raise RuntimeError(result.stderr.strip()[:120] or "curl failed")
-        return json.loads(result.stdout)
+        return qbit_get("torrents/info")
     except Exception as exc:
         failures.append(f"qbittorrent: {exc}")
         return None
@@ -209,7 +241,7 @@ def indexer_usage():
         try:
             key = api_key(app)
             for page in (1, 2, 3):
-                records = get(f"http://localhost:{port}/api/{api}/history"
+                records = get(f"{ARR_URL[port]}/api/{api}/history"
                               f"?page={page}&pageSize=200&sortKey=date&sortDirection=descending",
                               key)["records"]
                 if not records:
@@ -254,7 +286,7 @@ def media_audio():
     lines = ["# HELP arr_media_audio 1 per film and audio language present in the file",
              "# TYPE arr_media_audio gauge"]
     try:
-        movies = get("http://localhost:7878/api/v3/movie", api_key("radarr"))
+        movies = get(f"{RADARR}/api/v3/movie", api_key("radarr"))
         for movie in movies:
             f = movie.get("movieFile")
             if not movie.get("hasFile") or not f:
@@ -310,7 +342,7 @@ def waiting_on():
              "# TYPE arr_waiting gauge"]
     try:
         key = api_key("radarr")
-        profiles = {p["id"]: p for p in get("http://localhost:7878/api/v3/qualityprofile", key)}
+        profiles = {p["id"]: p for p in get(f"{RADARR}/api/v3/qualityprofile", key)}
         cutoff_name = {}
         for pid, profile in profiles.items():
             target = profile["cutoff"]
@@ -319,7 +351,7 @@ def waiting_on():
                  if (i.get("id") or i.get("quality", {}).get("id")) == target), str(target))
 
         today = datetime.now(timezone.utc)
-        movies = get("http://localhost:7878/api/v3/movie", key)
+        movies = get(f"{RADARR}/api/v3/movie", key)
         by_title, current, expected = {}, {}, {}
         for movie in movies:
             by_title[movie["title"]] = movie
@@ -330,7 +362,7 @@ def waiting_on():
 
         rows = {}
         # downloading wins over the other two: it is already happening
-        for item in get("http://localhost:7878/api/v3/queue?pageSize=100&includeMovie=true", key)["records"]:
+        for item in get(f"{RADARR}/api/v3/queue?pageSize=100&includeMovie=true", key)["records"]:
             title = (item.get("movie") or {}).get("title") or item.get("title", "?")
             eta = item.get("timeleft") or ""
             state = item.get("trackedDownloadState") or item.get("status") or ""
@@ -354,7 +386,7 @@ def waiting_on():
                            "target": cutoff_name.get(movie.get("qualityProfileId"), "?"),
                            "expected": expected.get(title, "unknown")}
 
-        for record in get("http://localhost:7878/api/v3/wanted/cutoff?pageSize=200", key)["records"]:
+        for record in get(f"{RADARR}/api/v3/wanted/cutoff?pageSize=200", key)["records"]:
             title = record["title"]
             if title in rows:
                 continue
@@ -384,7 +416,7 @@ def library_sizes():
              "# TYPE arr_media_size_bytes gauge"]
     counts = {}
     try:
-        movies = get("http://localhost:7878/api/v3/movie", api_key("radarr"))
+        movies = get(f"{RADARR}/api/v3/movie", api_key("radarr"))
         for movie in movies:
             f = movie.get("movieFile")
             if not movie.get("hasFile") or not f:
@@ -399,7 +431,7 @@ def library_sizes():
         failures.append(f"radarr library: {exc}")
 
     try:
-        shows = get("http://localhost:8989/api/v3/series", api_key("sonarr"))
+        shows = get(f"{SONARR}/api/v3/series", api_key("sonarr"))
         for series in shows:
             size = (series.get("statistics") or {}).get("sizeOnDisk", 0)
             if not size:
@@ -428,16 +460,10 @@ def maintainerr_pending():
 
     From the paginated media endpoint, not the `media` array on /api/collections, which is capped and
     returned two of three. The call goes through the container (no published port) and its server is
-    IPv4 only: localhost in there resolves to ::1 and is refused.
     """
     def api(path):
-        result = subprocess.run(
-            ["docker", "exec", "maintainerr", "wget", "-qO-",
-             f"http://127.0.0.1:6246/api/{path}"],
-            capture_output=True, text=True, timeout=30)
-        if result.returncode != 0:
-            raise RuntimeError(result.stderr.strip()[:120] or "wget failed")
-        return json.loads(result.stdout)
+        with urllib.request.urlopen(f"{MAINTAINERR}/api/{path}", timeout=20) as resp:
+            return json.loads(resp.read())
 
     try:
         collections = api("collections")
@@ -514,7 +540,7 @@ def orphans():
     queue_rows = []
     for app, port, id_field, unknown_arg in QUEUES:
         try:
-            records = get(f"http://localhost:{port}/api/v3/queue?pageSize=200&{unknown_arg}=true",
+            records = get(f"{ARR_URL[port]}/api/v3/queue?pageSize=200&{unknown_arg}=true",
                           api_key(app))["records"]
         except Exception as exc:
             failures.append(f"{app} queue: {exc}")
@@ -582,8 +608,8 @@ def prowlarr_indexers():
     state timeline shows them dropping out and coming back."""
     try:
         key = api_key("prowlarr")
-        indexers = get("http://localhost:9696/api/v1/indexer", key)
-        status = get("http://localhost:9696/api/v1/indexerstatus", key)
+        indexers = get(f"{PROWLARR}/api/v1/indexer", key)
+        status = get(f"{PROWLARR}/api/v1/indexerstatus", key)
     except Exception as exc:
         failures.append(f"prowlarr: {exc}")
         return
@@ -614,7 +640,7 @@ def prowlarr_indexer_activity():
     would hand Prometheus a pre-averaged number over a window it did not choose.
     """
     try:
-        stats = get("http://localhost:9696/api/v1/indexerstats", api_key("prowlarr"))
+        stats = get(f"{PROWLARR}/api/v1/indexerstats", api_key("prowlarr"))
     except Exception as exc:
         failures.append(f"prowlarr stats: {exc}")
         return
@@ -639,16 +665,29 @@ def prowlarr_indexer_activity():
     push("prowlarr_indexer_activity", queries + grabs + failed + slow)
 
 
+COLLECTORS = (
+    "quality_changes", "qbit_torrents", "indexer_usage", "library_sizes", "media_audio",
+    "waiting_on", "prowlarr_indexers", "prowlarr_indexer_activity", "maintainerr_pending",
+    "orphans",
+)
+
+
+def collect():
+    """Every group, in order, into one exposition body. A group that raises is skipped and named in
+    `failures`, so one unreachable app does not blank the rest.
+    """
+    OUTPUT.clear()
+    failures.clear()
+    for name in COLLECTORS:
+        try:
+            globals()[name]()
+        except Exception as exc:                      # noqa: BLE001 - one bad group, not all of them
+            failures.append(f"{name}: {exc}")
+    return "\n".join(OUTPUT) + "\n", list(failures)
+
+
 if __name__ == "__main__":
-    quality_changes()
-    qbit_torrents()
-    indexer_usage()
-    library_sizes()
-    media_audio()
-    waiting_on()
-    prowlarr_indexers()
-    prowlarr_indexer_activity()
-    maintainerr_pending()
-    orphans()
-    if failures:
-        sys.exit("; ".join(failures))
+    body, problems = collect()
+    print(body, end="")
+    if problems:
+        sys.exit("; ".join(problems))

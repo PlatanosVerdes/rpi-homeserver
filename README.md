@@ -269,7 +269,7 @@ Two consequences that read like bugs and are not:
   qBittorrent, which is safe while `auto_tmm` is off (it is: nothing moves on disk), stops the *arr
   from ever seeing it again, and leaves qbit-manage finishing the job, because it asks
   about hard links and trackers and never about categories. Both this and data a removed torrent left
-  behind are exported by `scripts/metrics/media.py` as `arr_orphan_*` every five minutes, and alerted on
+  behind are exported by the `pi-metrics` service as `arr_orphan_*` every five minutes, and alerted on
   ("Download nothing can import", "Data in downloads that nothing owns"), because the *arr's own
   notification only fires when it restarts and is easy to lose among the reboot alerts.
 
@@ -463,7 +463,6 @@ scripts/     Operational scripts, grouped by what they do:
   setup/       host state apply.sh converges on each pass: cron and log rotation
   recovery/    run by hand after something broke: rebuild a service, see what a human still owes
   sync/        pushes config that lives only in an app's appdata, every deploy
-  metrics/     numbers no exporter provides
   trackers/    the private-tracker economy: measure, decide, reclaim
   ops/         everything else on a schedule (backup, heartbeat, searches)
 appdata/     Persistent container data (databases, app state) — not in git
