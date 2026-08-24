@@ -11,7 +11,6 @@ const key = process.env.PROWLARR_API_KEY;
 const privateIndexers = {
     17: "TorrentLeech",
     16: "DigitalCore",
-    11: "BTSCHOOL",
     9: "C411",
     12: "retrotoon (generic torznab)",
 };

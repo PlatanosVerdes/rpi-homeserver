@@ -122,10 +122,11 @@ and the *arrs have to talk to `gluetun:8080` rather than `qbittorrent:8080`.
 - **ProtonVPN** and **PIA** are the two with *automatic* port forwarding in gluetun (PIA on every
   server except the US ones). **AirVPN** works too, but the port is set by hand once, since it does
   not change.
-- The SOCKS5 proxy already configured here (`nl.socks.nordhold.net`, tag `nordvpn`) is used by
-  Prowlarr for **searching** c411 and touches no torrent traffic. No commercial proxy fixes this
-  anyway: accepting inbound through a proxy needs SOCKS5 BIND, which none of them allow. A proxy
-  hides the IP; it does not make the box reachable.
+- The SOCKS5 proxy still configured in Prowlarr (`nl.socks.nordhold.net`, tag `nordvpn`) has no
+  indexer tagged to it any more: it searched c411 until its credentials expired in silence, which is
+  a failure that reads like a banned account. It never touched torrent traffic in any case. No
+  commercial proxy fixes this anyway: accepting inbound through a proxy needs SOCKS5 BIND, which none
+  of them allow. A proxy hides the IP; it does not make the box reachable.
 
 ## The risk that is actually present
 

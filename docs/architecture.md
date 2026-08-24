@@ -36,7 +36,7 @@ flowchart TB
   end
 
   subgraph OBS["4 · What watches it"]
-    PROM["prometheus :9090<br/><i>29 alert rules</i>"]
+    PROM["prometheus :9090<br/><i>30 alert rules</i>"]
     GRAF["grafana :3000"]
     PUSH["pushgateway :9091"]
     LOGS["vector → victorialogs"]
@@ -131,7 +131,7 @@ so a revert is invisible in `apply.log`.
 flowchart TB
   OV["Overseerr<br/><i>you ask</i>"] --> RA
   CS["scripts/ops/cutoff-search.sh<br/><i>05:00, what is still wanted</i>"] --> RA
-  RA["<b>Radarr</b><br/>decides what qualifies<br/><i>profiles + custom formats</i>"] -->|search| PR["Prowlarr<br/>14 indexers"]
+  RA["<b>Radarr</b><br/>decides what qualifies<br/><i>profiles + custom formats</i>"] -->|search| PR["Prowlarr<br/>13 indexers"]
   PR --> QB
   BRR["autobrr<br/><i>IRC announce, seconds</i>"] --> QB
   QB["<b>qBittorrent</b><br/>downloads and seeds"] --> UP["unpackerr<br/><i>extracts the mkv from the RAR</i>"]
@@ -208,8 +208,9 @@ The filter belongs in Prowlarr and not in the arrs because `requiredFlags` exist
 Torznab indexer and not on Sonarr's: filtering there would leave series unprotected.
 
 TorrentLeech today: ratio 0.821, headroom 67.7 GB, against a threshold of 0.4. Of the private
-indexers, only TorrentLeech currently has the freeleech-only filter on. BTSCHOOL and DigitalCore
-have it off, and C411 does not expose the field.
+indexers, only TorrentLeech currently has the freeleech-only filter on. DigitalCore has it off, and
+C411 does not expose the field at all, which is why its "freeleech only" rule is a habit rather than
+a setting.
 
 ---
 
@@ -321,7 +322,7 @@ nobody's request: no dashboard and no alert reads it.
 
 ## The scripts
 
-Twenty files under `scripts/`, grouped by what they do rather than by a prefix in the filename.
+Twenty-one files under `scripts/`, grouped by what they do rather than by a prefix in the filename.
 Measured by lines of code, branches and external calls, three of them earn a drawing and the rest
 earn a sentence. `deploy/apply.sh` is fifth by complexity, not first.
 
@@ -333,7 +334,7 @@ earn a sentence. `deploy/apply.sh` is fifth by complexity, not first.
 | `trackers/control.py` | 378 | 23 | 115 | config |
 | `deploy/apply.sh` | 266 | 6 | 64 | |
 | `ops/oci-hunt.py` | 251 | 14 | 57 | |
-| the other fourteen | <135 | <6 | <13 | |
+| the other fifteen | <135 | <6 | <13 | |
 
 ### trackers/seed-cleanup.py
 
@@ -428,4 +429,5 @@ Below `min_free_gb` the grabber stops entirely, and a reading older than 3h move
 | `ops/heartbeat.sh` | Tells an outside check the Pi is alive, and deliberately fails when the essentials are not running |
 | `ops/cutoff-search.sh` | Asks Radarr to search for what it already says is missing. Decides nothing |
 | `ops/oci-hunt.py` | Asks Oracle for the free instance every 2 min, signing by hand, and exits for good once one lands |
+| `ops/indexer-retry.py` | Probes a backed-off indexer's site and clears Prowlarr's 24 h backoff when it answers, so an hour of blocking does not cost a day |
 | `apply.sh` | **Temporary.** Three-line shim to `deploy/apply.sh` so the live crontab survives the move. Delete after one deploy, see PENDING.md |

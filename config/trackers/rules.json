@@ -119,21 +119,6 @@
     "site_wide_freeleech_until": "2026-09-30",
     "autobrr_filter": "RetroToon cartoons"
   },
-  "btschool": {
-    "_rules_read": "2026-08-21, from the site's own Rules page",
-    "prowlarr_indexer": "BTSCHOOL",
-    "min_ratio": 0,
-    "_min_ratio_note": "The rules say a low ratio costs download privileges but put the number in their FAQ, which has not been read yet.",
-    "hit_and_run": {
-      "min_seed_hours": 20,
-      "min_ratio": 1.0
-    },
-    "_hit_and_run_note": "20 h of seeding within 10 days of finishing, regardless of torrent size, and upload above download clears it outright. Ten unmet obligations is a ban, clearing one costs 20000 bonus points, and an H&R ban is lifted only by a 100 CNY donation.",
-    "tracker_hosts": [],
-    "_tracker_hosts_note": "Still unknown: the site refuses to serve a .torrent at all (Prowlarr gets 'Invalid torrent file contents'), which is consistent with an account still inside its newbie assessment. Searching works, downloading does not.",
-    "max_upload_mbytes_per_second": 25,
-    "_max_upload_note": "Their cap, not ours: over 25 MB/s on a reported announce is penalised at three times the reported upload, and over 100 MB/s is an automatic ban. qBittorrent's upload is unlimited and its global limit cannot be set per tracker, so this only becomes a real constraint once something seeds here. Measured peak so far across all trackers: about 0.5 MB/s."
-  },
   "c411": {
     "_rules_read": "2026-08-21, from the site's own Ratio & Seedtime wiki page",
     "prowlarr_indexer": "C411",
@@ -150,6 +135,6 @@
     "signup_upload_credit_gb": 50,
     "_credit_note": "New accounts get 50 GB of upload credit that counts towards the ratio, so the 52.2 GB the site shows is 2.3 GB really uploaded plus the credit. Any headroom figure from this site is inflated by it and does not grow back.",
     "cross_seed": "explicitly allowed by the wiki",
-    "_status_2026_08_21": "The site itself is in maintenance: its own homepage answers with a Maintenance page from here, which is why Prowlarr cannot parse the XML. Its API key is set, and the nordvpn proxy tag was removed on request, so search should recover on its own."
+    "_status_2026_08_24": "Searches go direct: the nordvpn SOCKS tag is off deliberately, because credentials that expire without warning produce a failure that reads like a ban. That leaves the ISP's match-night interception of Cloudflare addresses as an accepted outage, with scripts/ops/indexer-retry.py clearing Prowlarr's backoff within 15 min of the site answering again. The maintenance page it served on 2026-08-21 is gone, a search returns ~100 results. The account still cannot be read: the definition authenticates by API key, so there is no login for stats.py to reuse, and it exposes no freeleech facet either. See docs/private-trackers.md."
   }
 }
