@@ -177,13 +177,24 @@ def qbit_torrents():
     # categories in its nohardlinks list, and without autobrr's `ratio` tag no share_limits group
     # matches it either. So it seeds forever, nothing reclaims it and nothing says so. Added by hand
     # is how they arrive: `Obsession (2026)` sat like that from 2026-08-09 to 2026-08-24.
+    # Every seed goal here carries margin over what a site asks, because qBittorrent's clock counts
+    # while announces are being rejected and the tracker's does not: measured at 26 to 118 h on
+    # TorrentLeech in August, while its account was disabled. That gap only opens when announces
+    # fail, and qBittorrent already knows: `tracker` holds the first working one and is empty when
+    # none of them is. So watch the cause instead of guessing the margin per site.
+    silent = ["# HELP qbit_torrent_no_working_tracker Seeding whose announces are not landing",
+              "# TYPE qbit_torrent_no_working_tracker gauge"]
+    for t in items:
+        if not (t.get("tracker") or "").strip():
+            silent.append(f'qbit_torrent_no_working_tracker{{name="{escape(t["name"])[:90]}"}} 1')
+
     unmanaged = ["# HELP qbit_torrent_unmanaged Torrent that no retention rule can ever match",
                  "# TYPE qbit_torrent_unmanaged gauge"]
     for t in items:
         tags = {g.strip() for g in (t.get("tags") or "").split(",") if g.strip()}
         if not (t.get("category") or "") and "ratio" not in tags:
             unmanaged.append(f'qbit_torrent_unmanaged{{name="{escape(t["name"])[:90]}"}} 1')
-    push("qbit_torrents", progress + ratio + size + unmanaged)
+    push("qbit_torrents", progress + ratio + size + silent + unmanaged)
 
 
 def indexer_usage():

@@ -9,6 +9,11 @@ docker-compose.override.yml
 *.env
 # ...but versions.env holds only image versions (no secrets) and IS tracked
 !versions.env
+# `*.env` only matches what ends in .env, so a hand-made copy like .env.bak-20260824 was not
+# covered and one `git add -A` on the Pi would have pushed every secret to a public repo. One was
+# sitting there untracked on 2026-08-24.
+.env*
+!.env.example
 .env_copy
 .deploy_state
 .deploy.lock
@@ -24,6 +29,10 @@ config/homepage/*
 
 # Docker volumes and runtime data
 *.log
+# logrotate keeps four rounds beside each log, and copytruncate leaves them right here in the
+# repo root. Without these two lines `git status` on the Pi is permanently dirty with them.
+*.log.[0-9]
+*.log.[0-9].gz
 *.pid
 *.sock
 

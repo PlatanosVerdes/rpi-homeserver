@@ -608,6 +608,45 @@ groups:
               datasource: { type: __expr__, uid: __expr__ }
               conditions:
                 - evaluator: { type: gt, params: [-1] }
+      - uid: homelab-torrent-announce-silent
+        title: 'A torrent is seeding to nobody'
+        condition: C
+        # Two hours, because a tracker between announces reads the same as a tracker refusing them.
+        # This is the cause of every seed-goal margin in seed-rules.json and in the qbit-manage
+        # groups: qBittorrent counts seeding time while announces are rejected and the site does not,
+        # so the client's clock drifts ahead and a goal met here can still owe hours there. Knowing
+        # it happened beats guessing the margin, and it is the same signal on every tracker, so a
+        # site whose own seed time cannot be read is covered too.
+        for: 2h
+        labels:
+          severity: warning
+        annotations:
+          summary: '{{ $labels.name }} has no working tracker'
+          description: >-
+            It is seeding locally and the tracker is not accepting the announce, so the site is
+            crediting none of it while qBittorrent keeps counting. Usually a reset passkey, an
+            account suspended, or the site being blocked from here. Until it clears, that torrent's
+            seeding time is fiction.
+        noDataState: OK
+        execErrState: KeepLast
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: 'qbit_torrent_no_working_tracker > bool 0'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
       - uid: homelab-torrent-unmanaged
         title: 'A torrent nothing will ever clean up'
         condition: C
