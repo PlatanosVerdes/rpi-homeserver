@@ -384,26 +384,28 @@ for svc in (doc.get("services") or {}).values():
     fi
 
     # Fifth of the same, and it had been silent the longest: Prometheus and the blackbox exporter
-    # read their bind-mounted config once at startup and neither has `--web.enable-lifecycle`, so
-    # SIGHUP is the way in. The `tailscale` job committed on 22 Aug was still missing from the
-    # running config two days later for exactly this reason.
+    # read their bind-mounted config once at startup, so the `tailscale` job committed on 22 Aug was
+    # still missing from the running config two days later.
+    # A restart and not a signal, for the reason Vector taught above: git replaces the file, the
+    # container keeps the old inode, and both of these answer a SIGHUP with "no changes detected"
+    # while reading the file they were started with. Only a restart re-resolves the mount.
     if [[ "$label" == "homeserver" && "$before" != "$after" ]]; then
         local changed_config
         changed_config=$(git diff --name-only "$before" "$after")
         if grep -q '^config/prometheus/' <<<"$changed_config" &&
             docker ps --format '{{.Names}}' | grep -qx prometheus; then
-            if docker kill -s HUP prometheus >/dev/null 2>&1; then
-                log "[$label] prometheus.yml changed, Prometheus reloaded"
+            if docker restart prometheus >/dev/null 2>&1; then
+                log "[$label] prometheus.yml changed, Prometheus restarted to load it"
             else
-                log "[$label] WARNING: prometheus.yml changed but the reload signal failed"
+                log "[$label] WARNING: prometheus.yml changed but Prometheus would not restart"
             fi
         fi
         if grep -q '^config/blackbox/' <<<"$changed_config" &&
             docker ps --format '{{.Names}}' | grep -qx blackbox-exporter; then
-            if docker kill -s HUP blackbox-exporter >/dev/null 2>&1; then
-                log "[$label] blackbox modules changed, exporter reloaded"
+            if docker restart blackbox-exporter >/dev/null 2>&1; then
+                log "[$label] blackbox modules changed, exporter restarted to load them"
             else
-                log "[$label] WARNING: blackbox config changed but the reload signal failed"
+                log "[$label] WARNING: blackbox config changed but the exporter would not restart"
             fi
         fi
     fi
