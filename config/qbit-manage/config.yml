@@ -123,14 +123,53 @@ share_limits:
     include_any_tags:
       - noHL
       - ratio
-    max_seeding_time: 10d
+    # 120 h against the 72 h they ask, so 48 h of margin. The generic 10 d it sat under was 168 h
+    # of margin on a site whose only rule is time, which is disk held for nothing.
+    max_seeding_time: 120h
     max_ratio: -1            # -1 is "no ratio limit": time is the only thing that clears here
     min_last_active: 1d
     cleanup: true
     resume_torrent_after_change: false
 
-  private:
+  # 96 h owed, not 72: their clock starts 24 h after the download and the client's starts at
+  # completion, so 150 h here is 54 h of margin. Their H&R system is disabled site-wide right now,
+  # which is the reason this one can afford a thinner margin than DigitalCore's.
+  c411:
     priority: 3
+    include_all_tags:
+      - c411
+    include_any_tags:
+      - noHL
+      - ratio
+    max_seeding_time: 150h
+    max_ratio: 1.0
+    min_last_active: 1d
+    cleanup: true
+    resume_torrent_after_change: false
+
+  # 120 h owed, and left at 240 on purpose. Their FAQ is explicit that the site is the only source
+  # of truth for seed time, because it counts only what it saw announced, so the client's counter
+  # says nothing here. The gap between the two clocks has only ever been measured on TorrentLeech,
+  # where it ran from 26 to 118 h. Measure it here on the site's own per-torrent seed time before
+  # cutting this number, and then 180 h is the target.
+  digitalcore:
+    priority: 4
+    include_all_tags:
+      - digitalcore
+    include_any_tags:
+      - noHL
+      - ratio
+    max_seeding_time: 240h
+    max_ratio: 1.0
+    min_last_active: 1d
+    cleanup: true
+    resume_torrent_after_change: false
+
+  # Anything private with no group of its own, which today is nothing: every private tracker here
+  # has one. It stays as the floor so a new site is covered from its first torrent, at the generic
+  # goal, until it earns its own numbers.
+  private:
+    priority: 5
     include_all_tags:
       - private
     include_any_tags:
@@ -147,7 +186,7 @@ share_limits:
   # saving disk. No min_last_active either, for the same reason: still being useful to a public
   # swarm is not a reason to stay in it.
   public:
-    priority: 4
+    priority: 6
     include_any_tags:
       - public
     # The bespoke script drops a public torrent as soon as the library has the file, to get this

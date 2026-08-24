@@ -608,6 +608,42 @@ groups:
               datasource: { type: __expr__, uid: __expr__ }
               conditions:
                 - evaluator: { type: gt, params: [-1] }
+      - uid: homelab-torrent-unmanaged
+        title: 'A torrent nothing will ever clean up'
+        condition: C
+        # An hour, not minutes: a torrent added by hand and categorised a moment later is not a
+        # problem, and autobrr's own grabs arrive tagged. What this catches is the one that stays
+        # bare, which costs nothing today and a disk full in a year.
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: '{{ $labels.name }} is in no retention group'
+          description: >-
+            It has no category, so qbit-manage can never mark it as unlinked, and no `ratio` tag, so
+            no share-limits group matches it either. It will seed until someone notices. Give it a
+            category the nohardlinks list covers, or the `ratio` tag if it is a ratio grab that was
+            never in the library.
+        noDataState: OK
+        execErrState: KeepLast
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: 'qbit_torrent_unmanaged > bool 0'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
       - uid: homelab-indexers-all-down
         title: 'Every indexer is down'
         condition: C

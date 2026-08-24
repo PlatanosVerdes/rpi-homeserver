@@ -172,7 +172,18 @@ def qbit_torrents():
         progress.append(f"qbit_torrent_progress{{{labels}}} {t['progress']}")
         ratio.append(f"qbit_torrent_ratio{{{labels}}} {round(t.get('ratio', 0), 3)}")
         size.append(f"qbit_torrent_size_bytes{{{labels}}} {t.get('size', 0)}")
-    push("qbit_torrents", progress + ratio + size)
+
+    # A torrent with no category can never be tagged noHL, because qbit-manage only inspects the
+    # categories in its nohardlinks list, and without autobrr's `ratio` tag no share_limits group
+    # matches it either. So it seeds forever, nothing reclaims it and nothing says so. Added by hand
+    # is how they arrive: `Obsession (2026)` sat like that from 2026-08-09 to 2026-08-24.
+    unmanaged = ["# HELP qbit_torrent_unmanaged Torrent that no retention rule can ever match",
+                 "# TYPE qbit_torrent_unmanaged gauge"]
+    for t in items:
+        tags = {g.strip() for g in (t.get("tags") or "").split(",") if g.strip()}
+        if not (t.get("category") or "") and "ratio" not in tags:
+            unmanaged.append(f'qbit_torrent_unmanaged{{name="{escape(t["name"])[:90]}"}} 1')
+    push("qbit_torrents", progress + ratio + size + unmanaged)
 
 
 def indexer_usage():
