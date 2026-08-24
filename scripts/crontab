@@ -55,13 +55,21 @@
 */5 * * * * /home/raspi/rpi-homeserver/scripts/metrics/media.py >> /home/raspi/rpi-homeserver/media-metrics.log 2>&1
 
 # Oracle's Always Free shapes in Madrid are permanently full, and a free tenancy cannot query
-# capacity in advance, so the only way in is to keep asking. Every two minutes, one launch call per
-# run: the ARM shape every time because it is the one worth having, the micro one run in five. The
-# limit that matters is Oracle's own 429 on the attempts themselves, not this interval, so the
-# script backs off (10 min, doubling to an hour) whenever it trips it and resets when a call goes
-# through. Exits immediately once the instance exists, so this is safe to leave in forever.
+# capacity in advance, so the only way in is to keep asking. Every minute, one launch call per run:
+# the ARM shape every time because it is the one worth having, the micro one run in five. The limit
+# that matters is Oracle's own 429 on the attempts themselves, not this interval, so the script
+# backs off per shape (2 min, doubling to 30) whenever it trips it and resets when a call goes
+# through.
+#
+# A minute is the limit itself, measured on 2026-08-24 with this cron stopped and launch() driven by
+# hand: exactly one call gets through per ~60 s however hard you ask. So */2 was leaving half the
+# budget unused, and anything faster than a minute cannot raise the rate, only the refusal count.
+#
+# Logs one summary line an hour, not one per run: every ordinary run says the same thing, and at
+# this rate a line each would be 1440 identical lines a day in VictoriaLogs. Query it there with
+# container:oci-hunt. Exits immediately once the instance exists, so this is safe to leave forever.
 # See scripts/ops/oci-hunt.py.
-*/2 * * * * /home/raspi/rpi-homeserver/scripts/ops/oci-hunt.py >> /home/raspi/rpi-homeserver/oci-hunt.log 2>&1
+* * * * * /home/raspi/rpi-homeserver/scripts/ops/oci-hunt.py >> /home/raspi/rpi-homeserver/oci-hunt.log 2>&1
 
 # What the tracker itself says about the account, every half hour: ratio, uploaded, downloaded, and
 # the number that decides everything, the headroom of paid downloads left before the site disables
