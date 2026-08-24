@@ -62,7 +62,7 @@ RULES_FILE = Path(os.environ.get("SEED_RULES", PROJECT_DIR / "config/qbittorrent
 STATE_FILE = Path(os.environ.get("SEED_STATE", PROJECT_DIR / "appdata/seed-cleanup/state.json"))
 DRY_RUN = os.environ.get("DRY_RUN") == "1"
 WAITING_TAG = "waiting-seed"
-# `keep` is the human's escape hatch; `keep-bonus` belongs to scripts/trackers/control.py, which adds and
+# `keep` is the human's escape hatch; `keep-bonus` belongs to tracker-control, which adds and
 # removes it on its own. Two names so the automation can never clear a tag a person put there.
 KEEP_TAGS = {"keep", "keep-bonus"}
 CONTAINER_DATA_ROOT = "/data/"

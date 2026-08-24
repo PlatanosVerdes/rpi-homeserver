@@ -177,6 +177,40 @@ services:
     networks:
       - media-network
 
+  # --- TRACKER-CONTROL (read the account, move the knobs) ---
+  # Was two cron scripts handing a reading to each other through a state.json five minutes apart,
+  # which is why one of them refused to act on anything older than three hours. One loop reads and
+  # acts in the same pass, and is scraped rather than pushing: a wedged loop used to look healthy.
+  # DRY_RUN=1 reports what it would change and writes nothing.
+  tracker-control:
+    build: ./services/tracker-control
+    container_name: tracker-control
+    restart: unless-stopped
+    mem_limit: 64m
+    memswap_limit: 64m
+    profiles: [media, all]
+    environment:
+      - TZ=${TZ}
+      - QBIT_USER=${QBIT_USER}
+      - QBIT_PASSWORD=${QBIT_PASSWORD}
+      - AUTOBRR_API_KEY=${AUTOBRR_API_KEY}
+      - TELEGRAM_ALERT_BOT_TOKEN=${TELEGRAM_ALERT_BOT_TOKEN}
+      - TELEGRAM_ALERT_CHAT_ID=${TELEGRAM_ALERT_CHAT_ID}
+    volumes:
+      # The arr and Prowlarr API keys live in their config.xml and nowhere else, and Prowlarr also
+      # holds the site login this reuses, so no secret is duplicated into .env.
+      - ${APP_CONFIG_PATH}/radarr:/appdata/radarr:ro
+      - ${APP_CONFIG_PATH}/sonarr:/appdata/sonarr:ro
+      - ${APP_CONFIG_PATH}/prowlarr:/appdata/prowlarr:ro
+      - ${CONFIG_ROOT}/trackers:/config:ro
+      # The session cookie and the last reading, kept between restarts: these sites ban for
+      # hammering, so a restart must not mean a fresh login.
+      - ${APP_CONFIG_PATH}/tracker-stats:/state
+      # Read-only, and only to ask how much room is left before the grabber has to pause
+      - ${DATA_ROOT}:/mnt/data:ro
+    networks:
+      - media-network
+
   # The only free ratio there is: bytes already on this disk, seeded on every private tracker that
   # also has the release. A match is hardlinked, so it costs an inode and starts at 100%. It reads
   # what qBittorrent holds from BT_backup rather than keeping its own list, and searches only the

@@ -45,6 +45,11 @@ scrape_configs:
     static_configs:
       - targets: ['qbittorrent-exporter:17871']
 
+  # The tracker economy: what each site says about the account, and what the knobs are set to.
+  - job_name: 'tracker-control'
+    static_configs:
+      - targets: ['tracker-control:9111']
+
   # Liveness probes for services without an exporter (see config/blackbox/blackbox.yml).
   #
   # No list of targets on purpose: a container labelled `prometheus.probe` is probed at that URL, so

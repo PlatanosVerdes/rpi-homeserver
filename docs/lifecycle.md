@@ -88,7 +88,7 @@ free to go.
 | `noHL` | qbit-manage | The library no longer holds the file, so these bytes are only being kept for the tracker |
 | `ratio` | autobrr | Grabbed to build ratio, never in the library. Without this tag they would be invisible here: they carry no category, so the hardlink check never inspects them |
 | `issue` | qbit-manage | The tracker no longer recognises the torrent. Tagged rather than removed, because a reset passkey looks exactly like this |
-| `keep`, `keep-bonus` | a person, and `trackers/control.py` | Out of the clock: every group excludes them |
+| `keep`, `keep-bonus` | a person, and tracker-control | Out of the clock: every group excludes them |
 | `cross-seed`, `radarr.cross-seed` | cross-seed | A second tracker on bytes another one brought. They sit in the `cross-seed-link` category |
 
 `rem_unregistered` is the one exception that deletes on a single condition, and it is the tracker's
@@ -127,7 +127,7 @@ seven days and then the space comes back on its own.
 
 **The override is a tag.** Every group excludes `keep` and `keep-bonus`, so tagging a torrent in
 qBittorrent takes it out of the clock entirely, with no deploy and no config change. `keep` is for a
-person; `keep-bonus` is written by `trackers/control.py` to hold the data DigitalCore pays a bonus
+person; `keep-bonus` is written by tracker-control to hold the data DigitalCore pays a bonus
 for.
 
 ---
@@ -138,8 +138,8 @@ How hard a tracker is worked is one number: **headroom**, the GB of paid downloa
 before the account crosses the ratio the site disables it at. Freeleech never moves `downloaded`,
 which is why headroom and not ratio decides whether the arrs may take a paid torrent.
 
-`trackers/stats.py` reads it from the site every 30 minutes, `trackers/control.py` acts on it five
-minutes later, and the tier table it applies is in
+The tracker-control service reads it from the site every 30 minutes and acts on it in the same pass,
+and the tier table it applies is in
 [architecture.md](architecture.md#trackerscontrolpy). The switch lives in Prowlarr, not in the arrs:
 `requiredFlags` exists on Radarr's Torznab indexer and not on Sonarr's, so filtering there would
 leave series unprotected, and one 20 GB season pack that is not freeleech is the difference between
@@ -152,8 +152,8 @@ a working account and a disabled one.
 | Decision | File |
 | :--- | :--- |
 | What qualifies as a release | `config/arr/radarr`, `config/arr/sonarr` (formats and profiles) |
-| Which indexers, and the freeleech switch | Prowlarr, written by `trackers/control.py` |
-| Grabs per day for ratio | autobrr filter, written by `trackers/control.py` |
+| Which indexers, and the freeleech switch | Prowlarr, written by tracker-control |
+| Grabs per day for ratio | autobrr filter, written by tracker-control |
 | How long each tracker is seeded | `config/qbit-manage/config.yml`, `share_limits` |
 | What the site actually asks | `config/trackers/rules.json`, one entry per tracker |
 | When the library copy goes | Maintainerr rule, exported to `config/maintainerr` |

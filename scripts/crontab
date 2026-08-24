@@ -4,8 +4,9 @@
 # apply.sh runs it on every deploy, so committing a change here applies it. Editing the live
 # crontab with `crontab -e` is overwritten on the next deploy.
 #
-# What each script does: docs/architecture.md, "The scripts". The media, zram and disk numbers used
-# to be three lines here and are now the pi-metrics service, scraped instead of pushed.
+# What each script does: docs/architecture.md, "The scripts". The media, zram and disk numbers, and
+# the tracker read-then-act pair, used to be five lines here and are now the pi-metrics and
+# tracker-control services, scraped instead of pushed.
 
 # Self-heal net for the deploy. The webhook handles pushes; this restarts anything that died and
 # covers pushes that arrived while the Pi or the tunnel was down.
@@ -26,12 +27,6 @@
 # hard you ask, so anything faster only raises the refusal count. Exits for good once the instance
 # exists, so this is safe to leave forever. One summary line an hour, not one per run.
 * * * * * /home/raspi/rpi-homeserver/scripts/ops/oci-hunt.py >> /home/raspi/rpi-homeserver/oci-hunt.log 2>&1
-
-# Read the account, then act on it five minutes later. One page fetch per run with a stored cookie,
-# because this is a tracker that bans for hammering. DRY_RUN=1 on control.py to see what it would
-# change. See docs/lifecycle.md for what the reading decides.
-*/30 * * * * /home/raspi/rpi-homeserver/scripts/trackers/stats.py >> /home/raspi/rpi-homeserver/tracker-stats.log 2>&1
-5,35 * * * * /home/raspi/rpi-homeserver/scripts/trackers/control.py >> /home/raspi/rpi-homeserver/tracker-control.log 2>&1
 
 # Prowlarr backs a failed indexer off for up to 24h, so an hour of the ISP blocking a site would
 # otherwise cost a day of it being unusable. Probes the site first, never searches.

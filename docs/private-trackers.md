@@ -155,8 +155,8 @@ curl -s -H "X-Api-Key: $KEY" \
     print(len(d), sum(1 for r in d if r.get("indexerFlags")))'
 
 # what the site says about the account, and what the automation decided
-scripts/trackers/stats.py && cat appdata/tracker-stats/state.json
-DRY_RUN=1 scripts/trackers/control.py
+tracker-control && cat appdata/tracker-stats/state.json
+DRY_RUN=1 tracker-control
 ```
 
 `scripts/sync/arr-config.sh` used to report success while applying nothing; it is fixed, but the habit of
@@ -164,9 +164,9 @@ reading the value back rather than trusting the exit code is the reason it was f
 
 ## The control loop
 
-Since 2026-08-21 none of this depends on remembering to check a site. `scripts/trackers/stats.py` reads the
-account every 30 minutes, `scripts/trackers/control.py` acts on it five minutes later, and the tier comes from
-the headroom:
+Since 2026-08-21 none of this depends on remembering to check a site: the tracker-control service
+reads the account every 30 minutes and acts on it in the same pass, and the tier comes from the
+headroom:
 
 | Headroom | Prowlarr | Radarr | autobrr |
 | :--- | :--- | :--- | :--- |
@@ -238,7 +238,7 @@ Three API traps in autobrr, each of which cost an hour:
   GET that feeds the update does not return that field. A detached action leaves the filter matching
   releases and pushing nothing, and the only trace is one line in autobrr's log:
   `no active actions found for filter`. It cost four freeleech releases on 2026-08-21, announced in
-  the hour after the action was edited. `scripts/trackers/control.py` now asserts
+  the hour after the action was edited. the tracker-control service now asserts
   `actions_enabled_count >= 1` on every run, and the "filter matched" count in autobrr's own log is
   worth comparing against what actually reached the client.
 
@@ -338,7 +338,7 @@ twice over.
 anyone plans it or not, and cross-seeds, which are hardlinks by construction. Both cost nothing and
 neither needs a policy.
 
-`bonus_hold` stays implemented in `scripts/trackers/control.py` and unconfigured, for the day this tracker is
+`bonus_hold` stays implemented in the tracker-control service and unconfigured, for the day this tracker is
 leeched from heavily enough for the arithmetic to reverse. What it would do, and its ranking
 `min(size, 50 GiB) x (1 + 1/seeders)`, is in that function's docstring.
 
@@ -532,7 +532,7 @@ mistake on this site is deleting a torrent, not losing a search for an evening.
 
 Nothing automatic can help here yet, because the account cannot be read. The reason is not a
 forgotten password: the site's Cardigann definition authenticates with an **API key**, so the
-Prowlarr entry has no username and password field to fill in, and `scripts/trackers/stats.py` reads a
+Prowlarr entry has no username and password field to fill in, and the tracker-control service reads a
 site by logging in with a stored cookie. Giving it a way in means storing a real login for the site
 next to the API key, which is a decision about where the credentials live and not a code change.
 
@@ -587,8 +587,8 @@ then the configuration applied, then why.
    rate as a disk budget rather than a preference.
 6. **Add it to cross-seed** (`config/cross-seed/config.js`), because a tracker that has the release
    you already seed is free ratio.
-7. **Verify, do not assume**: `scripts/trackers/stats.py` must come back with the site's own numbers, and
-   `DRY_RUN=1 scripts/trackers/control.py` must pick the tier you expect.
+7. **Verify, do not assume**: the tracker-control service must come back with the site's own numbers, and
+   `DRY_RUN=1 tracker-control` must pick the tier you expect.
 
 ## cross-seed, the free ratio
 

@@ -543,6 +543,42 @@ groups:
               conditions:
                 - evaluator: { type: gt, params: [0] }
 
+      # The loop can wedge while the process is alive, and up == 0 would say nothing about that.
+      # Same shape as the pi-metrics rule: the interval travels next to the timestamp, so four
+      # missed passes is late without a threshold written here.
+      - uid: homelab-tracker-control-overdue
+        title: 'tracker-control is overdue'
+        condition: C
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'The tracker loop has not finished a pass in four of its intervals'
+          description: >-
+            Nothing is reading the account or moving the freeleech filter and the grab rate, so the
+            arrs may be taking paid torrents on a ratio nobody is watching. The panels keep showing
+            the last reading, which is why this is a separate alert from the service being down.
+        noDataState: OK
+        execErrState: KeepLast
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: '(time() - tracker_control_loop_timestamp_seconds) > bool (4 * tracker_control_loop_interval_seconds)'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+
       - uid: homelab-service-not-answering
         title: 'Service not answering'
         condition: C
@@ -990,7 +1026,7 @@ groups:
           summary: '{{ $labels.tracker }}: under 10 GB of non-freeleech downloads still fit'
           description: >-
             buffer = uploaded - min_ratio x downloaded, and headroom is that buffer divided by
-            min_ratio. scripts/trackers/control.py should already have switched the *arrs to freeleech only;
+            min_ratio. tracker-control should already have switched the *arrs to freeleech only;
             if it has not, its own log says why.
         noDataState: OK
         execErrState: KeepLast
@@ -1097,7 +1133,7 @@ groups:
         annotations:
           summary: No tracker reading in over 2 hours
           description: >-
-            scripts/trackers/stats.py runs every 30 minutes. Either cron stopped, the site changed its login,
+            tracker-control runs every 30 minutes. Either cron stopped, the site changed its login,
             or the stored session cookie no longer works and the password in Prowlarr is stale.
         noDataState: OK
         execErrState: KeepLast

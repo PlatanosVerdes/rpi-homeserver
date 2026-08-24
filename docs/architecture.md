@@ -113,7 +113,7 @@ during an ARM Go build cost exactly one extra pass.
 | `scripts/sync/pihole-dns.sh` | every deploy | Pi-hole | the Caddy config, additive only |
 | `scripts/setup/install-crontab.sh` | every deploy | host crontab | both repos' `scripts/crontab` |
 | `scripts/setup/install-logrotate.sh` | every deploy | `/etc/logrotate.d` | `config/logrotate/rpi-homeserver` |
-| `scripts/trackers/control.py` | :05 and :35 | Prowlarr, Radarr, autobrr | the measured ratio headroom |
+| the tracker-control service | :05 and :35 | Prowlarr, Radarr, autobrr | the measured ratio headroom |
 | qbit-manage | hourly | tags, share limits, deletes into the recycle bin | `config/qbit-manage/config.yml` |
 | `scripts/ops/cutoff-search.sh` | 05:00 | nothing, triggers a search | Radarr's own Wanted list |
 
@@ -216,8 +216,8 @@ open and the whole library in continuous upgrade search. That is what 10000 did 
 
 ```mermaid
 flowchart LR
-  SITE["tracker website<br/><i>stored session cookie</i>"] -->|one page fetch| TS["<b>scripts/trackers/stats.py</b><br/><i>every 30 min</i><br/>computes headroom"]
-  TS -->|GB of headroom| TC["<b>scripts/trackers/control.py</b><br/><i>5 min later</i><br/><i>refuses a reading over 3h old</i>"]
+  SITE["tracker website<br/><i>stored session cookie</i>"] -->|one page fetch| TS["<b>tracker-control</b><br/><i>reads, every 30 min</i><br/>computes headroom"]
+  TS -->|"GB of headroom, in memory"| TC["<b>the same pass</b><br/><i>acts on what it just read</i>"]
   TC ==>|freeleech-only filter| PR["Prowlarr"]
   TC ==>|requiredFlags| RA["Radarr"]
   TC ==>|grabs per day| BR["autobrr"]
@@ -267,7 +267,7 @@ flowchart LR
     S1["nothing left here<br/><i>zram and disk moved to pi-metrics</i>"] -->|.prom| NE["node-exporter<br/><i>textfile collector</i>"]
   end
   subgraph B["Route B · push"]
-    S2["scripts/trackers/stats.py<br/>scripts/trackers/control.py<br/>scripts/ops/backup.sh"] -->|POST| PG["Pushgateway"]
+    S2["tracker-control<br/>tracker-control<br/>scripts/ops/backup.sh"] -->|POST| PG["Pushgateway"]
   end
   subgraph C["Route C · scrape"]
     EX["node-exporter · cadvisor · blackbox<br/>pihole-exporter · qbittorrent-exporter<br/>speedtest-tracker · cloudflared<br/>tailscale-metrics · <b>pi-metrics</b>"]
@@ -335,8 +335,7 @@ earn a sentence. `deploy/apply.sh` is sixth by complexity, not first.
 | :--- | ---: | ---: | ---: | :--- |
 | `services/pi-metrics/media.go` | 610 | 10 | 140 | |
 | `trackers/seed-cleanup.py` | 477 | 29 | 116 | files |
-| `trackers/stats.py` | 380 | 18 | 75 | |
-| `trackers/control.py` | 378 | 23 | 115 | config |
+| `services/tracker-control` | 1090 | 41 | 190 | config |
 | `ops/oci-hunt.py` | 270 | 15 | 61 | |
 | `deploy/apply.sh` | 266 | 6 | 64 | |
 | the other fifteen | <135 | <6 | <13 | |
@@ -399,7 +398,7 @@ Coalescing, not a queue: ten pushes during an ARM Go build cost exactly one extr
 The marker exists because dropping the skipped run lost real deploys, a tag in one repo and its
 version bump in the other arriving inside the same window.
 
-### trackers/control.py
+### tracker-control
 
 Its complexity is a lookup table, not a flow, so it reads better as one. Headroom is how many GB of
 *paid* download still fit before the account crosses the ratio the site disables it at.
@@ -412,7 +411,8 @@ Its complexity is a lookup table, not a flow, so it reads better as one. Headroo
 
 More grabs the less headroom is left, which is the opposite of the intuition: with little headroom
 the account needs to *build* ratio, and freeleech raises the dividend without touching the divisor.
-Below `min_free_gb` the grabber stops entirely, and a reading older than 3h moves nothing.
+Below `min_free_gb` the grabber stops entirely. There is no staleness guard any more: the reading and
+the action are the same pass, so there is nothing old to act on.
 
 ### The rest, one line each
 
@@ -430,7 +430,7 @@ Below `min_free_gb` the grabber stops entirely, and a reading older than 3h move
 | `services/pi-metrics/media.go` | The largest, but wide rather than deep: ten collectors of the same shape, fetch, count, emit. Answers "which", not "how many" |
 | `services/pi-metrics/host.go` | Where the disk went and what zram costs. One walk answers both the largest files and the per-folder totals, counting a hardlinked inode once |
 | `services/pi-metrics/main.go` | Serves both from a snapshot refreshed in the background, and exports when each collector last succeeded |
-| `trackers/stats.py` | Reads each site with a stored cookie. The complexity is parsing, deliberately dumb about markup so a second site is config, not a selector hunt |
+| tracker-control | Reads each site with a stored cookie. The complexity is parsing, deliberately dumb about markup so a second site is config, not a selector hunt |
 | `ops/backup.sh` | Compresses appdata, keeps 7, excludes what regenerates (Prometheus TSDB, Plex caches) |
 | `ops/heartbeat.sh` | Tells an outside check the Pi is alive, and deliberately fails when the essentials are not running |
 | `ops/cutoff-search.sh` | Asks Radarr to search for what it already says is missing. Decides nothing |

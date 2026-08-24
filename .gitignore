@@ -86,3 +86,5 @@ services/farnsworth/farnsworth
 services/tailscale-metrics/tailscale-metrics
 services/acestream-updater/acestream-updater
 services/acestream-proxy/acestream-proxy
+services/tracker-control/tracker-control
+services/pi-metrics/pi-metrics

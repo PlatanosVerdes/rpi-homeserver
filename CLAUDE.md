@@ -49,6 +49,8 @@ services/                   Source code for custom services built in this repo
   subtitle-links/           Go service: page listing movies/episodes with a downloadable text subtitle
   pi-metrics/               Go exporter: the numbers no exporter provides (upgrades, torrents,
                             indexer usage, where the disk went, what zram costs). Was three crons
+  tracker-control/          Go service: reads each tracker account and moves the freeleech filter,
+                            requiredFlags and the grab rate from its headroom. Was two crons
 
 scripts/                    Operational scripts, grouped by what they do
   crontab                   This repo's cron fragment, merged with the other repo's on deploy
@@ -71,7 +73,8 @@ scripts/                    Operational scripts, grouped by what they do
     plex-prefs.sh           Plex LAN networks and the 95% played threshold
     qbit-config.sh          qBittorrent queue limits, upload cap and BT port
 
-  trackers/                 The private-tracker economy: measure, decide, reclaim
+  trackers/                 seed-cleanup.py only, parked: the measuring and deciding live in the
+                            tracker-control service now
     stats.py                Reads each site and computes the ratio headroom
     control.py              Moves the freeleech and grab-rate levers from that headroom
     seed-cleanup.py         PARKED 2026-08-24: qbit-manage owns deletion, see PENDING.md

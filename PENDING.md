@@ -286,7 +286,7 @@ Two things the C411 diagnosis added to the method, both worth doing before assum
 
 **Read on 2026-08-21: DigitalCore, retrotoon.world, BTSCHOOL and C411**, all four written up in
 [docs/private-trackers.md](docs/private-trackers.md) with their rules, what is configured for them
-and why. Their rules of record are in `config/trackers/rules.json`, and `scripts/trackers/stats.py` now
+and why. Their rules of record are in `config/trackers/rules.json`, and the tracker-control service now
 measures the hit & run clock for every tracker in that file, not only the one it can log into.
 
 What each one still owes:
@@ -319,7 +319,7 @@ implemented, measured and turned off: of a 27% bonus, 9% comes free from torrent
 with the library and 18% was bought with 179 GB of separate copies, on an account already at ratio
 4.21 with 86 GB of headroom. That disk is worth more to the TorrentLeech grabber. The bonus grows
 through hardlinks only, which is what cross-seed produces anyway. The mechanism stays in
-`scripts/trackers/control.py`, unconfigured, for the day the arithmetic reverses.
+the tracker-control service, unconfigured, for the day the arithmetic reverses.
 
 **Done on 2026-08-21**: autobrr now watches their `#announce` channel with the nick
 `PlatanosVerdes` and bot mode on, filtering freeleech between 15 and 30 GB at one a day. The passkey
@@ -341,7 +341,7 @@ really uploaded. The credit is a one-off and does not grow back.
 
 Nothing automatic can help until the account can be read, and the reason is not a forgotten
 password: the site's definition authenticates with an **API key**, so there is no username and
-password field on its Prowlarr entry, and `scripts/trackers/stats.py` reads a site by logging into it. So
+password field on its Prowlarr entry, and the tracker-control service reads a site by logging into it. So
 what is left to decide is whether to store a real login for the site alongside the API key, which is
 a question about where credentials live rather than a code change. Search itself is fixed, see below.
 Until the account can be read the rule is manual: **on C411, freeleech only.**
@@ -416,7 +416,7 @@ The rules from (1) belong in configuration, not in anyone's memory. Where things
 | retrotoon.world (Generic Torznab) | open | open |
 
 **The freeleech-only flag was never a decision, it was a control loop, and it is one now.**
-`scripts/trackers/control.py` moves it, the Sonarr indexer and the autobrr grab rate from a single number, the
+the tracker-control service moves it, the Sonarr indexer and the autobrr grab rate from a single number, the
 headroom (`buffer / min_ratio`, the GB of non-freeleech downloads that still fit above the line).
 Tiers live in `config/trackers/rules.json`; see the section in
 [docs/private-trackers.md](docs/private-trackers.md).
@@ -448,7 +448,7 @@ counting processed profiles.
 
 ### 3. Alerts and a Grafana row for the tracker numbers
 
-**Done for TorrentLeech on 2026-08-21**, by `scripts/trackers/stats.py`: `tracker_ratio`,
+**Done for TorrentLeech on 2026-08-21**, by the tracker-control service: `tracker_ratio`,
 `tracker_buffer_bytes`, `tracker_headroom_bytes`, `tracker_points`, `tracker_warning_seconds`,
 `tracker_hnr_pending`, `tracker_hnr_at_risk` and a per-torrent `tracker_hnr_torrent_hours_left`,
 with four alerts on top (headroom under 10 GB, ratio below the line, an obligation whose clock is
@@ -463,7 +463,7 @@ per-site work rather than one generic exporter.
 
 What is left: a Grafana row for these series (the alerts exist, the panels do not), and the same
 treatment for the other four sites, each of which needs its login form and profile shape checked
-once. The parsing in `scripts/trackers/stats.py` is deliberately dumb about markup (strip the tags, read the
+once. The parsing in the tracker-control service is deliberately dumb about markup (strip the tags, read the
 value on the line after its label) precisely so a second site is a config entry rather than a
 selector hunt.
 
@@ -513,7 +513,7 @@ wants to maintain it. So, in this order:
    - **The reporting went dark and nothing replaced it.** The script fed 18 panels across the
      Retention and Disk Usage dashboards, and `DRY_RUN=1` deliberately does not push metrics, so
      there is no way to keep them alive while it is parked. The panels that protect the accounts
-     (`tracker_hnr_*`, obligations and stopped clocks) come from `scripts/trackers/stats.py` and are
+     (`tracker_hnr_*`, obligations and stopped clocks) come from the tracker-control service and are
      unaffected.
    - **`rem_unregistered` is still off.** It is the feature the tool was adopted for and the safest
      deletion there is: it only removes what the tracker itself has disowned. Turn it on next.
@@ -604,7 +604,7 @@ against the schema the installed v4.12.0 actually reads:
 1. No `recyclebin` section, so `empty_after_x_days` was unset and nothing would ever empty
    `/data/downloads/.RecycleBin`. The 7 days in the file belonged to `orphaned`. Now 7 days here too.
 2. No group carried `exclude_any_tags`, so the documented `keep` override did nothing, and neither
-   did the `keep-bonus` tag `trackers/control.py` writes to hold DigitalCore's bonus. Both are
+   did the `keep-bonus` tag tracker-control writes to hold DigitalCore's bonus. Both are
    excluded in all six groups now.
 3. `settings.public_tag` and `settings.ignoreTags_OnUpdate` are not keys this version reads: it only
    ever writes `private_tag`, and it no longer strips foreign tags on re-tag, which is why the second
@@ -643,7 +643,7 @@ means qBittorrent needs a login because its AuthSubnetWhitelist does not cover t
 and the API keys read from `appdata/<app>/config.xml` (now three read-only mounts, so no secret is
 duplicated into `.env`).
 
-**Still to do: `trackers/stats.py` + `trackers/control.py` want to be one process.** They already
+**Still to do: tracker-control + tracker-control want to be one process.** They already
 talk through a `state.json` on disk, so what the split costs is the `MAX_READING_AGE` guard and the
 cron choreography (`:00/:30` then `:05/:35`), both of which exist only because they are two
 processes. The reason to be careful is that `control.py` writes to Prowlarr, Radarr, autobrr and

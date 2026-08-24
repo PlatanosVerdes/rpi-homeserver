@@ -177,7 +177,7 @@ Plex runs on the Pi, which is weak at video transcoding, so files should
 
   **`keep` is the manual override**: tag a torrent `keep` in qBittorrent and this never touches it,
   whatever the goals say. No deploy, no config edit, effective on the next pass. `keep-bonus` is the
-  same brake applied automatically by `scripts/trackers/control.py`, for a tracker that pays for holding data.
+  same brake applied automatically by the tracker-control service, for a tracker that pays for holding data.
   It is implemented and deliberately **not** configured: measured on DigitalCore, it bought 18% of
   leech bonus for 179 GB of disk on an account already at ratio 4.21, while the free 9% that comes
   from library hardlinks costs nothing. See [docs/private-trackers.md](docs/private-trackers.md).
@@ -198,10 +198,10 @@ Plex runs on the Pi, which is weak at video transcoding, so files should
   delete torrents for films you have not watched yet. One deleter, one policy. `DRY_RUN=1` prints
   what it would remove and touches nothing; the "Seed cleanup" row of the Disk usage dashboard shows
   the queue.
-- **scripts/trackers/stats.py + scripts/trackers/control.py** keep the account on the right side of the tracker's
-  ratio rule without anyone watching it. Every half hour the first logs into TorrentLeech and reads
-  what the site says (ratio, uploaded, downloaded, points, any active warning); five minutes later
-  the second acts on one derived number:
+- **the tracker-control service** keeps the account on the right side of the tracker's ratio rule
+  without anyone watching it. Every half hour it logs into TorrentLeech, reads what the site says
+  (ratio, uploaded, downloaded, points, any active warning) and acts in the same pass on one derived
+  number:
 
   ```
   buffer   = uploaded - min_ratio x downloaded
@@ -222,7 +222,7 @@ Plex runs on the Pi, which is weak at video transcoding, so files should
   not freeleech takes the ratio from 0.52 to 0.397, and 0.4 is the line TorrentLeech disables
   accounts under. The grabber also pauses below a free-space floor whatever the ratio says, because
   a grab cannot be deleted until its hit & run window closes. Thresholds live in
-  `config/trackers/rules.json`; `DRY_RUN=1` prints what it would change.
+  `config/trackers/rules.json`; `DRY_RUN=1` on the service prints what it would change and writes nothing.
 - **Private tracker rules, per site, and what got an account disabled once**:
   [docs/private-trackers.md](docs/private-trackers.md).
 - **Why the ratio on private trackers is near zero, and the three ways out** (gluetun on a VPN that
@@ -463,7 +463,7 @@ scripts/     Operational scripts, grouped by what they do:
   setup/       host state apply.sh converges on each pass: cron and log rotation
   recovery/    run by hand after something broke: rebuild a service, see what a human still owes
   sync/        pushes config that lives only in an app's appdata, every deploy
-  trackers/    the private-tracker economy: measure, decide, reclaim
+  trackers/    seed-cleanup.py only, parked: measuring and deciding are the tracker-control service
   ops/         everything else on a schedule (backup, heartbeat, searches)
 appdata/     Persistent container data (databases, app state) — not in git
 docs/        Setup guides: architecture.md for what talks to what, lifecycle.md for what
