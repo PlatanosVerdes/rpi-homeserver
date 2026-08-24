@@ -1,8 +1,8 @@
 {
   "_comment": [
-    "Figures read off each site by eye, with the date they were read. Three of these accounts cannot",
-    "be scraped: DigitalCore's API key returns 403 on every user endpoint, BTSCHOOL's login is behind",
-    "a captcha, and C411 has no stored credentials. Without this file their rows on the dashboard are",
+    "Figures read off each site by eye, with the date they were read. Neither of these accounts can",
+    "be scraped: DigitalCore's API key returns 403 on every user endpoint, and C411's Prowlarr entry",
+    "is API-key only, so it holds no login to reuse. Without this file their rows on the dashboard are",
     "empty, which is how a thin ratio goes unnoticed. Every panel shows the age of the reading next to",
     "the number, because a figure with no date is worse than no figure.",
     "Sizes are GiB, matching what the sites display. Update whenever a profile page is in front of you."
@@ -22,16 +22,6 @@
     "uploaded_gb": 52.2,
     "downloaded_gb": 63.3,
     "note": "50 of those 52.2 GB are the signup credit: only 2.3 GB was really uploaded, and the credit does not grow back"
-  },
-  "btschool": {
-    "read_at": "2026-08-21",
-    "ratio": 0,
-    "uploaded_gb": 0,
-    "downloaded_gb": 0,
-    "points": 0,
-    "hit_and_run": 0,
-    "deadline": "2026-08-24T09:40:00",
-    "note": "newbie assessment: needs 50 GB up, 50 GB down and 6000 points by the deadline, or a donation"
   },
   "retrotoon": {
     "read_at": "2026-08-21",

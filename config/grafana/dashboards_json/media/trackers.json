@@ -1000,7 +1000,7 @@
     {
       "type": "bargauge",
       "title": "Deadlines",
-      "description": "A TorrentLeech warning and a BTSCHOOL probation both end at a wall.",
+      "description": "TorrentLeech's warning is the only deadline left. A probation or a suspension elsewhere would land in the same panel.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -2631,7 +2631,7 @@
     },
     {
       "type": "row",
-      "title": "BTSCHOOL",
+      "title": "retrotoon.world",
       "collapsed": false,
       "gridPos": {
         "h": 1,
@@ -2643,445 +2643,12 @@
     },
     {
       "type": "text",
-      "title": "BTSCHOOL: its rules",
-      "gridPos": {
-        "h": 10,
-        "w": 6,
-        "x": 0,
-        "y": 53
-      },
-      "options": {
-        "mode": "markdown",
-        "content": "**On a clock: the newbie assessment**\n\n| Rule | Value |\n|---|---|\n| Assessment | 50 GB uploaded, 50 GB downloaded and **6000 bonus points** |\n| The alternative | a donation passes it outright |\n| Hit & run | **20 h within 10 days**, or upload above download |\n| Uncleared H&R | **10 = ban**. Clearing one costs 20000 points |\n| Always free | **over 20 GB**, raw Blu-ray discs, and each season's first episode |\n| Double upload | **everything**, one month after release |\n| Upload cap | **25 MB/s** theirs: exceeding it is penalised threefold |\n\nSearching works; **downloading does not**: Cloudflare answers with HTML instead of the `.torrent`."
-      }
-    },
-    {
-      "type": "stat",
-      "title": "Assessment time left",
-      "description": "",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 6,
-        "y": 53
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "mappings": [],
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 86400
-              },
-              {
-                "color": "green",
-                "value": 432000
-              }
-            ]
-          },
-          "noValue": "no data",
-          "decimals": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "percentChangeColorMode": "standard",
-        "showPercentChange": false,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "tracker_deadline_seconds{tracker=\"btschool\"}",
-          "instant": true,
-          "range": false,
-          "legendFormat": "__auto",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "type": "stat",
-      "title": "Ratio, read by eye",
-      "description": "",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 12,
-        "y": 53
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "mappings": [],
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "text",
-                "value": null
-              }
-            ]
-          },
-          "noValue": "no data",
-          "decimals": 2
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "percentChangeColorMode": "standard",
-        "showPercentChange": false,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "tracker_read_ratio{tracker=\"btschool\"}",
-          "instant": true,
-          "range": false,
-          "legendFormat": "__auto",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "type": "stat",
-      "title": "Seeding",
-      "description": "",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 18,
-        "y": 53
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "mappings": [],
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "text",
-                "value": null
-              }
-            ]
-          },
-          "noValue": "no data"
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "percentChangeColorMode": "standard",
-        "showPercentChange": false,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "tracker_client_seeding{tracker=\"btschool\"}",
-          "instant": true,
-          "range": false,
-          "legendFormat": "__auto",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "type": "stat",
-      "title": "Uploaded, per the client",
-      "description": "",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 6,
-        "y": 58
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes",
-          "mappings": [],
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "text",
-                "value": null
-              }
-            ]
-          },
-          "noValue": "no data",
-          "decimals": 1
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "percentChangeColorMode": "standard",
-        "showPercentChange": false,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "tracker_client_uploaded_bytes{tracker=\"btschool\"}",
-          "instant": true,
-          "range": false,
-          "legendFormat": "__auto",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "type": "stat",
-      "title": "Open obligations",
-      "description": "",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 12,
-        "y": 58
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "mappings": [],
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "text",
-                "value": null
-              }
-            ]
-          },
-          "noValue": "no data"
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "percentChangeColorMode": "standard",
-        "showPercentChange": false,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "tracker_hnr_pending{tracker=\"btschool\"}",
-          "instant": true,
-          "range": false,
-          "legendFormat": "__auto",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "type": "stat",
-      "title": "Bonus points",
-      "description": "",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 18,
-        "y": 58
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "mappings": [],
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "text",
-                "value": null
-              }
-            ]
-          },
-          "noValue": "no data"
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "percentChangeColorMode": "standard",
-        "showPercentChange": false,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "tracker_read_points{tracker=\"btschool\"}",
-          "instant": true,
-          "range": false,
-          "legendFormat": "__auto",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "type": "row",
-      "title": "retrotoon.world",
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 63
-      },
-      "panels": []
-    },
-    {
-      "type": "text",
       "title": "retrotoon.world: its rules",
       "gridPos": {
         "h": 10,
         "w": 6,
         "x": 0,
-        "y": 64
+        "y": 53
       },
       "options": {
         "mode": "markdown",
@@ -3100,7 +2667,7 @@
         "h": 5,
         "w": 6,
         "x": 6,
-        "y": 64
+        "y": 53
       },
       "fieldConfig": {
         "defaults": {
@@ -3166,7 +2733,7 @@
         "h": 5,
         "w": 6,
         "x": 12,
-        "y": 64
+        "y": 53
       },
       "fieldConfig": {
         "defaults": {
@@ -3232,7 +2799,7 @@
         "h": 5,
         "w": 6,
         "x": 18,
-        "y": 64
+        "y": 53
       },
       "fieldConfig": {
         "defaults": {
@@ -3299,7 +2866,7 @@
         "h": 5,
         "w": 6,
         "x": 6,
-        "y": 69
+        "y": 58
       },
       "fieldConfig": {
         "defaults": {
@@ -3366,7 +2933,7 @@
         "h": 5,
         "w": 6,
         "x": 12,
-        "y": 69
+        "y": 58
       },
       "fieldConfig": {
         "defaults": {
@@ -3432,7 +2999,7 @@
         "h": 5,
         "w": 6,
         "x": 18,
-        "y": 69
+        "y": 58
       },
       "fieldConfig": {
         "defaults": {
@@ -3503,7 +3070,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 74
+        "y": 63
       },
       "panels": []
     },
@@ -3519,7 +3086,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 75
+        "y": 64
       },
       "fieldConfig": {
         "defaults": {
@@ -3604,7 +3171,7 @@
         "h": 7,
         "w": 8,
         "x": 8,
-        "y": 75
+        "y": 64
       },
       "fieldConfig": {
         "defaults": {
@@ -3677,7 +3244,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 75
+        "y": 64
       },
       "fieldConfig": {
         "defaults": {
@@ -3750,7 +3317,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 82
+        "y": 71
       },
       "fieldConfig": {
         "defaults": {
@@ -3823,7 +3390,7 @@
         "h": 7,
         "w": 4,
         "x": 8,
-        "y": 82
+        "y": 71
       },
       "fieldConfig": {
         "defaults": {
@@ -3893,7 +3460,7 @@
         "h": 7,
         "w": 4,
         "x": 12,
-        "y": 82
+        "y": 71
       },
       "fieldConfig": {
         "defaults": {
@@ -3967,7 +3534,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 82
+        "y": 71
       },
       "fieldConfig": {
         "defaults": {

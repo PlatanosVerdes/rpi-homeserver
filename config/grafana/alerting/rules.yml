@@ -655,15 +655,21 @@ groups:
         #
         # The 1h average, rather than the instant value, is what keeps a brief recovery blip in the
         # middle of an otherwise-broken indexer from resolving the alert and re-firing it every time.
+        #
+        # scripts/ops/indexer-retry.py clears Prowlarr's backoff within 15 min of the site answering
+        # again, so this no longer fires over a site that recovered hours ago. What it does still fire
+        # over is a site only reachable through a proxy or FlareSolverr, which that script cannot
+        # probe. See docs/alerting.md.
         for: 6h
         labels:
           severity: warning
         annotations:
           summary: 'Indexer {{ $labels.name }} is down'
           description: >-
-            Failing most of its checks for the last hour, so searches are going out without it.
-            Prowlarr keeps retrying on its own and backs off up to a day between attempts, so a
-            site that has recovered can still read as down until the next attempt lands.
+            Failing most of its checks for the last hour, so searches are going out without it. The
+            backoff is cleared within 15 minutes of the site answering again, so this still being up
+            means the site is genuinely unreachable from here. Several at once is the line, not the
+            trackers: check the certificate before touching an account.
         noDataState: OK
         execErrState: KeepLast
         data:

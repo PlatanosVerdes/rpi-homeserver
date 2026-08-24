@@ -392,8 +392,8 @@ def main():
         # the half that gets accounts banned. So the obligations are measured for every tracker in
         # the file, and only the account numbers need a `site`.
         if not config.get("site"):
-            # A site with no ratio rule gets no line and no headroom: emitting zero for both put
-            # BTSCHOOL at the top of a "tightest headroom" panel it has no business being in.
+            # A site with no ratio rule gets no line and no headroom: emitting zero for both puts
+            # a tracker that has no threshold at the top of a "tightest headroom" panel.
             if min_ratio > 0:
                 lines.append(f"tracker_min_ratio{{{label}}} {min_ratio}")
             lines += [f"tracker_hnr_pending{{{label}}} {len(pending)}",

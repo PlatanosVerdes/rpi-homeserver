@@ -42,7 +42,6 @@ deletion rule reads them rather than applying one number everywhere:
 | TorrentLeech | upload only: no bonus for holding anything | hit & run cleared at 240 h or ratio 1:1, then as soon as it goes quiet |
 | DigitalCore | upload, plus a little for holding (0.5 p/hour/torrent, 1% off downloads per 10 GB) | 120 h or 1:1, so it rotates twice as fast as TorrentLeech |
 | C411 | upload only, with the ratio wall 2 GB away | their hit & run is disabled site-wide, so: as soon as it goes quiet |
-| BTSCHOOL | **everything pays double upload one month after release**, so holding a month multiplies every byte uploaded after it | not worth judging before that month is up |
 | retrotoon | points for seeding, and no ratio rule at all | their 72 h, then as soon as it goes quiet |
 
 The floor for "quiet" is `min_upload_gb_per_day` in `config/qbittorrent/seed-rules.json`, per tracker.
@@ -408,45 +407,23 @@ does not change the ratio wall.
 **The 40-day freeleech is the moment to take anything wanted from here**, since downloads cost
 nothing against ratio while it lasts.
 
-## BTSCHOOL
+## BTSCHOOL, dropped on 2026-08-24
 
-Rules read 2026-08-21, and this one has a deadline attached.
+Its newbie assessment ran out at 09:40 that morning. Passing it needed 50 GB uploaded, 50 GB
+downloaded and 6000 bonus points inside three days, from zero of all three, and the site's own page
+offered a donation as the other way through. Nothing was ever grabbed from it either: the site
+answered every `.torrent` request with an invalid file, which is what an account inside its
+assessment looks like, so its announce host was never learnt.
 
-### The newbie assessment, which is nearly over
+The indexer is gone from Prowlarr, and with it its rows in `config/trackers/rules.json`,
+`config/trackers/readings.json`, cross-seed's private map, qbit-manage's tracker tags and the
+Trackers dashboard. Re-adding the indexer alone buys nothing, since searching was never the part
+that failed.
 
-The account is inside its probation window with **2 days 15 hours left**, and to pass it needs
-**50 GB uploaded, 50 GB downloaded and 6000 bonus points**. Current state: zero of all three.
-
-That is not reachable in the time left by seeding, and the site says so itself: the other way through
-is a donation. So this is a decision, not a task: donate, or let the account go. Recorded in
-[../PENDING.md](../PENDING.md).
-
-### Its rules
-
-| Rule | Value |
-| :--- | :--- |
-| Hit & run | **20 h of seeding within 10 days** of finishing, whatever the torrent's size. Upload above download clears it outright |
-| H&R penalty | **10 unmet obligations is a ban**. Clearing one costs 20000 bonus points, and an H&R ban is lifted only by a 100 CNY donation |
-| Minimum ratio | not on the Rules page: it says a low ratio costs download privileges and puts the number in the FAQ |
-| Account pruning | no traffic at all for 30 days without logging in deletes the account; 150 days deletes an unsealed one |
-| Upload speed | **their cap, 25 MB/s**. Above it, reported upload is penalised threefold; above 100 MB/s the account is banned automatically |
-| Promotions | Free, 2X, 2XFree, 50%, 30%. Anything over 20 GB is automatically Free, so are Blu-ray and HD DVD raw discs and the first episode of a season, and **everything becomes permanent 2X upload one month after release** |
-| Their torrents | do not upload their `.torrent` files to other trackers |
-| Clients | only clients on their whitelist, which is in the FAQ |
-
-### How it is configured here
-
-| Piece | Value | Why |
-| :--- | :--- | :--- |
-| Prowlarr | id 11, FlareSolverr, **search works, download does not** | the site answers a `.torrent` request with an invalid file, which is what an account still inside its newbie assessment looks like. Its announce host is therefore still unknown |
-| Seed goal | the generic 240 h / ratio 1.0 | twelve times their 20 h requirement, so it cannot cause an H&R |
-| cross-seed | included | |
-| Upload cap | **not applied** | qBittorrent's limit is global and cannot be set per tracker, so capping at 25 MB/s would throttle TorrentLeech, which is where the ratio comes from. Nothing seeds here yet and the measured peak across all trackers is about 0.5 MB/s, so it is theoretical until it is not |
-
-The promotion rules are the most generous of any site here and are worth reading twice: **over 20 GB
-is free, and after a month everything pays double upload**. If the account survives its probation,
-that combination is the cheapest ratio available anywhere on this box.
-
+What is worth remembering is why it was tried: its promotion rules were the most generous of any
+site here, anything over 20 GB automatically free and **every torrent paying double upload one month
+after release**. If a NexusPHP site with those terms ever comes up again, the deciding question is
+whether the assessment can be met before signing up, not after.
 ## C411
 
 Rules read 2026-08-21. **This is the tightest account on the box, and it is the one nobody was
@@ -482,17 +459,32 @@ this account above its line.
 
 | Piece | Value | Why |
 | :--- | :--- | :--- |
-| Prowlarr | id 9, API key set, **proxy removed on 2026-08-21** | two separate faults were hiding behind one symptom: the SOCKS credentials had expired, and the site itself is now serving a **Maintenance** page, which is what Prowlarr cannot parse as XML. The announce path is fine throughout, which is why 4 torrents keep seeding |
+| Prowlarr | id 9, API key set, **no proxy**, direct like every other indexer | the `nordvpn` tag came off on 2026-08-21 and stays off. A SOCKS proxy whose service credentials expire without warning answers `Failed to authenticate with the SOCKS server`, which is indistinguishable from a ban until someone tests it, and that is exactly the diagnosis it cost that day. The credentials in Prowlarr do authenticate today, which is not the point: the failure mode is that nobody notices when they stop. The price of going direct is the match-night blocking below, and that now recovers on its own |
 | Seed goal | the generic 240 h / ratio 1.0 | more than three times their 72 h, so nothing can trip their H&R even after it comes back |
 | H&R measurement | on, as if their system were enabled | it is documented as returning, and measuring early costs nothing |
 | cross-seed | included | |
+
+### The three ways it has failed, and what each one looks like
+
+Every outage on this site so far has been one of these, and they are indistinguishable from
+"the account is banned" until the certificate is checked.
+
+| What broke | How it reads | What fixes it |
+| :--- | :--- | :--- |
+| The SOCKS proxy's credentials expired | Prowlarr's test says `Failed to authenticate with the SOCKS server`. Nothing else on the box is affected | historical: the tag is off, so this one cannot happen again unless someone puts it back |
+| The ISP intercepts the route on a match night | `Certificate validation for c411.org failed. RemoteCertificateNameMismatch, RemoteCertificateChainErrors`, and other trackers go down at the same time | nothing while it lasts, and it ends when the window does. What is handled is the aftermath: `scripts/ops/indexer-retry.py` clears Prowlarr's backoff within 15 min of the site answering again, instead of the indexer staying unusable for up to a day |
+| The site itself is in maintenance | Prowlarr cannot parse the answer as XML, because the answer is an HTML maintenance page | nothing, and it is the one case where waiting is the whole remedy |
+
+None of the three touches the announce path, which is why the four torrents here have seeded through
+all of them. That is also the reason to read this table before touching the account: the expensive
+mistake on this site is deleting a torrent, not losing a search for an evening.
 
 ### From its terms of use, read 2026-08-21
 
 | Term | What it means here |
 | :--- | :--- |
 | **Never share your passkey or personal announce link** | checked: nothing in this repo contains one. The only long hex strings tracked are an acestream content id and Docker image digests |
-| VPN and proxies | not forbidden; using one **to cheat the ratio** is. C411's Prowlarr entry routes its searches through the `nordvpn` SOCKS proxy, which is search traffic and touches no announce |
+| VPN and proxies | not forbidden; using one **to cheat the ratio** is. Nothing here uses one for this site: searches go direct and announces always did, so the question does not arise. Worth knowing anyway, because it means routing the searches through a proxy would be allowed if a reason ever appears |
 | One account per person, no sharing | |
 | Uploads | must be seeded at least 48 h after publishing, if anything is ever uploaded here |
 | Sanctions | progressive: warning, then temporary suspension, then permanent ban. Not the instant disable TorrentLeech uses |
@@ -500,10 +492,18 @@ this account above its line.
 
 ### What to do about it
 
-Nothing automatic can help here yet, because the account cannot be read: its Prowlarr entry holds no
-username and password, so `scripts/trackers/stats.py` has no way in. Until it does, the rule is manual and
-simple: **on C411, freeleech only.** Everything else there is two gigabytes from blocking the
-account's downloads.
+Nothing automatic can help here yet, because the account cannot be read. The reason is not a
+forgotten password: the site's Cardigann definition authenticates with an **API key**, so the
+Prowlarr entry has no username and password field to fill in, and `scripts/trackers/stats.py` reads a
+site by logging in with a stored cookie. Giving it a way in means storing a real login for the site
+next to the API key, which is a decision about where the credentials live and not a code change.
+
+The same definition is why the freeleech-only filter cannot be turned on here: it exposes
+`multilang`, `multilanguage` and `vostfr`, and no freeleech facet. Both of the levers that protect a
+thin ratio elsewhere are therefore missing on the one account that needs them most.
+
+Until that changes the rule is manual and simple: **on C411, freeleech only.** Everything else there
+is two gigabytes from blocking the account's downloads.
 
 ## Adding a new private tracker
 

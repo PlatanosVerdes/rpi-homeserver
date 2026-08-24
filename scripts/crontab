@@ -73,3 +73,11 @@
 # when the values already match, refuses to act on a reading over 3 h old, and pauses the grabber
 # below the free-space floor. See scripts/trackers/control.py; DRY_RUN=1 to see what it would change.
 5,35 * * * * /home/raspi/rpi-homeserver/scripts/trackers/control.py >> /home/raspi/rpi-homeserver/tracker-control.log 2>&1
+
+# Clears Prowlarr's failure backoff on an indexer whose site is answering again, four times an hour.
+# Prowlarr backs a failed indexer off for up to 24 h, and prowlarr_indexer_up reads that same
+# disabledTill, so an hour of the ISP's match-night blocking used to cost a full day of the indexer
+# being unusable and the alert firing over a site that works. Probes the site first and only then
+# asks Prowlarr to test, so a tracker that is really down gets one HTTPS request per run and never a
+# search. See scripts/ops/indexer-retry.py and docs/alerting.md.
+8,23,38,53 * * * * /home/raspi/rpi-homeserver/scripts/ops/indexer-retry.py >> /home/raspi/rpi-homeserver/indexer-retry.log 2>&1

@@ -111,6 +111,41 @@ returns 1 when it should fire (`<something> > bool <threshold>`). Commit, and th
 it. A malformed rule is rejected at startup, so check `docker logs grafana | grep provision`
 after deploying.
 
+## An indexer down on a match night is the line, not the tracker
+
+The first time "an indexer is down" fires for two trackers at once, the temptation is to go and fix
+the trackers. Read the certificate first.
+
+On this connection, HTTPS to the Cloudflare anycast addresses **188.114.96.5** and **188.114.97.5**
+is intercepted during the Spanish football blocking windows. Every SNI gets the same self-signed
+certificate back, so it is not Cloudflare answering:
+
+```bash
+echo | openssl s_client -connect 188.114.96.5:443 -servername yts.mx 2>/dev/null \
+  | openssl x509 -noout -subject
+# subject=C=EU, ST=SOME-ST, O=Widgits Pty Ltd, OU=Packetland, CN=core1.netops.test
+```
+
+Several trackers resolve there, so they go down together and come back together, which is the tell.
+Verified on 2026-08-23: valid certificates at 16:41, the interception one at 18:16, and YTS down from
+18:10 the previous evening until 05:40. Prowlarr words it as `Certificate validation for <site>
+failed. RemoteCertificateNameMismatch, RemoteCertificateChainErrors`, which reads like the tracker
+broke its own certificate. It did not.
+
+Two things follow, and both are already handled:
+
+- **The metric outlives the outage.** `prowlarr_indexer_up` reads Prowlarr's `disabledTill`, and
+  Prowlarr backs a failed indexer off for up to a day, so a one-hour block used to cost a full day of
+  the indexer being unusable and the alert firing over a site that works.
+  `scripts/ops/indexer-retry.py` closes that gap every 15 minutes: it probes the site, and only when
+  the site answers over a valid certificate does it ask Prowlarr to test the indexer, which clears
+  the backoff. So an alert that is still firing hours later means the site really is unreachable.
+- **Nothing routes around it.** C411 used to search through a SOCKS proxy, which would have missed
+  the intercepting device entirely, and the tag came off because credentials that expire in silence
+  produce a failure that reads exactly like a banned account. Announce traffic is qBittorrent's and
+  goes direct in any case, which is why torrents keep seeding through a window while searches fail.
+  See [private-trackers.md](private-trackers.md).
+
 ## The *arrs notify on their own
 
 Radarr, Sonarr and Prowlarr have a native Telegram connection pointing at the same bot and chat,
