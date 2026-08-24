@@ -175,11 +175,25 @@ def hit_and_run(config, torrents):
     """Per torrent, not per account: one uncleared torrent is a warning, three is a disabled account.
 
     A torrent clears by seeding min_seed_hours or reaching min_ratio, so what is owed is the hours
-    still to go on the ones that have neither.
+    still to go on the ones that have neither. Three parts of that come from each site's own rule
+    and are not the same everywhere:
+
+      starts_at_progress  when the obligation begins. Most sites start it at completion, so
+                          something still downloading owes nothing; DigitalCore's FAQ starts it at
+                          10% downloaded.
+      grace_hours         hours the site waits before starting its clock. Added to what is
+                          required, because the local counter has been running through them.
+      min_ratio           null on a site with no ratio rule, like retrotoon, where time is the
+                          only thing that clears an obligation.
+
+    Exemptions are deliberately not implemented: C411 exempts a global ratio of 2.0, the first
+    three torrents and anything under 100 MB. They only ever reduce what is owed, and owing more
+    than the site thinks is the safe direction for a number whose job is to prevent a ban.
     """
     rule = config.get("hit_and_run") or {}
-    min_hours = rule.get("min_seed_hours", 240)
+    min_hours = rule.get("min_seed_hours", 240) + rule.get("grace_hours", 0)
     min_ratio = rule.get("min_ratio", 1.0)
+    starts_at = rule.get("starts_at_progress", 1)
     hosts = set(config.get("tracker_hosts") or [])
     pending, worst_hours = [], 0.0
     for torrent in torrents:
@@ -187,12 +201,10 @@ def hit_and_run(config, torrents):
         host = url.split("://", 1)[-1].split("/", 1)[0].split(":", 1)[0]
         if host not in hosts:
             continue
-        # The obligation starts when the download finishes, so something still downloading owes
-        # nothing yet. Counting it made the worst-case number read 240 h the moment a grab arrived.
-        if torrent.get("progress", 0) < 1:
+        if torrent.get("progress", 0) < starts_at:
             continue
         hours = torrent.get("seeding_time", 0) / 3600
-        if torrent.get("ratio", 0) >= min_ratio or hours >= min_hours:
+        if hours >= min_hours or (min_ratio is not None and torrent.get("ratio", 0) >= min_ratio):
             continue
         left = min_hours - hours
         # Owing hours is normal. Owing them while the clock is stopped is what gets an account

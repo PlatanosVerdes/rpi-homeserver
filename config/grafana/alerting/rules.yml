@@ -730,6 +730,7 @@ groups:
                 - evaluator: { type: gt, params: [0] }
 
       - uid: homelab-seed-cleanup-failed
+        isPaused: true           # Paused on 2026-08-24: the script is parked, so it cannot report a status.
         title: Seed cleanup failed
         condition: C
         for: 5m
@@ -763,6 +764,7 @@ groups:
                 - evaluator: { type: gt, params: [0] }
 
       - uid: homelab-seed-cleanup-stale
+        isPaused: true           # Paused on 2026-08-24: the script is parked on purpose, so of course it is stale.
         title: Seed cleanup not running
         condition: C
         # It runs hourly, so three hours means two missed passes: cron, the script, or qBittorrent.

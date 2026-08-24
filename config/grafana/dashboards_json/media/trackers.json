@@ -860,7 +860,7 @@
     {
       "type": "bargauge",
       "title": "Open hit and run obligations",
-      "description": "Normal for anything recent. Only the stopped-clock count is an emergency.",
+      "description": "Measured from the client against each site's own rule, not read from the sites: the only H&R number any of them publishes here is DigitalCore's, and that one is read by eye. Normal for anything recent. Only the stopped-clock count is an emergency.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -3381,7 +3381,7 @@
     {
       "type": "timeseries",
       "title": "Open obligations, per tracker",
-      "description": "Normal for anything recent: it counts torrents that have not yet cleared their tracker's seed requirement. Only the panel beside it is an emergency.",
+      "description": "Torrents that have not yet cleared their tracker's seed requirement, measured from qBittorrent against each site's rule. The client's clock runs ahead of the tracker's, by 26 to 118 h the last time the two were compared, so read this as a floor. Only the panel beside it is an emergency.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"

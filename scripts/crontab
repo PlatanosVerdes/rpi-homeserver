@@ -43,10 +43,12 @@
 # disk writes. No-op unless HEALTHCHECK_URL is set in .env. See docs/alerting.md.
 * * * * * /home/raspi/rpi-homeserver/scripts/ops/heartbeat.sh
 
-# Seed-aware torrent cleanup, hourly at :20. Removes a torrent and its data once the film has left
-# the library (hardlink count back to 1) and its tracker is paid. Nothing to do most hours, and a
-# no-op is two API calls. See scripts/trackers/seed-cleanup.py; DRY_RUN=1 to see what it would remove.
-20 * * * * /home/raspi/rpi-homeserver/scripts/trackers/seed-cleanup.py >> /home/raspi/rpi-homeserver/seed-cleanup.log 2>&1
+# Seed-aware torrent cleanup: PARKED on 2026-08-24, deliberately left here rather than deleted.
+# qbit-manage owns deletion now (config/qbit-manage/config.yml, share_limits with cleanup), and two
+# deleters with different rules is the one arrangement worse than either alone. Uncomment this line
+# and pause the qbit-manage groups to go back; see PENDING.md for what has to hold before the script
+# and its two alert rules are deleted for good.
+#20 * * * * /home/raspi/rpi-homeserver/scripts/trackers/seed-cleanup.py >> /home/raspi/rpi-homeserver/seed-cleanup.log 2>&1
 
 # Media stack "which one" metrics -> Pushgateway (quality upgrades, torrents by name, indexer
 # status and usage) for the Media Pipeline dashboard. Read-only. See scripts/metrics/media.py.

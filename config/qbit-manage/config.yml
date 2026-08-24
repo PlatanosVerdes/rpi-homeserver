@@ -16,7 +16,7 @@ commands:
   tag_tracker_error: true  # tags what a tracker no longer recognises, rather than removing it
   rem_unregistered: false  # the feature that makes this tool worth adopting, but it deletes: later
   tag_nohardlinks: true    # tags what the library no longer holds
-  share_limits: false      # writing limits into qBittorrent is the thing the README keeps off
+  share_limits: true       # owns deletion since 2026-08-24, see PENDING.md
   rem_orphaned: false      # arr_orphan_* already watches this, and deleting is its own decision
   recheck: false
   skip_cleanup: false
@@ -73,43 +73,81 @@ tracker:
     tag: other-tracker
 
 share_limits:
-  # Lower priority number wins, so the tracker with its own rule is evaluated before the generic
-  # private group. Every one of these mirrors config/qbittorrent/seed-rules.json for now, on
-  # purpose: the point of the dry run is to compare like with like.
-
-  # include_all_tags, so a torrent only gets a limit once BOTH conditions hold: it belongs to the
-  # tracker AND the library no longer shares its file. Share limits on their own ignore hardlinks,
-  # and the comparison run on 2026-08-21 caught exactly that: two c411 torrents past ten days of
-  # seeding would have been removed while Plex still played the same bytes. Seeding those costs no
-  # disk at all and earns ratio for free, which is why scripts/trackers/seed-cleanup.py keeps them and why the noHL
-  # tag has to be part of the filter.
+  # Lower priority number wins, so a tracker with its own rule is evaluated before the generic
+  # private group. The numbers mirror config/qbittorrent/seed-rules.json on purpose, so the dry run
+  # compares like with like.
+  #
+  # Two separate questions have to be answered before a limit is written, and each is a tag:
+  #
+  #   include_all_tags   which tracker it belongs to, so its rule applies and not another site's.
+  #   include_any_tags   whether anything here still needs the bytes. Either the library has let go
+  #                      of the file (noHL) or it was never in the library at all (ratio, which
+  #                      autobrr puts on everything it grabs to build ratio). That second tag is
+  #                      the only way those torrents are visible here: they carry no category, so
+  #                      tag_nohardlinks never inspects them and they can never be tagged noHL.
+  #
+  # Share limits on their own ignore hardlinks, and the comparison run on 2026-08-21 caught exactly
+  # that: two c411 torrents past ten days of seeding would have been removed while Plex still played
+  # the same bytes. Seeding those costs no disk at all and earns ratio for free.
+  #
+  # min_last_active is the third condition, and the one that keeps a freeleech grab alive: a torrent
+  # still moving bytes is still paying whatever its ratio says, and on a freeleech the download
+  # never counted, so every byte up is profit. It is coarser than the 0.2 GB/day floor
+  # scripts/trackers/seed-cleanup.py uses, because any activity at all resets it, so a torrent that
+  # trickles is kept indefinitely. The free-space floor in config/trackers/rules.json is what stops
+  # the grabber if that ever costs real disk.
   torrentleech:
     priority: 1
     include_all_tags:
       - torrentleech
+    include_any_tags:
       - noHL
+      - ratio
     # 360 h rather than the tracker's own 240 h, because qBittorrent's clock runs ahead of the
     # tracker's: it counts while announces are being rejected. Measured gap on 2026-08-21 across
     # 14 torrents: 26 to 118 hours. See config/qbittorrent/seed-rules.json for the full reasoning.
     max_seeding_time: 15d
     max_ratio: 1.2
-    cleanup: false           # dry run first; this becomes true at cutover
+    min_last_active: 1d
+    cleanup: true            # deletes into the recycle bin, kept 7 days
+    resume_torrent_after_change: false
+
+  # Its own group, above `private`, for one reason: retrotoon's rules page states no ratio rule at
+  # all, so reaching 1:1 clears nothing there and only the 72 h of seeding does. Left in the generic
+  # group below, one of their torrents reaching ratio 1.0 early would be deleted still owing time,
+  # which is a hit and run on the site that calls this its strictest rule with no exceptions.
+  retrotoon:
+    priority: 2
+    include_all_tags:
+      - retrotoon
+    include_any_tags:
+      - noHL
+      - ratio
+    max_seeding_time: 10d
+    max_ratio: -1            # -1 is "no ratio limit": time is the only thing that clears here
+    min_last_active: 1d
+    cleanup: true
     resume_torrent_after_change: false
 
   private:
-    priority: 2
+    priority: 3
     include_all_tags:
       - private
+    include_any_tags:
       - noHL
+      - ratio
     max_seeding_time: 10d
     max_ratio: 1.0
-    cleanup: false
+    min_last_active: 1d
+    cleanup: true
     resume_torrent_after_change: false
 
-  # No noHL here, deliberately: a public torrent is dropped even while the library shares its file,
-  # because the point is getting this address out of public swarms rather than saving disk.
+  # No noHL and no ratio here, deliberately: a public torrent is dropped even while the library
+  # shares its file, because the point is getting this address out of public swarms rather than
+  # saving disk. No min_last_active either, for the same reason: still being useful to a public
+  # swarm is not a reason to stay in it.
   public:
-    priority: 3
+    priority: 4
     include_any_tags:
       - public
     # The bespoke script drops a public torrent as soon as the library has the file, to get this
@@ -119,7 +157,7 @@ share_limits:
     # min_seeding_time is deliberately absent: this tool refuses it unless max_ratio is above 0.
     max_seeding_time: 2h
     max_ratio: -1
-    cleanup: false
+    cleanup: true
     resume_torrent_after_change: false
 
 orphaned:

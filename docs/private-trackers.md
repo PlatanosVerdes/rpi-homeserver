@@ -17,6 +17,11 @@ PRIVATE tracker     the tracker's rules come first, always.
                     watched, rules NOT met  -> it stays, and it goes the moment they are met.
 ```
 
+**Who does it, since 2026-08-24:** the deleting side is qbit-manage's, driven by the groups in
+`config/qbit-manage/config.yml`. `scripts/trackers/seed-cleanup.py` is commented out of the crontab
+and kept there while the handover is on trial, so the script named in the table below is parked
+rather than gone. What it decided, the groups now decide, and PENDING.md holds what is still owed.
+
 | Situation | What happens | Who does it |
 | :--- | :--- | :--- |
 | Public, imported into the library | torrent and its download-side name removed at once | `scripts/trackers/seed-cleanup.py` |
@@ -116,6 +121,23 @@ deleting a torrent that still owed 88 hours.
 **4. `config/trackers/rules.json`**, which is what the automation reads: the site's minimum ratio,
 its hit & run rule, the tracker hostnames as they appear in the announce URL, the free-space floor,
 and the tiers that decide how hard the site is worked.
+
+The hit & run rule is not just hours and a ratio, because sites do not agree on when the clock
+starts or on whether a ratio clears anything at all. Three optional fields carry that, and each one
+belongs to the site's own wording rather than to a preference here:
+
+```json
+"hit_and_run": {
+  "min_seed_hours": 72,
+  "min_ratio": null,          // null where the site has no ratio rule: only time clears
+  "grace_hours": 24,          // hours before their clock starts, added to what is required
+  "starts_at_progress": 0.1   // when the obligation begins, if not at completion
+}
+```
+
+Exemptions are deliberately left out. C411 exempts a global ratio of 2.0, the first three torrents
+and anything under 100 MB, and implementing those would only ever reduce what this thinks is owed.
+Owing more than the site does is the safe direction for a number whose job is to prevent a ban.
 
 **5. autobrr, for the announce channel.** Freeleech is worth having the second it is announced, which
 is minutes before an RSS poll sees it. One warning that matters: **Identification → Mechanism must

@@ -74,7 +74,7 @@ scripts/                    Operational scripts, grouped by what they do
   trackers/                 The private-tracker economy: measure, decide, reclaim
     stats.py                Reads each site and computes the ratio headroom
     control.py              Moves the freeleech and grab-rate levers from that headroom
-    seed-cleanup.py         Drops a torrent once its film left the library and the tracker is paid
+    seed-cleanup.py         PARKED 2026-08-24: qbit-manage owns deletion, see PENDING.md
 
   ops/                      Everything else on a schedule
     backup.sh               Daily appdata backup, pushes metrics to Grafana

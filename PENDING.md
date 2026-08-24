@@ -480,29 +480,88 @@ wants to maintain it. So, in this order:
    (`rem_unregistered`, `share_limits`, `rem_orphaned`, `cat_update`). Config in
    `appdata/qbit-manage/config.yml`, which the tool rewrites itself, so it is not in git.
 
-   **Approved on 2026-08-21, so no need to ask again.** The evaluation, and what to do on or after
-   2026-08-28:
+   **Approved on 2026-08-21, and done on 2026-08-24: qbit_manage owns deletion now.** The plan was to
+   compare for a week, then enable `rem_unregistered`, then `share_limits`, then park the script, one
+   step a week into September. It went in one step instead, for two reasons that only turned up when
+   the numbers were looked at:
 
-   1. Compare a week of both tools on the same torrents. `scripts/trackers/seed-cleanup.py` reports its decisions in
-      `seed-cleanup.log` and the Retention dashboard; qbit_manage's are in `docker logs qbit-manage`.
-      What has to agree: which torrents are `noHL` (the library no longer holds them) against what
-      `scripts/trackers/seed-cleanup.py` calls "film gone from the library", and which are tagged `issue` against
-      what it treats as unregistered.
-   2. Turn on `rem_unregistered` first, on its own. It is the reason to adopt the tool: a reset
-      passkey makes every torrent announce `unregistered torrent pass`, and this catches it on the
-      first pass instead of four days later. It only removes torrents the tracker itself has
-      disowned, which is the safest deletion there is.
-   3. Then `share_limits`, and only then. The groups are already written and are the risky part,
-      because share limits **cannot see the library**: `include_all_tags: [torrentleech, noHL]` is
-      what stops it deleting a torrent whose bytes Plex is still sharing. Verify that on real data
-      before trusting it.
-   4. Only after both have run for a week does `scripts/trackers/seed-cleanup.py` come out of cron. Three rules must
-      survive the move: the per-tracker goals (360 h on TorrentLeech, because its clock runs behind
-      the client's), the public-tracker rule of dropping a torrent as soon as the library has the
-      file, and the absolute one, that nothing is deleted while any tracker is still owed.
+   - **The deletion is reversible.** `share_limits` cleanup routes through `tor_delete_recycle`, so
+     what it removes lands in `/data/downloads/.RecycleBin` and stays there for 7 days
+     (`empty_after_x_days`). A wrong group costs a restore, not a re-download.
+   - **Nothing was at risk on the first pass.** Computed against the live client before flipping the
+     flag: zero torrents past their limits, 23 with no group at all because the library still shares
+     their bytes, 15 active in the last day and 7 under their limits. The switch freed 0 GB on day
+     one and every group's limit sits above its site's obligation (360 h against TorrentLeech's 240,
+     240 against the 120, 96 and 72 of the rest), so no torrent can be deleted while still owing.
+
+   What changed, all of it revertible by uncommenting one cron line:
+
+   1. `share_limits: true` in commands, `cleanup: true` in all four groups.
+   2. `scripts/trackers/seed-cleanup.py` commented out of `scripts/crontab`, left in place rather
+      than deleted.
+   3. Its two alert rules, `homelab-seed-cleanup-failed` and `homelab-seed-cleanup-stale`, paused
+      with `isPaused: true`. The stale one fires after three hours, so parking the script without
+      this means an alert the same evening saying exactly what was intended.
+
+   **What is still owed, and this is the part to come back to:**
+
+   - **The reporting went dark and nothing replaced it.** The script fed 18 panels across the
+     Retention and Disk Usage dashboards, and `DRY_RUN=1` deliberately does not push metrics, so
+     there is no way to keep them alive while it is parked. The panels that protect the accounts
+     (`tracker_hnr_*`, obligations and stopped clocks) come from `scripts/trackers/stats.py` and are
+     unaffected.
+   - **`rem_unregistered` is still off.** It is the feature the tool was adopted for and the safest
+     deletion there is: it only removes what the tracker itself has disowned. Turn it on next.
+   - **Deletion is now slower than it was**, which is the opposite of the usual worry. The groups
+     mirror the generic 240 h rather than each site's own number, so `The.Furious.2025` on
+     DigitalCore at 168 h would have gone today under the script and now waits until 240 h. If disk
+     matters more than margin, DigitalCore wants its own group at its real 5 days plus margin.
+   - **Anything added by hand is invisible.** No category means it can never be tagged `noHL`, and
+     without autobrr it has no `ratio` tag either, so no group matches it and nothing will ever
+     reclaim it. `Obsession (2026)`, added 2026-08-09, was exactly that and was tagged `ratio` by
+     hand on 2026-08-24. A check for torrents carrying no `~share_limit_*` tag after a run would
+     catch the next one.
+   - **The three cross-seeds stay forever.** `cross-seed-link` is not in `nohardlinks`, correctly,
+     since a cross-seed shares its bytes by definition. It does mean the second torrent outlives the
+     film, which is the trade already recorded below.
+   - **The docs still describe the script as the thing that deletes**, in `README.md`,
+     `docs/private-trackers.md`, `docs/architecture.md` and `docs/seeding-and-ratio.md`. They are
+     left alone on purpose while this is reversible. When the script is deleted for good, so are
+     its two alert rules, its 18 panels and those paragraphs.
 
    One thing to fix while evaluating: the `nohardlinks` list names `tv-sonarr`, and qbit_manage
    reports no torrents in that category, so series are currently outside the check.
+
+   **Measured on 2026-08-24, and the three gaps found are closed in `config/qbit-manage/config.yml`.**
+   All three were config, no code:
+
+   1. **20 of the 46 torrents could never be tagged `noHL`**, because `tag_nohardlinks` only inspects
+      the categories in the `nohardlinks` list and 17 carry no category at all. Those 17 are
+      autobrr's ratio grabs, every one on a private tracker, 538.7 GB that
+      `scripts/trackers/seed-cleanup.py` was the only thing judging. The fix is not a category: autobrr
+      already tags everything it grabs `ratio`, so the groups now ask for
+      `include_any_tags: [noHL, ratio]`, which reads as "the library let go of it, or it was never in
+      the library". One torrent from 2026-08-09 predates autobrr and carries neither tag, so it stays
+      outside until it is tagged by hand.
+   2. **retrotoon fell into the `private` group, which clears at ratio 1.0**, on a site whose rules
+      page states no ratio rule at all. It now has its own group at priority 2 with `max_ratio: -1`,
+      so only its 72 h of seeding clears anything there.
+   3. **"Still paying" had no equivalent**, so a freeleech grab still uploading would have been
+      deleted on time alone, which is the one thing that must not happen to a torrent whose whole
+      purpose is ratio. Every private group now carries `min_last_active: 1d`. It is coarser than the
+      0.2 GB/day floor the script uses, since any activity resets it.
+
+   Verified with the tool itself, on a copy of the config with `share_limits: true`: the groups pick
+   up 14 torrentleech, 2 retrotoon, 6 private and 0 public, and `min_last_active` holds most of them
+   back with `Min inactive time not met`.
+
+   **`-dr` is not read-only.** That dry run wrote real per-torrent share limits (4 at ratio 1.2 and
+   15 days, 3 at 1.0 and 10 days, 15 explicitly unlimited) plus its own `~share_limit_*` and
+   `LastActiveLimitNotReached` tags. Nothing was ever near a limit and the global action is Pause,
+   not Remove, so nothing was at risk, and all 46 torrents were put back to `(-2, -2, -2)`. Two
+   things to remember: preview the cutover from the tool's log rather than by enabling
+   `share_limits`, and resetting a limit on qBittorrent 5.2 needs all four of `ratioLimit`,
+   `seedingTimeLimit`, `inactiveSeedingTimeLimit` and `shareLimitAction` or the API answers 400.
 
    And one that cross-seed introduced: its injected torrents land in a `cross-seed-link` category
    that no list here mentions, so they are outside `nohardlinks` too. That is correct for now (they

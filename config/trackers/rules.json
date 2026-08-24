@@ -29,7 +29,9 @@
         "freeleech_only": false
       }
     ],
-    "min_free_gb": 400
+    "min_free_gb": 400,
+    "_rules_read": "2026-08-21, from the site's own rules pages and its staff",
+    "_hit_and_run_note": "240 h of seeding or ratio 1:1 per torrent clears it, and their clock is the only one that counts: measured on 2026-08-21 the client was ahead of the tracker by 26 to 118 hours across the 14 torrents on its H&R list, which is why the seed goal in seed-rules.json is 360 h and not 240."
   },
   "digitalcore": {
     "_rules_read": "2026-08-21, from the site's own Rules page and FAQ",
@@ -38,9 +40,10 @@
     "_min_ratio_note": "Below it: five days of ratio watch, then leeching is revoked. The account stays enabled, so this costs downloads rather than the account.",
     "hit_and_run": {
       "min_seed_hours": 120,
-      "min_ratio": 1.0
+      "min_ratio": 1.0,
+      "starts_at_progress": 0.1
     },
-    "_hit_and_run_note": "Their real rule, from the FAQ: the obligation starts once 10% of a torrent is downloaded, and clears at 5 days of seeding OR ratio 1:1. Freeleech is NOT exempt. A torrent that stops announcing for one hour is listed as a hit and run immediately, with 10 days to fix it before it becomes permanent and needs points, upload credit or a donation to remove. Five of them is a warning, more is a download ban. **The site is the only source of truth for seed time**: it counts only what it saw announced, so the client's own counter means nothing here.",
+    "_hit_and_run_note": "Their real rule, from the FAQ: the obligation starts once 10% of a torrent is downloaded, which is what starts_at_progress carries, and clears at 5 days of seeding OR ratio 1:1. A download stalled below 100% therefore owes here while on every other site it owes nothing. Freeleech is NOT exempt. A torrent that stops announcing for one hour is listed as a hit and run immediately, with 10 days to fix it before it becomes permanent and needs points, upload credit or a donation to remove. Five of them is a warning, more is a download ban. **The site is the only source of truth for seed time**: it counts only what it saw announced, so the client's own counter means nothing here.",
     "tracker_hosts": [
       "tracker.digitalcore.club",
       "trackerprxy.digitalcore.club"
@@ -109,9 +112,9 @@
     "_min_ratio_note": "No ratio requirement stated. The rule here is seed time, not ratio.",
     "hit_and_run": {
       "min_seed_hours": 72,
-      "min_ratio": 1.0
+      "min_ratio": null
     },
-    "_hit_and_run_note": "72 h of seeding, reached within the first 10 days after the download, and the site calls it its strictest rule with no exceptions. The generic 240 h goal in seed-rules.json already exceeds it, so nothing is at risk while no override exists.",
+    "_hit_and_run_note": "72 h of seeding, reached within the first 10 days after the download, and the site calls it its strictest rule with no exceptions. min_ratio is null because the site states no ratio rule at all: here time is the only thing that clears an obligation, and the 1.0 that used to sit here would have cleared a torrent the site still counted as owing hours. The generic 240 h goal in seed-rules.json already exceeds the 72 h, so nothing is at risk while no override exists.",
     "tracker_hosts": [
       "ann.retrotoon.world"
     ],
@@ -126,9 +129,10 @@
     "_min_ratio_note": "Below 0.8 downloads are blocked until the ratio recovers. The account is not disabled, it just cannot leech.",
     "hit_and_run": {
       "min_seed_hours": 72,
-      "min_ratio": 1.0
+      "min_ratio": 1.0,
+      "grace_hours": 24
     },
-    "_hit_and_run_note": "Their H&R system is DISABLED right now, and the wiki documents the rules for when it comes back: 72 h or ratio 1.0 per torrent, a 24 h grace period, exemptions for a global ratio of 2.0, the first three torrents, anything under 100 MB and anything less than half downloaded. Three active violations block downloads, five strikes is a ban. Measured here as if it were on, because it will be.",
+    "_hit_and_run_note": "Their H&R system is DISABLED right now, and the wiki documents the rules for when it comes back: 72 h or ratio 1.0 per torrent, a 24 h grace period, exemptions for a global ratio of 2.0, the first three torrents, anything under 100 MB and anything less than half downloaded. Three active violations block downloads, five strikes is a ban. Measured here as if it were on, because it will be. grace_hours is added to the 72 rather than ignored: their clock starts 24 h after the download while the client's starts at completion, so 96 h of local seeding is what buys 72 h of credited seeding. The exemptions are not implemented on purpose, since they only ever reduce what is owed.",
     "tracker_hosts": [
       "c411.org"
     ],
