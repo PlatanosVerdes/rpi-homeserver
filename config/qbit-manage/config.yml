@@ -28,7 +28,11 @@ settings:
 # clears it: the default is "keep forever".
 recyclebin:
   enabled: true
-  empty_after_x_days: 7
+  # 2 days, not 7: the bin lives under /mnt/data/downloads, so what it holds is still on the same
+  # disk and the space does not come back until it empties. 76 GiB sat there on 2026-08-25 while
+  # free space went down rather than up. Two days is long enough to notice a wrong deletion the
+  # same evening and short enough that reclaimed disk is actually reclaimed.
+  empty_after_x_days: 2
 
 directory:
   # The same path qBittorrent reports, because hardlink counting compares the two views

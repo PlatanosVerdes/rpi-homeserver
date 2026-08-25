@@ -727,6 +727,9 @@ func maintainerrPending() ([]string, []string) {
 // `linked` is a label and not a filter: while the library shares those bytes they cost nothing, and
 // the day the retention policy deletes the film that leftover name is the last reference to bytes
 // nobody will reclaim.
+// Directories under downloads/ that belong to a tool rather than to a torrent.
+var managedDir = map[string]bool{"incomplete": true, ".RecycleBin": true, "orphaned_data": true}
+
 func orphans() ([]string, []string) {
 	type queueRow struct {
 		app, title, state, reason string
@@ -815,8 +818,14 @@ func orphans() ([]string, []string) {
 			claimed[strings.SplitN(relative, string(filepath.Separator), 2)[0]] = true
 		}
 		for _, entry := range entries {
-			// qBittorrent writes downloads in progress into incomplete/.
-			if entry.Name() == "incomplete" || claimed[entry.Name()] {
+			// incomplete/ is where qBittorrent writes downloads in progress. The other two are
+			// qbit-manage's own, declared in config/qbit-manage/config.yml: .RecycleBin holds what
+			// it deleted until empty_after_x_days passes, and orphaned_data is where its own
+			// rem_orphaned would put things. Counting either as unclaimed means every deletion
+			// raises "data in downloads that nothing owns", which is exactly what it is: data
+			// deliberately parked by the tool that owns deleting. It fired at 09:08 on 2026-08-25,
+			// one hour after the first 76 GiB went to the bin.
+			if managedDir[entry.Name()] || claimed[entry.Name()] {
 				continue
 			}
 			size, links := treeBytesAndLinks(filepath.Join(downloads, entry.Name()))
