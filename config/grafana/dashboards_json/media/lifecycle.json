@@ -29,392 +29,160 @@
       "type": "row",
       "title": "What is coming",
       "collapsed": false,
-      "id": 1,
+      "panels": [],
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
         "y": 0
-      },
-      "panels": []
-    },
-    {
-      "type": "table",
-      "title": "Films in grace, and the day they go",
-      "description": "Maintainerr's rule is 'watched more than two days ago', so this is when each one becomes eligible. Its collection handler runs at 00:00 and 12:00, so the deletion lands at the first of those after the date shown. Empty means nothing has been watched in the last two days.",
-      "id": 2,
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 1
-      },
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "align": "auto",
-            "cellOptions": {
-              "type": "auto"
-            }
-          },
-          "unit": "dateTimeAsIso"
-        },
-        "overrides": []
-      },
-      "options": {
-        "showHeader": true,
-        "cellHeight": "sm",
-        "footer": {
-          "show": false,
-          "reducer": [
-            "sum"
-          ],
-          "countRows": false,
-          "fields": ""
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "refId": "A",
-          "expr": "(maintainerr_pending_since_timestamp + 172800) * 1000",
-          "instant": true,
-          "range": false,
-          "editorMode": "code",
-          "format": "table",
-          "legendFormat": "__auto"
-        }
-      ],
-      "transformations": [
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {
-              "Time": true,
-              "__name__": true,
-              "instance": true,
-              "job": true,
-              "collection": true
-            },
-            "renameByName": {
-              "title": "Film",
-              "Value": "Goes after"
-            }
-          }
-        }
-      ]
-    },
-    {
-      "type": "table",
-      "title": "Hours each torrent still owes its site",
-      "description": "What the tracker is still owed, per torrent, from the rules in config/trackers/rules.json. Removal happens later than this: each qbit-manage group sits above its site's requirement, by 120 h on TorrentLeech and 60 on DigitalCore. So zero here means safe to delete, not deleted.",
-      "id": 3,
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 1
-      },
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "align": "auto",
-            "cellOptions": {
-              "type": "auto"
-            }
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "showHeader": true,
-        "cellHeight": "sm",
-        "footer": {
-          "show": false,
-          "reducer": [
-            "sum"
-          ],
-          "countRows": false,
-          "fields": ""
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "refId": "A",
-          "expr": "sort_desc(tracker_hnr_torrent_hours_left)",
-          "instant": true,
-          "range": false,
-          "editorMode": "code",
-          "format": "table",
-          "legendFormat": "__auto"
-        }
-      ],
-      "transformations": [
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {
-              "Time": true,
-              "__name__": true,
-              "instance": true,
-              "job": true
-            },
-            "renameByName": {
-              "name": "Torrent",
-              "tracker": "Tracker",
-              "stopped": "Clock stopped",
-              "Value": "Hours owed"
-            }
-          }
-        }
-      ]
-    },
-    {
-      "type": "stat",
-      "title": "Seeding to nobody",
-      "description": "Torrents seeding with no working tracker. Their seeding time is fiction: qBittorrent counts it and the site credits none of it, which is what every group's margin exists for.",
-      "id": 4,
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 8,
-        "x": 0,
-        "y": 9
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 1
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto",
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "refId": "A",
-          "expr": "count(qbit_torrent_no_working_tracker) or vector(0)",
-          "instant": true,
-          "range": false,
-          "editorMode": "code",
-          "legendFormat": "__auto"
-        }
-      ]
-    },
-    {
-      "type": "stat",
-      "title": "In no retention group",
-      "description": "Torrents with no category and no `ratio` tag, so nothing will ever reclaim them. Added by hand is how they arrive.",
-      "id": 5,
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 8,
-        "x": 8,
-        "y": 9
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 1
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto",
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "refId": "A",
-          "expr": "count(qbit_torrent_unmanaged) or vector(0)",
-          "instant": true,
-          "range": false,
-          "editorMode": "code",
-          "legendFormat": "__auto"
-        }
-      ]
-    },
-    {
-      "type": "stat",
-      "title": "Owing hours with the clock stopped",
-      "description": "The only number on this page that is an emergency: owing seeding time while not announcing. A paused or errored torrent pays nothing off.",
-      "id": 6,
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 8,
-        "x": 16,
-        "y": 9
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 1
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto",
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "refId": "A",
-          "expr": "sum(tracker_hnr_at_risk)",
-          "instant": true,
-          "range": false,
-          "editorMode": "code",
-          "legendFormat": "__auto"
-        }
-      ]
+      }
     },
     {
       "type": "table",
       "title": "When each torrent goes",
-      "id": 15,
+      "id": 20,
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "The countdown qbit-manage is running, read from the client rather than restated here: when a share_limits group claims a torrent it writes the limit into qBittorrent, so the time left is that limit minus what the torrent has already seeded. Joined on the infohash, because cross-seed gives every copy of a release the same name.\n\nOnly torrents a group has claimed appear. The rest are absent for one of two good reasons: no group matched, because the library still shares their bytes, or the group cleared the limit because the torrent moved bytes in the last day and is still paying for itself.",
+      "description": "The countdown qbit-manage is already running, read back from the client instead of restated here: when a share_limits group claims a torrent it writes the limit into qBittorrent, so what is left is that limit minus the time already seeded. Change a group in config/qbit-manage/config.yml and this moves on its own.\n\nJoined on the infohash, because cross-seed gives every copy of a release the same name.\n\nOnly torrents a group has claimed appear here. A torrent missing from the list is an answer, not a gap: either no group matched, because the library still shares its bytes, or the group cleared its limit because it moved bytes in the last day and is still paying for itself.",
       "gridPos": {
-        "h": 9,
-        "w": 16,
+        "h": 11,
+        "w": 15,
         "x": 0,
-        "y": 14
+        "y": 1
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "s",
-          "decimals": 0,
+          "unit": "short",
           "custom": {
             "align": "auto",
+            "filterable": false,
             "cellOptions": {
               "type": "auto"
             }
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Torrent"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 330
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Hours left"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "suffix: h"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "orange",
+                      "value": null
+                    },
+                    {
+                      "color": "text",
+                      "value": 48
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Goes on"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dateTimeAsIso"
+              },
+              {
+                "id": "custom.width",
+                "value": 170
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Category"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "none": {
+                        "text": "added by hand",
+                        "index": 0
+                      },
+                      "cross-seed-link": {
+                        "text": "cross-seed",
+                        "index": 1
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "showHeader": true,
         "cellHeight": "sm",
-        "sortBy": [
-          {
-            "desc": false,
-            "displayName": "Time left"
-          }
-        ],
         "footer": {
           "show": false,
+          "countRows": false,
           "reducer": [
             "sum"
           ],
-          "countRows": false,
           "fields": ""
-        }
+        },
+        "sortBy": [
+          {
+            "desc": false,
+            "displayName": "Hours left"
+          }
+        ]
       },
       "targets": [
         {
@@ -423,34 +191,68 @@
             "uid": "prometheus"
           },
           "refId": "A",
-          "format": "table",
+          "expr": "sort((qbit_torrent_seeding_limit_seconds - on(hash) group_left(name, category) qbit_torrent_seeding_seconds) / 3600)",
           "instant": true,
           "range": false,
           "editorMode": "code",
-          "legendFormat": "__auto",
-          "expr": "sort(qbit_torrent_seeding_limit_seconds - on(hash) group_left(name, category) qbit_torrent_seeding_seconds)"
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "B",
+          "expr": "(time() + (qbit_torrent_seeding_limit_seconds - on(hash) group_left(name, category) qbit_torrent_seeding_seconds)) * 1000",
+          "instant": true,
+          "range": false,
+          "editorMode": "code",
+          "format": "table"
         }
       ],
       "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "hash",
+            "mode": "outer"
+          }
+        },
         {
           "id": "organize",
           "options": {
             "excludeByName": {
               "Time": true,
+              "Time 1": true,
+              "Time 2": true,
+              "hash": true,
               "__name__": true,
+              "__name__ 1": true,
+              "__name__ 2": true,
               "instance": true,
+              "instance 1": true,
+              "instance 2": true,
               "job": true,
-              "hash": true
+              "job 1": true,
+              "job 2": true,
+              "name 2": true,
+              "category 2": true
             },
             "indexByName": {
-              "name": 0,
-              "category": 1,
-              "Value": 2
+              "name 1": 0,
+              "category 1": 1,
+              "Value 1": 2,
+              "Value 2": 3
             },
             "renameByName": {
               "name": "Torrent",
+              "name 1": "Torrent",
               "category": "Category",
-              "Value": "Time left"
+              "category 1": "Category",
+              "Value 1": "Hours left",
+              "Value #A": "Hours left",
+              "Value 2": "Goes on",
+              "Value #B": "Goes on"
             }
           }
         }
@@ -459,17 +261,17 @@
     {
       "type": "stat",
       "title": "Waiting in the recycle bin",
-      "id": 16,
+      "id": 21,
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Already deleted, still on the disk. The bin lives under /data/downloads, so deleting does not free space until qbit-manage empties it two days later (recyclebin.empty_after_x_days). Reclaimable is the part that actually comes back: a file the library still hardlinks frees nothing when the bin empties.",
+      "description": "Deleted already, still on the disk. The bin sits under /data/downloads, so nothing is freed until qbit-manage empties it two days after a file lands (recyclebin.empty_after_x_days).\n\nReclaimable is the part that actually comes back. A file the library still hardlinks frees nothing when the bin empties, so the two figures only match while everything in there is held by the bin alone.",
       "gridPos": {
-        "h": 9,
-        "w": 8,
-        "x": 16,
-        "y": 14
+        "h": 5,
+        "w": 9,
+        "x": 15,
+        "y": 1
       },
       "fieldConfig": {
         "defaults": {
@@ -489,7 +291,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Oldest released"
+              "options": "Oldest goes"
             },
             "properties": [
               {
@@ -512,7 +314,10 @@
         "colorMode": "none",
         "graphMode": "none",
         "justifyMode": "auto",
-        "orientation": "vertical"
+        "orientation": "horizontal",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
       },
       "targets": [
         {
@@ -549,29 +354,28 @@
           "instant": true,
           "range": false,
           "editorMode": "code",
-          "legendFormat": "Oldest released"
+          "legendFormat": "Oldest goes"
         }
       ]
     },
     {
       "type": "table",
-      "title": "Bytes only a cross-seed is holding",
-      "id": 14,
+      "title": "Films in grace, and the day they go",
+      "id": 22,
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "A cross-seed normally shares its bytes with the torrent that downloaded them: a second tracker paid for, no extra disk. Anything listed here is the last link to those bytes, so they exist only because of it. That happens by accident rather than by design: cross-seed searches whatever is in the client and a cross-seed is in the client, so A holds it, B gets injected, A expires, and A's tracker still has the content for B to match against. Each hop is finite and earns ratio on its own site; chained, they hold the same bytes indefinitely. Empty is the normal state and the one to expect.",
+      "description": "Maintainerr has flagged these for deletion and is holding them for two days. Empty is the normal state and means nothing is flagged right now, which is what No data means here.",
       "gridPos": {
         "h": 6,
-        "w": 24,
-        "x": 0,
-        "y": 23
+        "w": 9,
+        "x": 15,
+        "y": 6
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "bytes",
-          "decimals": 1,
+          "unit": "dateTimeAsIso",
           "custom": {
             "align": "auto",
             "cellOptions": {
@@ -585,13 +389,19 @@
         "showHeader": true,
         "cellHeight": "sm",
         "footer": {
-          "show": true,
+          "show": false,
+          "countRows": false,
           "reducer": [
             "sum"
           ],
-          "countRows": false,
           "fields": ""
-        }
+        },
+        "sortBy": [
+          {
+            "desc": false,
+            "displayName": "Goes on"
+          }
+        ]
       },
       "targets": [
         {
@@ -600,12 +410,11 @@
             "uid": "prometheus"
           },
           "refId": "A",
-          "expr": "sort_desc(qbit_torrent_sole_holder_bytes)",
+          "expr": "(maintainerr_pending_since_timestamp + 172800) * 1000",
           "instant": true,
           "range": false,
           "editorMode": "code",
-          "format": "table",
-          "legendFormat": "__auto"
+          "format": "table"
         }
       ],
       "transformations": [
@@ -616,13 +425,275 @@
               "Time": true,
               "__name__": true,
               "instance": true,
-              "job": true
+              "job": true,
+              "collection": true
             },
             "renameByName": {
-              "name": "Cross-seed",
-              "Value": "Bytes it alone holds"
+              "name": "Film",
+              "title": "Film",
+              "Value": "Goes on"
             }
           }
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Hours each torrent still owes its site",
+      "id": 23,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Hit-and-run: a private tracker asks for a minimum seed time per torrent, and dropping it early is a strike against the account. This is what each one has left to serve, measured against the site's own rule in config/trackers/rules.json.\n\nThe ratio column is a label rather than a number, so it sorts as text.",
+      "gridPos": {
+        "h": 8,
+        "w": 15,
+        "x": 0,
+        "y": 12
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "suffix: h",
+          "decimals": 0,
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Torrent"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 330
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ratio"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "custom.width",
+                "value": 90
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Tracker"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Hours owed"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "countRows": false,
+          "reducer": [
+            "sum"
+          ],
+          "fields": ""
+        },
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Hours owed"
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "A",
+          "expr": "sort_desc(tracker_hnr_torrent_hours_left)",
+          "instant": true,
+          "range": false,
+          "editorMode": "code",
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "instance": true,
+              "job": true,
+              "seeding": true
+            },
+            "indexByName": {
+              "name": 0,
+              "tracker": 1,
+              "ratio": 2,
+              "Value": 3
+            },
+            "renameByName": {
+              "name": "Torrent",
+              "tracker": "Tracker",
+              "ratio": "Ratio",
+              "Value": "Hours owed"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Should all be zero",
+      "id": 24,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Four ways the lifecycle goes wrong, in one place because the answer is normally zero.\n\nEach one falls back to a count of the torrents the exporter can see rather than to a plain zero. A bare `or vector(0)` would answer zero just as confidently when the exporter is dead, which is the one moment the number matters. Written this way, a dead exporter shows No data instead of good news.",
+      "gridPos": {
+        "h": 8,
+        "w": 9,
+        "x": 15,
+        "y": 12
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Bytes only a cross-seed holds"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "A",
+          "expr": "sum(qbit_torrent_no_working_tracker) or (count(qbit_torrent_progress) * 0)",
+          "instant": true,
+          "range": false,
+          "editorMode": "code",
+          "legendFormat": "Seeding to nobody"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "B",
+          "expr": "count(qbit_torrent_unmanaged) or (count(qbit_torrent_progress) * 0)",
+          "instant": true,
+          "range": false,
+          "editorMode": "code",
+          "legendFormat": "In no retention group"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "C",
+          "expr": "sum(qbit_torrent_sole_holder_bytes) or (count(qbit_torrent_progress) * 0)",
+          "instant": true,
+          "range": false,
+          "editorMode": "code",
+          "legendFormat": "Bytes only a cross-seed holds"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "D",
+          "expr": "sum(tracker_hnr_at_risk)",
+          "instant": true,
+          "range": false,
+          "editorMode": "code",
+          "legendFormat": "Owed hours with the clock stopped"
         }
       ]
     },
@@ -630,20 +701,19 @@
       "type": "row",
       "title": "What happened",
       "collapsed": false,
-      "id": 7,
+      "panels": [],
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 29
-      },
-      "panels": []
+        "y": 20
+      }
     },
     {
       "type": "logs",
-      "title": "Torrents removed, and how many",
-      "description": "qbit-manage's own words. `Cleanup: True [Meets Share Limits]` is one torrent going, and `Total Torrents + Contents Deleted` is the run's tally. The name is on a different line from the verdict, which is why this says when and how many rather than what.",
-      "id": 8,
+      "title": "What qbit-manage deleted",
+      "description": "Its own words, with the box drawing stripped out. `Cleanup: True [Meets Share Limits]` is one torrent going and `Total Torrents + Contents Deleted` is that run's tally. The name sits on a different line from the verdict, so this says when and how many, never which title.",
+      "id": 25,
       "datasource": {
         "type": "victoriametrics-logs-datasource",
         "uid": "victorialogs"
@@ -652,16 +722,16 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 30
+        "y": 21
       },
       "options": {
         "showTime": true,
         "showLabels": false,
         "showCommonLabels": false,
-        "wrapLogMessage": false,
+        "wrapLogMessage": true,
         "prettifyLogMessage": false,
         "enableLogDetails": true,
-        "dedupStrategy": "none",
+        "dedupStrategy": "exact",
         "sortOrder": "Descending"
       },
       "targets": [
@@ -671,45 +741,7 @@
             "uid": "victorialogs"
           },
           "refId": "A",
-          "expr": "container:qbit-manage (\"Cleanup: True\" OR \"Contents Deleted\")",
-          "queryType": "range",
-          "maxLines": 200
-        }
-      ]
-    },
-    {
-      "type": "logs",
-      "title": "Disk actually returned",
-      "description": "A deletion moves files to /data/downloads/.RecycleBin, which is on the same disk, so nothing is reclaimed until this line appears. It says the retention window it is honouring, which is how you check the config that is running rather than the one that is committed.",
-      "id": 9,
-      "datasource": {
-        "type": "victoriametrics-logs-datasource",
-        "uid": "victorialogs"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 30
-      },
-      "options": {
-        "showTime": true,
-        "showLabels": false,
-        "showCommonLabels": false,
-        "wrapLogMessage": false,
-        "prettifyLogMessage": false,
-        "enableLogDetails": true,
-        "dedupStrategy": "none",
-        "sortOrder": "Descending"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "victoriametrics-logs-datasource",
-            "uid": "victorialogs"
-          },
-          "refId": "A",
-          "expr": "container:qbit-manage \"Emptying Recycle Bin\"",
+          "expr": "container:qbit-manage (\"Cleanup: True\" OR \"Contents Deleted\") | replace_regexp (\"[|]\", \"\") | replace_regexp (\"\\\\s{2,}\", \" \")",
           "queryType": "range",
           "maxLines": 200
         }
@@ -718,46 +750,8 @@
     {
       "type": "logs",
       "title": "Library deletions",
-      "description": "Maintainerr taking the film out of the library after its grace period, and telling Radarr to stop monitoring it. This is what drops the hardlink count to 1 and puts the torrent in reach of its tracker's group.",
-      "id": 10,
-      "datasource": {
-        "type": "victoriametrics-logs-datasource",
-        "uid": "victorialogs"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 38
-      },
-      "options": {
-        "showTime": true,
-        "showLabels": false,
-        "showCommonLabels": false,
-        "wrapLogMessage": false,
-        "prettifyLogMessage": false,
-        "enableLogDetails": true,
-        "dedupStrategy": "none",
-        "sortOrder": "Descending"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "victoriametrics-logs-datasource",
-            "uid": "victorialogs"
-          },
-          "refId": "A",
-          "expr": "container:maintainerr \"Unmonitored movie\"",
-          "queryType": "range",
-          "maxLines": 200
-        }
-      ]
-    },
-    {
-      "type": "logs",
-      "title": "Indexer backoff cleared",
-      "description": "scripts/ops/indexer-retry.py, every 15 minutes. Silent unless it acted, so empty is the normal state: it speaks when a blocked indexer's site answered again and Prowlarr's backoff was cleared early.",
-      "id": 11,
+      "description": "Maintainerr acting on its rule: the film left Radarr and its file went. This is the only place a deletion is recorded per title.",
+      "id": 26,
       "datasource": {
         "type": "victoriametrics-logs-datasource",
         "uid": "victorialogs"
@@ -766,16 +760,16 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 38
+        "y": 21
       },
       "options": {
         "showTime": true,
         "showLabels": false,
         "showCommonLabels": false,
-        "wrapLogMessage": false,
+        "wrapLogMessage": true,
         "prettifyLogMessage": false,
         "enableLogDetails": true,
-        "dedupStrategy": "none",
+        "dedupStrategy": "exact",
         "sortOrder": "Descending"
       },
       "targets": [
@@ -785,7 +779,134 @@
             "uid": "victorialogs"
           },
           "refId": "A",
-          "expr": "container:indexer-retry",
+          "expr": "container:maintainerr \"Unmonitored movie\" | replace_regexp (\"[|]\", \"\") | replace_regexp (\"\\\\s{2,}\", \" \")",
+          "queryType": "range",
+          "maxLines": 200
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Disk the recycle bin is holding",
+      "id": 27,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Each drop is disk actually coming back. This replaces reading it from qbit-manage's log, which prints `Emptying Recycle Bin` every hour whether or not there was anything to empty and never prints a size, so the log could not answer the question at all.\n\nTwo days regardless of the dashboard's range: that is one full cycle of a bin checked hourly that holds things for two days. The series itself starts on 2026-08-25.",
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 29
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "decimals": 1,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "gradientMode": "opacity"
+          },
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "orange"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Reclaimable"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "A",
+          "expr": "recyclebin_bytes",
+          "editorMode": "code",
+          "legendFormat": "Holding",
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "B",
+          "expr": "recyclebin_reclaimable_bytes",
+          "editorMode": "code",
+          "legendFormat": "Reclaimable",
+          "range": true
+        }
+      ],
+      "timeFrom": "2d"
+    },
+    {
+      "type": "logs",
+      "title": "Indexer backoff cleared",
+      "description": "Prowlarr backs a failing indexer off for up to 24 hours, and keeps it marked down long after the site answers again. indexer-retry.py checks every 15 minutes and clears that backoff, but it only writes a line when it actually clears one, so empty means nothing needed clearing.",
+      "id": 28,
+      "datasource": {
+        "type": "victoriametrics-logs-datasource",
+        "uid": "victorialogs"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 29
+      },
+      "options": {
+        "showTime": true,
+        "showLabels": false,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": false,
+        "enableLogDetails": true,
+        "dedupStrategy": "exact",
+        "sortOrder": "Descending"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "victorialogs"
+          },
+          "refId": "A",
+          "expr": "file:indexer-retry | replace_regexp (\"[|]\", \"\") | replace_regexp (\"\\\\s{2,}\", \" \")",
           "queryType": "range",
           "maxLines": 200
         }
@@ -795,28 +916,32 @@
       "type": "row",
       "title": "What this cannot tell you",
       "collapsed": false,
-      "id": 12,
+      "panels": [],
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 46
-      },
-      "panels": []
+        "y": 36
+      }
     },
     {
       "type": "text",
-      "title": "Two gaps, on purpose",
-      "id": 13,
+      "title": "Two things nothing above records",
+      "id": 29,
       "gridPos": {
-        "h": 7,
+        "h": 5,
         "w": 24,
         "x": 0,
-        "y": 47
+        "y": 37
       },
       "options": {
         "mode": "markdown",
-        "content": "**There is no per-title history of what was deleted.** qbit-manage prints the torrent name and the verdict on separate lines, so no single log event carries both, and Prometheus holds state rather than events: `qbit_torrent_*` says what exists now and cannot say what existed last Tuesday. Closing that means one structured line per lifecycle event, emitted by a service that already reads the arrs, which Vector collects and VictoriaLogs indexes with no new plumbing at all.\n\n**And the freeleech lever moves in silence.** `tracker-control` runs every 30 minutes and decides three things: Radarr's freeleech-only filter, the Sonarr indexer, and autobrr's grab rate. Its log holds 92 lines and every one of them is a startup banner, so a decision that changes what gets grabbed leaves no trace. One line per change would put it on this page.\n\nWhat each site asks and what is configured against it lives on [Private trackers](/d/media-trackers/private-trackers). The path from announce to recycle bin is in [docs/lifecycle.md](https://github.com/PlatanosVerdes/rpi-homeserver/blob/main/docs/lifecycle.md)."
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "**Which title was deleted, and when.** qbit-manage prints the name and the verdict on separate lines, so no single event carries both, and the metrics hold what exists now rather than what happened. \"Library deletions\" above is the exception: Maintainerr does name the film.\n\n**When the freeleech lever moved.** tracker-control decides every 30 minutes what Radarr may grab, which indexer Sonarr uses and how fast autobrr grabs, and logs nothing when it changes its mind. One line per change would put both of these on this page."
       }
     }
   ]
