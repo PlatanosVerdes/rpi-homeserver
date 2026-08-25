@@ -1157,7 +1157,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(seed_cleanup_waiting_torrents) or vector(0)",
+          "expr": "sum(seed_cleanup_waiting_torrents)",
           "refId": "A",
           "instant": true,
           "range": false,
@@ -1222,7 +1222,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(seed_cleanup_waiting_bytes) or vector(0)",
+          "expr": "sum(seed_cleanup_waiting_bytes)",
           "refId": "A",
           "instant": true,
           "range": false,
@@ -1286,7 +1286,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(seed_cleanup_removed_torrents) or vector(0)",
+          "expr": "sum(seed_cleanup_removed_torrents)",
           "refId": "A",
           "instant": true,
           "range": false,
@@ -1351,7 +1351,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(seed_cleanup_freed_bytes) or vector(0)",
+          "expr": "sum(seed_cleanup_freed_bytes)",
           "refId": "A",
           "instant": true,
           "range": false,
@@ -1424,7 +1424,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "time() - (sum(seed_cleanup_last_run_timestamp) or vector(0))",
+          "expr": "time() - sum(seed_cleanup_last_run_timestamp)",
           "refId": "A",
           "instant": true,
           "range": false,
