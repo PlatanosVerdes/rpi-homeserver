@@ -87,12 +87,15 @@ free to go.
 | `private` | qbit-manage | The swarm is private. There is no `public` tag: public is the absence of this one, which is how that group selects |
 | `noHL` | qbit-manage | The library no longer holds the file, so these bytes are only being kept for the tracker |
 | `ratio` | autobrr | Grabbed to build ratio, never in the library. Without this tag they would be invisible here: they carry no category, so the hardlink check never inspects them |
+| `stalledDL` | qbit-manage | The download has found no seeder. Written and removed by the tool itself as the state changes, so the `stalled` group only ever holds what is stuck right now |
 | `issue` | qbit-manage | The tracker no longer recognises the torrent. Tagged rather than removed, because a reset passkey looks exactly like this |
 | `keep`, `keep-bonus` | a person, and tracker-control | Out of the clock: every group excludes them |
 | `cross-seed`, `radarr.cross-seed` | cross-seed | A second tracker on bytes another one brought. They sit in the `cross-seed-link` category |
 
-`rem_unregistered` is the one exception that deletes on a single condition, and it is the tracker's
-own word: it removes only what the site itself has disowned.
+Two exceptions delete on a single condition, and both are somebody else's judgement rather than a
+policy here. `rem_unregistered` removes only what the site itself has disowned. The `stalled` group
+removes a download that qBittorrent says has found no seeder: it never completed, so it has no
+seeding time for a tracker group to wait on, and left alone it would sit at 0% forever.
 
 ---
 
@@ -110,6 +113,7 @@ torrents, and 9 to 23 hours across five DigitalCore ones. The margin is that gap
 | c411 | 72 h, grace of 24 h | 150 h, ratio 1.0 | 54 h | Their H&R system is disabled site-wide, so a thinner margin is affordable |
 | retrotoon | 72 h, no ratio rule at all | 120 h, no ratio limit | 48 h | Ratio clears nothing here: only time does, so `max_ratio: -1` |
 | anything else private | — | 10 d, ratio 1.0 | — | The floor, so a new site is covered from its first torrent |
+| anything stalled | — | removed 12 h after the last byte moved | — | Priority 1, so it is seen before its tracker's group, which would wait forever on seeding time a download at 0% can never have. Filtered on `stalledDL`, so a download that finds a seeder again leaves the group |
 | public | — | 2 h, no ratio limit | — | Selected as "not tagged private". Time is the closest thing to "as soon as it is imported" this tool offers, and an import takes minutes |
 
 A ratio limit of `-1` means no ratio limit. Setting one where the site has no ratio rule would
@@ -122,8 +126,11 @@ activity resets it, so something that trickles is kept indefinitely. What stops 
 real disk is the free-space floor in `config/trackers/rules.json`, which pauses the grabber.
 
 Deletion moves the files to `/data/downloads/.RecycleBin` rather than removing them, and
-`recyclebin.empty_after_x_days: 7` clears them a week later, so a wrong call is recoverable for
-seven days and then the space comes back on its own.
+`recyclebin.empty_after_x_days: 2` clears them two days later. So a wrong call is recoverable for
+two days, and only then does the space come back: the bin sits on the same disk as the downloads it
+holds, which is why freeing 76 GiB on 2026-08-25 moved free space *down* until it emptied. The
+orphan scan skips `.RecycleBin` and `orphaned_data` for the same reason: they are data parked by the
+tool that owns deleting, not data nothing owns.
 
 **The override is a tag.** Every group excludes `keep` and `keep-bonus`, so tagging a torrent in
 qBittorrent takes it out of the clock entirely, with no deploy and no config change. `keep` is for a
