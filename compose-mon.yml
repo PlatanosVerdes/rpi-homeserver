@@ -130,6 +130,22 @@ services:
       # locked (SQLITE_BUSY)" errors in 24 hours, each one an alert rule that failed to evaluate or
       # a datasource lookup that failed. Silent, because execErrState is KeepLast everywhere on
       # purpose. WAL lets readers and the writer coexist, which is the whole fix.
+      #
+      # This variable is not enough on its own, and that was measured too. Grafana logs
+      # `Config overridden from Environment variable var="GF_DATABASE_WAL=true"` and its code adds
+      # `_journal_mode=WAL` to the DSN, but 13.1.2 uses the pure-Go modernc driver and the existing
+      # database stayed in `delete` across a restart. It was converted by hand on 2026-08-25, with
+      # the container stopped, and the mode lives in the file so it survives from here:
+      #
+      #   docker stop grafana
+      #   sudo python3 -c "import sqlite3;c=sqlite3.connect('APPDATA/grafana/data/grafana.db');\
+      #       print(c.execute('pragma journal_mode=WAL').fetchone())"
+      #   docker start grafana
+      #
+      # A rebuilt Pi starts from an empty database, so check it there rather than assuming:
+      #   pragma journal_mode  should say wal, and grafana.db-wal should exist beside it.
+      # And the count that matters, which should stay at zero:
+      #   docker logs grafana | grep -c "database is locked"
       - GF_DATABASE_WAL=true
       - GF_ANALYTICS_REPORTING_ENABLED=false
       - GF_ANALYTICS_CHECK_FOR_UPDATES=false

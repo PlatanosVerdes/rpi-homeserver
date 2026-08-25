@@ -24,6 +24,20 @@ echo "  arr custom formats + quality profiles, Pi-hole DNS, Seerr/Bazarr links"
 echo
 echo "Needs a human, at least once per rebuild:"
 
+# Grafana reads GF_DATABASE_WAL but 13.1.2's pure-Go sqlite driver did not convert an existing
+# database with it, so a rebuild is the moment to confirm the new one came up in WAL. Without it
+# an alert rule that fails to evaluate says nothing: execErrState is KeepLast everywhere.
+gf_db="$APPDATA_ROOT/grafana/data/grafana.db"
+if sudo test -f "$gf_db"; then
+    mode=$(sudo python3 -c "import sqlite3;print(sqlite3.connect('file:$gf_db?mode=ro',uri=True).execute('pragma journal_mode').fetchone()[0])" 2>/dev/null)
+    if [[ "$mode" == "wal" ]]; then
+        check Grafana 1 "database in WAL"
+    else
+        check Grafana 0 "database in '$mode', not wal — see compose-mon.yml for the one-liner"
+    fi
+fi
+
+
 plex_prefs="$APPDATA_ROOT/plex/Library/Application Support/Plex Media Server/Preferences.xml"
 if sudo test -f "$plex_prefs" && sudo grep -q 'PlexOnlineToken="' "$plex_prefs"; then
     check Plex 1 "claimed"
