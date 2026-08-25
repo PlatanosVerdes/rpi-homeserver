@@ -795,10 +795,16 @@ groups:
       - uid: homelab-tracker-reading-stale
         title: 'An account has not been read in a week'
         condition: C
-        # DigitalCore answers 403 on every user endpoint and C411's definition is API-key only with
-        # no login, so those two are read by eye into config/trackers/readings.json. A stale reading
-        # is not a gap on a panel: every headroom and every decision downstream is computed from it,
-        # so it keeps deciding with last week's numbers and looks perfectly healthy doing it.
+        # Only for accounts that actually still need a human. A stale reading is not a gap on a
+        # panel: every headroom and every decision downstream is computed from it, so it keeps
+        # deciding with last week's numbers and looks perfectly healthy doing it.
+        #
+        # `unless on(tracker) (tracker_up == 1)` is what keeps this honest as sites move from being
+        # typed in to being read. A tracker whose login works is dropped, because its readings.json
+        # entry is only a fallback now and is meant to go stale. A tracker with no login at all has
+        # no tracker_up series, so `unless` leaves it alone: that is retrotoon, whose login sits
+        # behind Cloudflare Turnstile and will always need a person. And a tracker whose login broke
+        # reports tracker_up 0, which puts it straight back into this alert, which is right.
         for: 1h
         labels:
           severity: warning
@@ -818,7 +824,7 @@ groups:
               refId: A
               instant: true
               editorMode: code
-              expr: '(time() - tracker_read_timestamp) > bool 604800'
+              expr: '((time() - tracker_read_timestamp) > bool 604800) unless on(tracker) (tracker_up == 1)'
           - refId: C
             datasourceUid: __expr__
             model:

@@ -866,7 +866,7 @@
     {
       "type": "bargauge",
       "title": "Age of each hand-read figure",
-      "description": "How old the by-eye reading is, per account. DigitalCore and C411 cannot be scraped (403 on every user endpoint, and an API-key-only definition with no user pages), so their ratio, points and H&R counts are typed in by hand and go stale silently.\n\nTorrentLeech is absent on purpose and not missing: it is scraped on every run, so its figures are minutes old rather than days, and \"Last tracker-control run\" is where their age shows.",
+      "description": "How old the by-eye reading is, for the accounts that still need one. A site whose login works drops off this panel, because its entry in readings.json becomes a fallback that is meant to go stale, and one whose login breaks reappears here.\n\nretrotoon will always be here: its login sits behind Cloudflare Turnstile. C411 is here while its password is wrong. TorrentLeech and DigitalCore read themselves, and the age of those figures is \"Last tracker-control run\".",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -934,7 +934,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "time() - tracker_read_timestamp",
+          "expr": "(time() - tracker_read_timestamp) unless on(tracker) (tracker_up == 1)",
           "instant": true,
           "range": false,
           "legendFormat": "{{tracker}}",
