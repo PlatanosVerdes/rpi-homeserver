@@ -17,11 +17,11 @@
     "note": "buffer 67.15 GiB, leech bonus 19%, class Sentinel, 11 torrents seeding, no hit and run. Counted 78.83 GiB up against 53.83 GiB really uploaded (their upload multipliers) and 11.68 GiB counted down against 351.97 GiB really downloaded. The signup freeleech expired on 2026-08-14 and the counted figure has not moved since, because everything grabbed after it was 15 GiB or larger, which their rules make free anyway."
   },
   "c411": {
-    "read_at": "2026-08-21",
+    "read_at": "2026-08-25",
     "ratio": 0.83,
-    "uploaded_gb": 52.2,
+    "uploaded_gb": 52.8,
     "downloaded_gb": 63.3,
-    "note": "50 of those 52.2 GB are the signup credit: only 2.3 GB was really uploaded, and the credit does not grow back"
+    "note": "50 of those 52.8 GB are the signup credit, so 2.8 GB is what this account has really uploaded, up from 2.2 GB on 2026-08-21. The credit does not grow back. Downloaded has not moved since the first reading and the site shows no hit and run system, so time is the only thing owed here."
   },
   "retrotoon": {
     "read_at": "2026-08-21",
