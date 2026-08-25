@@ -139,7 +139,7 @@ how bad a dead SD card is: what each tool keeps that no file in this repo descri
 | Plex | LAN networks and the 95% threshold, pushed by `scripts/sync/plex-prefs.sh` | libraries, watch history, and the claim token |
 | Prowlarr | **nothing** | every indexer, and each one's API key or passkey, which is why it cannot be in a public repo |
 | autobrr | **its three filters**, exported to `config/autobrr/filters.json` | the IRC network and nick, and the download client entry with its password |
-| Maintainerr | **its rule group**, exported to `config/maintainerr/rules.json` | nothing that matters: the collection is rebuilt from the rule |
+| Maintainerr | **its rule group**, exported to `config/maintainerr/rules.json` | its connections to Plex and Seerr, which hold tokens, and the collection, which is rebuilt from the rule |
 
 So one tool still lives entirely in the nightly archive, and it has no choice: every Prowlarr
 indexer carries a passkey or an API key and this repo is public. autobrr and Maintainerr used to be

@@ -31,11 +31,9 @@
         server: my-docker
         container: seerr
         widget:
-          # `overseerr` is Homepage's own name for this widget and Seerr is API-compatible with it,
-          # so the type and the token variable keep the old name on purpose. Only the host moved.
-          type: overseerr
+          type: seerr
           url: http://seerr:5055
-          key: "{{HOMEPAGE_VAR_OVERSEERR_TOKEN}}"
+          key: "{{HOMEPAGE_VAR_SEERR_TOKEN}}"
 
 - Library:
     - Radarr:
