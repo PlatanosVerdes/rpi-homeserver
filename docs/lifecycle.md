@@ -154,6 +154,24 @@ a working account and a disabled one.
 
 ---
 
+## Watching the countdown
+
+The [Lifecycle dashboard](http://grafana/d/media-lifecycle) answers "when does each thing go". It
+does not restate the policy: when a `share_limits` group claims a torrent, qbit-manage writes the
+limit into qBittorrent itself, so the dashboard subtracts what a torrent has already seeded from the
+limit the client is holding. Change a group in `config/qbit-manage/config.yml` and the countdown
+follows on its own; there is no second copy of the numbers to keep in step.
+
+That also means a torrent missing from the table is information, not a gap. Two reasons put it
+there: no group matched, because the library still shares its bytes, or the group cleared the limit
+(`max_ratio: -1`) because the torrent is still moving bytes and still paying for itself. The client
+stores `-2` for the first and `-1` for the second, and only a positive limit is a deadline.
+
+Deleting is not freeing. What qbit-manage removes goes to `/data/downloads/.RecycleBin`, on the same
+disk, and stays there for `empty_after_x_days`. The dashboard shows what the bin holds, when the
+oldest of it is released, and how much of it is actually reclaimable: a file the library still
+hardlinks frees nothing when the bin empties.
+
 ## Where each number lives
 
 | Decision | File |

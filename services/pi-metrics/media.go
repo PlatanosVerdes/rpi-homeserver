@@ -67,7 +67,7 @@ func media() ([]string, []string) {
 	var lines, problems []string
 	for _, group := range []func() ([]string, []string){
 		qualityChanges, qbitMetrics, indexerUsage, librarySizes, mediaAudio,
-		waitingOn, prowlarrIndexers, prowlarrActivity, maintainerrPending, orphans,
+		waitingOn, prowlarrIndexers, prowlarrActivity, maintainerrPending, orphans, recycleBin,
 	} {
 		part, failed := group()
 		lines = append(lines, part...)
@@ -166,6 +166,14 @@ func qbitMetrics() ([]string, []string) {
 	}
 	ratio := []string{"# HELP qbit_torrent_ratio Share ratio per torrent", "# TYPE qbit_torrent_ratio gauge"}
 	size := []string{"# HELP qbit_torrent_size_bytes Total size per torrent", "# TYPE qbit_torrent_size_bytes gauge"}
+	seeded := []string{
+		"# HELP qbit_torrent_seeding_seconds Seconds this torrent has spent seeding, per the client",
+		"# TYPE qbit_torrent_seeding_seconds gauge",
+	}
+	seedLimit := []string{
+		"# HELP qbit_torrent_seeding_limit_seconds The seeding limit qbit-manage wrote for it",
+		"# TYPE qbit_torrent_seeding_limit_seconds gauge",
+	}
 	for _, torrent := range items {
 		category := str(torrent, "category")
 		if category == "" {
@@ -179,6 +187,17 @@ func qbitMetrics() ([]string, []string) {
 		ratio = append(ratio, fmt.Sprintf("qbit_torrent_ratio{%s} %s", labels,
 			strconv.FormatFloat(math.Round(num(torrent, "ratio")*1000)/1000, 'f', -1, 64)))
 		size = append(size, fmt.Sprintf("qbit_torrent_size_bytes{%s} %.0f", labels, num(torrent, "size")))
+		// The two halves of "when does this go". qbit-manage writes the limit into qBittorrent when a
+		// share_limits group claims a torrent, so the client already holds the policy and nothing has
+		// to restate it here: subtract and you have the countdown. A limit of -1 means the group
+		// cleared it (held back by min_last_active) and -2 means no group matched at all, so only a
+		// positive one is a date.
+		seeded = append(seeded, fmt.Sprintf("qbit_torrent_seeding_seconds{name=%q} %.0f",
+			cut(str(torrent, "name"), nameLimit), num(torrent, "seeding_time")))
+		if limit := num(torrent, "seeding_time_limit"); limit > 0 {
+			seedLimit = append(seedLimit, fmt.Sprintf("qbit_torrent_seeding_limit_seconds{name=%q} %.0f",
+				cut(str(torrent, "name"), nameLimit), limit*60))
+		}
 	}
 
 	// Every seed goal carries margin over what a site asks, because qBittorrent's clock counts while
@@ -249,7 +268,7 @@ func qbitMetrics() ([]string, []string) {
 		}
 	}
 
-	return concat(progress, ratio, size, silent, sole, unmanaged), nil
+	return concat(progress, ratio, size, seeded, seedLimit, silent, sole, unmanaged), nil
 }
 
 // Grabs per indexer over the last 90 days: which ones are earning their place. The label is `name`,
@@ -897,6 +916,50 @@ func orphans() ([]string, []string) {
 // Total bytes under a path, and the highest link count among its real payload files. Small files are
 // ignored for the link count: an nfo or a subtitle is never hardlinked, so counting them would
 // report every release as unshared.
+// What the recycle bin is holding and when the oldest of it is released. Deleting a torrent moves
+// its files here rather than unlinking them, and the bin is on the same disk, so the space does not
+// come back until qbit-manage empties it: on 2026-08-25 freeing 76 GiB moved free space down. The
+// retention window lives in config/qbit-manage/config.yml (recyclebin.empty_after_x_days) and this
+// only reports the age, so the two cannot disagree.
+func recycleBin() ([]string, []string) {
+	lines := []string{
+		"# HELP recyclebin_bytes Bytes sitting in the recycle bin, deleted but still on the disk",
+		"# TYPE recyclebin_bytes gauge",
+		"# HELP recyclebin_reclaimable_bytes Of those, the bytes emptying the bin actually returns",
+		"# TYPE recyclebin_reclaimable_bytes gauge",
+		"# HELP recyclebin_oldest_timestamp When the oldest file in the bin was moved there",
+		"# TYPE recyclebin_oldest_timestamp gauge",
+	}
+	var total, sole int64
+	var oldest int64
+	filepath.WalkDir(filepath.Join(dataRoot, "downloads", ".RecycleBin"),
+		func(_ string, entry fs.DirEntry, err error) error {
+			if err != nil || entry.IsDir() {
+				return nil //nolint:nilerr // an unreadable entry is not worth failing the group
+			}
+			info, err := entry.Info()
+			if err != nil {
+				return nil
+			}
+			total += info.Size()
+			// A file the library still hardlinks frees nothing when the bin empties
+			if stat, ok := info.Sys().(*syscall.Stat_t); ok && stat.Nlink == 1 {
+				sole += info.Size()
+			}
+			if stamp := info.ModTime().Unix(); oldest == 0 || stamp < oldest {
+				oldest = stamp
+			}
+			return nil
+		})
+	lines = append(lines,
+		fmt.Sprintf("recyclebin_bytes %d", total),
+		fmt.Sprintf("recyclebin_reclaimable_bytes %d", sole))
+	if oldest > 0 {
+		lines = append(lines, fmt.Sprintf("recyclebin_oldest_timestamp %d", oldest))
+	}
+	return lines, nil
+}
+
 func treeBytesAndLinks(path string) (int64, uint64) {
 	var total int64
 	var links uint64

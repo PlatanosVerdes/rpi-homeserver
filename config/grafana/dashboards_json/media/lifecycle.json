@@ -372,6 +372,182 @@
     },
     {
       "type": "table",
+      "title": "When each torrent goes",
+      "id": 15,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "The countdown qbit-manage is running, read from the client rather than restated here: when a share_limits group claims a torrent it writes the limit into qBittorrent, so the remaining time is that limit minus what it has already seeded. Only torrents a group has claimed appear. The rest are missing for one of two good reasons: the library still shares their bytes, so no group matched, or the group cleared the limit because the torrent moved bytes in the last day and is still paying.",
+      "gridPos": {
+        "h": 9,
+        "w": 16,
+        "x": 0,
+        "y": 14
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 0,
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "desc": false,
+            "displayName": "Time left"
+          }
+        ],
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": ""
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "A",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "editorMode": "code",
+          "legendFormat": "__auto",
+          "expr": "sort(qbit_torrent_seeding_limit_seconds - on(name) qbit_torrent_seeding_seconds)"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "instance": true,
+              "job": true
+            },
+            "renameByName": {
+              "name": "Torrent",
+              "Value": "Time left"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Waiting in the recycle bin",
+      "id": 16,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Already deleted, still on the disk. The bin lives under /data/downloads, so deleting does not free space until qbit-manage empties it two days later (recyclebin.empty_after_x_days). Reclaimable is the part that actually comes back: a file the library still hardlinks frees nothing when the bin empties.",
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 16,
+        "y": 14
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Oldest released"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dateTimeAsIso"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name",
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "vertical"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "A",
+          "expr": "recyclebin_bytes",
+          "instant": true,
+          "range": false,
+          "editorMode": "code",
+          "legendFormat": "Holding"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "B",
+          "expr": "recyclebin_reclaimable_bytes",
+          "instant": true,
+          "range": false,
+          "editorMode": "code",
+          "legendFormat": "Reclaimable"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "C",
+          "expr": "(recyclebin_oldest_timestamp + 172800) * 1000",
+          "instant": true,
+          "range": false,
+          "editorMode": "code",
+          "legendFormat": "Oldest released"
+        }
+      ]
+    },
+    {
+      "type": "table",
       "title": "Bytes only a cross-seed is holding",
       "id": 14,
       "datasource": {
@@ -383,7 +559,7 @@
         "h": 6,
         "w": 24,
         "x": 0,
-        "y": 14
+        "y": 23
       },
       "fieldConfig": {
         "defaults": {
@@ -452,7 +628,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 20
+        "y": 29
       },
       "panels": []
     },
@@ -469,7 +645,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 21
+        "y": 30
       },
       "options": {
         "showTime": true,
@@ -507,7 +683,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 21
+        "y": 30
       },
       "options": {
         "showTime": true,
@@ -545,7 +721,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 29
+        "y": 38
       },
       "options": {
         "showTime": true,
@@ -583,7 +759,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 29
+        "y": 38
       },
       "options": {
         "showTime": true,
@@ -617,7 +793,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 37
+        "y": 46
       },
       "panels": []
     },
@@ -629,7 +805,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 38
+        "y": 47
       },
       "options": {
         "mode": "markdown",
