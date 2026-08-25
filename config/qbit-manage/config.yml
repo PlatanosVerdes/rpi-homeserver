@@ -71,6 +71,14 @@ tracker:
 # Two tags have to agree before a limit is written: include_all_tags is whose rules apply,
 # include_any_tags is whether anything still needs the bytes. Share limits ignore hardlinks on
 # their own, so without that second condition a torrent Plex is still playing would be deleted.
+#
+# Three tags answer that second question. noHL: the library has let go. ratio: autobrr grabbed it
+# and it was never in the library. cross-seed: a second tracker on bytes another one brought, which
+# can never be noHL because it shares its inode by definition. Without that third one no group
+# matched a cross-seed and nothing ever released it, which reads as harmless and is not: once the
+# film goes and the first torrent with it, the cross-seed is the last holder of those bytes and
+# holds them forever. Removing one is safe because cross-seed hardlinks into its own linkDirs path,
+# so it drops one link and never breaks the torrent that downloaded them.
 share_limits:
   # First, because a stalled download matches its tracker's group too and that group would never
   # release it: it never seeded, so max_seeding_time can never be reached and it would sit at 0%
@@ -100,6 +108,7 @@ share_limits:
     include_any_tags:
       - noHL
       - ratio
+      - cross-seed
     exclude_any_tags:            # the manual override: this is what makes a tag protect a torrent
       - keep
       - keep-bonus
@@ -118,6 +127,7 @@ share_limits:
     include_any_tags:
       - noHL
       - ratio
+      - cross-seed
     exclude_any_tags:            # the manual override: this is what makes a tag protect a torrent
       - keep
       - keep-bonus
@@ -135,6 +145,7 @@ share_limits:
     include_any_tags:
       - noHL
       - ratio
+      - cross-seed
     exclude_any_tags:            # the manual override: this is what makes a tag protect a torrent
       - keep
       - keep-bonus
@@ -153,6 +164,7 @@ share_limits:
     include_any_tags:
       - noHL
       - ratio
+      - cross-seed
     exclude_any_tags:            # the manual override: this is what makes a tag protect a torrent
       - keep
       - keep-bonus
@@ -170,6 +182,7 @@ share_limits:
     include_any_tags:
       - noHL
       - ratio
+      - cross-seed
     exclude_any_tags:            # the manual override: this is what makes a tag protect a torrent
       - keep
       - keep-bonus
