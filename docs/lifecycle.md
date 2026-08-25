@@ -55,7 +55,7 @@ flowchart TB
   PX --> MT["Maintainerr<br/><i>watched and out of grace</i>"]
   MT -->|"deletes the library name,<br/>link count back to 1"| LIB
   SEED --> QM["<b>qbit-manage</b><br/><i>share_limits, per tracker</i>"]
-  QM -->|"limit reached, nothing else<br/>needs the bytes, not tagged keep"| RB["recycle bin<br/><i>emptied after 7 days</i>"]
+  QM -->|"limit reached, nothing else<br/>needs the bytes, not tagged keep"| RB["recycle bin<br/><i>emptied after 2 days</i>"]
 ```
 
 The hardlink count is the signal the whole thing rests on: while the library holds the file, the
@@ -113,12 +113,16 @@ torrents, and 9 to 23 hours across five DigitalCore ones. The margin is that gap
 | c411 | 72 h, grace of 24 h | 150 h, ratio 1.0 | 54 h | Their H&R system is disabled site-wide, so a thinner margin is affordable |
 | retrotoon | 72 h, no ratio rule at all | 120 h, no ratio limit | 48 h | Ratio clears nothing here: only time does, so `max_ratio: -1` |
 | anything else private | — | 10 d, ratio 1.0 | — | The floor, so a new site is covered from its first torrent |
+| a cross-seed | — | 15 d, no ratio limit | — | Priority 2, above every tracker group. It downloaded nothing, so a ratio limit would fire on its first served byte. 15 d is the longest of the four, so one number covers it wherever it lands |
 | anything stalled | — | removed 12 h after the last byte moved | — | Priority 1, so it is seen before its tracker's group, which would wait forever on seeding time a download at 0% can never have. Filtered on `stalledDL`, so a download that finds a seeder again leaves the group |
 | public | — | 2 h, no ratio limit | — | Selected as "not tagged private". Time is the closest thing to "as soon as it is imported" this tool offers, and an import takes minutes |
 
-A ratio limit of `-1` means no ratio limit. Setting one where the site has no ratio rule would
-delete a torrent that still owes seeding time, which is the hit and run the site is trying to
-prevent.
+A ratio limit of `-1` means no ratio limit, and two cases need it. Where the site has no ratio rule,
+setting one would delete a torrent that still owes seeding time, which is the hit and run the site
+is trying to prevent. And a cross-seed downloads nothing at all, so its ratio is upload divided by
+zero: the first byte it serves does not land somewhere under 1.0, it blows past any limit at once,
+and the copy would be deleted the same hour it started being useful. Hence its own group, above
+the trackers', where only time can end it.
 
 `min_last_active: 1d` is the third condition on every private group: a torrent still moving bytes is
 still paying, and on a freeleech the download never counted, so every byte up is profit. Any

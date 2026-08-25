@@ -101,8 +101,36 @@ share_limits:
     cleanup: true
     resume_torrent_after_change: false
 
-  torrentleech:
+  # Above the tracker groups, because a cross-seed must never be judged on ratio. It downloads
+  # nothing: cross-seed hardlinks files that were already on the disk and the torrent starts
+  # complete, so `downloaded` stays at 0 forever and ratio is uploaded over zero. The first byte it
+  # ever serves makes that division blow up rather than land somewhere under 1.0, and on a group
+  # with `max_ratio: 1.0` the torrent would meet its share limit and be deleted the same hour it
+  # started being useful. Which is backwards: earning upload credit on a second tracker is the only
+  # reason the copy exists.
+  #
+  # Time is the only lever left, and 15d is the longest any of the four sites asks, so one number
+  # covers a cross-seed wherever it lands. Seeding longer than a site requires costs disk, never a
+  # strike, and a cross-seed owes nothing anyway: DigitalCore only starts an obligation once 10% of
+  # a torrent is downloaded, and none of these downloads anything.
+  #
+  # The tracker groups below still list cross-seed in include_any_tags. That is a fallback now, not
+  # the live path, so this group has to stay above them.
+  cross-seed:
     priority: 2
+    include_all_tags:
+      - cross-seed
+    exclude_any_tags:
+      - keep
+      - keep-bonus
+    max_seeding_time: 15d
+    max_ratio: -1
+    min_last_active: 1d
+    cleanup: true
+    resume_torrent_after_change: false
+
+  torrentleech:
+    priority: 3
     include_all_tags:
       - torrentleech
     include_any_tags:
@@ -115,13 +143,13 @@ share_limits:
     max_seeding_time: 15d          # 240 h asked, 120 h of margin for the clock gap
     max_ratio: 1.2
     min_last_active: 1d
-    cleanup: true            # deletes into the recycle bin, kept 7 days
+    cleanup: true            # deletes into the recycle bin, emptied after 2 days
     resume_torrent_after_change: false
 
   # Its own group above `private` because retrotoon states no ratio rule at all: reaching 1:1 there
   # clears nothing, so a generic ratio limit would delete a torrent still owing time.
   retrotoon:
-    priority: 3
+    priority: 4
     include_all_tags:
       - retrotoon
     include_any_tags:
@@ -139,7 +167,7 @@ share_limits:
 
   # 96 h owed, not 72: their clock starts 24 h after the download and the client's at completion.
   c411:
-    priority: 4
+    priority: 5
     include_all_tags:
       - c411
     include_any_tags:
@@ -158,7 +186,7 @@ share_limits:
   # 120 h owed, 180 here. Their site is the only source of truth for seed time and it runs behind
   # the client's by 9 to 23 h, so this is nearly triple the worst gap seen.
   digitalcore:
-    priority: 5
+    priority: 6
     include_all_tags:
       - digitalcore
     include_any_tags:
@@ -176,7 +204,7 @@ share_limits:
 
   # The floor, so a new site is covered from its first torrent until it earns its own numbers.
   private:
-    priority: 6
+    priority: 7
     include_all_tags:
       - private
     include_any_tags:
@@ -198,7 +226,7 @@ share_limits:
   # No noHL, no ratio and no min_last_active, deliberately: a public torrent is dropped even while
   # the library shares its file, because the point is leaving public swarms, not saving disk.
   public:
-    priority: 7
+    priority: 8
     exclude_any_tags:
       - private
       - keep

@@ -491,8 +491,9 @@ wants to maintain it. So, in this order:
    the numbers were looked at:
 
    - **The deletion is reversible.** `share_limits` cleanup routes through `tor_delete_recycle`, so
-     what it removes lands in `/data/downloads/.RecycleBin` and stays there for 7 days
-     (`empty_after_x_days`). A wrong group costs a restore, not a re-download.
+     what it removes lands in `/data/downloads/.RecycleBin` and stays there for two days
+     (`empty_after_x_days`: 7 when this was written, cut to 2 on 2026-08-25 because the bin sits
+     on the same disk as the downloads). A wrong group costs a restore, not a re-download.
    - **Nothing was at risk on the first pass.** Computed against the live client before flipping the
      flag: zero torrents past their limits, 23 with no group at all because the library still shares
      their bytes, 15 active in the last day and 7 under their limits. The switch freed 0 GB on day
@@ -602,7 +603,8 @@ Three things that were config rather than code, all found by diffing `config/qbi
 against the schema the installed v4.12.0 actually reads:
 
 1. No `recyclebin` section, so `empty_after_x_days` was unset and nothing would ever empty
-   `/data/downloads/.RecycleBin`. The 7 days in the file belonged to `orphaned`. Now 7 days here too.
+   `/data/downloads/.RecycleBin`. The 7 days in the file belonged to `orphaned`. Set here too, at 7
+   days then and 2 since 2026-08-25.
 2. No group carried `exclude_any_tags`, so the documented `keep` override did nothing, and neither
    did the `keep-bonus` tag tracker-control writes to hold DigitalCore's bonus. Both are
    excluded in all six groups now.
