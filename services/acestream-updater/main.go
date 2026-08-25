@@ -291,6 +291,9 @@ func run(cfg config) {
 			continue
 		}
 		combined.Write(data)
+		// Sources do not always end in a newline, and without this the last URL of one
+		// would be glued to the #EXTM3U of the next, escaping the dedup as a broken entry.
+		combined.WriteByte('\n')
 		log.Printf("  ok (%d)", code)
 	}
 

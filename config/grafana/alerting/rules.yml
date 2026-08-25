@@ -481,6 +481,36 @@ groups:
               datasource: { type: __expr__, uid: __expr__ }
               conditions:
                 - evaluator: { type: gt, params: [0] }
+      - uid: homelab-acestream-list-frozen
+        title: 'Acestream channel list frozen'
+        condition: C
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'The Acestream channel list has not changed in over 24 hours'
+          description: >-
+            Measures the age of the last Jellyfin refresh, which only fires when the list really changes, so this is the rule that catches the source going quiet while the updater and every gateway stay green. The guard on the timestamp stops a fresh state file, where it is 0, from firing this on the first run.
+        noDataState: OK
+        execErrState: KeepLast
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: '((time() - acestream_jellyfin_last_refresh_timestamp) > bool 86400) and (acestream_jellyfin_last_refresh_timestamp > 0)'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
       - uid: homelab-onepace-failures
         title: 'One Pace downloads failing'
         condition: C
