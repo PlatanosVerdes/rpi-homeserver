@@ -120,6 +120,16 @@ services:
       # Without TZ, Go formats .StartsAt in UTC and every Telegram alert reads two hours early.
       - TZ=${TZ}
       - GF_INSTALL_PLUGINS=victoriametrics-logs-datasource
+      # Four outbound calls on every page load by default: usage stats, the version check, one
+      # per plugin, and the news feed. On this line, where TLS to some Cloudflare ranges is
+      # intercepted during the football blocking windows, they stall until they time out and the
+      # dashboard waits with them. Measured 2026-08-25: Grafana itself serves /login in 25 ms and
+      # Prometheus answers an instant query in 100 ms, so the wait was never local.
+      - GF_ANALYTICS_REPORTING_ENABLED=false
+      - GF_ANALYTICS_CHECK_FOR_UPDATES=false
+      - GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES=false
+      - GF_ANALYTICS_FEEDBACK_LINKS_ENABLED=false
+      - GF_NEWS_NEWS_FEED_ENABLED=false
       - GF_SECURITY_ADMIN_USER=admin
       # Only read when Grafana initialises its DB, so changing it here does nothing to an existing
       # install. Kept in .env so a rebuilt Pi does not come back as admin/admin.

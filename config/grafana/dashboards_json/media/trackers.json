@@ -655,7 +655,7 @@
     {
       "type": "timeseries",
       "title": "Headroom",
-      "description": "",
+      "description": "How many GB of non-freeleech downloads still fit before the account crosses the line the site disables it under: (uploaded - min_ratio x downloaded) / min_ratio. Ratio says how you have done, headroom says what you can still spend, and only the second one is a decision. Freeleech never moves `downloaded`, so it never costs headroom.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -868,15 +868,15 @@
     },
     {
       "type": "bargauge",
-      "title": "Deadlines",
-      "description": "TorrentLeech's warning is the only deadline left. A probation or a suspension elsewhere would land in the same panel.",
+      "title": "Reading age",
+      "description": "How old the by-eye reading is, per account. DigitalCore and C411 cannot be scraped (403 on every user endpoint, and an API-key-only definition with no login), so their ratio and headroom are only as true as this is small. Orange at three days, red at a week, which is also when the alert fires.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
       "gridPos": {
         "h": 6,
-        "w": 4,
+        "w": 8,
         "x": 16,
         "y": 14
       },
@@ -891,95 +891,16 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "red",
+                "color": "green",
                 "value": null
               },
               {
                 "color": "orange",
-                "value": 86400
+                "value": 259200
               },
-              {
-                "color": "green",
-                "value": 432000
-              }
-            ]
-          },
-          "noValue": "no data",
-          "decimals": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "displayMode": "gradient",
-        "orientation": "horizontal",
-        "showUnfilled": true,
-        "valueMode": "color",
-        "namePlacement": "left",
-        "minVizHeight": 16,
-        "minVizWidth": 8,
-        "maxVizHeight": 300,
-        "sizing": "auto",
-        "legend": {
-          "showLegend": false
-        },
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "tracker_warning_seconds or tracker_deadline_seconds",
-          "instant": true,
-          "range": false,
-          "legendFormat": "{{tracker}}",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "type": "bargauge",
-      "title": "Reading age",
-      "description": "How old the by-eye reading is, per account. DigitalCore and C411 cannot be scraped, so their numbers are only as true as this is small.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 4,
-        "x": 20,
-        "y": 14
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "mappings": [],
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
               {
                 "color": "red",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 86400
-              },
-              {
-                "color": "green",
-                "value": 432000
+                "value": 604800
               }
             ]
           },
@@ -1863,7 +1784,7 @@
     {
       "type": "timeseries",
       "title": "Headroom",
-      "description": "",
+      "description": "How many GB of non-freeleech downloads still fit before the account crosses the line the site disables it under: (uploaded - min_ratio x downloaded) / min_ratio. Ratio says how you have done, headroom says what you can still spend, and only the second one is a decision. Freeleech never moves `downloaded`, so it never costs headroom.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"

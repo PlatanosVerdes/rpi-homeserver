@@ -720,6 +720,79 @@ groups:
               datasource: { type: __expr__, uid: __expr__ }
               conditions:
                 - evaluator: { type: gt, params: [0] }
+      - uid: homelab-tracker-warned-and-under
+        title: 'A tracker warning is about to be re-checked'
+        condition: C
+        # Not "a warning exists": TorrentLeech has had one open for days with the ratio at 1.336
+        # against a line of 0.4, and a message a day about something already fixed is how an alert
+        # gets ignored. This is the case that needs a person: the re-check lands within two days and
+        # the account is still under the line, which is the moment it gets disabled.
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          summary: '{{ $labels.tracker }} re-checks its warning within two days, still under its line'
+          description: >-
+            The site gave a deadline and it is nearly here. Freeleech is the only download that does
+            not make this worse, and upload is the only thing that fixes it. What the site asks and
+            what is configured against it is on the Private trackers dashboard.
+        noDataState: OK
+        execErrState: KeepLast
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: '(tracker_warning_seconds < 172800) and on(tracker) ((tracker_ratio or tracker_read_ratio) / tracker_min_ratio < 1)'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+
+      - uid: homelab-tracker-reading-stale
+        title: 'An account has not been read in a week'
+        condition: C
+        # DigitalCore answers 403 on every user endpoint and C411's definition is API-key only with
+        # no login, so those two are read by eye into config/trackers/readings.json. A stale reading
+        # is not a gap on a panel: every headroom and every decision downstream is computed from it,
+        # so it keeps deciding with last week's numbers and looks perfectly healthy doing it.
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: '{{ $labels.tracker }} was last read more than a week ago'
+          description: >-
+            Open the site, read ratio, uploaded, downloaded and points off its profile, and put them
+            in config/trackers/readings.json with today's date. The Reading age panel on the Private
+            trackers dashboard is the same number this fired on.
+        noDataState: OK
+        execErrState: KeepLast
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: '(time() - tracker_read_timestamp) > bool 604800'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
       - uid: homelab-torrent-unmanaged
         title: 'A torrent nothing will ever clean up'
         condition: C
