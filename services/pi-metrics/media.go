@@ -196,6 +196,39 @@ func qbitMetrics() ([]string, []string) {
 		}
 	}
 
+	// A cross-seed shares its bytes with the torrent that downloaded them, which is the whole point:
+	// a second tracker paid for, no extra disk. That stops being true the moment it is the last link
+	// left, and then those bytes exist only because of it. Reachable by accident, because cross-seed
+	// searches whatever is in the client and a cross-seed is itself in the client: A holds it, B is
+	// injected, A expires, B is now a searchee and A's tracker still has the content, so A comes
+	// back. Every hop is finite and legitimate, each one earning ratio on its own site, but chained
+	// they hold the same bytes indefinitely. This is the number that says it is happening.
+	sole := []string{
+		"# HELP qbit_torrent_sole_holder_bytes Bytes a cross-seed is the last link to",
+		"# TYPE qbit_torrent_sole_holder_bytes gauge",
+	}
+	for _, torrent := range items {
+		tags := strings.Split(str(torrent, "tags"), ",")
+		crossSeed := false
+		for _, tag := range tags {
+			if strings.TrimSpace(tag) == "cross-seed" {
+				crossSeed = true
+			}
+		}
+		if !crossSeed {
+			continue
+		}
+		content := str(torrent, "content_path")
+		if content == "" {
+			continue
+		}
+		bytes, links := treeBytesAndLinks(strings.Replace(content, "/data/", dataRoot+"/", 1))
+		if links <= 1 && bytes > 0 {
+			sole = append(sole, fmt.Sprintf("qbit_torrent_sole_holder_bytes{name=%q} %d",
+				cut(str(torrent, "name"), nameLimit), bytes))
+		}
+	}
+
 	// A torrent with no category can never be tagged noHL, because qbit-manage only inspects the
 	// categories in its nohardlinks list, and without autobrr's `ratio` tag no share_limits group
 	// matches it either. So it seeds forever, nothing reclaims it and nothing says so.
@@ -216,7 +249,7 @@ func qbitMetrics() ([]string, []string) {
 		}
 	}
 
-	return concat(progress, ratio, size, silent, unmanaged), nil
+	return concat(progress, ratio, size, silent, sole, unmanaged), nil
 }
 
 // Grabs per indexer over the last 90 days: which ones are earning their place. The label is `name`,

@@ -371,6 +371,79 @@
       ]
     },
     {
+      "type": "table",
+      "title": "Bytes only a cross-seed is holding",
+      "id": 14,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "A cross-seed normally shares its bytes with the torrent that downloaded them: a second tracker paid for, no extra disk. Anything listed here is the last link to those bytes, so they exist only because of it. That happens by accident rather than by design: cross-seed searches whatever is in the client and a cross-seed is in the client, so A holds it, B gets injected, A expires, and A's tracker still has the content for B to match against. Each hop is finite and earns ratio on its own site; chained, they hold the same bytes indefinitely. Empty is the normal state and the one to expect.",
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 14
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "decimals": 1,
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": true,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": ""
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "A",
+          "expr": "sort_desc(qbit_torrent_sole_holder_bytes)",
+          "instant": true,
+          "range": false,
+          "editorMode": "code",
+          "format": "table",
+          "legendFormat": "__auto"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "instance": true,
+              "job": true
+            },
+            "renameByName": {
+              "name": "Cross-seed",
+              "Value": "Bytes it alone holds"
+            }
+          }
+        }
+      ]
+    },
+    {
       "type": "row",
       "title": "What happened",
       "collapsed": false,
@@ -379,7 +452,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 14
+        "y": 20
       },
       "panels": []
     },
@@ -396,7 +469,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 15
+        "y": 21
       },
       "options": {
         "showTime": true,
@@ -434,7 +507,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 15
+        "y": 21
       },
       "options": {
         "showTime": true,
@@ -472,7 +545,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 23
+        "y": 29
       },
       "options": {
         "showTime": true,
@@ -510,7 +583,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 23
+        "y": 29
       },
       "options": {
         "showTime": true,
@@ -544,7 +617,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 31
+        "y": 37
       },
       "panels": []
     },
@@ -556,7 +629,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 32
+        "y": 38
       },
       "options": {
         "mode": "markdown",
