@@ -2390,7 +2390,7 @@
         {
           "id": "joinByField",
           "options": {
-            "byField": "name",
+            "byField": "hash",
             "mode": "outer"
           }
         },
@@ -2414,7 +2414,13 @@
               "state 2": true,
               "state 3": true,
               "category 2": true,
-              "category 3": true
+              "category 3": true,
+              "hash": true,
+              "hash 1": true,
+              "hash 2": true,
+              "hash 3": true,
+              "name 2": true,
+              "name 3": true
             },
             "renameByName": {
               "name": "Torrent",
@@ -2429,7 +2435,7 @@
           }
         }
       ],
-      "description": "**What the states mean**\n\n| State | Meaning |\n| :--- | :--- |\n| `downloading` | pulling data right now |\n| `metaDL` | fetching the .torrent metadata (magnet just added) |\n| `stalledDL` | wants to download but finds no seeds: stuck |\n| `queuedDL` | waiting for a download slot |\n| `uploading` | sending data to someone right now |\n| `stalledUP` | seeding, but nobody is downloading from you. Normal for old titles |\n| `queuedUP` | finished, waiting its turn to seed. **Not seeding at all** |\n| `pausedUP` / `stoppedUP` | stopped on purpose, or its share limit was reached |\n| `checkingUP` / `checkingDL` | verifying pieces against the disk |\n| `moving` | being moved between folders |\n| `error` / `missingFiles` | broken: the data is unreadable or gone |\n\nMany torrents sitting in `queuedUP` means qBittorrent's active-torrent limit is lower than the number\nof torrents, so it is rotating them. Queued time does not count towards a share limit, so those\ntorrents also take longer to retire themselves."
+      "description": "**What the states mean**\n\n| State | Meaning |\n| :--- | :--- |\n| `downloading` | pulling data right now |\n| `metaDL` | fetching the .torrent metadata (magnet just added) |\n| `stalledDL` | wants to download but finds no seeds: stuck |\n| `queuedDL` | waiting for a download slot |\n| `uploading` | sending data to someone right now |\n| `stalledUP` | seeding, but nobody is downloading from you. Normal for old titles |\n| `queuedUP` | finished, waiting its turn to seed. **Not seeding at all** |\n| `pausedUP` / `stoppedUP` | stopped on purpose, or its share limit was reached |\n| `checkingUP` / `checkingDL` | verifying pieces against the disk |\n| `moving` | being moved between folders |\n| `error` / `missingFiles` | broken: the data is unreadable or gone |\n\nMany torrents sitting in `queuedUP` means qBittorrent's active-torrent limit is lower than the number\nof torrents, so it is rotating them. Queued time does not count towards a share limit, so those\ntorrents also take longer to retire themselves.\n\nKeyed by infohash, not by name: cross-seed gives every copy of a release the same name, and joining those on the name merged two torrents into one row of mixed numbers."
     },
     {
       "type": "piechart",

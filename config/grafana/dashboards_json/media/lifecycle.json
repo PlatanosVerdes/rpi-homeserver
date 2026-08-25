@@ -378,7 +378,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "The countdown qbit-manage is running, read from the client rather than restated here: when a share_limits group claims a torrent it writes the limit into qBittorrent, so the remaining time is that limit minus what it has already seeded. Only torrents a group has claimed appear. The rest are missing for one of two good reasons: the library still shares their bytes, so no group matched, or the group cleared the limit because the torrent moved bytes in the last day and is still paying.",
+      "description": "The countdown qbit-manage is running, read from the client rather than restated here: when a share_limits group claims a torrent it writes the limit into qBittorrent, so the time left is that limit minus what the torrent has already seeded. Joined on the infohash, because cross-seed gives every copy of a release the same name.\n\nOnly torrents a group has claimed appear. The rest are absent for one of two good reasons: no group matched, because the library still shares their bytes, or the group cleared the limit because the torrent moved bytes in the last day and is still paying for itself.",
       "gridPos": {
         "h": 9,
         "w": 16,
@@ -428,7 +428,7 @@
           "range": false,
           "editorMode": "code",
           "legendFormat": "__auto",
-          "expr": "sort(qbit_torrent_seeding_limit_seconds - on(name) qbit_torrent_seeding_seconds)"
+          "expr": "sort(qbit_torrent_seeding_limit_seconds - on(hash) group_left(name, category) qbit_torrent_seeding_seconds)"
         }
       ],
       "transformations": [
@@ -439,10 +439,17 @@
               "Time": true,
               "__name__": true,
               "instance": true,
-              "job": true
+              "job": true,
+              "hash": true
+            },
+            "indexByName": {
+              "name": 0,
+              "category": 1,
+              "Value": 2
             },
             "renameByName": {
               "name": "Torrent",
+              "category": "Category",
               "Value": "Time left"
             }
           }

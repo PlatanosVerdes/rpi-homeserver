@@ -179,8 +179,16 @@ func qbitMetrics() ([]string, []string) {
 		if category == "" {
 			category = "none"
 		}
-		labels := fmt.Sprintf("name=%q,state=%q,category=%q",
-			cut(str(torrent, "name"), nameLimit), escape(str(torrent, "state")), escape(category))
+		// The infohash and not the name is the identity. cross-seed gives every copy of a release the
+		// same name, so a name-keyed series silently loses one of them: Prometheus keeps whichever
+		// duplicate label set it scraped first and drops the rest without a word, and a table joining
+		// on the name merges two torrents into one row of mixed numbers. Eight characters of the hash
+		// is short enough to read and long enough that no two of these collide.
+		labels := fmt.Sprintf("hash=%q,name=%q,state=%q,category=%q",
+			cut(str(torrent, "hash"), 8), cut(str(torrent, "name"), nameLimit),
+			escape(str(torrent, "state")), escape(category))
+		key := fmt.Sprintf("hash=%q,name=%q,category=%q",
+			cut(str(torrent, "hash"), 8), cut(str(torrent, "name"), nameLimit), escape(category))
 		progress = append(progress, fmt.Sprintf("qbit_torrent_progress{%s} %g", labels, num(torrent, "progress")))
 		// Three decimals, trailing zeros trimmed: the same text the Pushgateway used to carry, so a
 		// diff against it stays readable.
@@ -192,11 +200,13 @@ func qbitMetrics() ([]string, []string) {
 		// to restate it here: subtract and you have the countdown. A limit of -1 means the group
 		// cleared it (held back by min_last_active) and -2 means no group matched at all, so only a
 		// positive one is a date.
-		seeded = append(seeded, fmt.Sprintf("qbit_torrent_seeding_seconds{name=%q} %.0f",
-			cut(str(torrent, "name"), nameLimit), num(torrent, "seeding_time")))
+		// Without `state`, so the countdown is one continuous series while the torrent flips between
+		// stalledUP and uploading
+		seeded = append(seeded, fmt.Sprintf("qbit_torrent_seeding_seconds{%s} %.0f",
+			key, num(torrent, "seeding_time")))
 		if limit := num(torrent, "seeding_time_limit"); limit > 0 {
-			seedLimit = append(seedLimit, fmt.Sprintf("qbit_torrent_seeding_limit_seconds{name=%q} %.0f",
-				cut(str(torrent, "name"), nameLimit), limit*60))
+			seedLimit = append(seedLimit, fmt.Sprintf("qbit_torrent_seeding_limit_seconds{%s} %.0f",
+				key, limit*60))
 		}
 	}
 
