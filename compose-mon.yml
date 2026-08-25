@@ -125,6 +125,12 @@ services:
       # intercepted during the football blocking windows, they stall until they time out and the
       # dashboard waits with them. Measured 2026-08-25: Grafana itself serves /login in 25 ms and
       # Prometheus answers an instant query in 100 ms, so the wait was never local.
+      # SQLite in its default journal mode locks the whole file for a write, and this one is on the
+      # SD card with 36 alert rules evaluating every minute. Measured 2026-08-25: 32 "database is
+      # locked (SQLITE_BUSY)" errors in 24 hours, each one an alert rule that failed to evaluate or
+      # a datasource lookup that failed. Silent, because execErrState is KeepLast everywhere on
+      # purpose. WAL lets readers and the writer coexist, which is the whole fix.
+      - GF_DATABASE_WAL=true
       - GF_ANALYTICS_REPORTING_ENABLED=false
       - GF_ANALYTICS_CHECK_FOR_UPDATES=false
       - GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES=false

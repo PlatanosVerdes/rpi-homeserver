@@ -11,6 +11,11 @@ apiVersion: 1
 # raises a labelless DatasourceError, so restarting Prometheus pages you about a healthy service.
 # The trade is that a permanently broken expression stays quiet, so check
 # `docker logs grafana | grep provision` after editing this file.
+#
+# That trade has a second edge worth knowing: an evaluation that fails for reasons of its own also
+# stays quiet. On 2026-08-25 Grafana's SQLite answered `database is locked` 32 times in a day and
+# each one was a rule that did not run, with nothing said. `GF_DATABASE_WAL=true` in compose-mon.yml
+# is the fix; `docker logs grafana | grep -c "database is locked"` is how to check it is still fixed.
 
 groups:
   - orgId: 1
