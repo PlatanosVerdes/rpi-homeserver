@@ -455,95 +455,32 @@
       ]
     },
     {
+      "type": "text",
+      "title": "What each site asks, and what is configured against it",
+      "id": 1,
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 6
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "| Tracker | The site asks | Configured | Margin | Why |\n| :--- | :--- | :--- | :--- | :--- |\n| TorrentLeech | 240 h or ratio 1.0 | 15 d, ratio 1.2 | 120 h | The widest clock gap measured here, 26 to 118 h |\n| DigitalCore | 120 h, clock starts at 10% | 180 h, ratio 1.0 | 60 h | Their gap read off My Seeds: 9 to 23 h |\n| C411 | 72 h plus 24 h of grace | 150 h, ratio 1.0 | 54 h | H&R disabled site-wide, so a thinner margin is affordable |\n| retrotoon | 72 h, **no ratio rule at all** | 120 h, no ratio limit | 48 h | Only time clears anything here |\n| anything stalled | — | gone 12 h after the last byte | — | It never seeded, so no group would ever release it |\n\nEvery margin exists because qBittorrent counts seeding time while announces are rejected and the site does not. Full rules per site in [docs/private-trackers.md](https://github.com/PlatanosVerdes/rpi-homeserver/blob/main/docs/private-trackers.md), the lifecycle in [docs/lifecycle.md](https://github.com/PlatanosVerdes/rpi-homeserver/blob/main/docs/lifecycle.md)."
+      }
+    },
+    {
       "type": "row",
-      "title": "All accounts, side by side",
+      "title": "Where each account stands",
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 6
+        "y": 13
       },
+      "id": 2,
       "panels": []
-    },
-    {
-      "type": "bargauge",
-      "title": "Headroom",
-      "description": "Site figures where the account can be logged into, figures read by eye where it cannot.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 6,
-        "x": 0,
-        "y": 7
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes",
-          "mappings": [],
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 10737418240
-              },
-              {
-                "color": "green",
-                "value": 26843545600
-              }
-            ]
-          },
-          "noValue": "no data",
-          "decimals": 1
-        },
-        "overrides": []
-      },
-      "options": {
-        "displayMode": "gradient",
-        "orientation": "horizontal",
-        "showUnfilled": true,
-        "valueMode": "color",
-        "namePlacement": "left",
-        "minVizHeight": 16,
-        "minVizWidth": 8,
-        "maxVizHeight": 300,
-        "sizing": "auto",
-        "legend": {
-          "showLegend": false
-        },
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "tracker_headroom_bytes or tracker_read_headroom_bytes",
-          "instant": true,
-          "range": false,
-          "legendFormat": "{{tracker}}",
-          "refId": "A"
-        }
-      ]
     },
     {
       "type": "bargauge",
@@ -555,9 +492,9 @@
       },
       "gridPos": {
         "h": 6,
-        "w": 6,
-        "x": 6,
-        "y": 7
+        "w": 4,
+        "x": 0,
+        "y": 14
       },
       "fieldConfig": {
         "defaults": {
@@ -716,25 +653,25 @@
       ]
     },
     {
-      "type": "bargauge",
-      "title": "Seeding on disk",
-      "description": "What each tracker's torrents occupy locally.",
+      "type": "timeseries",
+      "title": "Headroom",
+      "description": "",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
       "gridPos": {
         "h": 6,
-        "w": 6,
-        "x": 12,
-        "y": 7
+        "w": 4,
+        "x": 4,
+        "y": 14
       },
       "fieldConfig": {
         "defaults": {
           "unit": "bytes",
           "mappings": [],
           "color": {
-            "mode": "thresholds"
+            "mode": "palette-classic"
           },
           "thresholds": {
             "mode": "absolute",
@@ -746,29 +683,31 @@
             ]
           },
           "noValue": "no data",
-          "decimals": 1
+          "decimals": 1,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": true,
+            "gradientMode": "opacity",
+            "axisPlacement": "auto"
+          }
         },
         "overrides": []
       },
       "options": {
-        "displayMode": "gradient",
-        "orientation": "horizontal",
-        "showUnfilled": true,
-        "valueMode": "color",
-        "namePlacement": "left",
-        "minVizHeight": 16,
-        "minVizWidth": 8,
-        "maxVizHeight": 300,
-        "sizing": "auto",
         "legend": {
-          "showLegend": false
-        },
-        "reduceOptions": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
           "calcs": [
             "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
         }
       },
       "targets": [
@@ -778,80 +717,9 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "tracker_client_bytes_on_disk",
-          "instant": true,
-          "range": false,
-          "legendFormat": "{{tracker}}",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "type": "bargauge",
-      "title": "Uploaded, per the client",
-      "description": "The client's own count, which is not the site's accounting. Useful for comparing trackers, not for arguing with staff.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 6,
-        "x": 18,
-        "y": 7
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes",
-          "mappings": [],
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "text",
-                "value": null
-              }
-            ]
-          },
-          "noValue": "no data",
-          "decimals": 1
-        },
-        "overrides": []
-      },
-      "options": {
-        "displayMode": "gradient",
-        "orientation": "horizontal",
-        "showUnfilled": true,
-        "valueMode": "color",
-        "namePlacement": "left",
-        "minVizHeight": 16,
-        "minVizWidth": 8,
-        "maxVizHeight": 300,
-        "sizing": "auto",
-        "legend": {
-          "showLegend": false
-        },
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "tracker_client_uploaded_bytes",
-          "instant": true,
-          "range": false,
+          "expr": "tracker_headroom_bytes or tracker_read_headroom_bytes",
+          "instant": false,
+          "range": true,
           "legendFormat": "{{tracker}}",
           "refId": "A"
         }
@@ -867,9 +735,9 @@
       },
       "gridPos": {
         "h": 6,
-        "w": 5,
-        "x": 0,
-        "y": 13
+        "w": 4,
+        "x": 8,
+        "y": 14
       },
       "fieldConfig": {
         "defaults": {
@@ -929,17 +797,17 @@
     },
     {
       "type": "bargauge",
-      "title": "Grabs a day, per tracker",
-      "description": "Zero means the filter exists and is switched off, which is different from having no grabber at all.",
+      "title": "Clock stopped",
+      "description": "Owing hours while not announcing. The only one of these that is an emergency: flat at zero is the only acceptable shape.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
       "gridPos": {
         "h": 6,
-        "w": 5,
-        "x": 5,
-        "y": 13
+        "w": 4,
+        "x": 12,
+        "y": 14
       },
       "fieldConfig": {
         "defaults": {
@@ -989,13 +857,14 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "refId": "A",
+          "expr": "tracker_hnr_at_risk",
           "instant": true,
           "range": false,
           "legendFormat": "{{tracker}}",
-          "expr": "tracker_grabber_per_day * tracker_grabber_enabled"
+          "refId": "A"
         }
-      ]
+      ],
+      "id": 3
     },
     {
       "type": "bargauge",
@@ -1007,9 +876,9 @@
       },
       "gridPos": {
         "h": 6,
-        "w": 5,
-        "x": 10,
-        "y": 13
+        "w": 4,
+        "x": 16,
+        "y": 14
       },
       "fieldConfig": {
         "defaults": {
@@ -1077,6 +946,546 @@
       ]
     },
     {
+      "type": "bargauge",
+      "title": "Reading age",
+      "description": "How old the by-eye reading is, per account. DigitalCore and C411 cannot be scraped, so their numbers are only as true as this is small.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 4,
+        "x": 20,
+        "y": 14
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "mappings": [],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 86400
+              },
+              {
+                "color": "green",
+                "value": 432000
+              }
+            ]
+          },
+          "noValue": "no data",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "left",
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "maxVizHeight": 300,
+        "sizing": "auto",
+        "legend": {
+          "showLegend": false
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "time() - tracker_read_timestamp",
+          "instant": true,
+          "range": false,
+          "legendFormat": "{{tracker}}",
+          "refId": "A"
+        }
+      ],
+      "id": 4
+    },
+    {
+      "type": "row",
+      "title": "What each account has given, and earned",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 20
+      },
+      "id": 5,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "Seeding on disk",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 4,
+        "x": 0,
+        "y": 21
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "mappings": [],
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "noValue": "no data",
+          "decimals": 1,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": true,
+            "gradientMode": "opacity",
+            "axisPlacement": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "tracker_client_bytes_on_disk",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{tracker}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "bargauge",
+      "title": "Torrents seeding",
+      "description": "How many torrents are seeding for this account right now, per the client.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 4,
+        "x": 4,
+        "y": 21
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "mappings": [],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "left",
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "maxVizHeight": 300,
+        "sizing": "auto",
+        "legend": {
+          "showLegend": false
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "tracker_client_seeding",
+          "instant": true,
+          "range": false,
+          "legendFormat": "{{tracker}}",
+          "refId": "A"
+        }
+      ],
+      "id": 6
+    },
+    {
+      "type": "timeseries",
+      "title": "Uploaded, per the client",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 4,
+        "x": 8,
+        "y": 21
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "mappings": [],
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "noValue": "no data",
+          "decimals": 1,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": true,
+            "gradientMode": "opacity",
+            "axisPlacement": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "tracker_client_uploaded_bytes",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{tracker}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Uploaded, per the site",
+      "description": "What the site credits, which is not what the client sent: upload multipliers and freeleech make the two diverge, and only this one moves the ratio.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 4,
+        "x": 12,
+        "y": 21
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "mappings": [],
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "noValue": "no data",
+          "decimals": 1,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": true,
+            "gradientMode": "opacity",
+            "axisPlacement": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "tracker_uploaded_bytes",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{tracker}}",
+          "refId": "A"
+        }
+      ],
+      "id": 7
+    },
+    {
+      "type": "bargauge",
+      "title": "Bonus points",
+      "description": "What the bonus shop has to spend. Read by eye, so trust it as much as the reading age above.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 4,
+        "x": 16,
+        "y": 21
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "mappings": [],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "left",
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "maxVizHeight": 300,
+        "sizing": "auto",
+        "legend": {
+          "showLegend": false
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "tracker_read_points",
+          "instant": true,
+          "range": false,
+          "legendFormat": "{{tracker}}",
+          "refId": "A"
+        }
+      ],
+      "id": 8
+    },
+    {
+      "type": "bargauge",
+      "title": "Leech bonus",
+      "description": "DigitalCore only: the percentage off what every download costs against ratio, earned by seeding. 100% is a site-wide freeleech.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 4,
+        "x": 20,
+        "y": 21
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "mappings": [],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "noValue": "no data",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "left",
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "maxVizHeight": 300,
+        "sizing": "auto",
+        "legend": {
+          "showLegend": false
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "tracker_leech_bonus_percent",
+          "instant": true,
+          "range": false,
+          "legendFormat": "{{tracker}}",
+          "refId": "A"
+        }
+      ],
+      "id": 9
+    },
+    {
+      "type": "row",
+      "title": "Per torrent, and the grabber",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 27
+      },
+      "id": 10,
+      "panels": []
+    },
+    {
       "type": "table",
       "title": "Hours each torrent still owes",
       "description": "Per torrent, per tracker, and whether its clock is running. A stopped clock on a torrent that still owes hours is the only row worth reacting to.",
@@ -1086,9 +1495,9 @@
       },
       "gridPos": {
         "h": 6,
-        "w": 9,
-        "x": 15,
-        "y": 13
+        "w": 16,
+        "x": 0,
+        "y": 28
       },
       "fieldConfig": {
         "defaults": {
@@ -1285,261 +1694,18 @@
       ]
     },
     {
-      "type": "row",
-      "title": "TorrentLeech",
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 19
-      },
-      "panels": []
-    },
-    {
-      "type": "text",
-      "title": "TorrentLeech: its rules",
-      "gridPos": {
-        "h": 10,
-        "w": 6,
-        "x": 0,
-        "y": 20
-      },
-      "options": {
-        "mode": "markdown",
-        "content": "**What disables the account**\n\n| Rule | Value |\n|---|---|\n| Minimum ratio | **0.4**, then a warning, 7 days, and disabled |\n| Hit & run | 240 h **or** ratio 1:1 per torrent |\n| Uncleared H&R | **3 = account disabled** |\n| Download slots | one, and a partial download occupies it |\n| Freeleech | excluded from the download count |\n| On being disabled | **the passkey is reset**: everything announces `unregistered` |\n\nSeed goal here: **360 h / ratio 1.2**, above their requirement because their clock lags the client's."
-      }
-    },
-    {
-      "type": "stat",
-      "title": "Ratio",
-      "description": "",
+      "type": "bargauge",
+      "title": "Grabs a day, per tracker",
+      "description": "Zero means the filter exists and is switched off, which is different from having no grabber at all.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
       "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 6,
-        "y": 20
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "mappings": [],
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 0.45
-              },
-              {
-                "color": "green",
-                "value": 0.7
-              }
-            ]
-          },
-          "noValue": "no data",
-          "decimals": 3
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "percentChangeColorMode": "standard",
-        "showPercentChange": false,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "tracker_ratio",
-          "instant": true,
-          "range": false,
-          "legendFormat": "__auto",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "type": "stat",
-      "title": "Headroom",
-      "description": "",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 12,
-        "y": 20
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes",
-          "mappings": [],
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 10737418240
-              },
-              {
-                "color": "green",
-                "value": 26843545600
-              }
-            ]
-          },
-          "noValue": "no data",
-          "decimals": 1
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "percentChangeColorMode": "standard",
-        "showPercentChange": false,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "tracker_headroom_bytes",
-          "instant": true,
-          "range": false,
-          "legendFormat": "__auto",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "type": "stat",
-      "title": "Uploaded, per the site",
-      "description": "",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 18,
-        "y": 20
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes",
-          "mappings": [],
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "text",
-                "value": null
-              }
-            ]
-          },
-          "noValue": "no data",
-          "decimals": 1
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "percentChangeColorMode": "standard",
-        "showPercentChange": false,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "tracker_uploaded_bytes",
-          "instant": true,
-          "range": false,
-          "legendFormat": "__auto",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "type": "stat",
-      "title": "Open obligations",
-      "description": "",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 6,
-        "y": 25
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 28
       },
       "fieldConfig": {
         "defaults": {
@@ -1562,84 +1728,18 @@
         "overrides": []
       },
       "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "percentChangeColorMode": "standard",
-        "showPercentChange": false,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "tracker_hnr_pending{tracker=\"torrentleech\"}",
-          "instant": true,
-          "range": false,
-          "legendFormat": "__auto",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "type": "stat",
-      "title": "Clock stopped",
-      "description": "",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 12,
-        "y": 25
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "mappings": [],
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 1
-              }
-            ]
-          },
-          "noValue": "no data"
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "left",
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "maxVizHeight": 300,
+        "sizing": "auto",
+        "legend": {
+          "showLegend": false
         },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "percentChangeColorMode": "standard",
-        "showPercentChange": false,
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -1655,1410 +1755,11 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "tracker_hnr_at_risk{tracker=\"torrentleech\"}",
+          "refId": "A",
           "instant": true,
           "range": false,
-          "legendFormat": "__auto",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "type": "stat",
-      "title": "Warning left",
-      "description": "",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 18,
-        "y": 25
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "mappings": [],
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 1
-              }
-            ]
-          },
-          "noValue": "no data",
-          "decimals": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "percentChangeColorMode": "standard",
-        "showPercentChange": false,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "tracker_warning_seconds",
-          "instant": true,
-          "range": false,
-          "legendFormat": "__auto",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "type": "row",
-      "title": "DigitalCore",
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 30
-      },
-      "panels": []
-    },
-    {
-      "type": "text",
-      "title": "DigitalCore: its rules",
-      "gridPos": {
-        "h": 10,
-        "w": 6,
-        "x": 0,
-        "y": 31
-      },
-      "options": {
-        "mode": "markdown",
-        "content": "**The healthiest account, and the one that pays for seeding**\n\n| Rule | Value |\n|---|---|\n| Minimum ratio | **0.5**, then 5 days of ratio watch and leeching is revoked |\n| Hit & run | starts at **10% downloaded**, clears at **5 days** or ratio 1:1 |\n| Uncleared H&R | **5 = warning**, more = download ban |\n| Whose clock counts | **the site's**. One hour without an announce and it is listed |\n| Always free | **15 GB or larger**, and every new torrent's first 24 h |\n| Leech bonus | 10 GB seeded = **1% off** every download; 1 TB = site-wide freeleech |\n\nSeed goal here: **168 h / ratio 1.0**. Never modify their torrents: no extra trackers, no DHT, no PEX."
-      }
-    },
-    {
-      "type": "stat",
-      "title": "Ratio, read by eye",
-      "description": "",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 6,
-        "y": 31
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "mappings": [],
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 0.6
-              },
-              {
-                "color": "green",
-                "value": 1
-              }
-            ]
-          },
-          "noValue": "no data",
-          "decimals": 2
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "percentChangeColorMode": "standard",
-        "showPercentChange": false,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "tracker_read_ratio{tracker=\"digitalcore\"}",
-          "instant": true,
-          "range": false,
-          "legendFormat": "__auto",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "type": "stat",
-      "title": "Headroom, read by eye",
-      "description": "",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 12,
-        "y": 31
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes",
-          "mappings": [],
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 10737418240
-              },
-              {
-                "color": "green",
-                "value": 26843545600
-              }
-            ]
-          },
-          "noValue": "no data",
-          "decimals": 1
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "percentChangeColorMode": "standard",
-        "showPercentChange": false,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "tracker_read_headroom_bytes{tracker=\"digitalcore\"}",
-          "instant": true,
-          "range": false,
-          "legendFormat": "__auto",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "type": "stat",
-      "title": "Leech bonus, estimated",
-      "description": "",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 18,
-        "y": 31
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percent",
-          "mappings": [],
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "text",
-                "value": null
-              }
-            ]
-          },
-          "noValue": "no data",
-          "decimals": 1
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "percentChangeColorMode": "standard",
-        "showPercentChange": false,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "tracker_leech_bonus_percent{tracker=\"digitalcore\"}",
-          "instant": true,
-          "range": false,
-          "legendFormat": "__auto",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "type": "stat",
-      "title": "Open obligations",
-      "description": "",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 6,
-        "y": 36
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "mappings": [],
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "text",
-                "value": null
-              }
-            ]
-          },
-          "noValue": "no data"
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "percentChangeColorMode": "standard",
-        "showPercentChange": false,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "tracker_hnr_pending{tracker=\"digitalcore\"}",
-          "instant": true,
-          "range": false,
-          "legendFormat": "__auto",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "type": "stat",
-      "title": "Clock stopped",
-      "description": "",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 12,
-        "y": 36
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "mappings": [],
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 1
-              }
-            ]
-          },
-          "noValue": "no data"
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "percentChangeColorMode": "standard",
-        "showPercentChange": false,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "tracker_hnr_at_risk{tracker=\"digitalcore\"}",
-          "instant": true,
-          "range": false,
-          "legendFormat": "__auto",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "type": "stat",
-      "title": "Bonus points",
-      "description": "",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 18,
-        "y": 36
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "mappings": [],
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "text",
-                "value": null
-              }
-            ]
-          },
-          "noValue": "no data"
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "percentChangeColorMode": "standard",
-        "showPercentChange": false,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "tracker_read_points{tracker=\"digitalcore\"}",
-          "instant": true,
-          "range": false,
-          "legendFormat": "__auto",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "type": "row",
-      "title": "C411",
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 41
-      },
-      "panels": []
-    },
-    {
-      "type": "text",
-      "title": "C411: its rules",
-      "gridPos": {
-        "h": 10,
-        "w": 6,
-        "x": 0,
-        "y": 42
-      },
-      "options": {
-        "mode": "markdown",
-        "content": "**The tightest account here, and the one nobody was watching**\n\n| Rule | Value |\n|---|---|\n| Ratio to download | **0.8**. Below it, downloads are blocked |\n| Signup credit | **50 GB** counted into the ratio, and it does not grow back |\n| Hit & run | **disabled site-wide right now** |\n| H&R when it returns | 72 h **or** ratio 1.0, after a 24 h grace period |\n| H&R sanctions | 3 active block downloads, **5 strikes is a ban** |\n| Cross-seeding | explicitly allowed |\n\nOf its 52 GB of upload, **50 are the credit**: only 2.3 GB was ever really uploaded."
-      }
-    },
-    {
-      "type": "stat",
-      "title": "Ratio, read by eye",
-      "description": "",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 6,
-        "y": 42
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "mappings": [],
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 0.85
-              },
-              {
-                "color": "green",
-                "value": 1
-              }
-            ]
-          },
-          "noValue": "no data",
-          "decimals": 2
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "percentChangeColorMode": "standard",
-        "showPercentChange": false,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "tracker_read_ratio{tracker=\"c411\"}",
-          "instant": true,
-          "range": false,
-          "legendFormat": "__auto",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "type": "stat",
-      "title": "Headroom, read by eye",
-      "description": "",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 12,
-        "y": 42
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes",
-          "mappings": [],
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 5368709120
-              },
-              {
-                "color": "green",
-                "value": 21474836480
-              }
-            ]
-          },
-          "noValue": "no data",
-          "decimals": 1
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "percentChangeColorMode": "standard",
-        "showPercentChange": false,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "tracker_read_headroom_bytes{tracker=\"c411\"}",
-          "instant": true,
-          "range": false,
-          "legendFormat": "__auto",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "type": "stat",
-      "title": "Seeding",
-      "description": "",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 18,
-        "y": 42
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "mappings": [],
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "text",
-                "value": null
-              }
-            ]
-          },
-          "noValue": "no data"
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "percentChangeColorMode": "standard",
-        "showPercentChange": false,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "tracker_client_seeding{tracker=\"c411\"}",
-          "instant": true,
-          "range": false,
-          "legendFormat": "__auto",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "type": "stat",
-      "title": "Uploaded, per the client",
-      "description": "",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 6,
-        "y": 47
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes",
-          "mappings": [],
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "text",
-                "value": null
-              }
-            ]
-          },
-          "noValue": "no data",
-          "decimals": 1
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "percentChangeColorMode": "standard",
-        "showPercentChange": false,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "tracker_client_uploaded_bytes{tracker=\"c411\"}",
-          "instant": true,
-          "range": false,
-          "legendFormat": "__auto",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "type": "stat",
-      "title": "Open obligations",
-      "description": "",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 12,
-        "y": 47
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "mappings": [],
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "text",
-                "value": null
-              }
-            ]
-          },
-          "noValue": "no data"
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "percentChangeColorMode": "standard",
-        "showPercentChange": false,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "tracker_hnr_pending{tracker=\"c411\"}",
-          "instant": true,
-          "range": false,
-          "legendFormat": "__auto",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "type": "stat",
-      "title": "Reading age",
-      "description": "",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 18,
-        "y": 47
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "mappings": [],
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 259200
-              },
-              {
-                "color": "red",
-                "value": 864000
-              }
-            ]
-          },
-          "noValue": "no data",
-          "decimals": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "percentChangeColorMode": "standard",
-        "showPercentChange": false,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "time() - tracker_read_timestamp{tracker=\"c411\"}",
-          "instant": true,
-          "range": false,
-          "legendFormat": "__auto",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "type": "row",
-      "title": "retrotoon.world",
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 52
-      },
-      "panels": []
-    },
-    {
-      "type": "text",
-      "title": "retrotoon.world: its rules",
-      "gridPos": {
-        "h": 10,
-        "w": 6,
-        "x": 0,
-        "y": 53
-      },
-      "options": {
-        "mode": "markdown",
-        "content": "**Cartoons only, and everything is free right now**\n\n| Rule | Value |\n|---|---|\n| Minimum ratio | none. Here the debt is **time** |\n| Required seeding | **72 h per torrent**, within the first 10 days |\n| Their own note | it is their strictest rule, \"no exceptions\" |\n| Right now | **site-wide freeleech** until about 2026-09-30 |\n| Content | animation, and strictly family friendly |\n| Bonus | points for seeding, tripled on the daily feature |\n\nSeed goal here: **96 h / ratio 1.0**, a third above what they ask for."
-      }
-    },
-    {
-      "type": "stat",
-      "title": "Bonus points",
-      "description": "",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 6,
-        "y": 53
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "mappings": [],
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "text",
-                "value": null
-              }
-            ]
-          },
-          "noValue": "no data"
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "percentChangeColorMode": "standard",
-        "showPercentChange": false,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "tracker_read_points{tracker=\"retrotoon\"}",
-          "instant": true,
-          "range": false,
-          "legendFormat": "__auto",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "type": "stat",
-      "title": "Seeding",
-      "description": "",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 12,
-        "y": 53
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "mappings": [],
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "text",
-                "value": null
-              }
-            ]
-          },
-          "noValue": "no data"
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "percentChangeColorMode": "standard",
-        "showPercentChange": false,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "tracker_client_seeding{tracker=\"retrotoon\"}",
-          "instant": true,
-          "range": false,
-          "legendFormat": "__auto",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "type": "stat",
-      "title": "On disk",
-      "description": "",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 18,
-        "y": 53
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes",
-          "mappings": [],
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "text",
-                "value": null
-              }
-            ]
-          },
-          "noValue": "no data",
-          "decimals": 1
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "percentChangeColorMode": "standard",
-        "showPercentChange": false,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "tracker_client_bytes_on_disk{tracker=\"retrotoon\"}",
-          "instant": true,
-          "range": false,
-          "legendFormat": "__auto",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "type": "stat",
-      "title": "Uploaded, per the client",
-      "description": "",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 6,
-        "y": 58
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes",
-          "mappings": [],
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "text",
-                "value": null
-              }
-            ]
-          },
-          "noValue": "no data",
-          "decimals": 1
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "percentChangeColorMode": "standard",
-        "showPercentChange": false,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "tracker_client_uploaded_bytes{tracker=\"retrotoon\"}",
-          "instant": true,
-          "range": false,
-          "legendFormat": "__auto",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "type": "stat",
-      "title": "Open obligations",
-      "description": "",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 12,
-        "y": 58
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "mappings": [],
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "text",
-                "value": null
-              }
-            ]
-          },
-          "noValue": "no data"
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "percentChangeColorMode": "standard",
-        "showPercentChange": false,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "tracker_hnr_pending{tracker=\"retrotoon\"}",
-          "instant": true,
-          "range": false,
-          "legendFormat": "__auto",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "type": "stat",
-      "title": "Reading age",
-      "description": "",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 18,
-        "y": 58
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "mappings": [],
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 259200
-              },
-              {
-                "color": "red",
-                "value": 864000
-              }
-            ]
-          },
-          "noValue": "no data",
-          "decimals": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "percentChangeColorMode": "standard",
-        "showPercentChange": false,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "time() - tracker_read_timestamp{tracker=\"retrotoon\"}",
-          "instant": true,
-          "range": false,
-          "legendFormat": "__auto",
-          "refId": "A"
+          "legendFormat": "{{tracker}}",
+          "expr": "tracker_grabber_per_day * tracker_grabber_enabled"
         }
       ]
     },
@@ -3070,7 +1771,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 63
+        "y": 34
       },
       "panels": []
     },
@@ -3086,7 +1787,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 64
+        "y": 35
       },
       "fieldConfig": {
         "defaults": {
@@ -3171,7 +1872,7 @@
         "h": 7,
         "w": 8,
         "x": 8,
-        "y": 64
+        "y": 35
       },
       "fieldConfig": {
         "defaults": {
@@ -3244,7 +1945,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 64
+        "y": 35
       },
       "fieldConfig": {
         "defaults": {
@@ -3317,7 +2018,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 71
+        "y": 42
       },
       "fieldConfig": {
         "defaults": {
@@ -3390,7 +2091,7 @@
         "h": 7,
         "w": 4,
         "x": 8,
-        "y": 71
+        "y": 42
       },
       "fieldConfig": {
         "defaults": {
@@ -3460,7 +2161,7 @@
         "h": 7,
         "w": 4,
         "x": 12,
-        "y": 71
+        "y": 42
       },
       "fieldConfig": {
         "defaults": {
@@ -3534,7 +2235,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 71
+        "y": 42
       },
       "fieldConfig": {
         "defaults": {
