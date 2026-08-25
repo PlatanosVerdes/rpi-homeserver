@@ -8,7 +8,7 @@ modules:
     prober: http
     timeout: 8s
     http:
-      # 307/308 are here because Overseerr answers 307 to /: any redirect still proves it is up.
+      # 307/308 are here because Seerr answers 307 to /: any redirect still proves it is up.
       # 303 and 404 for the same reason: Tautulli redirects / with a 303 and cross-seed answers 404
       # to it, and only a server that is running answers either. The probes hit containers
       # directly, never through Caddy, so no proxy can answer 404 on a dead app's behalf.

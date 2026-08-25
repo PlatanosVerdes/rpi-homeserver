@@ -425,7 +425,7 @@ bash "$PROJECT_DIR/scripts/sync/arr-config.sh" 2>&1 | while IFS= read -r line; d
 # only (see the script), so it never touches an entry it did not derive from Caddy.
 bash "$PROJECT_DIR/scripts/sync/pihole-dns.sh" 2>&1 | while IFS= read -r line; do log "[pihole-dns] $line"; done
 
-# Push Radarr/Sonarr's connection into Overseerr and Bazarr (their own link to each other, built
+# Push Radarr/Sonarr's connection into Seerr and Bazarr (their own link to each other, built
 # by hand through each app's UI and otherwise lost with appdata).
 bash "$PROJECT_DIR/scripts/sync/arr-links.sh" 2>&1 | while IFS= read -r line; do log "[arr-links] $line"; done
 

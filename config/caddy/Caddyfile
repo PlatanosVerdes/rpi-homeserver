@@ -39,10 +39,17 @@ https://jellyfin.platanosverdes.com {
     import cf_tls
     reverse_proxy jellyfin:8096
 }
+https://seerr.platanosverdes.com {
+    log
+    import cf_tls
+    reverse_proxy seerr:5055
+}
+# Overseerr's old name, kept as a redirect rather than a second route: every bookmark and every
+# phone still points here. Delete it once nothing has arrived on it for a while.
 https://overseerr.platanosverdes.com {
     log
     import cf_tls
-    reverse_proxy overseerr:5055
+    redir https://seerr.platanosverdes.com{uri} permanent
 }
 # Plex must be reached on the address it publishes as local=true, or the client shows the Remote
 # Watch Pass paywall. Proxying breaks that twice over, so bounce the browser at the server instead:
@@ -146,9 +153,13 @@ http://jellyfin {
     log
     reverse_proxy jellyfin:8096
 }
+http://seerr {
+    log
+    reverse_proxy seerr:5055
+}
 http://overseerr {
     log
-    reverse_proxy overseerr:5055
+    redir http://seerr{uri} permanent
 }
 http://plex {
     log

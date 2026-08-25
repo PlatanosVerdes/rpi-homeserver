@@ -19,7 +19,7 @@ Everything under `appdata/` **except** regenerable or huge data:
 | `*/Cache/`, `*/Metadata` thumbnails, `Crash Reports`, `Diagnostics` | Plex/Jellyfin caches, rebuilt on demand |
 | `*/log/`, `*/logs/`, `*.log` | Logs |
 
-So the important state (Pi-hole, Grafana, *arr* databases, qBittorrent, Overseerr,
+So the important state (Pi-hole, Grafana, *arr* databases, qBittorrent, Seerr,
 speedtest-tracker, vaultwarden, the Telegram bot DB, cal-bridge tokens) is all included.
 
 ## Configuration (`.env`)

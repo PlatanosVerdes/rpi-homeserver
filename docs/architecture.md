@@ -28,7 +28,7 @@ flowchart TB
   end
 
   subgraph WORK["3 · What does the work"]
-    DECIDE["Decide<br/>overseerr · radarr · sonarr<br/>prowlarr · flaresolverr<br/>autobrr · cross-seed"]
+    DECIDE["Decide<br/>seerr · radarr · sonarr<br/>prowlarr · flaresolverr<br/>autobrr · cross-seed"]
     GET["Download<br/>qbittorrent · unpackerr<br/>qbit-manage"]
     SERVE["Serve and reclaim<br/>plex · jellyfin · tautulli<br/>bazarr · maintainerr<br/>subtitle-links · watch-next · farnsworth"]
     PERS["Personal services<br/><i>rpi-services, separate repo</i>"]
@@ -90,7 +90,7 @@ flowchart LR
 
   APPLY ==>|custom formats + quality profiles| ARR["Radarr · Sonarr"]
   APPLY ==>|local DNS derived from Caddy| PH["Pi-hole"]
-  APPLY ==>|their link to the arrs| OV["Overseerr · Bazarr"]
+  APPLY ==>|their link to the arrs| OV["Seerr · Bazarr"]
   APPLY ==>|LAN networks, 95% played threshold| PLEX["Plex"]
   APPLY ==>|queue limits, upload cap, BT port| QB["qBittorrent"]
   APPLY ==>|merged fragments| CT["host crontab"]
@@ -109,7 +109,7 @@ during an ARM Go build cost exactly one extra pass.
 | `scripts/sync/arr-config.sh` | every deploy | Radarr, Sonarr | `config/arr/*/*.json` |
 | `scripts/sync/qbit-config.sh` | every deploy | qBittorrent | `config/qbittorrent/preferences.json` + `QBIT_BT_PORT` |
 | `scripts/sync/plex-prefs.sh` | every deploy | Plex | `PLEX_LAN_NETWORKS`, 95% threshold |
-| `scripts/sync/arr-links.sh` | every deploy | Overseerr, Bazarr | `config/overseerr-links.json` |
+| `scripts/sync/arr-links.sh` | every deploy | Seerr, Bazarr | `config/seerr-links.json` |
 | `scripts/sync/pihole-dns.sh` | every deploy | Pi-hole | the Caddy config, additive only |
 | `scripts/setup/install-crontab.sh` | every deploy | host crontab | both repos' `scripts/crontab` |
 | `scripts/setup/install-logrotate.sh` | every deploy | `/etc/logrotate.d` | `config/logrotate/rpi-homeserver` |
@@ -423,7 +423,7 @@ the action are the same pass, so there is nothing old to act on.
 | `recovery/rebuild-service.sh` | Rebuilds one compose service from scratch, by hand |
 | `recovery/recovery-status.sh` | After a rebuild, the three steps no API can do: Plex claim, Jellyfin wizard, Apple 2FA |
 | `sync/arr-config.sh` | Custom formats then quality profiles, in that order: profiles score formats by name and the id only exists once the format does |
-| `sync/arr-links.sh` | Overseerr and Bazarr's connection to the arrs. Bazarr publishes no port, so its call is proxied through the network |
+| `sync/arr-links.sh` | Seerr and Bazarr's connection to the arrs. Bazarr publishes no port, so its call is proxied through the network |
 | `sync/pihole-dns.sh` | Caddy's hosts as local DNS. Additive only: an entry not derived from Caddy is never touched |
 | `sync/plex-prefs.sh` | LAN networks, so tailnet clients are not billed as remote, and the played threshold at 95% |
 | `sync/qbit-config.sh` | Queue limits and BT port. Reads back after writing, because qBittorrent accepts an unknown key and drops it |

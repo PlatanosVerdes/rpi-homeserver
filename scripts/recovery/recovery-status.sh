@@ -1,7 +1,7 @@
 #!/bin/bash
 # Report what a rebuilt Pi still needs a human for, after scripts/deploy/apply.sh has already converged
 # everything that is derivable from .env (Radarr/Sonarr formats and profiles, Pi-hole DNS, the
-# Overseerr/Bazarr links). Run this after a rebuild to see exactly what is left, instead of
+# Seerr/Bazarr links). Run this after a rebuild to see exactly what is left, instead of
 # rediscovering it by clicking through each app.
 #
 # These three cannot be scripted away: each is a one-time interactive step with an external
@@ -20,7 +20,7 @@ check() {
 }
 
 echo "Auto-synced from git on every deploy (nothing to check by hand):"
-echo "  arr custom formats + quality profiles, Pi-hole DNS, Overseerr/Bazarr links"
+echo "  arr custom formats + quality profiles, Pi-hole DNS, Seerr/Bazarr links"
 echo
 echo "Needs a human, at least once per rebuild:"
 

@@ -41,23 +41,31 @@ services:
     networks:
       - media-network
 
-  # --- OVERSEERR (Request Management) ---
-  overseerr:
-    image: lscr.io/linuxserver/overseerr:${OVERSEERR_VERSION}
-    container_name: overseerr
+  # --- SEERR (Request Management) ---
+  # Overseerr was archived upstream in February 2026 and Seerr is its continuation. Three things
+  # differ from the LinuxServer image this replaces, and each one loses data or fails to start if it
+  # is missed:
+  #   - the config directory mounts at /app/config, not /config
+  #   - init: true is required, since the process does not reap its own children
+  #   - it runs as the node user (uid 1000) and has no PUID/PGID, so appdata must be owned by 1000
+  # The settings.json and db/db.sqlite3 layout is the same, so the existing directory carries over
+  # and Seerr migrates the database itself on first start. Guide: https://docs.seerr.dev/migration-guide/
+  seerr:
+    image: ghcr.io/seerr-team/seerr:${SEERR_VERSION}
+    container_name: seerr
+    init: true
     labels:
-      prometheus.probe: "http://overseerr:5055/"
+      prometheus.probe: "http://seerr:5055/"
     restart: unless-stopped
     profiles: [media, all]
+    # Its own resolver, because Pi-hole blocks some of the metadata hosts it reads.
     dns:
       - 8.8.8.8
       - 1.1.1.1
     environment:
-      - PUID=${PUID}
-      - PGID=${PGID}
       - TZ=${TZ}
     volumes:
-      - ${APP_CONFIG_PATH}/overseerr:/config
+      - ${APP_CONFIG_PATH}/seerr:/app/config
     ports:
       - "5055:5055"
     networks:

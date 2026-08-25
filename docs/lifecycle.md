@@ -14,7 +14,7 @@ seeding before the torrent may go.
 
 ```mermaid
 flowchart TB
-  OV["Overseerr<br/><i>somebody asks</i>"] --> ARR
+  OV["Seerr<br/><i>somebody asks</i>"] --> ARR
   WN["watch-next<br/><i>an episode was watched,<br/>search the next ones</i>"] --> ARR
   CO["ops/cutoff-search.sh<br/><i>05:00, what is still missing</i>"] --> ARR
   ARR["<b>Radarr · Sonarr</b><br/>decide what qualifies<br/><i>profile + custom formats</i>"] -->|"search"| PW

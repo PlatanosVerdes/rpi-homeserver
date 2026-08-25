@@ -25,14 +25,16 @@
           type: plex
           url: http://{{HOMEPAGE_VAR_TAILSCALE_IP}}:32400
           key: "{{HOMEPAGE_VAR_PLEX_TOKEN}}" #https://www.plexopedia.com/plex-media-server/general/plex-token/
-    - Overseerr:
+    - Seerr:
         icon: overseerr.png
-        href: https://overseerr.platanosverdes.com
+        href: https://seerr.platanosverdes.com
         server: my-docker
-        container: overseerr
+        container: seerr
         widget:
+          # `overseerr` is Homepage's own name for this widget and Seerr is API-compatible with it,
+          # so the type and the token variable keep the old name on purpose. Only the host moved.
           type: overseerr
-          url: http://overseerr:5055
+          url: http://seerr:5055
           key: "{{HOMEPAGE_VAR_OVERSEERR_TOKEN}}"
 
 - Library:

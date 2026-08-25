@@ -1,15 +1,15 @@
 #!/bin/bash
-# Push Radarr/Sonarr's connection into Overseerr and Bazarr.
+# Push Radarr/Sonarr's connection into Seerr and Bazarr.
 #
 # That link lives only in each app's appdata. The arr API keys are read live from config.xml and
-# never written to git; config/overseerr-links.json holds only preferences, no secrets.
+# never written to git; config/seerr-links.json holds only preferences, no secrets.
 #
 # Bazarr publishes no port, so its call is proxied through a container already on media-network.
 set -uo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 APPDATA_ROOT="/home/raspi/rpi-homeserver/appdata"
-LINKS_FILE="$PROJECT_DIR/config/overseerr-links.json"
+LINKS_FILE="$PROJECT_DIR/config/seerr-links.json"
 # Every call is capped: a service that accepts the connection and then never answers would hang
 # this script, and the deploy lock with it.
 CURL_LIMITS="--connect-timeout 5 --max-time 30"
@@ -28,11 +28,11 @@ arr_profile_id() {
         | jq -r --arg n "$3" '.[] | select(.name==$n) | .id' | head -1
 }
 
-sync_one_overseerr_app() {
-    # sync_one_overseerr_app APP PORT OVERSEERR_KEY
-    local app=$1 port=$2 overseerr_key=$3
+sync_one_seerr_app() {
+    # sync_one_seerr_app APP PORT SEERR_KEY
+    local app=$1 port=$2 seerr_key=$3
     local arr_key_val
-    arr_key_val=$(arr_key "$app") || { echo "overseerr: $app not running, skipping its link" >&2; return 0; }
+    arr_key_val=$(arr_key "$app") || { echo "seerr: $app not running, skipping its link" >&2; return 0; }
 
     local cfg profile_id body existing existing_id
     cfg=$(jq --arg a "$app" '.[$a]' "$LINKS_FILE")
@@ -41,7 +41,7 @@ sync_one_overseerr_app() {
     body=$(jq --arg key "$arr_key_val" --argjson pid "${profile_id:-0}" \
         '. + {apiKey: $key, activeProfileId: $pid}' <<< "$cfg")
 
-    existing=$(curl -sf $CURL_LIMITS "http://localhost:5055/api/v1/settings/$app" -H "X-Api-Key: $overseerr_key") || {
+    existing=$(curl -sf $CURL_LIMITS "http://localhost:5055/api/v1/settings/$app" -H "X-Api-Key: $seerr_key") || {
         failures=$((failures + 1)); return
     }
     existing_id=$(jq -r --arg h "$(jq -r '.hostname' <<< "$cfg")" \
@@ -49,26 +49,26 @@ sync_one_overseerr_app() {
 
     if [[ -n "$existing_id" ]]; then
         curl -sf $CURL_LIMITS -X PUT "http://localhost:5055/api/v1/settings/$app/$existing_id" \
-            -H "X-Api-Key: $overseerr_key" -H "Content-Type: application/json" \
+            -H "X-Api-Key: $seerr_key" -H "Content-Type: application/json" \
             --data "$body" > /dev/null || failures=$((failures + 1))
     else
         curl -sf $CURL_LIMITS -X POST "http://localhost:5055/api/v1/settings/$app" \
-            -H "X-Api-Key: $overseerr_key" -H "Content-Type: application/json" \
+            -H "X-Api-Key: $seerr_key" -H "Content-Type: application/json" \
             --data "$body" > /dev/null || failures=$((failures + 1))
     fi
 }
 
-sync_overseerr() {
+sync_seerr() {
     [[ -f "$LINKS_FILE" ]] || return 0
-    local settings="$APPDATA_ROOT/overseerr/settings.json"
+    local settings="$APPDATA_ROOT/seerr/settings.json"
     sudo test -f "$settings" || return 0
-    local overseerr_key
-    overseerr_key=$(sudo jq -r '.main.apiKey // empty' "$settings")
-    [[ -n "$overseerr_key" ]] || { echo "overseerr: no apiKey yet, skipping" >&2; return 0; }
+    local seerr_key
+    seerr_key=$(sudo jq -r '.main.apiKey // empty' "$settings")
+    [[ -n "$seerr_key" ]] || { echo "seerr: no apiKey yet, skipping" >&2; return 0; }
 
-    sync_one_overseerr_app radarr 7878 "$overseerr_key"
-    sync_one_overseerr_app sonarr 8989 "$overseerr_key"
-    echo "overseerr: radarr/sonarr links synced"
+    sync_one_seerr_app radarr 7878 "$seerr_key"
+    sync_one_seerr_app sonarr 8989 "$seerr_key"
+    echo "seerr: radarr/sonarr links synced"
 }
 
 sync_bazarr() {
@@ -99,7 +99,7 @@ print(yaml.safe_load(open('$conf'))['auth']['apikey'])" 2>/dev/null)
     echo "bazarr: radarr/sonarr connection synced"
 }
 
-sync_overseerr
+sync_seerr
 sync_bazarr
 
 [[ $failures -eq 0 ]] || exit 1

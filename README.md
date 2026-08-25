@@ -11,7 +11,7 @@ A modular, Docker-based home server for Raspberry Pi. Uses Docker Compose's `inc
 | Module | Purpose | Key Services |
 | :--- | :--- | :--- |
 | **Core** | Entry point & Networking | Caddy, Homepage, Pi-hole, Speedtest-tracker |
-| **Media** | Streaming & Live TV | Plex, Jellyfin, Overseerr, Bazarr, Maintainerr, Acestream |
+| **Media** | Streaming & Live TV | Plex, Jellyfin, Seerr, Bazarr, Maintainerr, Acestream |
 | **Arrs** | Automation & Downloads | Radarr, Sonarr, Prowlarr, qBittorrent, FlareSolverr, Unpackerr |
 | **Monitoring** | System Health | Prometheus, Grafana, Pushgateway, node-exporter, cAdvisor |
 
@@ -410,10 +410,10 @@ For HTTP short names to work on your laptop/desktop:
 
 ```
 # LAN access
-<STATIC_IP>    raspi homepage jellyfin overseerr plex grafana prometheus push prowlarr radarr sonarr flare torrent speedtest pihole
+<STATIC_IP>    raspi homepage jellyfin seerr plex grafana prometheus push prowlarr radarr sonarr flare torrent speedtest pihole
 
 # Tailscale access (add same names pointing to Tailscale IP if not using Pi-hole DNS)
-<TAILSCALE_IP> raspi homepage jellyfin overseerr plex grafana prometheus push prowlarr radarr sonarr flare torrent speedtest pihole
+<TAILSCALE_IP> raspi homepage jellyfin seerr plex grafana prometheus push prowlarr radarr sonarr flare torrent speedtest pihole
 ```
 
 ### 11. Check what still needs a human
@@ -423,7 +423,7 @@ bash scripts/recovery/recovery-status.sh
 ```
 
 The deploy converges everything derivable from `.env`: Radarr and Sonarr's custom formats and
-quality profiles, Pi-hole's DNS records, qBittorrent's limits, the Overseerr and Bazarr links. A
+quality profiles, Pi-hole's DNS records, qBittorrent's limits, the Seerr and Bazarr links. A
 few things it cannot, because each is a one-time interactive step with an outside provider — a Plex
 claim token, a setup wizard, an Apple 2FA code.
 
@@ -441,7 +441,7 @@ Every service belongs to one or more profiles. Set `COMPOSE_PROFILES` in `.env` 
 | `essential` | Caddy, Homepage, Pi-hole, Speedtest-tracker |
 | `moni` | Prometheus, Grafana, Pushgateway, node-exporter, cAdvisor, Pihole-exporter, Speedtest-tracker |
 | `acestream` | Aceserve, Acestream-updater, Jellyfin + Grafana/Prometheus/Pushgateway |
-| `media` | Plex, Overseerr, Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr, Unpackerr |
+| `media` | Plex, Seerr, Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr, Unpackerr |
 | `bot` | Pol Academy Offers Bot |
 | `all` | Everything |
 
