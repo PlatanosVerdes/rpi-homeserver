@@ -71,6 +71,17 @@ alert rules, the 18 panels on the Retention and Disk Usage dashboards that read 
 to push, the paragraphs in `README.md`, `private-trackers.md`, `architecture.md` and
 `seeding-and-ratio.md` that still describe it as the thing that deletes, and this file.
 
+## What the handover made visible
+
+The Lifecycle dashboard exists because of this migration rather than despite it. Parking the script
+took 18 panels with it, and the two that survived were the two reading from VictoriaLogs: events
+outlive a tool being parked, gauges do not. So what happened now comes from the logs the tools
+already write, and what is coming from the metrics that describe now.
+
+It also states its own two gaps rather than pretending: qbit-manage prints a torrent's name and the
+verdict on it on separate lines, so no single event carries both, and `tracker-control` logs 92
+startup banners and not one of its decisions.
+
 ## What no tool does, and is not being scripted
 
 - **Telling an arr that a release was bad.** qbit-manage removes a stalled torrent but cannot
