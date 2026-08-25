@@ -104,7 +104,18 @@ func fetchDigitalCore(tracker string, config map[string]any) (profile, error) {
 		}
 		text := body(resp)
 		if resp.StatusCode != 200 && resp.StatusCode != 201 {
-			return out, fmt.Errorf("login returned %d: %.140s", resp.StatusCode, text)
+			return out, fmt.Errorf("login returned %d: %s", resp.StatusCode, apiMessage(text))
+		}
+		// The password is accepted and the session is still not complete: this account has an
+		// authenticator on it, and the code cannot come from a config file. What works instead is
+		// logging in from a browser once and dropping that session into
+		// appdata/tracker-stats/digitalcore-cookies.json, which is read before any login is tried.
+		var answer struct {
+			TwoFactorRequired bool `json:"twoFactorRequired"`
+		}
+		if json.Unmarshal([]byte(text), &answer) == nil && answer.TwoFactorRequired {
+			return out, fmt.Errorf("password accepted but the account asks for a second factor, " +
+				"so seed the cookie from a browser instead")
 		}
 		save()
 		if account, status, err = read(); err != nil {
@@ -147,9 +158,15 @@ func fetchDigitalCore(tracker string, config map[string]any) (profile, error) {
 }
 
 // fetchC411. Their API keys are scoped to Torznab, torrent upload and upload drafts, so account
-// figures are not reachable that way, and every /api/** path answers 401 before it routes. The site
-// itself is a Nuxt app whose login form posts to /login with a csrf token published in a meta tag,
-// and the ratio, uploaded and downloaded sit in the header of every page behind it.
+// figures are not reachable with one. The login is /api/v1/../api/auth/login taking JSON with the
+// csrf token from the page's <meta name="csrf-token"> as a header: every /api/** path answers a bare
+// 401 to a stranger, which reads like the route does not exist, but with the token and a real body
+// it answers in French about the credentials themselves. Posting the form to /login instead sets no
+// cookie and returns the page again, which is a login that failed while looking like one that
+// worked.
+//
+// The figures then sit in the header of every page behind the session, value above label, in French
+// units.
 func fetchC411(tracker string, config map[string]any) (profile, error) {
 	var out profile
 	user, password, err := credentials(tracker, config)
@@ -190,13 +207,12 @@ func fetchC411(tracker string, config map[string]any) (profile, error) {
 		if match := csrfMeta.FindStringSubmatch(login); match != nil {
 			token = match[1]
 		}
-		form := url.Values{"username": {user}, "password": {password}}
-		if token != "" {
-			form.Set("csrf-token", token)
-		}
-		request, _ := http.NewRequest("POST", site+"/login", strings.NewReader(form.Encode()))
-		request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		payload, _ := json.Marshal(map[string]string{"username": user, "password": password})
+		request, _ := http.NewRequest("POST", site+"/api/auth/login", strings.NewReader(string(payload)))
+		request.Header.Set("Content-Type", "application/json")
 		request.Header.Set("User-Agent", userAgent)
+		request.Header.Set("Referer", site+"/login")
+		request.Header.Set("Origin", site)
 		if token != "" {
 			request.Header.Set("csrf-token", token)
 		}
@@ -206,7 +222,9 @@ func fetchC411(tracker string, config map[string]any) (profile, error) {
 		}
 		answer := body(resp)
 		if resp.StatusCode >= 400 {
-			return out, fmt.Errorf("login returned %d: %.140s", resp.StatusCode, answer)
+			// Their message is the useful part and it is in French: "Nom d'utilisateur ou mot de
+			// passe invalide" means exactly that, not a broken request.
+			return out, fmt.Errorf("login returned %d: %s", resp.StatusCode, apiMessage(answer))
 		}
 		save()
 		if text, status, err = page("/user/integrations"); err != nil {
@@ -246,94 +264,6 @@ func fetchC411(tracker string, config map[string]any) (profile, error) {
 	return out, nil
 }
 
-// fetchRetrotoon. A classic PHP tracker: login.php holds a form with `user` and `pass`, takelogin.php
-// answers, and my.php redirects to the login page until there is a session. Its submit runs a JS
-// function served from a CDN that refuses a plain fetch, so whether that JS hashes the password
-// before posting is the one thing this could not check beforehand: if the login is rejected with the
-// right password, that is the reason.
-func fetchRetrotoon(tracker string, config map[string]any) (profile, error) {
-	var out profile
-	user, password, err := credentials(tracker, config)
-	if err != nil {
-		return out, err
-	}
-	site := strings.TrimRight(str(config, "site"), "/")
-	base, err := url.Parse(site)
-	if err != nil {
-		return out, err
-	}
-	client, save, err := siteClient(tracker, base)
-	if err != nil {
-		return out, err
-	}
-
-	page := func(path string) (string, int, error) {
-		request, _ := http.NewRequest("GET", site+path, nil)
-		request.Header.Set("User-Agent", userAgent)
-		resp, err := client.Do(request)
-		if err != nil {
-			return "", 0, err
-		}
-		return body(resp), resp.StatusCode, nil
-	}
-
-	text, status, err := page("/my.php")
-	if err != nil {
-		return out, err
-	}
-	if status != 200 || strings.Contains(strings.ToLower(text), "<title>retrotoon world :: login") {
-		form := url.Values{"user": {user}, "pass": {password}}
-		request, _ := http.NewRequest("POST", site+"/takelogin.php", strings.NewReader(form.Encode()))
-		request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-		request.Header.Set("User-Agent", userAgent)
-		request.Header.Set("Referer", site+"/login.php")
-		resp, err := client.Do(request)
-		if err != nil {
-			return out, err
-		}
-		answer := body(resp)
-		if resp.StatusCode >= 400 {
-			return out, fmt.Errorf("takelogin.php returned %d: %.140s", resp.StatusCode, answer)
-		}
-		save()
-		if text, status, err = page("/my.php"); err != nil {
-			return out, err
-		}
-		if status != 200 {
-			return out, fmt.Errorf("logged in but my.php returned %d", status)
-		}
-	}
-	save()
-
-	lines := flatten(text)
-	uploaded, hasUp := toBytes(valueAfter(lines, "Uploaded"))
-	downloaded, hasDown := toBytes(valueAfter(lines, "Downloaded"))
-	if !hasUp {
-		uploaded, hasUp = toBytes(valueAfter(lines, "Upload"))
-	}
-	if !hasDown {
-		downloaded, hasDown = toBytes(valueAfter(lines, "Download"))
-	}
-	if !hasUp || !hasDown {
-		return out, fmt.Errorf("logged in but my.php held no Uploaded/Downloaded figures")
-	}
-	out.uploaded, out.downloaded = uploaded, downloaded
-	if ratio, ok := toFloat(valueAfter(lines, "Ratio")); ok {
-		out.ratio = ratio
-	} else if downloaded > 0 {
-		out.ratio = uploaded / downloaded
-	}
-	if points, ok := toFloat(valueAfter(lines, "Bonus points")); ok {
-		out.points = points
-	} else if points, ok := toFloat(valueAfter(lines, "Seedbonus")); ok {
-		out.points = points
-	}
-	if class := valueAfter(lines, "Class"); class != "" {
-		out.class = class
-	}
-	return out, nil
-}
-
 // walk visits every key in a decoded JSON document, however deeply it is nested.
 func walk(value any, visit func(key string, value any)) {
 	switch typed := value.(type) {
@@ -368,4 +298,21 @@ func topKeys(document map[string]any) string {
 		return "(none)"
 	}
 	return strings.Join(names, ", ")
+}
+
+// apiMessage digs the human sentence out of a JSON error envelope, because that sentence is what
+// says whether a login was refused or a request was malformed.
+func apiMessage(raw string) string {
+	var envelope map[string]any
+	if json.Unmarshal([]byte(raw), &envelope) == nil {
+		for _, key := range []string{"message", "error", "statusMessage"} {
+			if text, ok := envelope[key].(string); ok && text != "" {
+				return text
+			}
+		}
+	}
+	if len(raw) > 140 {
+		return raw[:140]
+	}
+	return raw
 }

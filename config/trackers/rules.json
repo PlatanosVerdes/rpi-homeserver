@@ -107,7 +107,6 @@
     "autobrr_filter": "DC freeleech ratio builder"
   },
   "retrotoon": {
-    "site": "https://retrotoon.world",
     "_rules_read": "2026-08-21, from the site's own Rules page",
     "prowlarr_indexer": "Generic Torznab",
     "min_ratio": 0,

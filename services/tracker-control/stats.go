@@ -194,8 +194,6 @@ func fetchAccount(tracker string, config map[string]any) (profile, error) {
 		return fetchDigitalCore(tracker, config)
 	case "c411":
 		return fetchC411(tracker, config)
-	case "retrotoon":
-		return fetchRetrotoon(tracker, config)
 	default:
 		return fetchProfile(tracker, config)
 	}

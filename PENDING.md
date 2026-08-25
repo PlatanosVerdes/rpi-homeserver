@@ -478,8 +478,26 @@ password, by reading what the sites answer to a stranger:
   CDN that refuses a plain fetch, so whether that JS hashes the password first is the one thing that
   could not be checked in advance.
 
-Left: the first run with a real password for each. Every failure names what it saw rather than going
-quiet, so that run is what confirms each shape.
+**The first run with real passwords, the same day, said what each site really wants.** All three
+failed, each with its own reason, and the messages were the point of writing them that way:
+
+- **DigitalCore** accepts the password and still refuses the session: `/api/v1/auth/login` answers
+  `{"twoFactorRequired": true, "id": ...}` and sets a PHPSESSID that `users/current` rejects. The
+  account has an authenticator on it, and a code cannot come from a config file. The way in is to log
+  in from a browser once and drop that session into `appdata/tracker-stats/digitalcore-cookies.json`,
+  which is read before any login is attempted. When it expires the site says `tracker_up 0` and the
+  cookie is seeded again.
+- **C411** was being asked in the wrong place. The form POST to `/login` sets no cookie and returns
+  the page again, a login that fails while looking like one that worked. The real endpoint is
+  `/api/auth/login`, JSON, with the csrf token from the page's meta tag as a header: a stranger gets
+  a bare 401 from every `/api/**` path, which reads like the route is absent, but with the token and
+  a real body it answers about the credentials themselves. It now says
+  `Nom d'utilisateur ou mot de passe invalide`, so the mechanism is right and the password is not.
+- **retrotoon cannot be automated at all.** Its submit posts to `ajax_takelogin.php`, which returns
+  `1;0` on success, `0;message` on failure and `2;2FA_REQUIRED` for a code, and it answers
+  `0;Please complete the security check.` Its login page loads Cloudflare Turnstile, which exists to
+  stop exactly this. That account stays hand-read, and its reader was deleted rather than left to
+  fail every half hour.
 
 What is left: a Grafana row for these series (the alerts exist, the panels do not), and the same
 treatment for the other four sites, each of which needs its login form and profile shape checked
