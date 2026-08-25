@@ -1091,7 +1091,7 @@
     {
       "id": 300,
       "type": "row",
-      "title": "Seed cleanup",
+      "title": "Seed cleanup (parked, see docs/migration.md)",
       "collapsed": false,
       "gridPos": {
         "h": 1,
@@ -1109,7 +1109,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Films already watched and gone from the library, whose torrent still owes its private tracker. They are seeding, not leaking: the cleanup removes each one the hour it is paid up.",
+      "description": "Films already watched and gone from the library, whose torrent still owes its private tracker. They are seeding, not leaking: the cleanup removes each one the hour it is paid up.\n\nFed by scripts/trackers/seed-cleanup.py, parked on 2026-08-24 when qbit-manage took over deleting. Empty on purpose: its frozen values were deleted from Pushgateway on 2026-08-25, because a gauge nobody updates keeps answering with yesterday's number. This panel goes with the script, see docs/migration.md.",
       "gridPos": {
         "h": 5,
         "w": 4,
@@ -1173,7 +1173,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Disk those torrents hold. This is the price of honouring the trackers, and it comes back on its own.",
+      "description": "Disk those torrents hold. This is the price of honouring the trackers, and it comes back on its own.\n\nFed by scripts/trackers/seed-cleanup.py, parked on 2026-08-24 when qbit-manage took over deleting. Empty on purpose: its frozen values were deleted from Pushgateway on 2026-08-25, because a gauge nobody updates keeps answering with yesterday's number. This panel goes with the script, see docs/migration.md.",
       "gridPos": {
         "h": 5,
         "w": 5,
@@ -1238,7 +1238,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Torrents deleted with their data on the last hourly pass.",
+      "description": "Torrents deleted with their data on the last hourly pass.\n\nFed by scripts/trackers/seed-cleanup.py, parked on 2026-08-24 when qbit-manage took over deleting. Empty on purpose: its frozen values were deleted from Pushgateway on 2026-08-25, because a gauge nobody updates keeps answering with yesterday's number. This panel goes with the script, see docs/migration.md.",
       "gridPos": {
         "h": 5,
         "w": 5,
@@ -1302,7 +1302,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Space the last pass gave back.",
+      "description": "Space the last pass gave back.\n\nFed by scripts/trackers/seed-cleanup.py, parked on 2026-08-24 when qbit-manage took over deleting. Empty on purpose: its frozen values were deleted from Pushgateway on 2026-08-25, because a gauge nobody updates keeps answering with yesterday's number. This panel goes with the script, see docs/migration.md.",
       "gridPos": {
         "h": 5,
         "w": 5,
@@ -1367,7 +1367,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Age of the last cleanup. It runs hourly, so orange past two hours means cron or the script is not running.",
+      "description": "Age of the last cleanup. It runs hourly, so orange past two hours means cron or the script is not running.\n\nFed by scripts/trackers/seed-cleanup.py, parked on 2026-08-24 when qbit-manage took over deleting. Empty on purpose: its frozen values were deleted from Pushgateway on 2026-08-25, because a gauge nobody updates keeps answering with yesterday's number. This panel goes with the script, see docs/migration.md.",
       "gridPos": {
         "h": 5,
         "w": 5,
@@ -1440,7 +1440,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "One row per watched film whose torrent is still paying its dues, with the seeding hours done against the hours its tracker asks for. Seeding time only advances while the torrent actually seeds, so a queued torrent sits still.",
+      "description": "One row per watched film whose torrent is still paying its dues, with the seeding hours done against the hours its tracker asks for. Seeding time only advances while the torrent actually seeds, so a queued torrent sits still.\n\nFed by scripts/trackers/seed-cleanup.py, parked on 2026-08-24 when qbit-manage took over deleting. Empty on purpose: its frozen values were deleted from Pushgateway on 2026-08-25, because a gauge nobody updates keeps answering with yesterday's number. This panel goes with the script, see docs/migration.md.",
       "gridPos": {
         "h": 9,
         "w": 24,

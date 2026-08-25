@@ -116,7 +116,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Gone from Plex, but the torrent still owes its private tracker. These are seeding, not leaking: each one goes the hour it is paid up.",
+      "description": "Gone from Plex, but the torrent still owes its private tracker. These are seeding, not leaking: each one goes the hour it is paid up.\n\nFed by scripts/trackers/seed-cleanup.py, parked on 2026-08-24 when qbit-manage took over deleting. Empty on purpose: its frozen values were deleted from Pushgateway on 2026-08-25, because a gauge nobody updates keeps answering with yesterday's number. This panel goes with the script, see docs/migration.md.",
       "gridPos": {
         "h": 5,
         "w": 4,
@@ -180,7 +180,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Disk the previous number is holding. This is the price of honouring the trackers, and it comes back on its own.",
+      "description": "Disk the previous number is holding. This is the price of honouring the trackers, and it comes back on its own.\n\nFed by scripts/trackers/seed-cleanup.py, parked on 2026-08-24 when qbit-manage took over deleting. Empty on purpose: its frozen values were deleted from Pushgateway on 2026-08-25, because a gauge nobody updates keeps answering with yesterday's number. This panel goes with the script, see docs/migration.md.",
       "gridPos": {
         "h": 5,
         "w": 4,
@@ -245,7 +245,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Torrents whose file the library shares, so seeding them costs no extra disk at all and the cleanup leaves them alone forever.\n\nThese counts plus the duplicates and whatever is still downloading are every torrent in qBittorrent: a film is in exactly one stage.",
+      "description": "Torrents whose file the library shares, so seeding them costs no extra disk at all and the cleanup leaves them alone forever.\n\nThese counts plus the duplicates and whatever is still downloading are every torrent in qBittorrent: a film is in exactly one stage.\n\nFed by scripts/trackers/seed-cleanup.py, parked on 2026-08-24 when qbit-manage took over deleting. Empty on purpose: its frozen values were deleted from Pushgateway on 2026-08-25, because a gauge nobody updates keeps answering with yesterday's number. This panel goes with the script, see docs/migration.md.",
       "gridPos": {
         "h": 5,
         "w": 3,
@@ -309,7 +309,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Films that live on disk twice, because the release came packed in RAR: what qBittorrent seeds is 96 `.rNN` archives, and what Plex plays is the `.mkv` unpackerr extracted out of them. Two separate sets of bytes, and a hardlink cannot bridge them.\n\nEvery byte here comes back on its own: the archives are dropped the moment their tracker is paid, whether or not the film is still in the library. The extracted film is a different file and is never touched.",
+      "description": "Films that live on disk twice, because the release came packed in RAR: what qBittorrent seeds is 96 `.rNN` archives, and what Plex plays is the `.mkv` unpackerr extracted out of them. Two separate sets of bytes, and a hardlink cannot bridge them.\n\nEvery byte here comes back on its own: the archives are dropped the moment their tracker is paid, whether or not the film is still in the library. The extracted film is a different file and is never touched.\n\nFed by scripts/trackers/seed-cleanup.py, parked on 2026-08-24 when qbit-manage took over deleting. Empty on purpose: its frozen values were deleted from Pushgateway on 2026-08-25, because a gauge nobody updates keeps answering with yesterday's number. This panel goes with the script, see docs/migration.md.",
       "gridPos": {
         "h": 5,
         "w": 3,
@@ -378,7 +378,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Torrents the policy has deleted since the counter started, 2026-08-19.",
+      "description": "Torrents the policy has deleted since the counter started, 2026-08-19.\n\nFed by scripts/trackers/seed-cleanup.py, parked on 2026-08-24 when qbit-manage took over deleting. Empty on purpose: its frozen values were deleted from Pushgateway on 2026-08-25, because a gauge nobody updates keeps answering with yesterday's number. This panel goes with the script, see docs/migration.md.",
       "gridPos": {
         "h": 5,
         "w": 3,
@@ -442,7 +442,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Disk given back since the counter started.",
+      "description": "Disk given back since the counter started.\n\nFed by scripts/trackers/seed-cleanup.py, parked on 2026-08-24 when qbit-manage took over deleting. Empty on purpose: its frozen values were deleted from Pushgateway on 2026-08-25, because a gauge nobody updates keeps answering with yesterday's number. This panel goes with the script, see docs/migration.md.",
       "gridPos": {
         "h": 5,
         "w": 3,
@@ -710,7 +710,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Every tracker with a torrent here, and the goal the cleanup applies to it. Public ones ask nothing: their torrents go as soon as the film leaves the library. Private goals come from config/qbittorrent/seed-rules.json, and either the hours or the ratio clears the debt, whichever lands first.\n\nSorted by what it asks for, so private trackers come first: those are the ones whose rules you can actually break. Biggest first within each group.",
+      "description": "Every tracker with a torrent here, and the goal the cleanup applies to it. Public ones ask nothing: their torrents go as soon as the film leaves the library. Private goals come from config/qbittorrent/seed-rules.json, and either the hours or the ratio clears the debt, whichever lands first.\n\nSorted by what it asks for, so private trackers come first: those are the ones whose rules you can actually break. Biggest first within each group.\n\nFed by scripts/trackers/seed-cleanup.py, parked on 2026-08-24 when qbit-manage took over deleting. Empty on purpose: its frozen values were deleted from Pushgateway on 2026-08-25, because a gauge nobody updates keeps answering with yesterday's number. This panel goes with the script, see docs/migration.md.",
       "gridPos": {
         "h": 9,
         "w": 12,
@@ -1022,7 +1022,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "How far each waiting film is along its tracker's goal. Either the hours or the ratio clears the debt, so this is whichever is further along: a torrent at 20% of the hours and 80% of the ratio is 80% done.\n\nAt 100% the next hourly pass deletes it. Remember qBittorrent only counts time spent actually seeding, so a queued torrent stands still.",
+      "description": "How far each waiting film is along its tracker's goal. Either the hours or the ratio clears the debt, so this is whichever is further along: a torrent at 20% of the hours and 80% of the ratio is 80% done.\n\nAt 100% the next hourly pass deletes it. Remember qBittorrent only counts time spent actually seeding, so a queued torrent stands still.\n\nFed by scripts/trackers/seed-cleanup.py, parked on 2026-08-24 when qbit-manage took over deleting. Empty on purpose: its frozen values were deleted from Pushgateway on 2026-08-25, because a gauge nobody updates keeps answering with yesterday's number. This panel goes with the script, see docs/migration.md.",
       "gridPos": {
         "h": 9,
         "w": 12,
@@ -1117,7 +1117,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "One row per film that is watched, gone from Plex, and still paying its dues. `Pending since` is when it left the library, which is the moment the clock that matters started.",
+      "description": "One row per film that is watched, gone from Plex, and still paying its dues. `Pending since` is when it left the library, which is the moment the clock that matters started.\n\nFed by scripts/trackers/seed-cleanup.py, parked on 2026-08-24 when qbit-manage took over deleting. Empty on purpose: its frozen values were deleted from Pushgateway on 2026-08-25, because a gauge nobody updates keeps answering with yesterday's number. This panel goes with the script, see docs/migration.md.",
       "gridPos": {
         "h": 9,
         "w": 24,
@@ -1468,7 +1468,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "One row per film that is on disk twice. When the percentage reaches 100 the next pass deletes the download copy and you get that space back, with the film untouched in the library.",
+      "description": "One row per film that is on disk twice. When the percentage reaches 100 the next pass deletes the download copy and you get that space back, with the film untouched in the library.\n\nFed by scripts/trackers/seed-cleanup.py, parked on 2026-08-24 when qbit-manage took over deleting. Empty on purpose: its frozen values were deleted from Pushgateway on 2026-08-25, because a gauge nobody updates keeps answering with yesterday's number. This panel goes with the script, see docs/migration.md.",
       "gridPos": {
         "h": 7,
         "w": 24,
@@ -1690,7 +1690,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Each bar is a day's worth of torrents the policy deleted. A flat line at zero for weeks is normal if nothing was watched.",
+      "description": "Each bar is a day's worth of torrents the policy deleted. A flat line at zero for weeks is normal if nothing was watched.\n\nFed by scripts/trackers/seed-cleanup.py, parked on 2026-08-24 when qbit-manage took over deleting. Empty on purpose: its frozen values were deleted from Pushgateway on 2026-08-25, because a gauge nobody updates keeps answering with yesterday's number. This panel goes with the script, see docs/migration.md.",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -1750,7 +1750,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "The same movements, in gigabytes.",
+      "description": "The same movements, in gigabytes.\n\nFed by scripts/trackers/seed-cleanup.py, parked on 2026-08-24 when qbit-manage took over deleting. Empty on purpose: its frozen values were deleted from Pushgateway on 2026-08-25, because a gauge nobody updates keeps answering with yesterday's number. This panel goes with the script, see docs/migration.md.",
       "gridPos": {
         "h": 8,
         "w": 12,
