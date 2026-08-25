@@ -42,14 +42,18 @@ var stoppedStates = map[string]bool{
 	"error": true, "missingFiles": true, "unknown": true,
 }
 
+// French sites write Go and Mo for what the rest write GB and MB. Same quantity, same powers of
+// two: these numbers are compared against each other and against a site's own display, never
+// against a disk.
 var units = map[string]float64{
 	"B": 1, "KB": 1 << 10, "MB": 1 << 20, "GB": 1 << 30, "TB": 1 << 40, "PB": 1 << 50,
+	"O": 1, "KO": 1 << 10, "MO": 1 << 20, "GO": 1 << 30, "TO": 1 << 40, "PO": 1 << 50,
 }
 
 var (
 	scriptTag = regexp.MustCompile(`(?s)<script.*?</script>`)
 	anyTag    = regexp.MustCompile(`<[^>]+>`)
-	sizeText  = regexp.MustCompile(`(?i)^([\d.,]+)\s*([KMGTP]?B)`)
+	sizeText  = regexp.MustCompile(`(?i)^([\d.,]+)\s*([KMGTP]?[BO])\b`)
 	floatText = regexp.MustCompile(`^-?[\d.]+`)
 )
 
@@ -142,6 +146,18 @@ func valueAfter(lines []string, label string) string {
 	return ""
 }
 
+// C411 prints the value above its label rather than below it, so the same flattened lines need
+// reading in the other direction.
+func valueBefore(lines []string, label string) string {
+	wanted := strings.TrimSuffix(strings.ToLower(label), ":")
+	for index, line := range lines {
+		if strings.TrimSuffix(strings.ToLower(line), ":") == wanted && index > 0 {
+			return lines[index-1]
+		}
+	}
+	return ""
+}
+
 func toBytes(text string) (float64, bool) {
 	match := sizeText.FindStringSubmatch(strings.TrimSpace(text))
 	if match == nil {
@@ -167,6 +183,22 @@ type profile struct {
 	uploaded, downloaded float64
 	ratio, points        float64
 	class, warnedUntil   string
+}
+
+// fetchAccount picks the reader for this site. One per site rather than one generic reader: they
+// log in three different ways and keep their numbers in three different places, and the moment that
+// becomes a config format it stops being debuggable.
+func fetchAccount(tracker string, config map[string]any) (profile, error) {
+	switch tracker {
+	case "digitalcore":
+		return fetchDigitalCore(tracker, config)
+	case "c411":
+		return fetchC411(tracker, config)
+	case "retrotoon":
+		return fetchRetrotoon(tracker, config)
+	default:
+		return fetchProfile(tracker, config)
+	}
 }
 
 // fetchProfile logs in only when the stored cookie has stopped working.
@@ -478,10 +510,11 @@ func read(rules map[string]map[string]any) ([]string, map[string]reading, []stri
 			}
 		}
 
-		// A site nobody can log into still has torrents in the client, and the hit & run clock is
-		// the half that gets accounts banned. So obligations are measured for every tracker in the
-		// file, and only the account numbers need a `site`.
-		if str(config, "site") == "" {
+		// The hit & run clock is measured from the client, so it exists whether or not the account
+		// can be read, and it is the half that gets an account banned. Publishing it is therefore
+		// not conditional on a login working: a site with no credentials, or one whose login broke
+		// this morning, still gets its obligations counted and still trips the at-risk alert.
+		clientSide := func() {
 			// A site with no ratio rule gets no line and no headroom: emitting zero for both puts a
 			// tracker that has no threshold at the top of a "tightest headroom" panel.
 			if minRatio > 0 {
@@ -492,13 +525,18 @@ func read(rules map[string]map[string]any) ([]string, map[string]reading, []stri
 				fmt.Sprintf("tracker_hnr_hours_worst{%s} %.1f", label, worst),
 				fmt.Sprintf("tracker_hnr_at_risk{%s} %d", label, atRisk))
 			detail = append(detail, hnrDetail(label, rows)...)
+		}
+
+		if str(config, "site") == "" {
+			clientSide()
 			continue
 		}
 
-		stats, err := fetchProfile(tracker, config)
+		stats, err := fetchAccount(tracker, config)
 		if err != nil {
 			problems = append(problems, fmt.Sprintf("%s: %v", tracker, err))
 			lines = append(lines, fmt.Sprintf("tracker_up{%s} 0", label))
+			clientSide()
 			continue
 		}
 
@@ -507,23 +545,25 @@ func read(rules map[string]map[string]any) ([]string, map[string]reading, []stri
 		lines = append(lines,
 			fmt.Sprintf("tracker_up{%s} 1", label),
 			fmt.Sprintf("tracker_ratio{%s} %g", label, stats.ratio),
-			fmt.Sprintf("tracker_min_ratio{%s} %g", label, minRatio),
 			fmt.Sprintf("tracker_uploaded_bytes{%s} %.0f", label, stats.uploaded),
 			fmt.Sprintf("tracker_downloaded_bytes{%s} %.0f", label, stats.downloaded),
-			fmt.Sprintf("tracker_buffer_bytes{%s} %.0f", label, buffer),
-			fmt.Sprintf("tracker_headroom_bytes{%s} %.0f", label, buffer/minRatio),
 			fmt.Sprintf("tracker_points{%s} %g", label, stats.points),
 			fmt.Sprintf("tracker_warning_seconds{%s} %.0f", label, warning),
-			fmt.Sprintf("tracker_hnr_pending{%s} %d", label, len(pending)),
-			fmt.Sprintf("tracker_hnr_hours_worst{%s} %.1f", label, worst),
-			fmt.Sprintf("tracker_hnr_at_risk{%s} %d", label, atRisk),
 			fmt.Sprintf("tracker_class_info{%s,class=%q} 1", label, escape(withDefault(stats.class, "?"))))
-		detail = append(detail, hnrDetail(label, rows)...)
+		// Headroom is bytes divided by a threshold, so a site that states no ratio rule has none of
+		// it to report. retrotoon is that site: min_ratio 0 there would be a division by zero, and
+		// an infinity in a "tightest headroom" panel reads as a real number.
+		if minRatio > 0 {
+			lines = append(lines,
+				fmt.Sprintf("tracker_buffer_bytes{%s} %.0f", label, buffer),
+				fmt.Sprintf("tracker_headroom_bytes{%s} %.0f", label, buffer/minRatio))
+		}
+		clientSide()
 
 		numbers[tracker] = reading{
 			Ratio: stats.ratio, MinRatio: minRatio,
 			Uploaded: stats.uploaded, Downloaded: stats.downloaded,
-			Buffer: buffer, Headroom: buffer / minRatio,
+			Buffer: buffer, Headroom: headroomOrZero(buffer, minRatio),
 			HnrPending: len(pending), HnrAtRisk: atRisk, WarningSeconds: warning,
 		}
 	}
@@ -602,4 +642,13 @@ func parseDay(value string) (time.Time, error) {
 		return time.Parse("2006-01-02", value)
 	}
 	return time.Parse(time.RFC3339, strings.Replace(value, " ", "T", 1))
+}
+
+// headroomOrZero keeps a site with no ratio rule out of the arithmetic: dividing by its zero
+// threshold would put an infinity in the saved reading and in every panel that reads it.
+func headroomOrZero(buffer, minRatio float64) float64 {
+	if minRatio <= 0 {
+		return 0
+	}
+	return buffer / minRatio
 }

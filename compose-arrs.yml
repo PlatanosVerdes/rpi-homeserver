@@ -196,9 +196,20 @@ services:
       - AUTOBRR_API_KEY=${AUTOBRR_API_KEY}
       - TELEGRAM_ALERT_BOT_TOKEN=${TELEGRAM_ALERT_BOT_TOKEN}
       - TELEGRAM_ALERT_CHAT_ID=${TELEGRAM_ALERT_CHAT_ID}
+      # Site logins for the three trackers Prowlarr cannot supply: C411 and DigitalCore are
+      # API-key definitions and retrotoon is a generic Torznab entry, so none of them holds a
+      # username and password to reuse. Empty is fine: the site is then left to its hand-typed
+      # figures in config/trackers/readings.json.
+      - DIGITALCORE_USER=${DIGITALCORE_USER:-}
+      - DIGITALCORE_PASSWORD=${DIGITALCORE_PASSWORD:-}
+      - C411_USER=${C411_USER:-}
+      - C411_PASSWORD=${C411_PASSWORD:-}
+      - RETROTOON_USER=${RETROTOON_USER:-}
+      - RETROTOON_PASSWORD=${RETROTOON_PASSWORD:-}
     volumes:
-      # The arr and Prowlarr API keys live in their config.xml and nowhere else, and Prowlarr also
-      # holds the site login this reuses, so no secret is duplicated into .env.
+      # The arr and Prowlarr API keys live in their config.xml and nowhere else, and Prowlarr holds
+      # TorrentLeech's login, so those secrets are not duplicated into .env. The other three sites
+      # have no login in Prowlarr to reuse, which is why theirs are variables above.
       - ${APP_CONFIG_PATH}/radarr:/appdata/radarr:ro
       - ${APP_CONFIG_PATH}/sonarr:/appdata/sonarr:ro
       - ${APP_CONFIG_PATH}/prowlarr:/appdata/prowlarr:ro

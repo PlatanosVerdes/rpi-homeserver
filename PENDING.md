@@ -461,6 +461,26 @@ and re-login only when it stops working. DigitalCore's API key still returns 403
 endpoint (`/api/v1/user`, `/users/current`, `/account`, `/user/stats`, `/me`), which is why this is
 per-site work rather than one generic exporter.
 
+**The other three followed on 2026-08-25**, and none of them could reuse a Prowlarr login, so their
+credentials are variables in `.env` instead. What each one needed was found without ever holding a
+password, by reading what the sites answer to a stranger:
+
+- **DigitalCore** rejects an API key by name, not by accident: `This action (GET:user) is not allowed
+  for API key access`, identically for `X-API-KEY`, `Authorization: Bearer` and `?apikey=`. A passkey
+  is refused too. But the same 401 names a login cookie as valid, and `/api/v1/auth/login` answers
+  `Bad credentials.` to an empty body, so a session works and the answer is JSON.
+- **C411** puts its API keys behind scopes that cover Torznab, torrent upload and upload drafts and
+  nothing else, and every `/api/**` path answers 401 before it routes. Its login is a form POST to
+  `/login` with a csrf token published in a `<meta name="csrf-token">`, and the figures sit in the
+  header of every page behind it, value above label, in French units.
+- **retrotoon** is a classic PHP tracker: `login.php` holds `user` and `pass`, `takelogin.php`
+  answers, `my.php` redirects until there is a session. Its submit calls a JS function served from a
+  CDN that refuses a plain fetch, so whether that JS hashes the password first is the one thing that
+  could not be checked in advance.
+
+Left: the first run with a real password for each. Every failure names what it saw rather than going
+quiet, so that run is what confirms each shape.
+
 What is left: a Grafana row for these series (the alerts exist, the panels do not), and the same
 treatment for the other four sites, each of which needs its login form and profile shape checked
 once. The parsing in the tracker-control service is deliberately dumb about markup (strip the tags, read the

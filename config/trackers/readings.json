@@ -1,11 +1,15 @@
 {
   "_comment": [
-    "Figures read off each site by eye, with the date they were read. Neither of these accounts can",
-    "be scraped: DigitalCore's API key returns 403 on every user endpoint, and C411's Prowlarr entry",
-    "is API-key only, so it holds no login to reuse. Without this file their rows on the dashboard are",
-    "empty, which is how a thin ratio goes unnoticed. Every panel shows the age of the reading next to",
-    "the number, because a figure with no date is worse than no figure.",
-    "Sizes are GiB, matching what the sites display. Update whenever a profile page is in front of you."
+    "Figures typed in by hand, with the date they were read. This is the fallback now, not the only",
+    "way: tracker-control reads all four sites itself when .env carries a login for them",
+    "(DIGITALCORE_USER and the rest). Without one, a site keeps whatever is written here, and every",
+    "panel shows the age of the reading next to the number, because a figure with no date is worse",
+    "than no figure.",
+    "Neither an API key nor a passkey can replace a login: DigitalCore refuses every user endpoint",
+    "to a key by name, and C411's keys are scoped to Torznab, upload and drafts with nothing for",
+    "account data.",
+    "Sizes are GiB, matching what the sites display. Update whenever a profile page is in front of",
+    "you, or set the login and stop updating it."
   ],
   "digitalcore": {
     "read_at": "2026-08-24",

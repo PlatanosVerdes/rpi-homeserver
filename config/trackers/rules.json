@@ -34,6 +34,7 @@
     "_hit_and_run_note": "240 h of seeding or ratio 1:1 per torrent clears it, and their clock is the only one that counts: measured on 2026-08-21 the client was ahead of the tracker by 26 to 118 hours across the 14 torrents on its H&R list, which is why the seed goal in seed-rules.json is 360 h and not 240."
   },
   "digitalcore": {
+    "site": "https://digitalcore.club",
     "_rules_read": "2026-08-21, from the site's own Rules page and FAQ",
     "prowlarr_indexer": "DigitalCore (API)",
     "min_ratio": 0.5,
@@ -106,6 +107,7 @@
     "autobrr_filter": "DC freeleech ratio builder"
   },
   "retrotoon": {
+    "site": "https://retrotoon.world",
     "_rules_read": "2026-08-21, from the site's own Rules page",
     "prowlarr_indexer": "Generic Torznab",
     "min_ratio": 0,
@@ -123,6 +125,7 @@
     "autobrr_filter": "RetroToon cartoons"
   },
   "c411": {
+    "site": "https://c411.org",
     "_rules_read": "2026-08-21, from the site's own Ratio & Seedtime wiki page",
     "prowlarr_indexer": "C411",
     "min_ratio": 0.8,
