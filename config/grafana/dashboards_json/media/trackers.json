@@ -251,7 +251,7 @@
     {
       "type": "stat",
       "title": "TorrentLeech ratio",
-      "description": "Named because it is the only account under a deadline. Its line is 0.4.",
+      "description": "Named because it is the only account under a deadline. Its line is 0.4.\n\nBetween 2026-08-21 and 2026-08-24 these numbers came from the parked `trackers/stats.py`, pushed under the job `tracker_stats`; since then they come from the tracker-control service. Two producers means two series per tracker, which drew two of everything. `max by (tracker)` stitches them into one line, so the history before the switch is kept rather than filtered out.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -313,7 +313,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "tracker_ratio",
+          "expr": "max by (tracker) (tracker_ratio{tracker=\"torrentleech\"})",
           "refId": "A",
           "instant": false,
           "range": true,
@@ -387,8 +387,8 @@
     },
     {
       "type": "stat",
-      "title": "Reading age",
-      "description": "tracker-control runs every 30 minutes. A stale reading looks exactly like a healthy account, which is why this is on the front row.",
+      "title": "Last tracker-control run",
+      "description": "How long ago tracker-control last read the sites and moved its levers. It runs every 30 minutes, so anything much past that means the service is stuck, and a stale reading looks exactly like a healthy account. This is the age of the scraped figures; the hand-read ones have their own panel below.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -653,9 +653,9 @@
       ]
     },
     {
-      "type": "timeseries",
+      "type": "bargauge",
       "title": "Headroom",
-      "description": "How many GB of non-freeleech downloads still fit before the account crosses the line the site disables it under: (uploaded - min_ratio x downloaded) / min_ratio. Ratio says how you have done, headroom says what you can still spend, and only the second one is a decision. Freeleech never moves `downloaded`, so it never costs headroom.",
+      "description": "How many GB of non-freeleech downloading still fits before the account crosses the line the site disables it under: (uploaded - min_ratio x downloaded) / min_ratio. This is where each account stands right now; the same figure over time is in the History row.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -671,7 +671,7 @@
           "unit": "bytes",
           "mappings": [],
           "color": {
-            "mode": "palette-classic"
+            "mode": "thresholds"
           },
           "thresholds": {
             "mode": "absolute",
@@ -682,32 +682,29 @@
               }
             ]
           },
-          "noValue": "no data",
-          "decimals": 1,
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 2,
-            "fillOpacity": 8,
-            "showPoints": "never",
-            "spanNulls": true,
-            "gradientMode": "opacity",
-            "axisPlacement": "auto"
-          }
+          "noValue": "no data"
         },
         "overrides": []
       },
       "options": {
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "left",
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "maxVizHeight": 300,
+        "sizing": "auto",
         "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true,
+          "showLegend": false
+        },
+        "reduceOptions": {
           "calcs": [
             "lastNotNull"
-          ]
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
+          ],
+          "fields": "",
+          "values": false
         }
       },
       "targets": [
@@ -718,8 +715,8 @@
           },
           "editorMode": "code",
           "expr": "tracker_headroom_bytes or tracker_read_headroom_bytes",
-          "instant": false,
-          "range": true,
+          "instant": true,
+          "range": false,
           "legendFormat": "{{tracker}}",
           "refId": "A"
         }
@@ -868,8 +865,8 @@
     },
     {
       "type": "bargauge",
-      "title": "Reading age",
-      "description": "How old the by-eye reading is, per account. DigitalCore and C411 cannot be scraped (403 on every user endpoint, and an API-key-only definition with no login), so their ratio and headroom are only as true as this is small. Orange at three days, red at a week, which is also when the alert fires.",
+      "title": "Age of each hand-read figure",
+      "description": "How old the by-eye reading is, per account. DigitalCore and C411 cannot be scraped (403 on every user endpoint, and an API-key-only definition with no user pages), so their ratio, points and H&R counts are typed in by hand and go stale silently.\n\nTorrentLeech is absent on purpose and not missing: it is scraped on every run, so its figures are minutes old rather than days, and \"Last tracker-control run\" is where their age shows.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -960,9 +957,9 @@
       "panels": []
     },
     {
-      "type": "timeseries",
+      "type": "bargauge",
       "title": "Seeding on disk",
-      "description": "",
+      "description": "What this tracker's torrents occupy locally right now, per the client. The trend is in the History row.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -978,7 +975,7 @@
           "unit": "bytes",
           "mappings": [],
           "color": {
-            "mode": "palette-classic"
+            "mode": "thresholds"
           },
           "thresholds": {
             "mode": "absolute",
@@ -989,32 +986,29 @@
               }
             ]
           },
-          "noValue": "no data",
-          "decimals": 1,
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 2,
-            "fillOpacity": 8,
-            "showPoints": "never",
-            "spanNulls": true,
-            "gradientMode": "opacity",
-            "axisPlacement": "auto"
-          }
+          "noValue": "no data"
         },
         "overrides": []
       },
       "options": {
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "left",
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "maxVizHeight": 300,
+        "sizing": "auto",
         "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true,
+          "showLegend": false
+        },
+        "reduceOptions": {
           "calcs": [
             "lastNotNull"
-          ]
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
+          ],
+          "fields": "",
+          "values": false
         }
       },
       "targets": [
@@ -1025,8 +1019,8 @@
           },
           "editorMode": "code",
           "expr": "tracker_client_bytes_on_disk",
-          "instant": false,
-          "range": true,
+          "instant": true,
+          "range": false,
           "legendFormat": "{{tracker}}",
           "refId": "A"
         }
@@ -1104,9 +1098,9 @@
       "id": 6
     },
     {
-      "type": "timeseries",
+      "type": "bargauge",
       "title": "Uploaded, per the client",
-      "description": "",
+      "description": "What the client says it has sent for this account, which is not what the site credits: multipliers and freeleech make the two diverge. The trend is in the History row.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -1122,7 +1116,7 @@
           "unit": "bytes",
           "mappings": [],
           "color": {
-            "mode": "palette-classic"
+            "mode": "thresholds"
           },
           "thresholds": {
             "mode": "absolute",
@@ -1133,32 +1127,29 @@
               }
             ]
           },
-          "noValue": "no data",
-          "decimals": 1,
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 2,
-            "fillOpacity": 8,
-            "showPoints": "never",
-            "spanNulls": true,
-            "gradientMode": "opacity",
-            "axisPlacement": "auto"
-          }
+          "noValue": "no data"
         },
         "overrides": []
       },
       "options": {
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "left",
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "maxVizHeight": 300,
+        "sizing": "auto",
         "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true,
+          "showLegend": false
+        },
+        "reduceOptions": {
           "calcs": [
             "lastNotNull"
-          ]
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
+          ],
+          "fields": "",
+          "values": false
         }
       },
       "targets": [
@@ -1169,8 +1160,8 @@
           },
           "editorMode": "code",
           "expr": "tracker_client_uploaded_bytes",
-          "instant": false,
-          "range": true,
+          "instant": true,
+          "range": false,
           "legendFormat": "{{tracker}}",
           "refId": "A"
         }
@@ -1179,7 +1170,7 @@
     {
       "type": "timeseries",
       "title": "Uploaded, per the site",
-      "description": "What the site credits, which is not what the client sent: upload multipliers and freeleech make the two diverge, and only this one moves the ratio.",
+      "description": "What the site credits, which is not what the client sent: upload multipliers and freeleech make the two diverge, and only this one moves the ratio.\n\nBetween 2026-08-21 and 2026-08-24 these numbers came from the parked `trackers/stats.py`, pushed under the job `tracker_stats`; since then they come from the tracker-control service. Two producers means two series per tracker, which drew two of everything. `max by (tracker)` stitches them into one line, so the history before the switch is kept rather than filtered out.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -1241,7 +1232,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "tracker_uploaded_bytes",
+          "expr": "max by (tracker) (tracker_uploaded_bytes)",
           "instant": false,
           "range": true,
           "legendFormat": "{{tracker}}",
@@ -1699,7 +1690,7 @@
     {
       "type": "timeseries",
       "title": "TorrentLeech ratio against its line",
-      "description": "",
+      "description": "TorrentLeech only, because it is the one account with a deadline and the only one whose ratio can be scraped. Both series are filtered to it: without that, `tracker_min_ratio` returned every site's threshold and drew three different lines all labelled \"the line\".\n\nBetween 2026-08-21 and 2026-08-24 these numbers came from the parked `trackers/stats.py`, pushed under the job `tracker_stats`; since then they come from the tracker-control service. Two producers means two series per tracker, which drew two of everything. `max by (tracker)` stitches them into one line, so the history before the switch is kept rather than filtered out.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -1761,7 +1752,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "tracker_ratio",
+          "expr": "max by (tracker) (tracker_ratio{tracker=\"torrentleech\"})",
           "instant": false,
           "range": true,
           "legendFormat": "ratio",
@@ -1773,7 +1764,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "tracker_min_ratio",
+          "expr": "max by (tracker) (tracker_min_ratio{tracker=\"torrentleech\"})",
           "instant": false,
           "range": true,
           "legendFormat": "the line",
@@ -1783,8 +1774,8 @@
     },
     {
       "type": "timeseries",
-      "title": "Headroom",
-      "description": "How many GB of non-freeleech downloads still fit before the account crosses the line the site disables it under: (uploaded - min_ratio x downloaded) / min_ratio. Ratio says how you have done, headroom says what you can still spend, and only the second one is a decision. Freeleech never moves `downloaded`, so it never costs headroom.",
+      "title": "Headroom, over time",
+      "description": "The same headroom as the row above, over time. A line walking down is an account spending faster than it earns, which is the shape worth catching early.\n\nBetween 2026-08-21 and 2026-08-24 these numbers came from the parked `trackers/stats.py`, pushed under the job `tracker_stats`; since then they come from the tracker-control service. Two producers means two series per tracker, which drew two of everything. `max by (tracker)` stitches them into one line, so the history before the switch is kept rather than filtered out.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -1846,7 +1837,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "tracker_headroom_bytes or tracker_read_headroom_bytes",
+          "expr": "max by (tracker) (tracker_headroom_bytes or tracker_read_headroom_bytes)",
           "instant": false,
           "range": true,
           "legendFormat": "{{tracker}}",
@@ -1856,8 +1847,8 @@
     },
     {
       "type": "timeseries",
-      "title": "Seeding on disk",
-      "description": "",
+      "title": "Seeding on disk, over time",
+      "description": "Bytes held per tracker over time. A step down is a retention group letting something go; a slope up is the grabber outrunning the deletions.\n\nBetween 2026-08-21 and 2026-08-24 these numbers came from the parked `trackers/stats.py`, pushed under the job `tracker_stats`; since then they come from the tracker-control service. Two producers means two series per tracker, which drew two of everything. `max by (tracker)` stitches them into one line, so the history before the switch is kept rather than filtered out.\n\nA tracker that no longer exists keeps a line that simply ends: btschool was removed on 2026-08-24, so it is history rather than a ghost.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -1919,7 +1910,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "tracker_client_bytes_on_disk",
+          "expr": "max by (tracker) (tracker_client_bytes_on_disk)",
           "instant": false,
           "range": true,
           "legendFormat": "{{tracker}}",
@@ -1929,8 +1920,8 @@
     },
     {
       "type": "timeseries",
-      "title": "Uploaded, per the client",
-      "description": "",
+      "title": "Uploaded per the client, over time",
+      "description": "What the client has sent per account over time. Flat means nothing is being asked of these torrents, which is normal on a private tracker with no leechers.\n\nBetween 2026-08-21 and 2026-08-24 these numbers came from the parked `trackers/stats.py`, pushed under the job `tracker_stats`; since then they come from the tracker-control service. Two producers means two series per tracker, which drew two of everything. `max by (tracker)` stitches them into one line, so the history before the switch is kept rather than filtered out.\n\nA tracker that no longer exists keeps a line that simply ends: btschool was removed on 2026-08-24, so it is history rather than a ghost.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -1992,7 +1983,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "tracker_client_uploaded_bytes",
+          "expr": "max by (tracker) (tracker_client_uploaded_bytes)",
           "instant": false,
           "range": true,
           "legendFormat": "{{tracker}}",
@@ -2003,7 +1994,7 @@
     {
       "type": "timeseries",
       "title": "Open obligations, per tracker",
-      "description": "Torrents that have not yet cleared their tracker's seed requirement, measured from qBittorrent against each site's rule. The client's clock runs ahead of the tracker's, by 26 to 118 h the last time the two were compared, so read this as a floor. Only the panel beside it is an emergency.",
+      "description": "Torrents that have not yet cleared their tracker's seed requirement, measured from qBittorrent against each site's rule. The client's clock runs ahead of the tracker's, by 26 to 118 h the last time the two were compared, so read this as a floor. Only the panel beside it is an emergency.\n\nBetween 2026-08-21 and 2026-08-24 these numbers came from the parked `trackers/stats.py`, pushed under the job `tracker_stats`; since then they come from the tracker-control service. Two producers means two series per tracker, which drew two of everything. `max by (tracker)` stitches them into one line, so the history before the switch is kept rather than filtered out.\n\nA tracker that no longer exists keeps a line that simply ends: btschool was removed on 2026-08-24, so it is history rather than a ghost.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -2063,7 +2054,7 @@
           },
           "editorMode": "code",
           "refId": "A",
-          "expr": "tracker_hnr_pending",
+          "expr": "max by (tracker) (tracker_hnr_pending)",
           "instant": false,
           "range": true,
           "legendFormat": "{{tracker}}"
@@ -2073,7 +2064,7 @@
     {
       "type": "timeseries",
       "title": "Clock stopped, per tracker",
-      "description": "A torrent that owes seeding time and is not announcing pays nothing off. Flat at zero is the only acceptable shape here.",
+      "description": "A torrent that owes seeding time and is not announcing pays nothing off. Flat at zero is the only acceptable shape here.\n\nBetween 2026-08-21 and 2026-08-24 these numbers came from the parked `trackers/stats.py`, pushed under the job `tracker_stats`; since then they come from the tracker-control service. Two producers means two series per tracker, which drew two of everything. `max by (tracker)` stitches them into one line, so the history before the switch is kept rather than filtered out.\n\nA tracker that no longer exists keeps a line that simply ends: btschool was removed on 2026-08-24, so it is history rather than a ghost.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -2137,7 +2128,7 @@
           },
           "editorMode": "code",
           "refId": "A",
-          "expr": "tracker_hnr_at_risk",
+          "expr": "max by (tracker) (tracker_hnr_at_risk)",
           "instant": false,
           "range": true,
           "legendFormat": "{{tracker}}"
@@ -2147,7 +2138,7 @@
     {
       "type": "timeseries",
       "title": "Estimated leech bonus",
-      "description": "DigitalCore's own formula applied to what is seeding. Cross-seeds move this at no disk cost.",
+      "description": "DigitalCore's own formula applied to what is seeding. Cross-seeds move this at no disk cost.\n\nBetween 2026-08-21 and 2026-08-24 these numbers came from the parked `trackers/stats.py`, pushed under the job `tracker_stats`; since then they come from the tracker-control service. Two producers means two series per tracker, which drew two of everything. `max by (tracker)` stitches them into one line, so the history before the switch is kept rather than filtered out.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -2209,7 +2200,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "tracker_leech_bonus_percent",
+          "expr": "max by (tracker) (tracker_leech_bonus_percent)",
           "instant": false,
           "range": true,
           "legendFormat": "{{tracker}}",
