@@ -250,6 +250,11 @@ The rule of record. Everything above is its implementation, and any doubt is set
 The whole path, from the indexer that announces a release to the recycle bin, with what each
 tracker asks for and what is configured against it, is in [docs/lifecycle.md](docs/lifecycle.md).
 
+**Until roughly 2026-08-31 this is mid-handover**: qbit-manage does the deleting and the script that
+used to do it sits commented out in the crontab, waiting for a week of clean deletions before it is
+removed for good. What moved, what is being watched and how to go back is in
+[docs/migration.md](docs/migration.md), which gets deleted along with the script.
+
 Two consequences that read like bugs and are not:
 
 - **A film that is still seeding is normally still in Plex, and costs nothing extra for it.** Radarr
