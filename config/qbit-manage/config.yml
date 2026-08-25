@@ -72,8 +72,29 @@ tracker:
 # include_any_tags is whether anything still needs the bytes. Share limits ignore hardlinks on
 # their own, so without that second condition a torrent Plex is still playing would be deleted.
 share_limits:
-  torrentleech:
+  # First, because a stalled download matches its tracker's group too and that group would never
+  # release it: it never seeded, so max_seeding_time can never be reached and it would sit at 0%
+  # forever. qbit-manage tags a stalled download itself (`tag_stalled_torrents`, on by default) and
+  # removes the tag the moment the state changes, so this group only ever holds what is stalled
+  # right now.
+  #
+  # 12h from the last byte that moved, not from when it was added: a download that finds a seeder
+  # again resets it and never enters this group. What it cannot do is tell the arr the release was
+  # bad, so an arr waiting on one of these may grab the same dead release again. Nothing in the
+  # stack blocklists on its own; the "Download stalled for hours" alert is what says it happened
+  # twice, and Decluttarr is the tool for it if it ever becomes worth a container.
+  stalled:
     priority: 1
+    include_all_tags:
+      - stalledDL
+    max_last_active: 12h
+    max_ratio: -1
+    max_seeding_time: -1
+    cleanup: true
+    resume_torrent_after_change: false
+
+  torrentleech:
+    priority: 2
     include_all_tags:
       - torrentleech
     include_any_tags:
@@ -91,7 +112,7 @@ share_limits:
   # Its own group above `private` because retrotoon states no ratio rule at all: reaching 1:1 there
   # clears nothing, so a generic ratio limit would delete a torrent still owing time.
   retrotoon:
-    priority: 2
+    priority: 3
     include_all_tags:
       - retrotoon
     include_any_tags:
@@ -108,7 +129,7 @@ share_limits:
 
   # 96 h owed, not 72: their clock starts 24 h after the download and the client's at completion.
   c411:
-    priority: 3
+    priority: 4
     include_all_tags:
       - c411
     include_any_tags:
@@ -126,7 +147,7 @@ share_limits:
   # 120 h owed, 180 here. Their site is the only source of truth for seed time and it runs behind
   # the client's by 9 to 23 h, so this is nearly triple the worst gap seen.
   digitalcore:
-    priority: 4
+    priority: 5
     include_all_tags:
       - digitalcore
     include_any_tags:
@@ -143,7 +164,7 @@ share_limits:
 
   # The floor, so a new site is covered from its first torrent until it earns its own numbers.
   private:
-    priority: 5
+    priority: 6
     include_all_tags:
       - private
     include_any_tags:
@@ -164,7 +185,7 @@ share_limits:
   # No noHL, no ratio and no min_last_active, deliberately: a public torrent is dropped even while
   # the library shares its file, because the point is leaving public swarms, not saving disk.
   public:
-    priority: 6
+    priority: 7
     exclude_any_tags:
       - private
       - keep
