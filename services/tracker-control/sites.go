@@ -14,7 +14,10 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -51,16 +54,22 @@ func body(resp *http.Response) string {
 	return string(raw)
 }
 
-// fetchDigitalCore. Their API rejects an API key on every user endpoint by name
-// ("This action (GET:user) is not allowed for API key access") and a passkey is not accepted either,
-// but the same 401 lists a login cookie as a valid credential, and /api/v1/auth/login answers
-// "Bad credentials." to an empty body. So: log in, keep the cookie, read JSON.
+// fetchDigitalCore. Their API refuses an API key on user endpoints by name and refuses a passkey
+// too, but /api/v1/auth/login takes a username and password as JSON and answers with the whole
+// account, and the session cookie it sets then reads /api/v1/users/<id>. Note the plural and the id:
+// /api/v1/user, /users/current and /account are all 404 to a session, which is why the shape had to
+// be found rather than assumed.
+//
+// The id is kept beside the cookie so a run with a live session costs one GET. Logging in every half
+// hour for a number that moves in gigabytes is how an account gets noticed.
+//
+// Field names are mapped one by one on purpose. Matching them by meaning looked tidier and was
+// wrong: this payload carries uploaded_real and downloaded_real next to uploaded and downloaded,
+// where the pairs differ by a factor of thirty because of freeleech and upload multipliers, plus a
+// doljuploader flag. Anything scanning for a key containing "upload" picks one of those at random,
+// since Go walks a map in no fixed order.
 func fetchDigitalCore(tracker string, config map[string]any) (profile, error) {
 	var out profile
-	user, password, err := credentials(tracker, config)
-	if err != nil {
-		return out, err
-	}
 	site := strings.TrimRight(str(config, "site"), "/")
 	base, err := url.Parse(site)
 	if err != nil {
@@ -70,31 +79,45 @@ func fetchDigitalCore(tracker string, config map[string]any) (profile, error) {
 	if err != nil {
 		return out, err
 	}
+	idPath := filepath.Join(stateDir, tracker+"-id")
 
-	read := func() (map[string]any, int, error) {
-		request, _ := http.NewRequest("GET", site+"/api/v1/users/current", nil)
+	account := func(path string) map[string]any {
+		request, err := http.NewRequest("GET", site+path, nil)
+		if err != nil {
+			return nil
+		}
 		request.Header.Set("User-Agent", userAgent)
 		resp, err := client.Do(request)
 		if err != nil {
-			return nil, 0, err
+			return nil
 		}
 		text := body(resp)
 		if resp.StatusCode != 200 {
-			return nil, resp.StatusCode, nil
+			return nil
 		}
 		var parsed map[string]any
 		if json.Unmarshal([]byte(text), &parsed) != nil {
-			return nil, resp.StatusCode, fmt.Errorf("users/current was not an object: %.120s", text)
+			return nil
 		}
-		return parsed, resp.StatusCode, nil
+		if _, ok := parsed["uploaded"]; !ok {
+			return nil
+		}
+		return parsed
 	}
 
-	account, status, err := read()
-	if err != nil {
-		return out, err
+	var user map[string]any
+	if raw, err := os.ReadFile(idPath); err == nil {
+		if id := strings.TrimSpace(string(raw)); id != "" {
+			user = account("/api/v1/users/" + url.PathEscape(id))
+		}
 	}
-	if account == nil {
-		payload, _ := json.Marshal(map[string]string{"username": user, "password": password})
+
+	if user == nil {
+		name, password, err := credentials(tracker, config)
+		if err != nil {
+			return out, err
+		}
+		payload, _ := json.Marshal(map[string]string{"username": name, "password": password})
 		request, _ := http.NewRequest("POST", site+"/api/v1/auth/login", strings.NewReader(string(payload)))
 		request.Header.Set("Content-Type", "application/json")
 		request.Header.Set("User-Agent", userAgent)
@@ -106,53 +129,49 @@ func fetchDigitalCore(tracker string, config map[string]any) (profile, error) {
 		if resp.StatusCode != 200 && resp.StatusCode != 201 {
 			return out, fmt.Errorf("login returned %d: %s", resp.StatusCode, apiMessage(text))
 		}
-		// The password is accepted and the session is still not complete: this account has an
-		// authenticator on it, and the code cannot come from a config file. What works instead is
-		// logging in from a browser once and dropping that session into
-		// appdata/tracker-stats/digitalcore-cookies.json, which is read before any login is tried.
 		var answer struct {
-			TwoFactorRequired bool `json:"twoFactorRequired"`
+			User              map[string]any `json:"user"`
+			TwoFactorRequired bool           `json:"twoFactorRequired"`
 		}
-		if json.Unmarshal([]byte(text), &answer) == nil && answer.TwoFactorRequired {
+		if json.Unmarshal([]byte(text), &answer) != nil {
+			return out, fmt.Errorf("login answered something that is not an object: %.140s", text)
+		}
+		// The password is right and the session is still not usable: a code cannot come from a
+		// config file, so the way in is a browser session dropped into the cookie file.
+		if answer.TwoFactorRequired {
 			return out, fmt.Errorf("password accepted but the account asks for a second factor, " +
 				"so seed the cookie from a browser instead")
 		}
-		save()
-		if account, status, err = read(); err != nil {
-			return out, err
+		if answer.User == nil {
+			return out, fmt.Errorf("login held no user object, keys were: %s", topKeys(text))
 		}
-		if account == nil {
-			return out, fmt.Errorf("logged in but users/current still returned %d", status)
+		save()
+		user = answer.User
+		if id, ok := numberField(user, "id"); ok {
+			os.MkdirAll(stateDir, 0o755)
+			os.WriteFile(idPath, []byte(fmt.Sprintf("%.0f", id)), 0o600)
 		}
 	}
 	save()
 
-	// Their field names are unknown until a real session answers, so match on what a key means
-	// rather than on a name guessed from nothing.
-	found := map[string]bool{}
-	walk(account, func(key string, value any) {
-		lower := strings.ToLower(key)
-		number, isNumber := asNumber(value)
-		switch {
-		case !isNumber:
-			if text, ok := value.(string); ok && strings.Contains(lower, "class") && out.class == "" {
-				out.class = text
-			}
-		case strings.Contains(lower, "upload") && !strings.Contains(lower, "multi") && !found["up"]:
-			out.uploaded, found["up"] = number, true
-		case strings.Contains(lower, "download") && !strings.Contains(lower, "multi") && !found["down"]:
-			out.downloaded, found["down"] = number, true
-		case lower == "ratio" && !found["ratio"]:
-			out.ratio, found["ratio"] = number, true
-		case (strings.Contains(lower, "bonus") || strings.Contains(lower, "points")) && !found["points"]:
-			out.points, found["points"] = number, true
-		}
-	})
-	if !found["up"] || !found["down"] {
-		return out, fmt.Errorf("users/current held no byte counters, keys were: %s", topKeys(account))
+	uploaded, hasUp := numberField(user, "uploaded")
+	downloaded, hasDown := numberField(user, "downloaded")
+	if !hasUp || !hasDown {
+		return out, fmt.Errorf("the account held no uploaded/downloaded pair")
 	}
-	if !found["ratio"] && out.downloaded > 0 {
-		out.ratio = out.uploaded / out.downloaded
+	out.uploaded, out.downloaded = uploaded, downloaded
+	if downloaded > 0 {
+		out.ratio = uploaded / downloaded
+	}
+	if points, ok := numberField(user, "bonuspoang"); ok {
+		out.points = points
+	}
+	if class, ok := numberField(user, "class"); ok {
+		out.class = fmt.Sprintf("%.0f", class)
+	}
+	// warneduntil only comes back on a fresh login, and "no" is the normal answer to warned.
+	if until, ok := user["warneduntil"].(string); ok && !strings.HasPrefix(until, "0000") {
+		out.warnedUntil = until
 	}
 	return out, nil
 }
@@ -264,32 +283,12 @@ func fetchC411(tracker string, config map[string]any) (profile, error) {
 	return out, nil
 }
 
-// walk visits every key in a decoded JSON document, however deeply it is nested.
-func walk(value any, visit func(key string, value any)) {
-	switch typed := value.(type) {
-	case map[string]any:
-		for key, inner := range typed {
-			visit(key, inner)
-			walk(inner, visit)
-		}
-	case []any:
-		for _, inner := range typed {
-			walk(inner, visit)
-		}
+// topKeys names what a payload did contain, so a shape that changed says so instead of going quiet.
+func topKeys(raw string) string {
+	var document map[string]any
+	if json.Unmarshal([]byte(raw), &document) != nil {
+		return "(not an object)"
 	}
-}
-
-func asNumber(value any) (float64, bool) {
-	switch typed := value.(type) {
-	case float64:
-		return typed, true
-	case string:
-		return toFloat(typed)
-	}
-	return 0, false
-}
-
-func topKeys(document map[string]any) string {
 	var names []string
 	for key := range document {
 		names = append(names, key)
@@ -297,7 +296,19 @@ func topKeys(document map[string]any) string {
 	if len(names) == 0 {
 		return "(none)"
 	}
+	sort.Strings(names)
 	return strings.Join(names, ", ")
+}
+
+// numberField reads one named number, whether the site sends it as a number or as a string.
+func numberField(document map[string]any, key string) (float64, bool) {
+	switch typed := document[key].(type) {
+	case float64:
+		return typed, true
+	case string:
+		return toFloat(typed)
+	}
+	return 0, false
 }
 
 // apiMessage digs the human sentence out of a JSON error envelope, because that sentence is what
