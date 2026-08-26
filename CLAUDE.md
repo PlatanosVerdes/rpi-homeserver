@@ -75,8 +75,6 @@ scripts/                    Operational scripts, grouped by what they do
 
   trackers/                 seed-cleanup.py only, parked: the measuring and deciding live in the
                             tracker-control service now
-    stats.py                Reads each site and computes the ratio headroom
-    control.py              Moves the freeleech and grab-rate levers from that headroom
     seed-cleanup.py         PARKED 2026-08-24: qbit-manage owns deletion, see PENDING.md
 
   ops/                      Everything else on a schedule

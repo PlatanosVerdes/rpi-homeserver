@@ -214,6 +214,9 @@ services:
       - ${APP_CONFIG_PATH}/prowlarr:/appdata/prowlarr:ro
       # Read-only, for the disk walk and for spotting downloads no torrent claims
       - ${DATA_ROOT}:/mnt/data:ro
+      # The only thing it writes: what qbit-manage posted after its last run, so a restart of this
+      # container does not read as "qbit-manage has not run" until the next hour.
+      - ${APP_CONFIG_PATH}/pi-metrics:/state
     networks:
       - media-network
 

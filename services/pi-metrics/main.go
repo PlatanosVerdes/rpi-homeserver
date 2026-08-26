@@ -91,6 +91,12 @@ func metrics(w http.ResponseWriter, _ *http.Request) {
 	}
 	mu.Unlock()
 
+	// What qbit-manage posted after its last run, if it has posted one yet.
+	if lines := qbmLines(); len(lines) > 0 {
+		out.WriteString(strings.Join(lines, "\n"))
+		out.WriteString("\n")
+	}
+
 	// zram is one sysfs read, so it is answered live rather than cached.
 	if lines, problems := zram(); len(problems) == 0 {
 		out.WriteString(strings.Join(lines, "\n"))
@@ -130,6 +136,8 @@ func main() {
 	go collect("media", mediaEvery, media)
 	go collect("disk", diskEvery, disk)
 
+	qbmLoad()
+	http.HandleFunc("/qbit-manage", qbmHook)
 	http.HandleFunc("/metrics", metrics)
 	http.HandleFunc("/", metrics)
 	log.Printf("pi-metrics on :%s, media every %s, disk every %s", port, mediaEvery, diskEvery)
