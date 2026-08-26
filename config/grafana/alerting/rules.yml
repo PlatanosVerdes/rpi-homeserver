@@ -647,6 +647,52 @@ groups:
               conditions:
                 - evaluator: { type: gt, params: [0] }
 
+      # Only what somebody asked for. The version of this that got deleted watched every stalled
+      # torrent, and in a week 12 of the 13 were autobrr's ratio grabs: nothing in the library was
+      # waiting for them, and qbit-manage removes a stalled torrent 12h after its last byte anyway.
+      # Filtered to the arr categories it becomes the opposite kind of alert: in that same week it
+      # would have fired zero times, because the one film that stalled (Akira, 25 minutes) found a
+      # peer on its own.
+      #
+      # 4h, so an evening of no peers is not news, and there are still 8h before the cleanup takes
+      # it and the arr searches again. What it buys is those 8 hours, on something you are waiting
+      # for.
+      - uid: homelab-arr-download-stalled
+        title: 'A film or episode you asked for is stalled'
+        condition: C
+        for: 4h
+        labels:
+          severity: warning
+        annotations:
+          summary: '{{ $labels.name }} has had no peers for four hours'
+          description: >-
+            This one was grabbed for the library, so nothing else is going to bring it: blocklist it
+            in Radarr or Sonarr and let it search for a different release. Left alone, qbit-manage
+            removes it 12 hours after its last byte and the arr tries again on its own.
+        noDataState: OK
+        execErrState: KeepLast
+        data:
+          # No aggregation, so each stalled download is its own alert instance with its own timer.
+          # The hash is in the summary because cross-seed gives every copy of a release the same
+          # name, and two copies used to arrive as two identical-looking messages.
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: 'qbit_torrent_progress{state="stalledDL",category=~"radarr|tv-sonarr"}'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [-1] }
+
       - uid: homelab-qbit-torrent-error
         title: 'Torrents in error'
         condition: C

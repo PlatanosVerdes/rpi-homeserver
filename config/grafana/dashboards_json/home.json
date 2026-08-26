@@ -20,7 +20,7 @@
   "graphTooltip": 0,
   "links": [],
   "preload": false,
-  "refresh": "",
+  "refresh": "30s",
   "schemaVersion": 42,
   "tags": [
     "home"
@@ -35,7 +35,7 @@
   "timepicker": {
     "hidden": true
   },
-  "timezone": "",
+  "timezone": "browser",
   "title": "Home",
   "uid": "home-overview",
   "version": 22,

@@ -710,7 +710,7 @@
       "type": "row"
     }
   ],
-  "refresh": "",
+  "refresh": "1m",
   "schemaVersion": 39,
   "tags": ["pihole6", "pihole"],
   "templating": {

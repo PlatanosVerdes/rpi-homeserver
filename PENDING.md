@@ -696,9 +696,10 @@ whole job), `ops/backup.sh` (a daily batch job, the sanctioned Pushgateway case)
 
 ## Nothing watches whether qbit-manage still runs
 
-Noticed on 2026-08-26, when the stalled-download alert was deleted. That alert was the only thing
-that would have noticed, indirectly and by accident, that the retention side had stopped working: a
-stalled torrent still sitting there long after the `stalled` group should have taken it.
+Noticed on 2026-08-26, when the stalled-download alert was replaced by one that only watches what
+the library asked for. Nothing now would notice that the retention side had stopped working: the old
+alert did it indirectly and by accident, because a stalled torrent still sitting there means nothing
+removed it.
 
 The right version of that is one alert about the tool rather than about one of its symptoms, because
 today nothing would say a word if qbit-manage stopped running: no share limits written, no tags, no

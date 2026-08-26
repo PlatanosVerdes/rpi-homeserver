@@ -7,7 +7,7 @@
   "refresh": "1m",
   "time": { "from": "now-6h", "to": "now" },
   "timepicker": {},
-  "timezone": "",
+  "timezone": "browser",
   "links": [],
   "annotations": { "list": [] },
   "templating": { "list": [] },

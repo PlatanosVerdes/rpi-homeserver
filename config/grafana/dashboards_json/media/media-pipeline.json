@@ -1883,7 +1883,7 @@
           "range": false
         }
       ],
-      "description": "Torrents that want to download and find no seeds. Nothing alerts on this on purpose: qbit-manage removes one 12 hours after its last byte, and in practice they are autobrr's ratio grabs rather than anything the library is waiting for, so there is nothing to do about them. Here to be looked at, not to be told about. A film or an episode that is genuinely missing shows up in the 'Radarr is waiting on' panel instead."
+      "description": "Torrents that want to download and find no seeds. Most of these are autobrr's ratio grabs, which nothing in the library is waiting for, so they are here to be looked at rather than alerted on: qbit-manage removes one 12 hours after its last byte. The alert only covers the radarr and tv-sonarr categories, which are the ones somebody actually asked for."
     },
     {
       "type": "stat",
