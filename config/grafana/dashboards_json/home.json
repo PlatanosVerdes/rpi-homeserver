@@ -368,7 +368,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "How much of the Pi's RAM the swap actually costs — the honest version of the ~87% that\nnode_exporter's own SWAP gauge shows in red.\n\nThat gauge measures how full the swap device is. This swap is /dev/zram0: pages compressed in\nRAM, not the SD card. A full one is zram working, and what it costs is not what it holds —\n1.65 GB of pages currently occupy 0.56 GB of real RAM, about 7% of the machine.\n\nIt only climbs if the pages stop compressing, which is the one case worth reacting to.",
+      "description": "How much of the Pi's RAM the swap actually costs, which is the honest version of the ~87% node_exporter's own SWAP gauge shows in red.\n\nThat gauge measures how full the swap device is. This swap is /dev/zram0: pages compressed in RAM, not the SD card. A full one is zram working, and what it holds is not what it costs, because the whole point is that those pages are compressed. This is the cost: the real RAM they occupy, as a percentage of the machine.\n\nIt only climbs if the pages stop compressing, which is the one case worth reacting to.\n\nSummed on both sides on purpose: the two numbers come from different exporters (zram from pi-metrics, the total from node-exporter), so a division that matches on labels pairs nothing and the panel reads No data.",
       "gridPos": {
         "h": 5,
         "w": 4,
@@ -440,7 +440,7 @@
           "instant": false,
           "range": true,
           "legendFormat": "__auto",
-          "expr": "100 * zram_memory_used_bytes{device=\"zram0\"} / ignoring(device) node_memory_MemTotal_bytes"
+          "expr": "100 * sum(zram_memory_used_bytes{device=\"zram0\"}) / sum(node_memory_MemTotal_bytes)"
         }
       ]
     },
