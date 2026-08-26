@@ -1883,7 +1883,7 @@
           "range": false
         }
       ],
-      "description": "Torrents that want to download but find no seeds. qbit-manage removes one 12 hours after its last byte, so what shows here is the window before that: blocklist it in Radarr if you want another release searched for sooner. The alert only fires if one is still here after a day, which means the cleanup itself stopped working."
+      "description": "Torrents that want to download and find no seeds. Nothing alerts on this on purpose: qbit-manage removes one 12 hours after its last byte, and in practice they are autobrr's ratio grabs rather than anything the library is waiting for, so there is nothing to do about them. Here to be looked at, not to be told about. A film or an episode that is genuinely missing shows up in the 'Radarr is waiting on' panel instead."
     },
     {
       "type": "stat",

@@ -693,3 +693,16 @@ timestamp so a wedged loop is visible the way a wedged cron never was.
 **Not converting**: `ops/heartbeat.sh` (a container cannot report that Docker is down, which is its
 whole job), `ops/backup.sh` (a daily batch job, the sanctioned Pushgateway case), `ops/oci-hunt.py`
 (temporary, exits for good once it wins) and `ops/config-export.py` (a deploy step, not a schedule).
+
+## Nothing watches whether qbit-manage still runs
+
+Noticed on 2026-08-26, when the stalled-download alert was deleted. That alert was the only thing
+that would have noticed, indirectly and by accident, that the retention side had stopped working: a
+stalled torrent still sitting there long after the `stalled` group should have taken it.
+
+The right version of that is one alert about the tool rather than about one of its symptoms, because
+today nothing would say a word if qbit-manage stopped running: no share limits written, no tags, no
+deletions, and every panel showing the last state it left behind. It runs hourly in its own
+container, so the shape is a freshness metric like the two services have
+(`pi_metrics_last_success_timestamp_seconds`, `tracker_control_loop_timestamp_seconds`) rather than
+another rule reading torrent state. Its own log is the only place its runs are visible now.
