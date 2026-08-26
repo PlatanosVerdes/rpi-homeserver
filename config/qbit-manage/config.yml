@@ -1,5 +1,14 @@
 # qbit_manage owns tagging and deletion since 2026-08-24. What each tag means and why every group
 # asks for more seeding than its site does: docs/lifecycle.md.
+# Nothing else knows whether this ran. Its own answer to that is a Discord or Apprise message per
+# run, which cannot report silence, so both hooks go to pi-metrics instead and come out as metrics:
+# see services/pi-metrics/qbm.go. A list, not a string: the tool iterates over this value.
+webhooks:
+  run_end:
+    - http://pi-metrics:9110/qbit-manage
+  error:
+    - http://pi-metrics:9110/qbit-manage
+
 commands:
   dry_run: false
   cat_update: false        # categories are Radarr's and Sonarr's business, not this tool's
