@@ -750,7 +750,7 @@
       }
     }
   ],
-  "refresh": "",
+  "refresh": "1m",
   "schemaVersion": 42,
   "tags": [
     "acestream",
@@ -764,6 +764,6 @@
     "to": "now"
   },
   "timepicker": {},
-  "timezone": "",
+  "timezone": "browser",
   "title": "Acestream Monitor"
 }
