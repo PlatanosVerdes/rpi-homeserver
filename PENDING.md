@@ -707,3 +707,15 @@ deletions, and every panel showing the last state it left behind. It runs hourly
 container, so the shape is a freshness metric like the two services have
 (`pi_metrics_last_success_timestamp_seconds`, `tracker_control_loop_timestamp_seconds`) rather than
 another rule reading torrent state. Its own log is the only place its runs are visible now.
+
+## The Retention policy dashboard is gone; bringing it back needs a new UID
+
+Deleted on 2026-08-26. Of its 16 panels, 14 read every `seed_cleanup_*` metric there was, and those
+have not existed since `trackers/seed-cleanup.py` was parked on the 24th: the Pushgateway group is
+gone and Prometheus holds zero series for them. The two that still had data, the Maintainerr grace
+ones, are answered by the Lifecycle dashboard's "Films in grace, and the date".
+
+If seed-cleanup.py is ever revived and its dashboard wanted back, take it from git history **and
+change its uid**. Re-provisioning a UID that existed before and was deleted silently does nothing on
+Grafana v13, which is written up further down this file: the file is read, the log says it finished,
+and no dashboard appears.
