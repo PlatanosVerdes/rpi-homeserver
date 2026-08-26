@@ -1625,13 +1625,13 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "topk(50, time() - sum by (name) (container_start_time_seconds{name!=\"\",name!~\".*POD.*\"}))",
+          "expr": "topk(50, time() - max by (name) (container_start_time_seconds{name!=\"\",name!~\".*POD.*\"}))",
           "instant": true,
           "refId": "A",
           "legendFormat": "{{name}}"
         }
       ],
-      "description": "How long each container has been running, longest first. A container that just restarted (crash loop, redeploy) drops to the bottom."
+      "description": "How long each container has been running, longest first. It cannot exceed the host's own uptime: a reboot restarts every container, so what sits at the top is simply what no deploy has recreated since. Expect the oldest ones to read a couple of minutes over the host: the Pi has no battery-backed clock, so Docker stamps a container's start time before NTP has corrected the boot-time clock. Read as max per container, not sum: right after a recreate a container briefly has two series, and adding two unix timestamps produces nonsense."
     }
   ]
 }
