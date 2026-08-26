@@ -197,6 +197,11 @@ just uncovered. To turn it on:
    Grace 3 minutes**. Those two numbers, not the cron, decide how fast you are told: the check is
    declared down once `period + grace` passes with no ping, so this alerts about 4 minutes after
    the Pi goes dark. Going lower turns a single missed ping into a false alarm.
+
+   The grace covers *silence*, not the failure the script reports itself. A `/fail` ping is acted on
+   immediately, which is the point of it, so anything the script calls broken reaches the phone in
+   seconds. That is why it does not call a deploy broken: a deploy recreates caddy, and those thirty
+   seconds used to arrive as DOWN and then UP a minute later.
 2. Put its ping URL in `.env` as `HEALTHCHECK_URL`.
 
 Cost of running it every minute, measured on the Pi: **~0.2s of CPU** per heartbeat (0.12s user +

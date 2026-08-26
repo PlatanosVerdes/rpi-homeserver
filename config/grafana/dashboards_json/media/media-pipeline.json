@@ -1883,7 +1883,7 @@
           "range": false
         }
       ],
-      "description": "Torrents that want to download but find no seeds. One stalled for hours usually means the\nrelease is dead: blocklist it in Radarr so it grabs a different one instead of retrying the same."
+      "description": "Torrents that want to download but find no seeds. qbit-manage removes one 12 hours after its last byte, so what shows here is the window before that: blocklist it in Radarr if you want another release searched for sooner. The alert only fires if one is still here after a day, which means the cleanup itself stopped working."
     },
     {
       "type": "stat",
