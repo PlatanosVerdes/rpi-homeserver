@@ -33,15 +33,10 @@ settings:
   nohardlinks_tag: noHL
   private_tag: private
 
-# Deleting moves files here instead of removing them. Without empty_after_x_days nothing ever
-# clears it: the default is "keep forever".
+# Deleted files come here instead of being removed. The bin is on the data disk, so its contents
+# still cost space: unset, the default keeps them forever.
 recyclebin:
   enabled: true
-  # One day. The bin lives under /mnt/data/downloads, so what it holds is still on the same disk and
-  # the space does not come back until it empties: 76 GiB sat in there while free space went down
-  # rather than up, and emptying it returned 56 GiB in one pass. A day still covers the case this
-  # exists for, noticing a wrong deletion the same evening, and nothing here is irreplaceable
-  # enough to hold a week of it on a disk that is also the download target.
   empty_after_x_days: 1
 
 directory:
