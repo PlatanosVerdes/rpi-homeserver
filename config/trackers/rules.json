@@ -125,6 +125,7 @@
   },
   "c411": {
     "site": "https://c411.org",
+    "_site_note": "Measured 2026-08-27: the indexer itself is fine on its API key alone, 132 queries and 7 grabs in 24h, so nothing about downloading from here depends on the login below. What fails is reading the account: `site` needs a web login and its Prowlarr entry holds only the key, so every pass logs `401 Nom d'utilisateur ou mot de passe invalide` and the loop reports one failure. Two ways out, neither applied yet: put the real username and password on the Prowlarr indexer, or drop `site` from this entry and go back to reading the account by eye into readings.json.",
     "_rules_read": "2026-08-21, from the site's own Ratio & Seedtime wiki page",
     "prowlarr_indexer": "C411",
     "min_ratio": 0.8,

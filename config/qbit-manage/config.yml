@@ -37,11 +37,12 @@ settings:
 # clears it: the default is "keep forever".
 recyclebin:
   enabled: true
-  # 2 days, not 7: the bin lives under /mnt/data/downloads, so what it holds is still on the same
-  # disk and the space does not come back until it empties. 76 GiB sat there on 2026-08-25 while
-  # free space went down rather than up. Two days is long enough to notice a wrong deletion the
-  # same evening and short enough that reclaimed disk is actually reclaimed.
-  empty_after_x_days: 2
+  # One day. The bin lives under /mnt/data/downloads, so what it holds is still on the same disk and
+  # the space does not come back until it empties: 76 GiB sat in there while free space went down
+  # rather than up, and emptying it returned 56 GiB in one pass. A day still covers the case this
+  # exists for, noticing a wrong deletion the same evening, and nothing here is irreplaceable
+  # enough to hold a week of it on a disk that is also the download target.
+  empty_after_x_days: 1
 
 directory:
   # The same path qBittorrent reports, because hardlink counting compares the two views
@@ -152,7 +153,7 @@ share_limits:
     max_seeding_time: 15d          # 240 h asked, 120 h of margin for the clock gap
     max_ratio: 1.2
     min_last_active: 1d
-    cleanup: true            # deletes into the recycle bin, emptied after 2 days
+    cleanup: true            # deletes into the recycle bin, emptied after a day
     resume_torrent_after_change: false
 
   # Its own group above `private` because retrotoon states no ratio rule at all: reaching 1:1 there
