@@ -84,6 +84,10 @@ func zram() ([]string, []string) {
 type biggest struct {
 	size int64
 	path string
+	// Which top-level folders this inode was found in. An import is a hardlink, so the same bytes
+	// appear under films/ and under downloads/, and which folders hold it is what says whether
+	// deleting the torrent would free anything.
+	roots map[string]bool
 }
 
 // disk answers both questions in one walk, which is half the I/O the `find` and `du` it replaces
@@ -131,15 +135,17 @@ func disk() ([]string, []string) {
 				return nil
 			}
 			if previous, known := seen[stat.Ino]; known {
+				previous.roots[root] = true
 				// The same bytes under a second name. The later path alphabetically wins, which is
 				// films/ or series/ over downloads/: the same number either way, and the library
 				// path is the one worth reading on a panel.
 				if path > previous.path {
-					seen[stat.Ino] = biggest{previous.size, path}
+					previous.path = path
 				}
+				seen[stat.Ino] = previous
 				return nil
 			}
-			seen[stat.Ino] = biggest{info.Size(), path}
+			seen[stat.Ino] = biggest{info.Size(), path, map[string]bool{root: true}}
 			perRoot[root] += info.Size()
 			return nil
 		})
@@ -173,6 +179,8 @@ func disk() ([]string, []string) {
 	for _, name := range roots {
 		lines = append(lines, fmt.Sprintf("disk_root_bytes{root=%q} %d", escape(name), perRoot[name]))
 	}
+
+	lines = append(lines, purpose(seen)...)
 
 	lines = append(lines,
 		"# HELP disk_usage_scrape_timestamp_seconds Unix time this walk finished.",
