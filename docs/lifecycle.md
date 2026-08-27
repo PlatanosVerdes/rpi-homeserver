@@ -55,7 +55,7 @@ flowchart TB
   PX --> MT["Maintainerr<br/><i>watched and out of grace</i>"]
   MT -->|"deletes the library name,<br/>link count back to 1"| LIB
   SEED --> QM["<b>qbit-manage</b><br/><i>share_limits, per tracker</i>"]
-  QM -->|"limit reached, nothing else<br/>needs the bytes, not tagged keep"| RB["recycle bin<br/><i>emptied after 2 days</i>"]
+  QM -->|"limit reached, nothing else<br/>needs the bytes, not tagged keep"| RB["recycle bin<br/><i>emptied after a day</i>"]
 ```
 
 The hardlink count is the signal the whole thing rests on: while the library holds the file, the
@@ -130,9 +130,10 @@ activity resets it, so something that trickles is kept indefinitely. What stops 
 real disk is the free-space floor in `config/trackers/rules.json`, which pauses the grabber.
 
 Deletion moves the files to `/data/downloads/.RecycleBin` rather than removing them, and
-`recyclebin.empty_after_x_days: 2` clears them two days later. So a wrong call is recoverable for
-two days, and only then does the space come back: the bin sits on the same disk as the downloads it
-holds, which is why freeing 76 GiB on 2026-08-25 moved free space *down* until it emptied. The
+`recyclebin.empty_after_x_days: 1` clears them a day later. So a wrong call is recoverable for a
+day, and only then does the space come back: the bin sits on the same disk as the downloads it
+holds, which is why 76 GiB sitting in there moved free space *down* until it emptied, and returned
+56 GiB the pass it did. The
 orphan scan skips `.RecycleBin` and `orphaned_data` for the same reason: they are data parked by the
 tool that owns deleting, not data nothing owns.
 

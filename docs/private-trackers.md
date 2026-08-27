@@ -493,6 +493,26 @@ this account above its line.
 | Freeleech | full (0x), 50%, and 2x upload, per torrent, per account or site-wide |
 | Cheating | announced upload is cross-checked against real swarm activity; ghost leech and modified clients lead to a permanent ban |
 
+### Downloading works; reading the account does not
+
+Two different things, and the failing one is the smaller. Measured 2026-08-27: the indexer answered
+**132 queries and took 7 grabs in 24h** on its API key alone, so nothing about searching or grabbing
+here depends on a login. What fails is the account page: `site` is set in
+`config/trackers/rules.json`, the tracker-control service tries to log in for the ratio, and its
+Prowlarr entry holds only an API key, so every pass logs
+
+```
+c411: login returned 401: Nom d'utilisateur ou mot de passe invalide
+```
+
+and the loop reports one failure. That failure is worth reading as "the ratio on this row is stale",
+not as "the tracker is broken". It is also the tightest account on the box, so the ratio is the one
+number here you would most want live.
+
+Two ways out, neither taken yet: put the real username and password on the Prowlarr indexer, and the
+account reads itself like the other three; or drop `site` from its entry and go back to reading the
+figures by eye into `config/trackers/readings.json`, which is what the panels fell back to before.
+
 ### How it is configured here
 
 | Piece | Value | Why |
