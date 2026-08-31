@@ -336,7 +336,7 @@ earn a sentence. `deploy/apply.sh` is sixth by complexity, not first.
 | `services/pi-metrics/media.go` | 610 | 10 | 140 | |
 | `trackers/seed-cleanup.py` | 477 | 29 | 116 | files |
 | `services/tracker-control` | 1090 | 41 | 190 | config |
-| `ops/oci-hunt.py` | 270 | 15 | 61 | |
+| `ops/oci-hunt.py` | 284 | 16 | 61 | |
 | `deploy/apply.sh` | 266 | 6 | 64 | |
 | the other fifteen | <135 | <6 | <13 | |
 
@@ -434,5 +434,5 @@ the action are the same pass, so there is nothing old to act on.
 | `ops/backup.sh` | Compresses appdata, keeps 7, excludes what regenerates (Prometheus TSDB, Plex caches) |
 | `ops/heartbeat.sh` | Tells an outside check the Pi is alive, and deliberately fails when the essentials are not running |
 | `ops/cutoff-search.sh` | Asks Radarr to search for what it already says is missing. Decides nothing |
-| `ops/oci-hunt.py` | Asks Oracle for the free instance every minute, which is its measured rate limit, signing by hand. Counts the runs and logs one summary an hour rather than a line each, and exits for good once one lands |
+| `ops/oci-hunt.py` | Asks Oracle for one of the two free instances every minute, which is its measured rate limit, signing by hand. Counts the runs and logs one summary an hour rather than a line each, and exits for good once both exist |
 | `ops/indexer-retry.py` | Probes a backed-off indexer's site and clears Prowlarr's 24 h backoff when it answers, so an hour of blocking does not cost a day |
