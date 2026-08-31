@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Keep asking Oracle for the free instance until capacity exists, then say so on Telegram.
+"""Keep asking Oracle for the free instances until capacity exists, then say so on Telegram.
 
 Oracle's Always Free shapes in a single-AD region are permanently oversubscribed: creating one is a
 race against everyone else in the region, with no way to know in advance (Capacity Reports are not
 available on a free tenancy). So this asks on a schedule instead, tries both free shapes, and stops
-the moment one lands. It is idempotent on purpose: if the instance already exists, it exits without
-doing anything, so it is safe to run from cron forever.
+once every name in NAMES exists. It is idempotent on purpose: it only ever asks for a name that is
+missing, so it is safe to run from cron forever.
 
 Signing is done by hand rather than with the OCI SDK: the SDK is a 50 MB dependency for four API
 calls, and the signature is a documented HTTP Signature over a handful of headers.
@@ -34,12 +34,15 @@ TENANCY = "ocid1.tenancy.oc1..aaaaaaaaq4cbn7clmh7a2bijvysc46ii3gkhbqw4qgcwhbd7bf
 FINGERPRINT = "d2:e8:9c:64:45:82:76:53:2d:5b:1f:30:0e:e0:e0:5f"
 REGION = "eu-madrid-1"
 
-NAME = "seedgate"
+# Always Free covers two of the micro shape, so the hunt has two targets and asks for whichever one
+# is still missing. displayName is the identity here: live_names() matches on it.
+NAMES = ["seedgate", "seedgate-2"]
 SSH_KEY = ("ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBYtwcWMwV0yRrYqcr9t79jwa9UUlhVOcPXhU6gJQ6Lv"
            " homelab")
 
-# Both free shapes, tried in this order. The ARM one is the better machine; the micro is the
-# fallback. memoryInGBs/ocpus are ignored for the fixed micro shape.
+# Both free shapes. The ARM is the better machine, the micro is the one this region frees up;
+# shapes_for_this_run() decides which of them asks on a given run.
+# memoryInGBs/ocpus are ignored for the fixed micro shape.
 SHAPES = [
     {"shape": "VM.Standard.A1.Flex", "ocpus": 1, "memory": 6, "arch": "aarch64"},
     {"shape": "VM.Standard.E2.1.Micro", "ocpus": None, "memory": None, "arch": "x86_64"},
@@ -59,9 +62,10 @@ CAPACITY_MARKERS = ("out of host capacity", "out of capacity")
 # 45 s alternated (its first opportunity past the limit is 90 s) and 30 s let one in two through,
 # again one every 61 s. So the ceiling is a flat rate, not a burst budget that runs out.
 #
-# One call per run, so the cron interval is the rate: the ARM shape every run because it is the one
-# worth having, the micro only every Nth run as a fallback.
-MICRO_EVERY = 5
+# One call per run, so the cron interval is the rate. The micro gets the priority because it is the
+# shape this region actually frees up: it landed inside its ~2300 turns while the ARM lost ~9000 of
+# them. The ARM keeps one turn in five, being the better machine if it ever shows up.
+ARM_EVERY = 5
 
 # Backoff is per shape, and deliberately barely longer than the measured limit. A 429 costs Oracle
 # nothing and means only "not yet", so the old 2-to-30-minute ladder punished us far harder than
@@ -150,6 +154,14 @@ def save_state(data):
         json.dump(data, handle, indent=2)
 
 
+def per_target(data, key):
+    """State keyed by instance name. It held a single value back when the hunt had one target."""
+    value = data.get(key)
+    if isinstance(value, dict):
+        return value
+    return {NAMES[0]: value} if value else {}
+
+
 def discover():
     """The AD, the public subnet and one image per architecture. Cached: none of it moves."""
     cached = state()
@@ -189,12 +201,13 @@ def discover():
     return cached
 
 
-def existing():
+def live_names():
+    """Display names of the instances that exist, or None if the API could not be reached."""
     status, instances = call(IAAS, "GET", "/20160918/instances", query={"compartmentId": TENANCY})
     if status != 200:
         return None
-    return [i for i in instances
-            if i["displayName"] == NAME and i["lifecycleState"] not in ("TERMINATED", "TERMINATING")]
+    return {i["displayName"] for i in instances
+            if i["lifecycleState"] not in ("TERMINATED", "TERMINATING")}
 
 
 def public_ip(instance_id):
@@ -211,14 +224,14 @@ def public_ip(instance_id):
     return None
 
 
-def launch(config, entry):
+def launch(config, entry, name):
     image = config["images"].get(entry["shape"])
     if not image:
         return None, "no image"
     body = {
         "availabilityDomain": config["ad"],
         "compartmentId": TENANCY,
-        "displayName": NAME,
+        "displayName": name,
         "shape": entry["shape"],
         "sourceDetails": {"sourceType": "image", "imageId": image},
         "createVnicDetails": {"subnetId": config["subnet"], "assignPublicIp": True},
@@ -283,8 +296,9 @@ def tally(kind):
 def shapes_for_this_run():
     """One launch call per run, and never an idle run while a shape is available.
 
-    The ARM is the machine worth having, so it gets every turn; the micro takes one turn in five,
-    plus any turn the ARM is cooling down from. Only when both are cooling does the run do nothing.
+    The micro is the shape with capacity here, so it gets every turn; the ARM takes one turn in
+    five, plus any turn the micro is cooling down from. Only when both are cooling does the run do
+    nothing.
     """
     data = state()
     runs = data.get("runs", 0) + 1
@@ -292,42 +306,48 @@ def shapes_for_this_run():
     save_state(data)
 
     arm, micro = SHAPES[0], SHAPES[1]
-    order = [micro, arm] if runs % MICRO_EVERY == 0 else [arm, micro]
+    order = [arm, micro] if runs % ARM_EVERY == 0 else [micro, arm]
     return [entry for entry in order if not cooling(entry["shape"])][:1]
 
 
 def main():
     config = discover()
 
-    already = existing()
-    if already is None:
+    alive = live_names()
+    if alive is None:
         sys.exit("cannot reach the OCI API")
-    if already:
-        instance = already[0]
-        print(f"{NAME} already exists ({instance['lifecycleState']}), nothing to do")
+    pending = [name for name in NAMES if name not in alive]
+    if not pending:
+        print(f"{' and '.join(NAMES)} already exist, nothing to do")
         return
+    target = pending[0]
 
     candidates = shapes_for_this_run()
     if not candidates:
         tally("idle")
         return
 
-    attempts = state().get("attempts", 0)
+    counts = per_target(state(), "attempts")
+    attempts = counts.get(target, 0)
     for entry in candidates:
-        instance, error = launch(config, entry)
+        instance, error = launch(config, entry, target)
         attempts += 1
+        counts[target] = attempts
         if instance:
             data = state()
-            data["attempts"] = attempts
-            data["created"] = instance["id"]
+            data["attempts"] = counts
+            created = per_target(data, "created")
+            created[target] = instance["id"]
+            data["created"] = created
             save_state(data)
             ip = public_ip(instance["id"])
             waited = f" en el intento {attempts}" if attempts > 1 else ""
             telegram(f"🎉 <b>Oracle: instancia creada</b>{waited}\n\n"
+                     f"Nombre: <code>{target}</code>\n"
                      f"Shape: <code>{entry['shape']}</code>\n"
                      f"IP publica: <code>{ip or 'aun asignandose'}</code>\n"
                      f"Entra con: <code>ssh -i ~/.ssh/homelab ubuntu@{ip or 'IP'}</code>")
-            print(f"created with {entry['shape']}, ip {ip}")
+            print(f"created {target} with {entry['shape']}, ip {ip}")
             return
         low = (error or "").lower()
         if any(marker in low for marker in CAPACITY_MARKERS):
@@ -342,7 +362,7 @@ def main():
         print(f"{entry['shape']}: {error}", file=sys.stderr)
 
     data = state()
-    data["attempts"] = attempts
+    data["attempts"] = counts
     data["last_try"] = email.utils.format_datetime(
         datetime.datetime.now(datetime.timezone.utc), usegmt=True)
     save_state(data)

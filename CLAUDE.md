@@ -81,7 +81,7 @@ scripts/                    Operational scripts, grouped by what they do
     backup.sh               Daily appdata backup, pushes metrics to Grafana
     heartbeat.sh            Dead man's switch ping to an external check, every minute
     cutoff-search.sh        Nightly *arr search for missing and below-cutoff items
-    oci-hunt.py             Keeps asking Oracle for the free instance until capacity exists
+    oci-hunt.py             Keeps asking Oracle for the two free instances until capacity exists
     indexer-retry.py        Clears Prowlarr's backoff once a blocked indexer's site answers again
     config-export.py        Pulls autobrr's filters and Maintainerr's rule into git; --check on deploy
 
