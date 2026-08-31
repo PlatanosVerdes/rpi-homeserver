@@ -28,6 +28,12 @@ log() { echo "$(date '+%Y-%m-%d %H:%M:%S') - $1"; }
 # queue, so a burst of pushes costs one extra run. See docs/architecture.md.
 PENDING_MARKER="$PROJECT_DIR/.deploy.pending"
 LOCK_FILE="$PROJECT_DIR/.deploy.lock"
+# How many later passes will retry a build that failed. A transient failure needs a couple of hours
+# of cron sweeps: on 2026-08-31 GitHub refused the anonymous fetch and all four remote build
+# contexts died at once, and the same build worked untouched two hours later. Past that it is not
+# transient, and burning five minutes of ARM CPU every half hour on a build that is not going to
+# work is worse than leaving the alert standing, which deploy_repo_last_status=2 already does.
+BUILD_RETRIES=${DEPLOY_BUILD_RETRIES:-5}
 # A normal run takes a minute and an ARM Go build five, so past this it is stuck, not slow.
 STUCK_AFTER=${DEPLOY_STUCK_AFTER:-2700}
 
@@ -76,6 +82,28 @@ rerun_if_pending() {
     fi
 }
 trap rerun_if_pending EXIT
+
+# stream_logged runs a command, prefixes each line of its output with the label as it arrives, and
+# reports the command's own status.
+#
+# Not `cmd 2>&1 | while read; do log; done` guarded by `if !`, which is what this replaced. Without
+# pipefail a pipeline reports its *last* command's status, so the while loop's zero hid every
+# failure the command itself had: on 2026-08-31 a compose build that could not fetch its git source
+# was recorded as a success, the metric said "changed", no alert fired, and a five-day-old image
+# went on serving for two hours until somebody read the version in the page footer. "Docker Compose
+# failed." had never once appeared in the log.
+#
+# The pipelines further down that do not test their status are left as they are: those run sync
+# scripts that report their own problems. Anything whose success is checked goes through here.
+stream_logged() {
+    local label=$1
+    shift
+    local status
+    "$@" 2>&1 | while IFS= read -r line; do log "[$label] $line"; done
+    # Read before anything else runs: PIPESTATUS only holds the last pipeline.
+    status=${PIPESTATUS[0]}
+    return "$status"
+}
 
 push_metrics() {
     local status=$1
@@ -213,7 +241,7 @@ deploy_repo() {
     # branches diverge, which aborts the pull and stops the deploy applying anything. Merging and
     # not rebasing, because local commits may be someone else's work in flight.
     log "[$label] Pulling..."
-    if ! git pull --no-rebase origin main 2>&1 | while IFS= read -r line; do log "[$label] $line"; done; then
+    if ! stream_logged "$label" git pull --no-rebase origin main; then
         log "[$label] Git pull failed (repo may not be pushed yet), ensuring containers are running..."
         docker compose up -d --remove-orphans 2>/dev/null
         return 2
@@ -363,24 +391,47 @@ for svc in (doc.get("services") or {}).values():
         fi
     fi
 
-    if [ "$before" != "$after" ]; then
+    # A build that failed has to be remembered, because by the next pass the commit that caused it
+    # is already pulled: `before` equals `after`, the no-change branch runs, and nothing is ever
+    # built again. That is how a failed build left the old image serving across four passes with
+    # nothing but a line in this log, and the line was missing too.
+    local failed_file attempts retry=""
+    failed_file="$PROJECT_DIR/.deploy.build-failed.$label"
+    attempts=$(cat "$failed_file" 2>/dev/null || echo 0)
+    [[ "$attempts" =~ ^[0-9]+$ ]] || attempts=0
+    (( attempts > 0 && attempts <= BUILD_RETRIES )) && retry=1
+
+    if [ "$before" != "$after" ] || [[ -n "$retry" ]]; then
         # `--build` recreates every locally built container even when its image is identical, and a
         # recreate cuts what it was serving: Caddy's live connections, the stream Jellyfin is
-        # reading from acestream-proxy. So build only when the diff touches a build input.
+        # reading from acestream-proxy. So build only when the diff touches a build input. A retry
+        # is exempt: a build that fails recreates nothing at all, so there is nothing to cut until
+        # the day it works, which is the day it was supposed to.
         local changed rebuild_when
         changed=$(git diff --name-only "$before" "$after")
         rebuild_when=$(build_triggers)
-        if [[ -n "$changed" ]] && ! grep -qE "^(${rebuild_when})" <<<"$changed"; then
+        if [[ -z "$retry" ]] && [[ -n "$changed" ]] &&
+            ! grep -qE "^(${rebuild_when})" <<<"$changed"; then
             log "[$label] Nothing an image is built from changed, skipping rebuild..."
             docker compose up -d --remove-orphans 2>/dev/null
             return 2  # no-op, nothing to rebuild
         fi
 
-        log "[$label] Changes detected, rebuilding..."
-        if ! docker compose up -d --build --remove-orphans 2>&1 | while IFS= read -r line; do log "[$label] $line"; done; then
-            log "[$label] Docker Compose failed."
+        if [[ -n "$retry" ]]; then
+            log "[$label] The last build failed and no image was recreated; retrying it (attempt $((attempts + 1)) of $((BUILD_RETRIES + 1)))."
+        else
+            log "[$label] Changes detected, rebuilding..."
+        fi
+        if ! stream_logged "$label" docker compose up -d --build --remove-orphans; then
+            attempts=$((attempts + 1))
+            printf '%s\n' "$attempts" > "$failed_file"
+            log "[$label] Docker Compose failed ($attempts in a row)."
+            if (( attempts > BUILD_RETRIES )); then
+                log "[$label] Not retrying on its own any more: this one needs looking at. The alert stands until a build succeeds."
+            fi
             return 1
         fi
+        rm -f "$failed_file"
         return 0  # changed
     else
         log "[$label] No changes, ensuring containers are running..."

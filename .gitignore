@@ -16,7 +16,9 @@ docker-compose.override.yml
 !.env.example
 .env_copy
 .deploy_state
-.deploy.lock
+# Every deploy marker: the lock, the "a push landed while building" note, and the per-repo record
+# of a build that failed and is owed a retry.
+.deploy.*
 .crontab.merged
 .last_prune
 .bitwarden

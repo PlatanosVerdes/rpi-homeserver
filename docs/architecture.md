@@ -337,7 +337,7 @@ earn a sentence. `deploy/apply.sh` is sixth by complexity, not first.
 | `trackers/seed-cleanup.py` | 477 | 29 | 116 | files |
 | `services/tracker-control` | 1090 | 41 | 190 | config |
 | `ops/oci-hunt.py` | 284 | 16 | 61 | |
-| `deploy/apply.sh` | 266 | 6 | 64 | |
+| `deploy/apply.sh` | 291 | 7 | 75 | |
 | the other fifteen | <135 | <6 | <13 | |
 
 ### trackers/seed-cleanup.py — parked since 2026-08-24
@@ -397,6 +397,17 @@ flowchart LR
 Coalescing, not a queue: ten pushes during an ARM Go build cost exactly one extra pass, not ten.
 The marker exists because dropping the skipped run lost real deploys, a tag in one repo and its
 version bump in the other arriving inside the same window.
+
+The second thing that is not obvious: **a build that fails is owed a retry**. By the next pass the
+commit that caused it has already been pulled, so the diff is empty, the no-change branch runs, and
+nothing is ever built again. On 2026-08-31 that left a five-day-old image serving for two hours
+across four passes, and the log did not even say so: `cmd | while read; do log; done` reports the
+while loop's status and not the command's, so `if !` saw a zero and the metric said the deploy had
+applied changes. Every pipeline whose success is checked now goes through `stream_logged`, and a
+failed build leaves `.deploy.build-failed.<repo>` holding a count of consecutive failures. Later
+passes retry it five times, which is what a transient failure needs, and then stop and leave it to
+`deploy_repo_last_status=2` and the alert on it: five minutes of ARM CPU every half hour on a build
+that is not going to work is worse than an alert nobody has closed.
 
 ### tracker-control
 
