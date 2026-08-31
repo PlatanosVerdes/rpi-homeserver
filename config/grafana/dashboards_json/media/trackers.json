@@ -8,7 +8,7 @@
     "policy"
   ],
   "schemaVersion": 42,
-  "version": 10,
+  "version": 11,
   "editable": true,
   "graphTooltip": 1,
   "preload": false,
@@ -2205,6 +2205,295 @@
           "range": true,
           "legendFormat": "{{tracker}}",
           "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "title": "How much leaves the house each month",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 49
+      },
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "title": "Uploaded a month, at this week's rate",
+      "description": "Bytes leaving the qBittorrent container over the last seven days, scaled to thirty. cAdvisor counts the container's own interface, so this is wire bytes: torrent payload plus protocol overhead, plus the WebUI and *arr API traffic sharing that interface. The counter is per container instance, so `sum` is what survives a recreate. The window is a week and not a month because Prometheus here keeps 15 days.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "id": 11,
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 0,
+        "y": 50
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "decbytes",
+          "mappings": [],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "noValue": "no data",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(increase(container_network_transmit_bytes_total{name=\"qbittorrent\"}[7d])) / 7 * 30",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "legendFormat": ""
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Share of a 10 TB egress allowance",
+      "description": "The same monthly figure against 10 TB, the outbound transfer an Oracle Always Free tenancy includes per month. It answers whether the seed path would fit if it were tunnelled through that instance. It says nothing about the home line, whose upload is unchanged either way, because the bytes still leave the house first.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "id": 12,
+      "gridPos": {
+        "h": 5,
+        "w": 5,
+        "x": 6,
+        "y": 50
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "mappings": [],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 60
+              },
+              {
+                "color": "red",
+                "value": 85
+              }
+            ]
+          },
+          "noValue": "no data",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(increase(container_network_transmit_bytes_total{name=\"qbittorrent\"}[7d])) / 7 * 30 / (10 * 1000^4) * 100",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "legendFormat": ""
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Share of it the sites credit",
+      "description": "What the private trackers credited over the same week as a share of everything the client sent. The remainder is upload no configured account is claiming, which is public-tracker traffic. Credited bytes carry upload multipliers, so this can read high without more bytes on the wire. `max by (tracker)` collapses the two producers each tracker has.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "id": 13,
+      "gridPos": {
+        "h": 5,
+        "w": 5,
+        "x": 11,
+        "y": 50
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "mappings": [],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "noValue": "no data",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(max by (tracker) (max_over_time(tracker_uploaded_bytes[7d]) - min_over_time(tracker_uploaded_bytes[7d]))) / sum(increase(container_network_transmit_bytes_total{name=\"qbittorrent\"}[7d])) * 100",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "legendFormat": ""
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Uploaded per day",
+      "description": "A rolling 24-hour total of the same wire bytes, so a spike is a day that seeded hard rather than a scrape landing badly.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "id": 14,
+      "gridPos": {
+        "h": 5,
+        "w": 8,
+        "x": 16,
+        "y": 50
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "decbytes",
+          "mappings": [],
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "noValue": "no data",
+          "decimals": 1,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": true,
+            "gradientMode": "opacity",
+            "axisPlacement": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(increase(container_network_transmit_bytes_total{name=\"qbittorrent\"}[1d]))",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "legendFormat": "wire bytes"
         }
       ]
     }
