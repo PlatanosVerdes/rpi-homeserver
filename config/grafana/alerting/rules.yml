@@ -1,5 +1,12 @@
 apiVersion: 1
 
+# Taking a rule out of `groups` does not remove it: Grafana keeps provisioned rules it no longer
+# finds in the file, and it goes on evaluating them. `homelab-qbit-stalled-download` was deleted from
+# here on 2026-08-26 and still woke the phone on 2026-09-01. Deleting one means naming it here.
+deleteRules:
+  - orgId: 1
+    uid: homelab-qbit-stalled-download
+
 # Alert rules, provisioned from git (read-only in the UI on purpose: this file is the source
 # of truth). Every expression is written to return 1 when it fires, using PromQL's `bool`
 # modifier, so all rules share the same "threshold > 0" condition and stay easy to read.

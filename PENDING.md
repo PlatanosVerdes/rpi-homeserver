@@ -719,3 +719,17 @@ If seed-cleanup.py is ever revived and its dashboard wanted back, take it from g
 change its uid**. Re-provisioning a UID that existed before and was deleted silently does nothing on
 Grafana v13, which is written up further down this file: the file is read, the log says it finished,
 and no dashboard appears.
+
+## Removing a provisioned alert rule needs `deleteRules`, and the dashboard trap is its twin
+
+Found on 2026-09-01, when a rule deleted from git on 2026-08-26 fired at 01:36. Grafana's own
+documentation is explicit: taking a rule out of the `groups` section leaves it in place, and it goes
+on evaluating. Grafana's database had 39 rules against the file's 38, and the extra one was the
+deleted one, not paused.
+
+So a deletion is two edits: take the rule out of `groups`, and name its uid under `deleteRules`. The
+block stays in the file afterwards; re-applying it costs nothing.
+
+Its twin is already written up above: re-provisioning a *dashboard* whose UID existed and was deleted
+silently does nothing. Same shape, opposite direction. Anything provisioned from a file here should
+be assumed to need an explicit instruction to disappear.
