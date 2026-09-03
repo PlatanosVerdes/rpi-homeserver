@@ -1330,3 +1330,104 @@ groups:
               datasource: { type: __expr__, uid: __expr__ }
               conditions:
                 - evaluator: { type: gt, params: [0] }
+
+      - uid: homelab-wallapop-session-dead
+        title: 'Wallapop session no longer valid'
+        condition: C
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          summary: The Wallapop session cannot mint a token any more
+          description: >-
+            Listings stay expired until a new session cookie is imported:
+            docker exec wallapop-reactivator wallapop session import --cookie VALUE, taking
+            __Secure-next-auth.session-token from the browser.
+        noDataState: OK
+        execErrState: KeepLast
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: 'wallapop_last_run_status == bool 2'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+
+      - uid: homelab-wallapop-session-expiring
+        title: 'Wallapop session expiring'
+        condition: C
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: The Wallapop session has less than three days left
+          description: >-
+            The cookie renews itself on every pass, so this means the passes stopped renewing it
+            or the 30 day ceiling is close. Reimport it before it runs out. Exact days left are in
+            wallapop_session_days_remaining.
+        noDataState: OK
+        execErrState: KeepLast
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: '(wallapop_session_days_remaining < bool 3) * (wallapop_session_days_remaining > bool 0)'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+
+      - uid: homelab-wallapop-still-failing
+        title: 'Wallapop pass still failing'
+        condition: C
+        # A single failed pass fixes itself on the next one, so this waits out more than a full
+        # day before saying anything. Past that, it is not fixing itself: usually the API changed.
+        for: 26h
+        labels:
+          severity: warning
+        annotations:
+          summary: Two Wallapop passes in a row have failed
+          description: >-
+            The listings are not being reactivated. Check the container logs for the failing call:
+            the endpoints are overridable through WALLA_PATH_ITEMS and WALLA_PATH_REACTIVATE, so a
+            path that changed on their side is a redeploy.
+        noDataState: OK
+        execErrState: KeepLast
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: 'wallapop_last_run_status == bool 1'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
