@@ -1431,3 +1431,38 @@ groups:
               datasource: { type: __expr__, uid: __expr__ }
               conditions:
                 - evaluator: { type: gt, params: [0] }
+
+      - uid: homelab-wallapop-no-recent-pass
+        title: 'Wallapop pass not running'
+        condition: C
+        # healthz only reports that the process is alive, on purpose. A wedged loop answers it
+        # perfectly, so this is what notices: passes run daily and retry every 15 minutes when
+        # they fail, so two days of silence is not a slow day.
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: No Wallapop pass in over two days
+          description: >-
+            The container answers but is not doing the round. Check its logs and whether the
+            interval ticker is still running.
+        noDataState: OK
+        execErrState: KeepLast
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: '(time() - wallapop_last_run_timestamp) > bool 172800'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
