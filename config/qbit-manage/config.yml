@@ -57,6 +57,7 @@ cat:
   radarr: /data/downloads
   tv-sonarr: /data/downloads
   prowlarr: /data/downloads
+  manual: /data/downloads    # what torrent-drop adds, see the `manual` share_limits group below
 
 tracker:
   torrentleech:
@@ -134,8 +135,29 @@ share_limits:
     cleanup: true
     resume_torrent_after_change: false
 
-  torrentleech:
+  # A download added by hand through torrent-drop, and the one case where the file matters more
+  # than the disk: no *arr requested it, so nothing else knows it exists and nothing would ever
+  # fetch it again. `cleanup: false` is the whole point of the group: the seeding term is served,
+  # qBittorrent stops the torrent when the limit is met (the global action is Pause, not Remove)
+  # and the file stays where it is. Reclaiming those bytes is a decision, not a timer.
+  #
+  # Above the tracker groups so their `cleanup: true` never claims it, and above `public`, which
+  # would otherwise delete a manual public download 2 h after it finished. 15d is the longest term
+  # any of the four sites asks, the same single number the cross-seed group uses.
+  manual:
     priority: 3
+    include_all_tags:
+      - manual
+    exclude_any_tags:
+      - keep
+      - keep-bonus
+    max_seeding_time: 15d
+    max_ratio: -1
+    cleanup: false
+    resume_torrent_after_change: false
+
+  torrentleech:
+    priority: 4
     include_all_tags:
       - torrentleech
     include_any_tags:
@@ -154,7 +176,7 @@ share_limits:
   # Its own group above `private` because retrotoon states no ratio rule at all: reaching 1:1 there
   # clears nothing, so a generic ratio limit would delete a torrent still owing time.
   retrotoon:
-    priority: 4
+    priority: 5
     include_all_tags:
       - retrotoon
     include_any_tags:
@@ -172,7 +194,7 @@ share_limits:
 
   # 96 h owed, not 72: their clock starts 24 h after the download and the client's at completion.
   c411:
-    priority: 5
+    priority: 6
     include_all_tags:
       - c411
     include_any_tags:
@@ -191,7 +213,7 @@ share_limits:
   # 120 h owed, 180 here. Their site is the only source of truth for seed time and it runs behind
   # the client's by 9 to 23 h, so this is nearly triple the worst gap seen.
   digitalcore:
-    priority: 6
+    priority: 7
     include_all_tags:
       - digitalcore
     include_any_tags:
@@ -209,7 +231,7 @@ share_limits:
 
   # The floor, so a new site is covered from its first torrent until it earns its own numbers.
   private:
-    priority: 7
+    priority: 8
     include_all_tags:
       - private
     include_any_tags:
@@ -231,7 +253,7 @@ share_limits:
   # No noHL, no ratio and no min_last_active, deliberately: a public torrent is dropped even while
   # the library shares its file, because the point is leaving public swarms, not saving disk.
   public:
-    priority: 8
+    priority: 9
     exclude_any_tags:
       - private
       - keep

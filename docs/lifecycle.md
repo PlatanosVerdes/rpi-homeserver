@@ -91,6 +91,8 @@ free to go.
 | `issue` | qbit-manage | The tracker no longer recognises the torrent. Tagged rather than removed, because a reset passkey looks exactly like this |
 | `keep`, `keep-bonus` | a person, and tracker-control | Out of the clock: every group excludes them |
 | `cross-seed`, `radarr.cross-seed` | cross-seed | A second tracker on bytes another one brought. They sit in the `cross-seed-link` category |
+| `manual` | torrent-drop | Added by hand, not by an *arr. It selects the one group that never deletes, so the file outlives the torrent |
+| `xseed` | torrent-drop | cross-seed has already been asked about this torrent. The marker lives in qBittorrent so a restart does not re-ask about everything on the disk |
 
 Two exceptions delete on a single condition, and both are somebody else's judgement rather than a
 policy here. `rem_unregistered` removes only what the site itself has disowned. The `stalled` group
@@ -116,6 +118,7 @@ torrents, and 9 to 23 hours across five DigitalCore ones. The margin is that gap
 | a cross-seed | — | 15 d, no ratio limit | — | Priority 2, above every tracker group. It downloaded nothing, so a ratio limit would fire on its first served byte. 15 d is the longest of the four, so one number covers it wherever it lands |
 | anything stalled | — | removed 12 h after the last byte moved | — | Priority 1, so it is seen before its tracker's group, which would wait forever on seeding time a download at 0% can never have. Filtered on `stalledDL`, so a download that finds a seeder again leaves the group |
 | public | — | 2 h, no ratio limit | — | Selected as "not tagged private". Time is the closest thing to "as soon as it is imported" this tool offers, and an import takes minutes |
+| a download added by hand | nothing, it is not a site rule | 15 d, no ratio limit, and **the file is never deleted** | n/a | Priority 3, above every tracker group and above `public`, which would otherwise take a manual public download 2 h after it finished. `cleanup: false` is the whole point: the term is served, qBittorrent stops the torrent, the file stays. No *arr asked for it, so nothing would ever fetch it again |
 
 A ratio limit of `-1` means no ratio limit, and two cases need it. Where the site has no ratio rule,
 setting one would delete a torrent that still owes seeding time, which is the hit and run the site
@@ -141,6 +144,12 @@ tool that owns deleting, not data nothing owns.
 qBittorrent takes it out of the clock entirely, with no deploy and no config change. `keep` is for a
 person; `keep-bonus` is written by tracker-control to hold the data DigitalCore pays a bonus
 for.
+
+**Stopping and deleting are not the same decision.** Every group here deletes into the recycle bin
+when its clock runs out, with one exception: the `manual` group carries `cleanup: false`, so a
+download added by hand serves its seeding term, is stopped by qBittorrent when the limit is met,
+and keeps its file until a person says otherwise. Nothing else on the disk works that way, because
+everything else was requested by an *arr that can fetch it again.
 
 ---
 
