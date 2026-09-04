@@ -110,6 +110,7 @@ during an ARM Go build cost exactly one extra pass.
 | `scripts/sync/qbit-config.sh` | every deploy | qBittorrent | `config/qbittorrent/preferences.json` + `QBIT_BT_PORT` |
 | `scripts/sync/plex-prefs.sh` | every deploy | Plex | `PLEX_LAN_NETWORKS`, 95% threshold |
 | `scripts/sync/arr-links.sh` | every deploy | Seerr, Bazarr | `config/seerr-links.json` |
+| `scripts/sync/bazarr-prune-subs.py` | 05:40 daily | Bazarr's database | the subtitle tracks the media files actually have |
 | `scripts/sync/pihole-dns.sh` | every deploy | Pi-hole | the Caddy config, additive only |
 | `scripts/setup/install-crontab.sh` | every deploy | host crontab | both repos' `scripts/crontab` |
 | `scripts/setup/install-logrotate.sh` | every deploy | `/etc/logrotate.d` | `config/logrotate/rpi-homeserver` |
@@ -435,6 +436,7 @@ the action are the same pass, so there is nothing old to act on.
 | `recovery/recovery-status.sh` | After a rebuild, the three steps no API can do: Plex claim, Jellyfin wizard, Apple 2FA |
 | `sync/arr-config.sh` | Custom formats then quality profiles, in that order: profiles score formats by name and the id only exists once the format does |
 | `sync/arr-links.sh` | Seerr and Bazarr's connection to the arrs. Bazarr publishes no port, so its call is proxied through the network |
+| `sync/bazarr-prune-subs.py` | Bazarr keeps the embedded tracks of a file Radarr already replaced, so it stops searching for a language the new release does not have. Deletes only rows the file disproves |
 | `sync/pihole-dns.sh` | Caddy's hosts as local DNS. Additive only: an entry not derived from Caddy is never touched |
 | `sync/plex-prefs.sh` | LAN networks, so tailnet clients are not billed as remote, and the played threshold at 95% |
 | `sync/qbit-config.sh` | Queue limits and BT port. Reads back after writing, because qBittorrent accepts an unknown key and drops it |

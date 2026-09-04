@@ -72,6 +72,7 @@ scripts/                    Operational scripts, grouped by what they do
   sync/                     Config that lives only in an app's appdata, pushed from git each deploy
     arr-config.sh           Custom formats and quality profiles -> Radarr/Sonarr
     arr-links.sh            Wires Overseerr and Bazarr to Radarr/Sonarr
+    bazarr-prune-subs.py    Drops Bazarr's subtitle rows left behind by a replaced file
     pihole-dns.sh           Caddy's *.platanosverdes.com hosts -> Pi-hole custom DNS
     plex-prefs.sh           Plex LAN networks and the 95% played threshold
     qbit-config.sh          qBittorrent queue limits, upload cap and BT port
