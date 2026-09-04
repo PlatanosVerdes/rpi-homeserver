@@ -19,6 +19,12 @@
 
 0 4 * * * /home/raspi/rpi-homeserver/scripts/ops/backup.sh >> /home/raspi/rpi-homeserver/backup.log 2>&1
 
+# Bazarr keeps the subtitle tracks of a file Radarr has already replaced, and a language it wrongly
+# believes is embedded is never searched for. Its own 04:00 index only inserts, so this runs after
+# it and takes the rows away. 05:40 and not inside apply.sh because a full pass is ~55s of ffprobe
+# over every media file, and Plex holds 02:00-05:00 on the same platters (docs/lifecycle.md).
+40 5 * * * /home/raspi/rpi-homeserver/scripts/sync/bazarr-prune-subs.py >> /home/raspi/rpi-homeserver/bazarr-prune-subs.log 2>&1
+
 # Dead man's switch, so someone outside notices within minutes if the Pi goes dark. No-op unless
 # HEALTHCHECK_URL is set. See docs/alerting.md.
 * * * * * /home/raspi/rpi-homeserver/scripts/ops/heartbeat.sh
