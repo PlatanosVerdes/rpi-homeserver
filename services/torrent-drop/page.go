@@ -18,11 +18,18 @@ func icon(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(iconSVG))
 }
 
+// A torrent on its way up to the cloud. Filled rather than stroked, because Homepage draws it at
+// 34 px and outlines close up at that size. Both circles end at y=36, the same line the bar ends
+// on, or the silhouette shows a notch.
 const iconSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <rect width="64" height="64" rx="14" fill="#08201a"/>
-  <path d="M32 12 V34" stroke="#34d399" stroke-width="4" fill="none" stroke-linecap="round"/>
-  <path d="M22 26 L32 36 L42 26" stroke="#34d399" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M14 42 V48 H50 V42" stroke="#34d399" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <g fill="#34d399">
+    <circle cx="25" cy="25" r="11"/>
+    <circle cx="41" cy="27" r="9"/>
+    <rect x="14" y="27" width="36" height="9" rx="4.5"/>
+  </g>
+  <path d="M32 55 V42" stroke="#34d399" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+  <path d="M25.5 48.5 L32 42 L38.5 48.5" stroke="#34d399" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
 </svg>`
 
 const pageHTML = `<!doctype html>
