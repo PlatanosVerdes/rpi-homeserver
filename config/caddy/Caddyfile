@@ -144,6 +144,11 @@ https://subs.platanosverdes.com {
     import cf_tls
     reverse_proxy subtitle-links:8085
 }
+https://drop.platanosverdes.com {
+    log
+    import cf_tls
+    reverse_proxy torrent-drop:8087
+}
 # --- HTTP (LAN short names) ---
 http://raspi http://homepage {
     log
@@ -204,6 +209,10 @@ http://flare {
 http://torrent {
     log
     reverse_proxy qbittorrent:8080
+}
+http://drop {
+    log
+    reverse_proxy torrent-drop:8087
 }
 http://autobrr {
     log

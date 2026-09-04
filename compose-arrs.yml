@@ -252,6 +252,27 @@ services:
     networks:
       - media-network
 
+  # --- torrent-drop: one page to hand qBittorrent a .torrent or a magnet by hand ---
+  # It also asks cross-seed about every torrent as it completes, which is what turns that daemon's
+  # once-a-day sweep into something immediate.
+  torrent-drop:
+    build: ./services/torrent-drop
+    container_name: torrent-drop
+    labels:
+      prometheus.probe: "http://torrent-drop:8087/"
+    restart: unless-stopped
+    mem_limit: 64m
+    memswap_limit: 64m
+    profiles: [media, all]
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      - TZ=${TZ}
+      - QBIT_USER=${QBIT_USER}
+      - QBIT_PASSWORD=${QBIT_PASSWORD}
+    networks:
+      - media-network
+
   unpackerr:
     image: ghcr.io/unpackerr/unpackerr:${UNPACKERR_VERSION}
     container_name: unpackerr

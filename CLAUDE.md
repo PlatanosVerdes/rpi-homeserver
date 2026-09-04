@@ -23,7 +23,8 @@ docker-compose.yml          Entry point — uses `include` to load all modules
 versions.env                Single source of truth for all image versions (committed)
 compose-core.yml            Caddy, Homepage, Pi-hole, Speedtest-tracker
 compose-media.yml           Plex, Jellyfin, Overseerr, Acestream, Tautulli, watch-next
-compose-arrs.yml            Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr, Unpackerr
+compose-arrs.yml            Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr, Unpackerr,
+                            cross-seed, autobrr, qbit-manage, torrent-drop
 compose-mon.yml             Prometheus, Grafana, Pushgateway, node-exporter, cAdvisor,
                             VictoriaLogs + Vector (container logs, see docs/logging.md)
 
@@ -49,6 +50,8 @@ services/                   Source code for custom services built in this repo
   subtitle-links/           Go service: page listing movies/episodes with a downloadable text subtitle
   pi-metrics/               Go exporter: the numbers no exporter provides (upgrades, torrents,
                             indexer usage, where the disk went, what zram costs). Was three crons
+  torrent-drop/             Go service: page to add a torrent by hand, and the immediate
+                            cross-seed search on every torrent that completes
   tracker-control/          Go service: reads each tracker account and moves the freeleech filter,
                             requiredFlags and the grab rate from its headroom. Was two crons
 
@@ -186,7 +189,7 @@ Controlled via `COMPOSE_PROFILES` in `.env`. No need to touch compose files.
 | `essential` | Caddy, Homepage, Pi-hole, Speedtest-tracker |
 | `moni` | Prometheus, Grafana, Pushgateway, node-exporter, cAdvisor, Pihole-exporter, Speedtest-tracker |
 | `acestream` | Aceserve, Acestream-updater, Jellyfin + Grafana/Prometheus/Pushgateway |
-| `media` | Plex, Overseerr, Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr, Unpackerr, Bazarr, Maintainerr, Tautulli, watch-next |
+| `media` | Plex, Overseerr, Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr, Unpackerr, Bazarr, Maintainerr, Tautulli, watch-next, torrent-drop |
 | `bot` | Pol Academy Offers Bot |
 | `cal` | Google Calendar Bridge (cal-bridge) |
 | `tunnel` | Cloudflared (publishes only the GitHub deploy webhook — see docs/deploy-webhook.md) |

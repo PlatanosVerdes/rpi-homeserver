@@ -77,6 +77,12 @@
         description: Acestream channels in your player
         server: my-docker
         container: farnsworth
+    - Torrent drop:
+        icon: https://drop.platanosverdes.com/icon.svg
+        href: https://drop.platanosverdes.com
+        description: Drop a .torrent, cross-seed follows on its own
+        server: my-docker
+        container: torrent-drop
 
 - Monitoring:
     - Grafana:

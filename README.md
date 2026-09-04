@@ -12,7 +12,7 @@ A modular, Docker-based home server for Raspberry Pi. Uses Docker Compose's `inc
 | :--- | :--- | :--- |
 | **Core** | Entry point & Networking | Caddy, Homepage, Pi-hole, Speedtest-tracker |
 | **Media** | Streaming & Live TV | Plex, Jellyfin, Seerr, Bazarr, Maintainerr, Acestream |
-| **Arrs** | Automation & Downloads | Radarr, Sonarr, Prowlarr, qBittorrent, FlareSolverr, Unpackerr |
+| **Arrs** | Automation & Downloads | Radarr, Sonarr, Prowlarr, qBittorrent, FlareSolverr, Unpackerr, cross-seed, torrent-drop |
 | **Monitoring** | System Health | Prometheus, Grafana, Pushgateway, node-exporter, cAdvisor |
 
 ---
@@ -441,7 +441,7 @@ Every service belongs to one or more profiles. Set `COMPOSE_PROFILES` in `.env` 
 | `essential` | Caddy, Homepage, Pi-hole, Speedtest-tracker |
 | `moni` | Prometheus, Grafana, Pushgateway, node-exporter, cAdvisor, Pihole-exporter, Speedtest-tracker |
 | `acestream` | Aceserve, Acestream-updater, Jellyfin + Grafana/Prometheus/Pushgateway |
-| `media` | Plex, Seerr, Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr, Unpackerr |
+| `media` | Plex, Seerr, Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr, Unpackerr, torrent-drop |
 | `bot` | Pol Academy Offers Bot |
 | `all` | Everything |
 
@@ -572,6 +572,30 @@ docker logs -f acestream-updater
 Tautulli (Plex) or Jellyfin reports one watched, so a season fills in progressively instead of all
 at once. See [docs/watch-next.md](docs/watch-next.md) for the full setup (Tautulli/Jellyfin
 webhook configuration).
+
+### Torrent drop (adding a torrent by hand)
+`services/torrent-drop/` (Go, Dockerized) serves one page at `drop.platanosverdes.com`: drop a
+`.torrent`, paste a magnet, an https link or a bare infohash, and it goes into qBittorrent with the
+`manual` category and tag. qBittorrent's own WebUI accepts a dropped file too; what this adds is not
+having to log into it, and the two things below.
+
+**Every torrent gets a cross-seed search the moment it completes.** The daemon's own `searchCadence`
+is one day, so this is the difference between free ratio now and free ratio tomorrow: a 30-second
+poll asks cross-seed's `/api/webhook` about anything that has just finished and writes an `xseed`
+tag so it is asked once. The ask carries `ignoreExcludeOlder` and `ignoreExcludeRecentSearch`,
+without which a release over 180 days old is skipped in silence. On its first pass it marks what is
+already complete *without* searching: at startup that is every torrent on the disk, and searching
+them all at once is hundreds of queries at four private trackers for releases the daily sweep has
+covered for months. Anything that finishes later is asked about within 30 seconds.
+
+**A manual download is never deleted.** It is the one case where the file matters more than the
+disk, since no *arr requested it and nothing would fetch it again. Its own `share_limits` group
+carries `cleanup: false`, so the tracker's term is served, qBittorrent stops the torrent, and the
+file stays. Full reasoning in [docs/lifecycle.md](docs/lifecycle.md). The page's "seguir sembrando"
+checkbox adds the `keep` tag, which takes the torrent out of every clock and keeps it seeding.
+
+The queue is worth knowing about: `max_active_downloads` is 1, so a torrent added while Radarr is
+downloading sits in `queuedDL` until that one finishes. The page says so rather than looking stuck.
 
 ### Tailscale Metrics
 `services/tailscale-metrics/` is a Dockerized Go exporter with no published port. Prometheus
