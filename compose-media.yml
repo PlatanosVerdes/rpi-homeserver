@@ -106,6 +106,33 @@ services:
     networks:
       - media-network
 
+  # --- IPFS node, the only unthrottled route to the Acestream playlist ---
+  kubo:
+    image: ipfs/kubo:${KUBO_VERSION}
+    container_name: kubo
+    labels:
+      prometheus.probe: "http://kubo:8080/version"
+    restart: unless-stopped
+    mem_limit: 512m
+    memswap_limit: 512m
+    profiles: [acestream, all]
+    # No published ports: the gateway is for acestream-updater, over the docker network.
+    environment:
+      - TZ=${TZ}
+      - IPFS_PROFILE=lowpower
+      - IPFS_PATH=/data/ipfs
+    command: ["daemon", "--migrate=true", "--routing=autoclient"]
+    volumes:
+      - ${APP_CONFIG_PATH}/kubo:/data/ipfs
+    networks:
+      - media-network
+    healthcheck:
+      test: ["CMD", "ipfs", "id"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
   # --- Acestream playlist updater + channel health checker ---
   acestream-updater:
     build: ./services/acestream-updater
@@ -119,13 +146,15 @@ services:
       - 1.0.0.1
     networks:
       - media-network
+    depends_on:
+      - kubo
     volumes:
       - ${APP_CONFIG_PATH}/jellyfin/acestream:/data
       - ${APP_CONFIG_PATH}/acestream-updater:/app
     environment:
       - TZ=${TZ}
       - OUTPUT_FILE=/data/channels_ace.m3u
-      - SOURCE_URLS=https://k51qzi5uqu5di462t7j4vu4akwfhvtjhy88qbupktvoacqfqe9uforjvhyi4wr.ipns.dweb.link/hashes_acestream.m3u,https://ipfs.io/ipns/k51qzi5uqu5di462t7j4vu4akwfhvtjhy88qbupktvoacqfqe9uforjvhyi4wr/hashes_acestream.m3u,https://dweb.link/ipns/k51qzi5uqu5di462t7j4vu4akwfhvtjhy88qbupktvoacqfqe9uforjvhyi4wr/hashes_acestream.m3u
+      - SOURCE_URLS=http://kubo:8080/ipns/k51qzi5uqu5di462t7j4vu4akwfhvtjhy88qbupktvoacqfqe9uforjvhyi4wr/hashes_acestream.m3u,https://ipfs.io/ipns/k51qzi5uqu5di462t7j4vu4akwfhvtjhy88qbupktvoacqfqe9uforjvhyi4wr/hashes_acestream.m3u,https://dweb.link/ipns/k51qzi5uqu5di462t7j4vu4akwfhvtjhy88qbupktvoacqfqe9uforjvhyi4wr/hashes_acestream.m3u
       - ACESERVE_URL=http://172.19.0.1:6878/ace/getstream?id=
       - STREAM_BASE_URL=http://acestream-proxy:6879/ace/getstream?id=
       - PUSHGATEWAY_URL=http://pushgateway:9091
