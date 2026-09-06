@@ -247,7 +247,9 @@ groups:
       - uid: homelab-acestream-sources-all-failing
         title: 'Acestream, every source URL failing'
         condition: C
-        for: 15m
+        # The gateways rate-limit us back to 429 for the first quarter of every hour, which is a
+        # gap Jellyfin never notices. Only a block that outlives that is worth waking someone.
+        for: 30m
         labels:
           severity: critical
         annotations:
