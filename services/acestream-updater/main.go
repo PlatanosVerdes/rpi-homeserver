@@ -279,6 +279,8 @@ func run(cfg config) {
 	sourceHTTPCodes := make(map[string]int)
 	downloadErrors := 0
 
+	// The sources are three routes to one IPNS key, and a gateway with a stale record resolves
+	// it to an older CID, so merging them puts already dropped channels back. First answer wins.
 	for _, sourceURL := range cfg.sourceURLs {
 		log.Printf("Downloading: %s", sourceURL)
 		data, code, err := downloadSource(sourceURL)
@@ -295,9 +297,10 @@ func run(cfg config) {
 		// would be glued to the #EXTM3U of the next, escaping the dedup as a broken entry.
 		combined.WriteByte('\n')
 		log.Printf("  ok (%d)", code)
+		break
 	}
 
-	if downloadErrors == len(cfg.sourceURLs) {
+	if combined.Len() == 0 {
 		log.Printf("error: all sources failed")
 		saveState(s)
 		pushMetrics(cfg.pushgatewayURL, s, nil, 0, sourceHTTPCodes)
