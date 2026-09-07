@@ -835,7 +835,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "count(onepace_arc_episodes_on_disk{job=\"one-pace-downloader\",lang=\"es\"})",
+          "expr": "count(onepace_arc_episodes_on_disk{job=\"one-pace-downloader\",subtitles=\"es\"})",
           "refId": "A",
           "instant": true,
           "range": false
@@ -903,7 +903,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "count(onepace_arc_episodes_on_disk{job=\"one-pace-downloader\",lang=\"en\"})",
+          "expr": "count(onepace_arc_episodes_on_disk{job=\"one-pace-downloader\",subtitles=\"en\"})",
           "refId": "A",
           "instant": true,
           "range": false
@@ -1036,49 +1036,6 @@
                         "text": "\u2013",
                         "color": "text",
                         "index": 1
-                      }
-                    }
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Downloaded in"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 120
-              },
-              {
-                "id": "custom.cellOptions",
-                "value": {
-                  "type": "color-background"
-                }
-              },
-              {
-                "id": "mappings",
-                "value": [
-                  {
-                    "type": "value",
-                    "options": {
-                      "es": {
-                        "text": "Spanish",
-                        "color": "green",
-                        "index": 0
-                      },
-                      "en": {
-                        "text": "English",
-                        "color": "yellow",
-                        "index": 1
-                      },
-                      "none": {
-                        "text": "Not downloaded",
-                        "color": "text",
-                        "index": 2
                       }
                     }
                   }
@@ -1263,17 +1220,17 @@
               "instance": true,
               "job": true,
               "type": true,
-              "variant": true
+              "variant": true,
+              "lang": true
             },
             "indexByName": {
               "season": 0,
               "title": 1,
               "available_es": 2,
               "available_en": 3,
-              "lang": 4,
-              "audio": 5,
-              "subtitles": 6,
-              "Value": 7
+              "audio": 4,
+              "subtitles": 5,
+              "Value": 6
             },
             "renameByName": {
               "Value": "On disk",
@@ -1281,7 +1238,6 @@
               "season": "Season",
               "available_es": "Avail. ES",
               "available_en": "Avail. EN",
-              "lang": "Downloaded in",
               "audio": "Audio",
               "subtitles": "Subtitles"
             }
