@@ -506,6 +506,10 @@ if [[ ! -f "$PRUNE_MARKER" ]] || find "$PRUNE_MARKER" -mmin +1380 -print 2>/dev/
     # No sudo: the deploy user is in the docker group, and one less sudo is one less thing
     # that breaks depending on who invoked the script
     docker image prune -f > /dev/null
+    # `image prune` does not touch the build cache, and every push rebuilds ten local
+    # services into it. A week is kept so the next deploy still hits warm layers.
+    log "Cleaning up build cache older than a week (daily)..."
+    docker builder prune -f --filter until=168h > /dev/null
     touch "$PRUNE_MARKER"
 fi
 
