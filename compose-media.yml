@@ -90,6 +90,9 @@ services:
   kubo:
     image: ipfs/kubo:v0.43.0
     container_name: kubo
+    # Everything, healthcheck included, as the image's ipfs user, so nothing creates a
+    # root-owned repo.lock that the daemon then cannot take.
+    user: "1000:100"
     restart: unless-stopped
     mem_limit: 512m
     memswap_limit: 512m
