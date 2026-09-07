@@ -946,6 +946,10 @@
             },
             "properties": [
               {
+                "id": "custom.width",
+                "value": 500
+              },
+              {
                 "id": "custom.align",
                 "value": "left"
               }
