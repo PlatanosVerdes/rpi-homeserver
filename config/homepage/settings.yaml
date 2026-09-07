@@ -1,0 +1,36 @@
+# https://gethomepage.dev/configs/settings/
+
+title: "RaspiHome"
+favicon: https://img.icons8.com/?size=100&id=12229&format=png&color=000000
+base: http://100.120.107.32:3001
+
+#background:
+#  image: https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=2070&auto=format&fit=crop
+#  opacity: 0.5
+quicklaunch:
+  searchDescriptions: true    
+  hideInternetSearch: false   
+  showSearchSuggestions: true
+  hideVisitURL: false         
+  provider: google            
+
+statusStyle: dot              
+showStats: true               
+hideVersion: true            
+disableUpdateCheck: false
+
+layout:
+  Media:
+    style: grid
+    columns: 3
+  Downloads:
+    style: grid
+    columns: 3
+  Management:
+    style: grid
+    columns: 3
+
+appearance:
+  fontFamily: "Inter"
+  fontWeight: 500
+  useEqualHeightCards: true # From the new docs you provided

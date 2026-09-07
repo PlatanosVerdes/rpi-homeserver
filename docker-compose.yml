@@ -1,0 +1,11 @@
+include:
+  - compose-core.yml
+  - compose-media.yml
+  # - compose-arrs.yml
+  - compose-mon.yml
+  # - compose-apps.yml
+  
+networks:
+  media-network:
+    name: media-network
+    driver: bridge
