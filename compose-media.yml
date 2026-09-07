@@ -110,6 +110,9 @@ services:
   kubo:
     image: ipfs/kubo:${KUBO_VERSION}
     container_name: kubo
+    # Everything, healthcheck included, as the image's ipfs user, so nothing creates a
+    # root-owned repo.lock that the daemon then cannot take.
+    user: "1000:100"
     labels:
       prometheus.probe: "http://kubo:8080/version"
     restart: unless-stopped
