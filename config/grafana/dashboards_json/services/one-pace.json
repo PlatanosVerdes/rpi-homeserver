@@ -1169,12 +1169,12 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Canon"
+              "options": "Type"
             },
             "properties": [
               {
                 "id": "custom.width",
-                "value": 80
+                "value": 90
               },
               {
                 "id": "custom.cellOptions",
@@ -1189,12 +1189,12 @@
                     "type": "value",
                     "options": {
                       "true": {
-                        "text": "\u2713",
-                        "color": "green",
+                        "text": "Arc",
+                        "color": "text",
                         "index": 0
                       },
                       "false": {
-                        "text": "no",
+                        "text": "Extra",
                         "color": "text",
                         "index": 1
                       },
@@ -1284,7 +1284,7 @@
               "available_en": "Avail. EN",
               "audio": "Audio",
               "subtitles": "Subtitles",
-              "canon": "Canon"
+              "canon": "Type"
             }
           }
         },
