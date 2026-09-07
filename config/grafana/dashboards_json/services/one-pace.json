@@ -948,10 +948,6 @@
               {
                 "id": "custom.align",
                 "value": "left"
-              },
-              {
-                "id": "custom.width",
-                "value": 220
               }
             ]
           },
@@ -1097,6 +1093,117 @@
                 "value": 90
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Audio"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "original": {
+                        "text": "Original",
+                        "color": "green",
+                        "index": 0
+                      },
+                      "es": {
+                        "text": "Spanish dub",
+                        "color": "red",
+                        "index": 1
+                      },
+                      "en": {
+                        "text": "English dub",
+                        "color": "red",
+                        "index": 2
+                      },
+                      "mixed": {
+                        "text": "Mixed",
+                        "color": "orange",
+                        "index": 3
+                      },
+                      "unknown": {
+                        "text": "Unknown",
+                        "color": "orange",
+                        "index": 4
+                      },
+                      "none": {
+                        "text": "\u2013",
+                        "color": "text",
+                        "index": 5
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Subtitles"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "es": {
+                        "text": "Spanish",
+                        "color": "green",
+                        "index": 0
+                      },
+                      "en": {
+                        "text": "English",
+                        "color": "yellow",
+                        "index": 1
+                      },
+                      "mixed": {
+                        "text": "Mixed",
+                        "color": "orange",
+                        "index": 2
+                      },
+                      "unknown": {
+                        "text": "Unknown",
+                        "color": "orange",
+                        "index": 3
+                      },
+                      "none": {
+                        "text": "\u2013",
+                        "color": "text",
+                        "index": 4
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
           }
         ]
       },
@@ -1151,7 +1258,8 @@
               "arc_id": true,
               "instance": true,
               "job": true,
-              "type": true
+              "type": true,
+              "variant": true
             },
             "indexByName": {
               "season": 0,
@@ -1159,7 +1267,9 @@
               "available_es": 2,
               "available_en": 3,
               "lang": 4,
-              "Value": 5
+              "audio": 5,
+              "subtitles": 6,
+              "Value": 7
             },
             "renameByName": {
               "Value": "On disk",
@@ -1167,7 +1277,9 @@
               "season": "Season",
               "available_es": "Avail. ES",
               "available_en": "Avail. EN",
-              "lang": "Downloaded in"
+              "lang": "Downloaded in",
+              "audio": "Audio",
+              "subtitles": "Subtitles"
             }
           }
         },
