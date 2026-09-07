@@ -86,6 +86,30 @@ services:
     networks:
       - media-network
 
+  # --- IPFS node, the only unthrottled route to the Acestream playlist ---
+  kubo:
+    image: ipfs/kubo:v0.43.0
+    container_name: kubo
+    restart: unless-stopped
+    mem_limit: 512m
+    memswap_limit: 512m
+    # No published ports: the gateway is for acestream-updater, over the docker network.
+    environment:
+      - TZ=${TZ}
+      - IPFS_PROFILE=lowpower
+      - IPFS_PATH=/data/ipfs
+    command: ["daemon", "--migrate=true", "--routing=autoclient"]
+    volumes:
+      - ${APP_CONFIG_PATH}/kubo:/data/ipfs
+    networks:
+      - media-network
+    healthcheck:
+      test: ["CMD", "ipfs", "id"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
   # --- Cron to get IPFS ---
   acestream-updater:
     image: alpine:latest
@@ -108,11 +132,13 @@ services:
     environment:
       - TZ=${TZ}
       - OUTPUT_FILE=/data/channels_ace.m3u
-      - SOURCE_URLS=https://k51qzi5uqu5di462t7j4vu4akwfhvtjhy88qbupktvoacqfqe9uforjvhyi4wr.ipns.dweb.link/hashes_acestream.m3u,https://ipfs.io/ipns/k51qzi5uqu5di462t7j4vu4akwfhvtjhy88qbupktvoacqfqe9uforjvhyi4wr/hashes_acestream.m3u,https://dweb.link/ipns/k51qzi5uqu5di462t7j4vu4akwfhvtjhy88qbupktvoacqfqe9uforjvhyi4wr/hashes_acestream.m3u
+      - SOURCE_URLS=http://kubo:8080/ipns/k51qzi5uqu5di462t7j4vu4akwfhvtjhy88qbupktvoacqfqe9uforjvhyi4wr/hashes_acestream.m3u,https://ipfs.io/ipns/k51qzi5uqu5di462t7j4vu4akwfhvtjhy88qbupktvoacqfqe9uforjvhyi4wr/hashes_acestream.m3u,https://dweb.link/ipns/k51qzi5uqu5di462t7j4vu4akwfhvtjhy88qbupktvoacqfqe9uforjvhyi4wr/hashes_acestream.m3u
       - ACESERVE_URL=http://aceserve:6878/ace/getstream?id=
       - PUSHGATEWAY_URL=http://pushgateway:9091
       - JELLYFIN_URL=http://jellyfin:8096
       - JELLYFIN_API_KEY=${JELLYFIN_API_KEY}
+    depends_on:
+      - kubo
     command: >
       /bin/sh -c "
         apk add --no-cache curl sed bash coreutils tzdata > /dev/null 2>&1;

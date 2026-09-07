@@ -87,6 +87,7 @@ for i in "${!URLS[@]}"; do
     if [[ "$HTTP_CODE" == "200" ]]; then
         grep -v "^#EXTM3U" "$TEMP_RAW" >> "$TEMP_COMBINED" || true
         echo "  OK (200)"
+        break
     else
         echo "  Warning: Failed (HTTP $HTTP_CODE)" >&2
         DOWNLOAD_ERRORS=$((DOWNLOAD_ERRORS + 1))
