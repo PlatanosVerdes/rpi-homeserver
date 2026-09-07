@@ -510,7 +510,7 @@
     {
       "id": 8,
       "type": "piechart",
-      "title": "Episodes by language",
+      "title": "Episodes by audio and subtitles",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -564,13 +564,14 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (lang) (onepace_arc_episodes_on_disk{job=\"one-pace-downloader\"})",
+          "expr": "sum by (audio, subtitles) (onepace_arc_files_on_disk{job=\"one-pace-downloader\"})",
           "refId": "A",
           "instant": true,
           "range": false,
-          "legendFormat": "{{lang}}"
+          "legendFormat": "{{audio}} audio / {{subtitles}} subs"
         }
-      ]
+      ],
+      "description": "Read off the filenames, not off the .lang marker. \"original\" audio is the Japanese track with subtitles over it; anything else is a dub."
     },
     {
       "id": 9,
@@ -656,7 +657,7 @@
       },
       "gridPos": {
         "h": 3,
-        "w": 6,
+        "w": 5,
         "x": 0,
         "y": 15
       },
@@ -721,8 +722,8 @@
       },
       "gridPos": {
         "h": 3,
-        "w": 6,
-        "x": 6,
+        "w": 5,
+        "x": 5,
         "y": 15
       },
       "fieldConfig": {
@@ -786,8 +787,8 @@
       },
       "gridPos": {
         "h": 3,
-        "w": 6,
-        "x": 12,
+        "w": 5,
+        "x": 10,
         "y": 15
       },
       "fieldConfig": {
@@ -851,8 +852,8 @@
       },
       "gridPos": {
         "h": 3,
-        "w": 6,
-        "x": 18,
+        "w": 5,
+        "x": 15,
         "y": 15
       },
       "fieldConfig": {
@@ -1183,6 +1184,77 @@
         }
       ],
       "type": "table"
+    },
+    {
+      "id": 902,
+      "type": "stat",
+      "title": "Dubbed episodes",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 4,
+        "x": 20,
+        "y": 15
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "mappings": [],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "noValue": "0"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "pluginVersion": "12.3.3",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(onepace_arc_files_on_disk{job=\"one-pace-downloader\",audio!=\"original\"}) or vector(0)",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "legendFormat": "dubbed"
+        }
+      ],
+      "description": "Episodes whose audio is not the original track. The preference is subtitles over original audio, so this belongs at zero."
     }
   ]
 }
