@@ -122,7 +122,7 @@ fi
 
 TOTAL_IN=$(grep -c "^acestream://" "$TEMP_COMBINED" 2>/dev/null || echo 0)
 TOTAL_OUT=$(grep -v "^#" "$TEMP_NEW" | grep -c "." 2>/dev/null || echo 0)
-UNIQUE_CHANNELS=$(( TOTAL_OUT / 2 ))
+UNIQUE_CHANNELS=$TOTAL_OUT
 echo "Channels: $TOTAL_IN total from all sources, $UNIQUE_CHANNELS after dedup"
 
 JELLYFIN_REFRESH_HTTP_CODE=0
