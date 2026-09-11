@@ -524,12 +524,24 @@ path answers a bare 401 to a stranger, but with the csrf token from the login pa
 hand: the token came back, the login form still names its fields `username` ("Pseudo ou email") and
 `password`, and the other two sites read without a failure in the same pass.
 
-The second is the one worth remembering: **the site answers in the language of the account, not in
-the `Accept-Language` header.** This account is set to Spanish, so the profile reads `Enviado` and
-`Descargado` over `66,4 GB`, while the reader knew only `Envoyé`, `Téléchargé` and French `Go`
-units. Labels are now tried in French, Spanish and English (`valueBeforeAny`) and the header
-fallback takes both `Go` and `GB`. Changing the language on the site would have fixed the symptom
-and left the next language change to break it again.
+The second says the profile page was never readable at all. Its first reading was that **the site
+answers in the language of the account, not in the `Accept-Language` header**: this account is set
+to Spanish, so it prints `Enviado` and `Descargado` over `66,4 GB` where the reader expected
+`Envoyé`, `Téléchargé` and French `Go`. Teaching it the three languages changed nothing, because
+**the site is a Nuxt application and draws the profile in the browser**: the HTML served behind the
+session carries no figures in any language.
+
+What the page itself calls is `/api/auth/me`, and that answers with the account as JSON:
+
+```
+uploaded 71251821335   downloaded 67926159552   ratio 1.0489599560012528
+uploadCredit 53687091200   minRatioForDownload 0.8   canDownload true   isFreeleech true
+```
+
+That is what `fetchC411` reads now. It also names two things the page never states: `uploadCredit`,
+the signup credit as a number rather than a footnote, and `minRatioForDownload`, the 0.8 that
+`config/trackers/rules.json` carries by hand. Neither is used yet, and both are the obvious way to
+stop trusting a figure typed in from a wiki page.
 
 A login failure here is worth reading as "the ratio on this row is stale", not as "the tracker is
 broken": the panels fall back to the figures in `config/trackers/readings.json`, which is where they
