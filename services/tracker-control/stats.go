@@ -146,29 +146,6 @@ func valueAfter(lines []string, label string) string {
 	return ""
 }
 
-// C411 prints the value above its label rather than below it, so the same flattened lines need
-// reading in the other direction.
-func valueBefore(lines []string, label string) string {
-	wanted := strings.TrimSuffix(strings.ToLower(label), ":")
-	for index, line := range lines {
-		if strings.TrimSuffix(strings.ToLower(line), ":") == wanted && index > 0 {
-			return lines[index-1]
-		}
-	}
-	return ""
-}
-
-// valueBeforeAny: the same lookup for a site that answers in whatever language the account is set
-// to, so the label is not known in advance.
-func valueBeforeAny(lines []string, labels ...string) string {
-	for _, label := range labels {
-		if value := valueBefore(lines, label); value != "" {
-			return value
-		}
-	}
-	return ""
-}
-
 func toBytes(text string) (float64, bool) {
 	match := sizeText.FindStringSubmatch(strings.TrimSpace(text))
 	if match == nil {
