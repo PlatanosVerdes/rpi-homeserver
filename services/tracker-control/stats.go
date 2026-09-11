@@ -158,6 +158,17 @@ func valueBefore(lines []string, label string) string {
 	return ""
 }
 
+// valueBeforeAny: the same lookup for a site that answers in whatever language the account is set
+// to, so the label is not known in advance.
+func valueBeforeAny(lines []string, labels ...string) string {
+	for _, label := range labels {
+		if value := valueBefore(lines, label); value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
 func toBytes(text string) (float64, bool) {
 	match := sizeText.FindStringSubmatch(strings.TrimSpace(text))
 	if match == nil {

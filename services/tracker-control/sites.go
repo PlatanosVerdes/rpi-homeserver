@@ -256,15 +256,16 @@ func fetchC411(tracker string, config map[string]any) (profile, error) {
 	save()
 
 	// The profile block prints the value above its label, the opposite of TorrentLeech, and the
-	// units are French: 52.8 Go rather than 52.8 GB.
+	// page comes back in the account's own language, so the labels and the units travel with it:
+	// 52.8 Go in French, 66,4 GB in Spanish.
 	lines := flatten(text)
-	uploaded, hasUp := toBytes(valueBefore(lines, "Envoyé"))
-	downloaded, hasDown := toBytes(valueBefore(lines, "Téléchargé"))
+	uploaded, hasUp := toBytes(valueBeforeAny(lines, "Envoyé", "Enviado", "Uploaded"))
+	downloaded, hasDown := toBytes(valueBeforeAny(lines, "Téléchargé", "Descargado", "Downloaded"))
 	ratio, hasRatio := toFloat(valueBefore(lines, "Ratio"))
 	if !hasUp || !hasDown {
 		// The header carries the same three figures as ↑52.8 Go | 0.83 | ↓63.3 Go
 		if match := regexp.MustCompile(
-			`↑\s*([\d.,]+\s*[KMGT]?o)\s*\|?\s*([\d.,]+)\s*\|?\s*↓\s*([\d.,]+\s*[KMGT]?o)`,
+			`(?i)↑\s*([\d.,]+\s*[KMGTP]?[BO])\s*\|?\s*([\d.,]+)\s*\|?\s*↓\s*([\d.,]+\s*[KMGTP]?[BO])`,
 		).FindStringSubmatch(strings.Join(lines, " ")); match != nil {
 			uploaded, hasUp = toBytes(match[1])
 			ratio, hasRatio = toFloat(match[2])
@@ -272,7 +273,7 @@ func fetchC411(tracker string, config map[string]any) (profile, error) {
 		}
 	}
 	if !hasUp || !hasDown {
-		return out, fmt.Errorf("logged in but found no Envoyé/Téléchargé figures on the page")
+		return out, fmt.Errorf("logged in but found no uploaded/downloaded figures on the page")
 	}
 	out.uploaded, out.downloaded = uploaded, downloaded
 	if hasRatio {
