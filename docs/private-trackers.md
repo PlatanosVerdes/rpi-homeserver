@@ -465,19 +465,27 @@ whether the assessment can be met before signing up, not after.
 ## C411
 
 Rules read 2026-08-21. **This is the tightest account on the box, and it is the one nobody was
-watching.** The site shows 52.2 GB up against 63.3 GB down for a ratio of **0.83**, and its minimum
-to download anything is **0.8**.
+watching.** Its minimum to download anything is **0.8**, and on 2026-08-21 the site showed 52.2 GB
+up against 63.3 GB down for a ratio of 0.83:
 
 ```
 headroom = (52.2 - 0.8 x 63.3) / 0.8 = 1.95 GB of paid downloads left
 ```
 
-Two gigabytes. One ordinary film that is not freeleech blocks leeching on this site.
+Two gigabytes. One ordinary film that is not freeleech blocked leeching on this site.
 
-And the ratio is thinner than it looks: **new accounts get 50 GB of upload credit** that counts
-towards the ratio, so of those 52.2 GB only **2.3 GB were really uploaded** (which matches
-qBittorrent exactly). The credit is a one-off, it does not grow back, and it is what has been holding
-this account above its line.
+Read again on 2026-09-11 it is 66.4 GB up against the same 63.3 GB down, ratio **1.05**, and the
+headroom is **19.7 GB**. Downloaded has not moved since the account was opened; the whole of that
+came from seeding 13.6 GB in the 17 days after the CGNAT fix, at roughly 0.8 GB a day.
+
+The ratio is still thinner than it looks: **new accounts get 50 GB of upload credit** that counts
+towards the ratio, so of those 66.4 GB only **16.4 GB were really uploaded**, a real ratio of 0.26.
+The credit is a one-off, it does not grow back, and it is what has been holding this account above
+its line.
+
+**Site-wide freeleech from 2026-09-09 10:35 to 2026-09-21 10:35**, announced as an apology for a
+late "tokenisation": downloads count 0x and uploads 1x, so the divisor cannot move until it ends.
+While it lasts the freeleech-only rule below costs nothing, because everything is free.
 
 ### Its rules
 
@@ -493,25 +501,39 @@ this account above its line.
 | Freeleech | full (0x), 50%, and 2x upload, per torrent, per account or site-wide |
 | Cheating | announced upload is cross-checked against real swarm activity; ghost leech and modified clients lead to a permanent ban |
 
-### Downloading works; reading the account does not
+### Downloading and reading the account are two different things
 
-Two different things, and the failing one is the smaller. Measured 2026-08-27: the indexer answered
-**132 queries and took 7 grabs in 24h** on its API key alone, so nothing about searching or grabbing
-here depends on a login. What fails is the account page: `site` is set in
-`config/trackers/rules.json`, the tracker-control service tries to log in for the ratio, and its
-Prowlarr entry holds only an API key, so every pass logs
+Measured 2026-08-27: the indexer answered **132 queries and took 7 grabs in 24h** on its API key
+alone, so nothing about searching or grabbing here depends on a login. Reading the account does, and
+its API key cannot do it: those keys are scoped to Torznab, torrent upload and upload drafts, with
+nothing for account data, and the Prowlarr entry holds no password to reuse the way TorrentLeech's
+does. That is what `C411_USER` and `C411_PASSWORD` in `.env` are for, and `fetchC411` in
+tracker-control is the reader that uses them.
+
+Two failures on the way there, and both printed something worth reading:
 
 ```
 c411: login returned 401: Nom d'utilisateur ou mot de passe invalide
+c411: logged in but found no Envoyé/Téléchargé figures on the page
 ```
 
-and the loop reports one failure. That failure is worth reading as "the ratio on this row is stale",
-not as "the tracker is broken". It is also the tightest account on the box, so the ratio is the one
-number here you would most want live.
+The first is the site talking about the credentials themselves, not a broken request: every `/api/**`
+path answers a bare 401 to a stranger, but with the csrf token from the login page's
+`<meta name="csrf-token">` and a real body it answers in words. When it says this, the password in
+`.env` is wrong, and nothing else in the chain is. Diagnosed on 2026-09-11 by replaying the flow by
+hand: the token came back, the login form still names its fields `username` ("Pseudo ou email") and
+`password`, and the other two sites read without a failure in the same pass.
 
-Two ways out, neither taken yet: put the real username and password on the Prowlarr indexer, and the
-account reads itself like the other three; or drop `site` from its entry and go back to reading the
-figures by eye into `config/trackers/readings.json`, which is what the panels fell back to before.
+The second is the one worth remembering: **the site answers in the language of the account, not in
+the `Accept-Language` header.** This account is set to Spanish, so the profile reads `Enviado` and
+`Descargado` over `66,4 GB`, while the reader knew only `Envoyé`, `Téléchargé` and French `Go`
+units. Labels are now tried in French, Spanish and English (`valueBeforeAny`) and the header
+fallback takes both `Go` and `GB`. Changing the language on the site would have fixed the symptom
+and left the next language change to break it again.
+
+A login failure here is worth reading as "the ratio on this row is stale", not as "the tracker is
+broken": the panels fall back to the figures in `config/trackers/readings.json`, which is where they
+lived before any of this.
 
 ### How it is configured here
 
