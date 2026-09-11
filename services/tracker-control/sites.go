@@ -177,15 +177,17 @@ func fetchDigitalCore(tracker string, config map[string]any) (profile, error) {
 }
 
 // fetchC411. Their API keys are scoped to Torznab, torrent upload and upload drafts, so account
-// figures are not reachable with one. The login is /api/v1/../api/auth/login taking JSON with the
-// csrf token from the page's <meta name="csrf-token"> as a header: every /api/** path answers a bare
-// 401 to a stranger, which reads like the route does not exist, but with the token and a real body
-// it answers in French about the credentials themselves. Posting the form to /login instead sets no
+// figures are not reachable with one. The login is /api/auth/login taking JSON with the csrf token
+// from the page's <meta name="csrf-token"> as a header: every /api/** path answers a bare 401 to a
+// stranger, which reads like the route does not exist, but with the token and a real body it
+// answers in French about the credentials themselves. Posting the form to /login instead sets no
 // cookie and returns the page again, which is a login that failed while looking like one that
 // worked.
 //
-// The figures then sit in the header of every page behind the session, value above label, in French
-// units.
+// The figures come from /api/auth/me, not from the profile page. The site is a Nuxt application
+// that draws them in the browser, so the HTML behind the session carries no numbers at all, in any
+// language, and scraping it logs in and then finds nothing. The payload also names the signup
+// credit (uploadCredit) and the ratio the site itself enforces, neither of which the page states.
 func fetchC411(tracker string, config map[string]any) (profile, error) {
 	var out profile
 	user, password, err := credentials(tracker, config)
@@ -202,10 +204,12 @@ func fetchC411(tracker string, config map[string]any) (profile, error) {
 		return out, err
 	}
 
-	page := func(path string) (string, int, error) {
+	get := func(path string, json bool) (string, int, error) {
 		request, _ := http.NewRequest("GET", site+path, nil)
 		request.Header.Set("User-Agent", userAgent)
-		request.Header.Set("Accept-Language", "fr-FR,fr;q=0.9")
+		if json {
+			request.Header.Set("Accept", "application/json")
+		}
 		resp, err := client.Do(request)
 		if err != nil {
 			return "", 0, err
@@ -213,12 +217,12 @@ func fetchC411(tracker string, config map[string]any) (profile, error) {
 		return body(resp), resp.StatusCode, nil
 	}
 
-	text, status, err := page("/user/integrations")
+	text, status, err := get("/api/auth/me", true)
 	if err != nil {
 		return out, err
 	}
-	if status != 200 || !strings.Contains(text, "Ratio") {
-		login, _, err := page("/login")
+	if status != 200 || !strings.Contains(text, "\"user\"") {
+		login, _, err := get("/login", false)
 		if err != nil {
 			return out, err
 		}
@@ -246,37 +250,30 @@ func fetchC411(tracker string, config map[string]any) (profile, error) {
 			return out, fmt.Errorf("login returned %d: %s", resp.StatusCode, apiMessage(answer))
 		}
 		save()
-		if text, status, err = page("/user/integrations"); err != nil {
+		if text, status, err = get("/api/auth/me", true); err != nil {
 			return out, err
 		}
 		if status != 200 {
-			return out, fmt.Errorf("logged in but the account page returned %d", status)
+			return out, fmt.Errorf("logged in but /api/auth/me returned %d", status)
 		}
 	}
 	save()
 
-	// The profile block prints the value above its label, the opposite of TorrentLeech, and the
-	// page comes back in the account's own language, so the labels and the units travel with it:
-	// 52.8 Go in French, 66,4 GB in Spanish.
-	lines := flatten(text)
-	uploaded, hasUp := toBytes(valueBeforeAny(lines, "Envoyé", "Enviado", "Uploaded"))
-	downloaded, hasDown := toBytes(valueBeforeAny(lines, "Téléchargé", "Descargado", "Downloaded"))
-	ratio, hasRatio := toFloat(valueBefore(lines, "Ratio"))
-	if !hasUp || !hasDown {
-		// The header carries the same three figures as ↑52.8 Go | 0.83 | ↓63.3 Go
-		if match := regexp.MustCompile(
-			`(?i)↑\s*([\d.,]+\s*[KMGTP]?[BO])\s*\|?\s*([\d.,]+)\s*\|?\s*↓\s*([\d.,]+\s*[KMGTP]?[BO])`,
-		).FindStringSubmatch(strings.Join(lines, " ")); match != nil {
-			uploaded, hasUp = toBytes(match[1])
-			ratio, hasRatio = toFloat(match[2])
-			downloaded, hasDown = toBytes(match[3])
-		}
+	var document map[string]any
+	if err := json.Unmarshal([]byte(text), &document); err != nil {
+		return out, fmt.Errorf("/api/auth/me is not JSON: %v", err)
 	}
+	account, ok := document["user"].(map[string]any)
+	if !ok {
+		return out, fmt.Errorf("/api/auth/me carried no user object, only: %s", topKeys(text))
+	}
+	uploaded, hasUp := numberField(account, "uploaded")
+	downloaded, hasDown := numberField(account, "downloaded")
 	if !hasUp || !hasDown {
-		return out, fmt.Errorf("logged in but found no uploaded/downloaded figures on the page")
+		return out, fmt.Errorf("/api/auth/me carried no uploaded/downloaded figures")
 	}
 	out.uploaded, out.downloaded = uploaded, downloaded
-	if hasRatio {
+	if ratio, has := numberField(account, "ratio"); has {
 		out.ratio = ratio
 	} else if downloaded > 0 {
 		out.ratio = uploaded / downloaded
