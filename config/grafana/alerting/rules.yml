@@ -1405,3 +1405,82 @@ groups:
               datasource: { type: __expr__, uid: __expr__ }
               conditions:
                 - evaluator: { type: gt, params: [0] }
+
+      - uid: homelab-transcode-video
+        title: 'Video is being re-encoded'
+        condition: C
+        # The expensive one. Audio re-encoding is a track swap; video re-encoding is the whole
+        # picture through ffmpeg on a Pi, and it is what makes a film buffer while everything else
+        # on the box crawls. No client is excluded, because there is no client where this is normal:
+        # in the recorded history here every session copied its video and only touched the audio.
+        #
+        # 5m, so a re-encode that lasts a few frames on a seek or on a client picking its stream is
+        # not a message. A session that is still transcoding after five minutes is a film being
+        # watched that way.
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: '{{ $labels.client }} is having its video re-encoded, from {{ $labels.codec }}'
+          description: >-
+            Either the file is in a codec this client cannot decode, or the client asked for a lower
+            bitrate than the file carries. Both are settled in the client, not here.
+        noDataState: OK
+        execErrState: KeepLast
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: 'sum by (app, client, codec) (media_transcode_sessions{stream="video"}) > bool 0'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+
+      - uid: homelab-transcode-audio
+        title: 'Audio is being re-encoded'
+        condition: C
+        # `browser="false"` is the whole point of this rule. No browser decodes TrueHD, DTS or AC3,
+        # so Plex Web re-encodes the audio of every file carrying one and there is nothing on this
+        # end to fix: two of the three re-encodes recorded in the month before this rule was written
+        # were a browser, and both were unfixable. On a TV or a phone it is the opposite, and the
+        # fix already exists.
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: '{{ $labels.client }} is having its audio re-encoded, from {{ $labels.codec }}'
+          description: >-
+            The file carries no audio track this client can decode.
+            scripts/sync/audio-compat.py adds an AC3 5.1 track for exactly this and runs at 01:30,
+            keeping every original track, so the next play goes direct. Browsers are left out of
+            this alert because no browser plays those codecs either way.
+        noDataState: OK
+        execErrState: KeepLast
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: 'sum by (app, client, codec) (media_transcode_sessions{stream="audio",browser="false"}) > bool 0'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }

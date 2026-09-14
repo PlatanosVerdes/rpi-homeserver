@@ -288,6 +288,12 @@ from a snapshot because one media pass takes ~7s against five APIs and a 15s scr
 it. `up` says the process lives and `pi_metrics_last_success_timestamp_seconds` says the data is
 fresh, which are two different failures and now two different alerts.
 
+Its `playback` collector runs on a much shorter interval than the rest, 60s against Plex's
+`/status/sessions` and Jellyfin's `/Sessions`, because a session being re-encoded has to be seen
+while it is still happening. What it publishes is deliberately split into video, audio and the kind
+of client, since those are three different problems and only two have a fix:
+[alerting.md](alerting.md#not-every-transcode-is-worth-a-message).
+
 ### Is an indexer being used, or just up
 
 `prowlarr_indexer_up` answers "does it answer". It does not answer "is anything being asked of

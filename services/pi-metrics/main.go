@@ -29,6 +29,13 @@ var (
 	prowlarrURL = env("PROWLARR_URL", "http://prowlarr:9696")
 	maintURL    = env("MAINTAINERR_URL", "http://maintainerr:6246")
 
+	// Plex runs on the host network, so it is reached through the gateway and not by name.
+	// Both keys are optional: no key means that server is not part of this install.
+	plexURL     = env("PLEX_URL", "http://host.docker.internal:32400")
+	plexToken   = os.Getenv("PLEX_API_TOKEN")
+	jellyfinURL = env("JELLYFIN_URL", "http://jellyfin:8096")
+	jellyfinKey = os.Getenv("JELLYFIN_API_KEY")
+
 	client = &http.Client{Timeout: 25 * time.Second}
 )
 
@@ -79,7 +86,7 @@ func collect(name string, every time.Duration, produce func() ([]string, []strin
 func metrics(w http.ResponseWriter, _ *http.Request) {
 	var out strings.Builder
 	mu.Lock()
-	for _, name := range []string{"media", "disk"} {
+	for _, name := range []string{"media", "disk", "playback"} {
 		if entry, ok := store[name]; ok && entry.body != "" {
 			out.WriteString(entry.body)
 			out.WriteString("\n")
@@ -113,7 +120,7 @@ func metrics(w http.ResponseWriter, _ *http.Request) {
 	out.WriteString("# TYPE pi_metrics_collection_failures gauge\n")
 	out.WriteString("# HELP pi_metrics_collection_interval_seconds How often it is supposed to run, so overdue is answerable without knowing the schedule\n")
 	out.WriteString("# TYPE pi_metrics_collection_interval_seconds gauge\n")
-	for _, name := range []string{"disk", "media"} {
+	for _, name := range []string{"disk", "media", "playback"} {
 		entry, ok := current[name]
 		if !ok {
 			continue
@@ -132,15 +139,20 @@ func main() {
 	port := env("PORT", "9110")
 	mediaEvery := seconds("MEDIA_INTERVAL", 300)
 	diskEvery := seconds("DISK_INTERVAL", 3600)
+	// Far shorter than the rest: a session that is transcoding has to be seen while it lasts, and
+	// two session endpoints are one cheap request each rather than the media pass's five APIs.
+	playbackEvery := seconds("PLAYBACK_INTERVAL", 60)
 
 	go collect("media", mediaEvery, media)
 	go collect("disk", diskEvery, disk)
+	go collect("playback", playbackEvery, playback)
 
 	qbmLoad()
 	http.HandleFunc("/qbit-manage", qbmHook)
 	http.HandleFunc("/metrics", metrics)
 	http.HandleFunc("/", metrics)
-	log.Printf("pi-metrics on :%s, media every %s, disk every %s", port, mediaEvery, diskEvery)
+	log.Printf("pi-metrics on :%s, media every %s, disk every %s, playback every %s",
+		port, mediaEvery, diskEvery, playbackEvery)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
 

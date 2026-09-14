@@ -200,11 +200,19 @@ services:
     mem_limit: 64m
     memswap_limit: 64m
     profiles: [moni, all]
+    # Plex runs on the host network, so the playback collector reaches it through the gateway.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       - TZ=${TZ}
       # qBittorrent's AuthSubnetWhitelist does not cover the Docker bridge, so it logs in
       - QBIT_USER=${QBIT_USER}
       - QBIT_PASSWORD=${QBIT_PASSWORD}
+      # Which sessions each media server is re-encoding. Unlike the arrs, neither keeps its key in a
+      # config.xml this container could read, and leaving one empty simply drops that server from
+      # the collector rather than failing it.
+      - PLEX_API_TOKEN=${PLEX_API_TOKEN:-}
+      - JELLYFIN_API_KEY=${JELLYFIN_API_KEY:-}
     volumes:
       # The arrs' API keys live in their config.xml and nowhere else, so they are read rather than
       # duplicated into .env. Whole directories and not the single file: git and the apps replace
