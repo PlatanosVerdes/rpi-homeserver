@@ -41,3 +41,8 @@
 # Parked 2026-08-24: qbit-manage owns deletion, and two deleters with different rules is worse than
 # either alone. Uncommenting this needs the qbit-manage share_limits groups paused. See PENDING.md.
 #20 * * * * /home/raspi/rpi-homeserver/scripts/trackers/seed-cleanup.py >> /home/raspi/rpi-homeserver/seed-cleanup.log 2>&1
+
+# 01:30 is the one window nothing else uses: one-pace builds at 03:00, the backup runs at 04:00.
+# Two files a run at roughly ten minutes each, nice and ionice. Leaves anything still hardlinked
+# alone, so it never drops a link qbit-manage would read as noHL.
+30 1 * * * /home/raspi/rpi-homeserver/scripts/sync/audio-compat.py >> /home/raspi/rpi-homeserver/audio-compat.log 2>&1
