@@ -37,3 +37,8 @@
 # Prowlarr backs a failed indexer off for up to 24h, so an hour of the ISP blocking a site would
 # otherwise cost a day of it being unusable. Probes the site first, never searches.
 8,23,38,53 * * * * /home/raspi/rpi-homeserver/scripts/ops/indexer-retry.py >> /home/raspi/rpi-homeserver/indexer-retry.log 2>&1
+
+# 01:30 is the one window nothing else uses: one-pace builds at 03:00, the backup runs at 04:00.
+# Two files a run at roughly ten minutes each, nice and ionice. Leaves anything still hardlinked
+# alone, so it never drops a link qbit-manage would read as noHL.
+30 1 * * * /home/raspi/rpi-homeserver/scripts/sync/audio-compat.py >> /home/raspi/rpi-homeserver/audio-compat.log 2>&1
