@@ -268,23 +268,5 @@
         ]
       }
     ]
-  },
-  {
-    "name": "DTS (any flavour)",
-    "includeCustomFormatWhenRenaming": false,
-    "specifications": [
-      {
-        "name": "DTS (any flavour)",
-        "implementation": "ReleaseTitleSpecification",
-        "negate": false,
-        "required": true,
-        "fields": [
-          {
-            "name": "value",
-            "value": "\\bdts\\b"
-          }
-        ]
-      }
-    ]
   }
 ]

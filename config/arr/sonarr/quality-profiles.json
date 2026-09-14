@@ -299,10 +299,6 @@
       {
         "formatName": "Audio compatible TV",
         "score": 400
-      },
-      {
-        "formatName": "DTS (any flavour)",
-        "score": -400
       }
     ],
     "minUpgradeFormatScore": 1
@@ -607,10 +603,6 @@
       {
         "formatName": "Audio compatible TV",
         "score": 400
-      },
-      {
-        "formatName": "DTS (any flavour)",
-        "score": -400
       }
     ],
     "minUpgradeFormatScore": 1
@@ -915,10 +907,6 @@
       {
         "formatName": "Audio compatible TV",
         "score": 400
-      },
-      {
-        "formatName": "DTS (any flavour)",
-        "score": -400
       }
     ],
     "minUpgradeFormatScore": 1
@@ -1223,10 +1211,6 @@
       {
         "formatName": "Audio compatible TV",
         "score": 400
-      },
-      {
-        "formatName": "DTS (any flavour)",
-        "score": -400
       }
     ],
     "minUpgradeFormatScore": 1
@@ -1531,10 +1515,6 @@
       {
         "formatName": "Audio compatible TV",
         "score": 400
-      },
-      {
-        "formatName": "DTS (any flavour)",
-        "score": -400
       }
     ],
     "minUpgradeFormatScore": 1
@@ -1839,10 +1819,6 @@
       {
         "formatName": "Audio compatible TV",
         "score": 400
-      },
-      {
-        "formatName": "DTS (any flavour)",
-        "score": -400
       }
     ],
     "minUpgradeFormatScore": 1
