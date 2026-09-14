@@ -58,9 +58,14 @@ docker compose up -d
 `scripts/ops/backup.sh` pushes to Pushgateway (visible in the **Backup Monitor** Grafana dashboard):
 
 - `backup_last_status` — 0 ok, 1 error
-- `backup_last_run_timestamp` — alert if it goes stale (no backup in >24h)
+- `backup_last_run_timestamp` — alert if it goes stale (no backup in >36h)
 - `backup_last_size_bytes` — archive size
 - `appdata_size_bytes` — total `appdata/` size on disk, to watch growth over time
+
+Every exit reports, including one that never got as far as reading `.env`. The reason the trap is
+on EXIT and not ERR is in the script. What it buys is that a failed run cannot leave
+`backup_last_status` reading 0 from the last one that worked, which is the state where the only
+sign is the staleness alert 36 hours later.
 
 ## Offsite (recommended, not enabled by default)
 
