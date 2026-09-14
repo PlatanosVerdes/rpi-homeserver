@@ -365,7 +365,7 @@ collection from it, visible on the Plex home, holding whatever is queued for del
     have none (`max_ratio=-1, max_seeding_time=-1` on all of them), so the fallback *is* the rule,
     and 0.5 with two hours of seeding is a hit-and-run on TorrentLeech.
 
-  `scripts/trackers/seed-cleanup.py` owns torrent deletion instead, per tracker. See the README.
+  qbit-manage's share-limit groups own torrent deletion instead, per tracker. See the README.
 - **Fixed a double grace period on the collection.** The rule means "last viewed more than N days
   ago" (an unwatched title has no `lastViewedAt`, so it never matches). The collection
   used to wait a *second* 7 days after the item entered it before deleting, doubling the real delay.

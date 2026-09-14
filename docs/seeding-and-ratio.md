@@ -144,8 +144,8 @@ the argument for routing torrent traffic through a VPN.
 The 16 TorrentLeech torrents (365 GB) stay. If the account comes back, seeding exactly those is how
 the ratio gets repaired, so deleting them would throw away the only asset available for that. They
 announce `unregistered torrent pass` in the meantime, which means the tracker counts nothing:
-`scripts/trackers/seed-cleanup.py` will still retire them after 240 h of **local** seeding time, so while this lasts
-the seeding rule protects nothing on that tracker.
+qbit-manage's `torrentleech` group will still retire them after its 15d of **local** seeding time, so
+while this lasts the seeding rule protects nothing on that tracker.
 
 ## Unrelated but adjacent: the advertised routes
 

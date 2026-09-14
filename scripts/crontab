@@ -37,7 +37,3 @@
 # Prowlarr backs a failed indexer off for up to 24h, so an hour of the ISP blocking a site would
 # otherwise cost a day of it being unusable. Probes the site first, never searches.
 8,23,38,53 * * * * /home/raspi/rpi-homeserver/scripts/ops/indexer-retry.py >> /home/raspi/rpi-homeserver/indexer-retry.log 2>&1
-
-# Parked 2026-08-24: qbit-manage owns deletion, and two deleters with different rules is worse than
-# either alone. Uncommenting this needs the qbit-manage share_limits groups paused. See PENDING.md.
-#20 * * * * /home/raspi/rpi-homeserver/scripts/trackers/seed-cleanup.py >> /home/raspi/rpi-homeserver/seed-cleanup.log 2>&1
