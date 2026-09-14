@@ -49,7 +49,8 @@ services/                   Source code for custom services built in this repo
   watch-next/               Go service: monitors + searches the next Sonarr episode(s) on watch
   subtitle-links/           Go service: page listing movies/episodes with a downloadable text subtitle
   pi-metrics/               Go exporter: the numbers no exporter provides (upgrades, torrents,
-                            indexer usage, where the disk went, what zram costs). Was three crons
+                            indexer usage, where the disk went, what zram costs, and what Plex or
+                            Jellyfin is re-encoding right now). Was three crons
   torrent-drop/             Go service: page to add a torrent by hand, and the immediate
                             cross-seed search on every torrent that completes
   tracker-control/          Go service: reads each tracker account and moves the freeleech filter,

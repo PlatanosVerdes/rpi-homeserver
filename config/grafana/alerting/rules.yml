@@ -977,8 +977,7 @@ groups:
         # 14h and not 6h because what 6h fired on was the football blocking windows, which end by
         # themselves: 20 of them in the month this was measured, every one Friday to Monday evening,
         # none starting before 16:45 or outliving 00:45, the longest 8h. So 14h clears the longest by
-        # six hours and still reports a genuinely dead indexer within the same day. The mechanism,
-        # and how to tell it from a tracker that really broke, is in docs/alerting.md.
+        # six hours and still reports a genuinely dead indexer within the same day.
         #
         # Every enabled indexer, one alert each, including a private tracker with zero grabs: an
         # account still in its newbie window has none by definition and is exactly the one worth
@@ -1402,6 +1401,79 @@ groups:
               instant: true
               editorMode: code
               expr: '(time() - wallapop_last_run_timestamp) > bool 172800'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+
+      - uid: homelab-transcode-video
+        title: 'Video is being re-encoded'
+        condition: C
+        # No client is excluded, unlike the audio rule below: there is no client where this is
+        # normal. In the month measured before this rule existed every session copied its video and
+        # only ever touched the audio, so this one should stay silent for a long time. A session that is still transcoding after five minutes is a film being
+        # watched that way.
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: '{{ $labels.client }} is having its video re-encoded, from {{ $labels.codec }}'
+          description: >-
+            Either the file is in a codec this client cannot decode, or the client asked for a lower
+            bitrate than the file carries. Both are settled in the client, not here.
+        noDataState: OK
+        execErrState: KeepLast
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: 'sum by (app, client, codec) (media_transcode_sessions{stream="video"}) > bool 0'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+
+      - uid: homelab-transcode-audio
+        title: 'Audio is being re-encoded'
+        condition: C
+        # `browser="false"` is the whole point of this rule: two of the three re-encodes recorded in
+        # the month before it was written were a browser, and neither had a fix. Why that is, and
+        # why a TV is the opposite, is in docs/alerting.md.
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: '{{ $labels.client }} is having its audio re-encoded, from {{ $labels.codec }}'
+          description: >-
+            The file carries no audio track this client can decode.
+            scripts/sync/audio-compat.py adds an AC3 5.1 track for exactly this and runs at 01:30,
+            keeping every original track, so the next play goes direct. Browsers are left out of
+            this alert because no browser plays those codecs either way.
+        noDataState: OK
+        execErrState: KeepLast
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: 'sum by (app, client, codec) (media_transcode_sessions{stream="audio",browser="false"}) > bool 0'
           - refId: C
             datasourceUid: __expr__
             model:

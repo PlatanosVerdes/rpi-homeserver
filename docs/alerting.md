@@ -33,6 +33,8 @@ this repo is the source of truth.
 | Seed cleanup not running | no pass in more than 3h | 15m |
 | Download nothing can import | a queue item the *arr cannot attribute to any title | 2h |
 | Data in downloads that nothing owns | unclaimed bytes the library does not share either | 1h |
+| Video is being re-encoded | any client, any server | 5m |
+| Audio is being re-encoded | a client that is not a browser | 5m |
 
 Every expression uses PromQL's `bool` modifier so it returns 1 when it fires, which keeps all the
 rules on the same `threshold > 0` condition instead of seven different reduce/threshold shapes.
@@ -149,6 +151,26 @@ Two things follow, and both are already handled:
   produce a failure that reads exactly like a banned account. Announce traffic is qBittorrent's and
   goes direct in any case, which is why torrents keep seeding through a window while searches fail.
   See [private-trackers.md](private-trackers.md).
+
+## Not every transcode is worth a message
+
+"Something is transcoding" sounds like one alert and is really three situations, only two of which
+anyone can act on. `media_transcode_sessions`, from the `playback` collector in `services/pi-metrics`,
+carries the labels that separate them: `stream` (video or audio) and `browser`.
+
+| What is happening | Alerted | Why |
+| :--- | :--- | :--- |
+| **Video** re-encoded, any client | yes | The whole picture through ffmpeg. This is what makes a film buffer and the rest of the box crawl |
+| **Audio** re-encoded, TV or phone | yes | The file has no track that client can decode, and `scripts/sync/audio-compat.py` adds one |
+| **Audio** re-encoded, browser | no | No browser decodes TrueHD, DTS or AC3. Plex Web re-encodes them always and nothing here changes that |
+| **Remux** | no | Container change, streams copied. Jellyfin does it to the acestream Live TV channels several times a day and it is free |
+
+The split is not theoretical. In the month before these rules existed there were three re-encodes,
+all three of them audio with the video copied, and two of the three were a browser. An alert on "any
+transcode" would have been right about the facts and useless twice out of three times.
+
+Both rules wait `for: 5m`, so a re-encode that lasts a few frames while a client picks its stream, or
+one seek, is not a message.
 
 ## The *arrs notify on their own
 
