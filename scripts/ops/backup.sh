@@ -11,20 +11,6 @@ set -euo pipefail
 PROJECT_DIR="$HOME/rpi-homeserver"
 PUSHGATEWAY_URL="http://localhost:9091"
 
-set -a; source "$PROJECT_DIR/.env"; set +a
-cd "$PROJECT_DIR"
-
-# APP_CONFIG_PATH may be relative (e.g. ./appdata); resolve it against the project dir
-APPDATA="${APP_CONFIG_PATH:-./appdata}"
-[[ "$APPDATA" != /* ]] && APPDATA="$PROJECT_DIR/${APPDATA#./}"
-
-# Companion repo appdata (AirTag keys, cal-bridge tokens, bot DB) — backed up too if present
-SERVICES_DIR="${SERVICES_DIR:-$HOME/rpi-services}"
-SERVICES_APPDATA="$SERVICES_DIR/appdata"
-
-DEST="${BACKUP_DEST:-${DATA_ROOT}/backups/appdata}"
-RETENTION="${BACKUP_RETENTION:-7}"
-
 log() { echo "$(date '+%Y-%m-%d %H:%M:%S') - $1"; }
 
 push_metrics() {
@@ -45,7 +31,26 @@ appdata_size_bytes $appdata_size
 EOF
 }
 
-trap 'log "Backup FAILED"; push_metrics 1 0; exit 1' ERR
+# EXIT rather than ERR, and armed before .env is read. Reading .env is itself a step that can fail:
+# an unquoted $ in a password is an unbound variable under `set -u`, and that exits the shell
+# without ever running an ERR trap. Unreported, the only sign is "No recent backup" 36 hours later
+# instead of "Backup failed" the same morning.
+BACKUP_DONE=0
+trap '[[ $BACKUP_DONE -eq 1 ]] || { log "Backup FAILED"; push_metrics 1 0; }' EXIT
+
+set -a; source "$PROJECT_DIR/.env"; set +a
+cd "$PROJECT_DIR"
+
+# APP_CONFIG_PATH may be relative (e.g. ./appdata); resolve it against the project dir
+APPDATA="${APP_CONFIG_PATH:-./appdata}"
+[[ "$APPDATA" != /* ]] && APPDATA="$PROJECT_DIR/${APPDATA#./}"
+
+# Companion repo appdata (AirTag keys, cal-bridge tokens, bot DB) — backed up too if present
+SERVICES_DIR="${SERVICES_DIR:-$HOME/rpi-services}"
+SERVICES_APPDATA="$SERVICES_DIR/appdata"
+
+DEST="${BACKUP_DEST:-${DATA_ROOT}/backups/appdata}"
+RETENTION="${BACKUP_RETENTION:-7}"
 
 mkdir -p "$DEST"
 STAMP=$(date +%Y%m%d-%H%M%S)
@@ -71,7 +76,6 @@ sudo tar \
 # tar exit 1 = some files changed/vanished mid-read (benign for live caches); >1 = fatal
 if [ "$tar_rc" -gt 1 ]; then
     log "tar failed (exit $tar_rc)"
-    push_metrics 1 0
     exit 1
 fi
 
@@ -93,6 +97,7 @@ if [[ -n "${BACKUP_RCLONE_REMOTE:-}" ]] && command -v rclone >/dev/null 2>&1; th
 fi
 
 push_metrics 0 "$SIZE" "$APPDATA_SIZE"
+BACKUP_DONE=1
 log "Backup done."
 
 # crontab -e
