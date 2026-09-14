@@ -970,10 +970,15 @@ groups:
       - uid: homelab-used-indexer-down
         title: 'An indexer is down'
         condition: C
-        # 6h, not minutes: an indexer being down is not fixable from here, so the only version worth
-        # a message is "gone long enough to pick a different one". With the 1h average in the
-        # expression that is ~7h of being mostly down, and the average is also what stops a recovery
-        # blip resolving the alert and re-firing it.
+        # 14h, not minutes: an indexer being down is not fixable from here, so the only version
+        # worth a message is "gone long enough to pick a different one". The 1h average in the
+        # expression is also what stops a recovery blip resolving the alert and re-firing it.
+        #
+        # 14h and not 6h because what 6h fired on was the football blocking windows, which end by
+        # themselves: 20 of them in the month this was measured, every one Friday to Monday evening,
+        # none starting before 16:45 or outliving 00:45, the longest 8h. So 14h clears the longest by
+        # six hours and still reports a genuinely dead indexer within the same day. The mechanism,
+        # and how to tell it from a tracker that really broke, is in docs/alerting.md.
         #
         # Every enabled indexer, one alert each, including a private tracker with zero grabs: an
         # account still in its newbie window has none by definition and is exactly the one worth
@@ -982,16 +987,17 @@ groups:
         # scripts/ops/indexer-retry.py clears the backoff within 15 min of the site answering, so
         # this no longer fires over a site that recovered. It still fires over one reachable only
         # through a proxy or FlareSolverr, which that script cannot probe. See docs/alerting.md.
-        for: 6h
+        for: 14h
         labels:
           severity: warning
         annotations:
           summary: 'Indexer {{ $labels.name }} is down'
           description: >-
-            Failing most of its checks for the last hour, so searches are going out without it. The
-            backoff is cleared within 15 minutes of the site answering again, so this still being up
-            means the site is genuinely unreachable from here. Several at once is the line, not the
-            trackers: check the certificate before touching an account.
+            Failing most of its checks for 14 hours, so searches are going out without it. That
+            outlives both Prowlarr's backoff, cleared within 15 minutes of the site answering, and
+            the evening blocks that lift on their own, so the site is genuinely unreachable from
+            here. Several at once is the line, not the trackers: check the certificate before
+            touching an account.
         noDataState: OK
         execErrState: KeepLast
         data:
