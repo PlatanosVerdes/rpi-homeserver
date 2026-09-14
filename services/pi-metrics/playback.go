@@ -9,16 +9,15 @@ import (
 
 // What each media server is re-encoding right now, and for whom.
 //
-// Video and audio are separate series on purpose, because they are not the same problem. Re-encoding
-// video is what costs this Pi its CPU. Re-encoding audio is cheap, and on a browser it is also
-// unavoidable: no browser decodes TrueHD, DTS or AC3, so Plex Web re-encodes the audio of every file
-// carrying one and nothing on this end changes that. The `browser` label is what lets an alert ask
-// only about the clients where a fix exists — on a TV, an audio re-encode means the file wants the
-// extra track scripts/sync/audio-compat.py adds.
+// Three labels carry the whole decision, and each one exists because what it separates is a
+// different problem: `stream`, because video is what costs this Pi its CPU and audio is not;
+// `browser`, because a browser's audio re-encode is the one kind with no fix on this end; and
+// `codec`, so the message names what to go and change. The table behind all three, and the month of
+// sessions it was measured from, is in docs/alerting.md.
 //
-// A remux is not a transcode and is not counted as one. Jellyfin remuxes the acestream Live TV
-// channels several times a day (container change, stream copied), which is free. It reports that as
-// TranscodingInfo with both streams still direct, and Plex as a container-only decision.
+// A remux is not a transcode and is not counted as one, or the acestream Live TV channels would
+// report several a day for something free. Jellyfin says which it is with IsVideoDirect and
+// IsAudioDirect, both of which stay true through a remux; Plex with a container-only decision.
 
 const (
 	streamVideo = "video"

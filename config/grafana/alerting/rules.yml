@@ -1409,13 +1409,9 @@ groups:
       - uid: homelab-transcode-video
         title: 'Video is being re-encoded'
         condition: C
-        # The expensive one. Audio re-encoding is a track swap; video re-encoding is the whole
-        # picture through ffmpeg on a Pi, and it is what makes a film buffer while everything else
-        # on the box crawls. No client is excluded, because there is no client where this is normal:
-        # in the recorded history here every session copied its video and only touched the audio.
-        #
-        # 5m, so a re-encode that lasts a few frames on a seek or on a client picking its stream is
-        # not a message. A session that is still transcoding after five minutes is a film being
+        # No client is excluded, unlike the audio rule below: there is no client where this is
+        # normal. In the month measured before this rule existed every session copied its video and
+        # only ever touched the audio, so this one should stay silent for a long time. A session that is still transcoding after five minutes is a film being
         # watched that way.
         for: 5m
         labels:
@@ -1449,11 +1445,9 @@ groups:
       - uid: homelab-transcode-audio
         title: 'Audio is being re-encoded'
         condition: C
-        # `browser="false"` is the whole point of this rule. No browser decodes TrueHD, DTS or AC3,
-        # so Plex Web re-encodes the audio of every file carrying one and there is nothing on this
-        # end to fix: two of the three re-encodes recorded in the month before this rule was written
-        # were a browser, and both were unfixable. On a TV or a phone it is the opposite, and the
-        # fix already exists.
+        # `browser="false"` is the whole point of this rule: two of the three re-encodes recorded in
+        # the month before it was written were a browser, and neither had a fix. Why that is, and
+        # why a TV is the opposite, is in docs/alerting.md.
         for: 5m
         labels:
           severity: warning
