@@ -77,10 +77,6 @@ scripts/                    Operational scripts, grouped by what they do
     plex-prefs.sh           Plex LAN networks and the 95% played threshold
     qbit-config.sh          qBittorrent queue limits, upload cap and BT port
 
-  trackers/                 seed-cleanup.py only, parked: the measuring and deciding live in the
-                            tracker-control service now
-    seed-cleanup.py         PARKED 2026-08-24: qbit-manage owns deletion, see PENDING.md
-
   ops/                      Everything else on a schedule
     backup.sh               Daily appdata backup, pushes metrics to Grafana
     heartbeat.sh            Dead man's switch ping to an external check, every minute

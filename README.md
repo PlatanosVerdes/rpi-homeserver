@@ -468,7 +468,6 @@ scripts/     Operational scripts, grouped by what they do:
   setup/       host state apply.sh converges on each pass: cron and log rotation
   recovery/    run by hand after something broke: rebuild a service, see what a human still owes
   sync/        pushes config that lives only in an app's appdata, every deploy
-  trackers/    seed-cleanup.py only, parked: measuring and deciding are the tracker-control service
   ops/         everything else on a schedule (backup, heartbeat, searches)
 appdata/     Persistent container data (databases, app state) — not in git
 docs/        Setup guides: architecture.md for what talks to what, lifecycle.md for what

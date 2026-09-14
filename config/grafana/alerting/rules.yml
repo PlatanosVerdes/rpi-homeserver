@@ -6,6 +6,10 @@ apiVersion: 1
 deleteRules:
   - orgId: 1
     uid: homelab-qbit-stalled-download
+  - orgId: 1
+    uid: homelab-seed-cleanup-failed
+  - orgId: 1
+    uid: homelab-seed-cleanup-stale
 
 # Alert rules, provisioned from git (read-only in the UI on purpose: this file is the source
 # of truth). Every expression is written to return 1 when it fires, using PromQL's `bool`
@@ -1047,74 +1051,6 @@ groups:
               conditions:
                 - evaluator: { type: gt, params: [0] }
 
-      - uid: homelab-seed-cleanup-failed
-        isPaused: true           # Paused on 2026-08-24: the script is parked, so it cannot report a status.
-        title: Seed cleanup failed
-        condition: C
-        for: 5m
-        labels:
-          severity: warning
-        annotations:
-          summary: The seed-aware torrent cleanup reported an error
-          description: >-
-            Nothing is lost when this fails, it just stops giving disk back: watched films keep
-            seeding and pile up. Check `container:seed-cleanup` in VictoriaLogs, or run
-            `DRY_RUN=1 scripts/trackers/seed-cleanup.py` on the Pi to see what it would do.
-        noDataState: OK
-        execErrState: KeepLast
-        data:
-          - refId: A
-            relativeTimeRange: { from: 300, to: 0 }
-            datasourceUid: prometheus
-            model:
-              refId: A
-              instant: true
-              editorMode: code
-              expr: 'seed_cleanup_last_status != bool 0'
-          - refId: C
-            datasourceUid: __expr__
-            model:
-              refId: C
-              type: threshold
-              expression: A
-              datasource: { type: __expr__, uid: __expr__ }
-              conditions:
-                - evaluator: { type: gt, params: [0] }
-
-      - uid: homelab-seed-cleanup-stale
-        isPaused: true           # Paused on 2026-08-24: the script is parked on purpose, so of course it is stale.
-        title: Seed cleanup not running
-        condition: C
-        # It runs hourly, so three hours means two missed passes: cron, the script, or qBittorrent.
-        # A silent stop is the failure mode that matters here, because the symptom is a disk that
-        # fills over weeks with nothing in the logs to explain it.
-        for: 15m
-        labels:
-          severity: warning
-        annotations:
-          summary: No seed cleanup pass in more than 3 hours
-          description: The hourly cron either did not run or never finished.
-        noDataState: OK
-        execErrState: KeepLast
-        data:
-          - refId: A
-            relativeTimeRange: { from: 300, to: 0 }
-            datasourceUid: prometheus
-            model:
-              refId: A
-              instant: true
-              editorMode: code
-              expr: '(time() - seed_cleanup_last_run_timestamp) > bool 10800'
-          - refId: C
-            datasourceUid: __expr__
-            model:
-              refId: C
-              type: threshold
-              expression: A
-              datasource: { type: __expr__, uid: __expr__ }
-              conditions:
-                - evaluator: { type: gt, params: [0] }
-
       - uid: homelab-arr-orphan-queue
         title: 'Download nothing can import'
         condition: C
@@ -1164,7 +1100,8 @@ groups:
         annotations:
           summary: Bytes in downloads that no torrent claims and the library does not share
           description: >-
-            scripts/trackers/seed-cleanup.py only ever looks at torrents that exist, so data left behind by a torrent
+            qbit-manage only ever looks at torrents that exist, and rem_orphaned is off here, so data left
+            behind by a torrent
             that was removed without its files is reclaimed by nobody. While the library still
             shares the file this stays quiet on purpose (it wastes nothing); it starts firing the
             day the retention policy deletes the film and those bytes become unreachable.

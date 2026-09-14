@@ -237,7 +237,7 @@ efficiently is a worse answer than not transcoding.
 ## The retention policy does not cover series (not implemented)
 
 Films have the full cycle: Maintainerr deletes the library copy two days after you watch one, and
-`scripts/trackers/seed-cleanup.py` drops the torrent once its tracker is paid. Series have neither half.
+qbit-manage's share-limit groups drop the torrent once its tracker is paid. Series have neither half.
 
 Maintainerr's only collection is `type: movie` on library `1` (Películas), so **nothing ever deletes
 a watched episode**. And the cleanup only ever acts once the library has let go of a file, which for

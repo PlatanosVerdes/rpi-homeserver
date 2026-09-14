@@ -172,8 +172,7 @@ claim token, Jellyfin's setup wizard, and the AirTag 2FA code.
 
 Moved to [lifecycle.md](lifecycle.md), which follows one file from the indexer that announces it to
 the recycle bin, for a film and for an episode, and carries the per-tracker seeding table. What was
-here said the hourly `trackers/seed-cleanup.py` does the deleting, and that has been qbit-manage's
-job since 2026-08-24.
+here said an hourly script does the deleting, and that has been qbit-manage's job since 2026-08-24.
 
 ---
 
@@ -245,7 +244,6 @@ flowchart LR
   QB["<b>qbit-manage</b><br/><i>owns deletion since 2026-08-24</i>"] --> Q1 & Q2
   Q1{"WHOSE rules?<br/><i>the tracker tag picks<br/>the share-limit group</i>"}
   Q2{"MAY it go?<br/><i>noHL or ratio tag, and<br/>a day with no activity</i>"}
-  SR["config/qbittorrent/<br/>seed-rules.json"] -.->|"parked, see PENDING.md"| SC["trackers/seed-cleanup.py"]
 ```
 
 Per tracker: what the site asks, what is configured against it and why the difference, in
@@ -335,48 +333,10 @@ earn a sentence. `deploy/apply.sh` is sixth by complexity, not first.
 | Script | Code | Functions | Branches | Deletes |
 | :--- | ---: | ---: | ---: | :--- |
 | `services/pi-metrics/media.go` | 610 | 10 | 140 | |
-| `trackers/seed-cleanup.py` | 477 | 29 | 116 | files |
 | `services/tracker-control` | 1090 | 41 | 190 | config |
 | `ops/oci-hunt.py` | 284 | 16 | 61 | |
 | `deploy/apply.sh` | 291 | 7 | 75 | |
 | the other fifteen | <135 | <6 | <13 | |
-
-### trackers/seed-cleanup.py — parked since 2026-08-24
-
-Not running: qbit-manage owns deletion now, and two deleters with different rules is worse than
-either alone. Kept because going back is uncommenting one cron line, and its decision tree is the
-reference for what a deleter has to check. See PENDING.md for what has to hold before it goes.
-
-```mermaid
-flowchart TB
-  T["A torrent<br/><i>hourly at :20</i>"] --> G
-  G{"Any guard tripped?"} -->|yes| KEEP0["Untouched, nothing else is checked"]
-  G -->|no| D1
-  D1{"link count >= 2?"} -->|yes| K1["STAYS<br/><i>the library shares the bytes</i>"]
-  D1 -->|no| D2
-  D2{"does the arr say its import<br/>is still on disk?"} -->|yes| K2["STAYS<br/><i>the RAR case</i>"]
-  D2 -->|no| D3
-  D3{"public tracker?"} -->|yes| R1["DELETE NOW<br/><i>leaving the public swarm matters more</i>"]
-  D3 -->|no| D4
-  D4{"seed goal met?"} -->|yes| R2["DELETE torrent and data"]
-  D4 -->|no| W["Keep seeding, tag it,<br/>look again next hour"]
-```
-
-The guards, all of them absolute: outside qBittorrent's own download folder, the library shares the
-file, the arrs cannot be reached, progress below 100%, checking or moving, a second torrent shares
-the files, or younger than `min_age_hours`. `DRY_RUN=1` prints the decision without acting.
-
-The second question is the one that is not obvious, and the one that stopped live films being
-deleted. Radarr imports by hardlink, but a hardlink needs the same bytes at both ends and a scene
-release packed in RAR does not have them: unpackerr extracts one `.mkv` out of 96 `.rNN` archives,
-and that file is new. 19 of 71 files in the library arrived that way, with a link count of 1 from
-the moment they landed, and trusting the count alone read them as watched and deleted while the
-film sat in the library untouched.
-
-The seed goal comes from `config/qbittorrent/seed-rules.json`, and whether a tracker is private
-comes from qBittorrent itself, so there is no list to keep up to date. The clock is qBittorrent's,
-which only advances while the torrent really seeds: stricter than the tracker's calendar, which is
-the safe direction to be wrong in.
 
 ### deploy/apply.sh
 

@@ -18,9 +18,8 @@ PRIVATE tracker     the tracker's rules come first, always.
 ```
 
 **Who does it, since 2026-08-24:** the deleting side is qbit-manage's, driven by the groups in
-`config/qbit-manage/config.yml`. `scripts/trackers/seed-cleanup.py` is commented out of the crontab
-and kept there while the handover is on trial, so the script named in the table below is parked
-rather than gone. What it decided, the groups now decide, and PENDING.md holds what is still owed.
+`config/qbit-manage/config.yml`. The script that used to do it was parked the same day and deleted
+once the handover had run clean; it is in git history if the decision tree is ever wanted again.
 
 | Situation | What happens | Who does it |
 | :--- | :--- | :--- |

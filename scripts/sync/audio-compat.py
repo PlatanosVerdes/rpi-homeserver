@@ -14,13 +14,13 @@ nothing is lost: the AC3 is only what plays by default.
 
 A file that is still hardlinked is left alone, and that is the whole reason this runs on a timer
 instead of on import. A remux cannot edit the file in place, so the new copy never shares an inode
-with the one qBittorrent seeds, and the link count drops to 1. Two things read that count as "the
-library has let go": qbit-manage's tag_nohardlinks, whose noHL tag is what admits a torrent into
-every tracker group in its config, and those groups carry cleanup: true; and seed-cleanup.py, which
-asks the same question first. seed-cleanup.py survives it, because its second question asks the arr
-whether the imported path is still on disk, the same fallback that covers unpackerr's extracted
-RARs. qbit-manage has no such fallback: it would read a remux as a film the library dropped and
-start counting that torrent towards deletion, on a private tracker, for a reason that is not true.
+with the one qBittorrent seeds, and the link count drops to 1. qbit-manage reads that count as "the
+library has let go": its tag_nohardlinks produces the noHL tag, that tag is what admits a torrent
+into every tracker group in its config, and those groups carry cleanup: true. It has no second
+question, so it would read a remux as a film the library dropped and start counting that torrent
+towards deletion, on a private tracker, for a reason that is not true. Nothing else is watching
+either: the script that used to ask the arrs what a download produced was retired once qbit-manage
+took over deletion, which leaves that count the only signal there is.
 
 So the seeded copy is never disturbed. Those films are fixed on a later pass, once the tracker's
 term is served and the torrent released, which is also when remuxing stops costing a second copy
