@@ -295,6 +295,10 @@
       {
         "formatName": "AV1",
         "score": -10000
+      },
+      {
+        "formatName": "Audio compatible TV",
+        "score": 400
       }
     ],
     "minUpgradeFormatScore": 1
@@ -595,6 +599,10 @@
       {
         "formatName": "AV1",
         "score": -10000
+      },
+      {
+        "formatName": "Audio compatible TV",
+        "score": 400
       }
     ],
     "minUpgradeFormatScore": 1
@@ -895,6 +903,10 @@
       {
         "formatName": "AV1",
         "score": -10000
+      },
+      {
+        "formatName": "Audio compatible TV",
+        "score": 400
       }
     ],
     "minUpgradeFormatScore": 1
@@ -1195,6 +1207,10 @@
       {
         "formatName": "AV1",
         "score": -10000
+      },
+      {
+        "formatName": "Audio compatible TV",
+        "score": 400
       }
     ],
     "minUpgradeFormatScore": 1
@@ -1495,6 +1511,10 @@
       {
         "formatName": "AV1",
         "score": -10000
+      },
+      {
+        "formatName": "Audio compatible TV",
+        "score": 400
       }
     ],
     "minUpgradeFormatScore": 1
@@ -1795,6 +1815,10 @@
       {
         "formatName": "AV1",
         "score": -10000
+      },
+      {
+        "formatName": "Audio compatible TV",
+        "score": 400
       }
     ],
     "minUpgradeFormatScore": 1
