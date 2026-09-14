@@ -974,12 +974,11 @@ groups:
         # worth a message is "gone long enough to pick a different one". The 1h average in the
         # expression is also what stops a recovery blip resolving the alert and re-firing it.
         #
-        # The number comes from the ISP rather than from the trackers. Every Cloudflare-fronted site
-        # here goes unreachable while football is being broadcast, because LaLiga has Spanish ISPs
-        # null-route Cloudflare ranges for the duration: 20 windows in a month, all of them Friday
-        # to Monday evening, none starting before 16:45 or outliving 00:45, the longest 8h. The site
-        # comes back without anyone doing anything, so none of them is worth a message. 14h clears
-        # the longest by six hours and still reports a genuinely dead indexer within the same day.
+        # 14h and not 6h because what 6h fired on was the football blocking windows, which end by
+        # themselves: 20 of them in the month this was measured, every one Friday to Monday evening,
+        # none starting before 16:45 or outliving 00:45, the longest 8h. So 14h clears the longest by
+        # six hours and still reports a genuinely dead indexer within the same day. The mechanism,
+        # and how to tell it from a tracker that really broke, is in docs/alerting.md.
         #
         # Every enabled indexer, one alert each, including a private tracker with zero grabs: an
         # account still in its newbie window has none by definition and is exactly the one worth
