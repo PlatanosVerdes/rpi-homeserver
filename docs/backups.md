@@ -62,11 +62,10 @@ docker compose up -d
 - `backup_last_size_bytes` — archive size
 - `appdata_size_bytes` — total `appdata/` size on disk, to watch growth over time
 
-Every exit reports, including one that never got as far as reading `.env`. The script arms its
-trap on EXIT rather than ERR, and before sourcing `.env`, because an unquoted `$` in a password is
-an unbound variable under `set -u` and that ends the shell without running an ERR trap. Without
-that, the failure is invisible until the staleness alert 36 hours later: `backup_last_status` still
-reads 0, from the last run that worked.
+Every exit reports, including one that never got as far as reading `.env`. The reason the trap is
+on EXIT and not ERR is in the script. What it buys is that a failed run cannot leave
+`backup_last_status` reading 0 from the last one that worked, which is the state where the only
+sign is the staleness alert 36 hours later.
 
 ## Offsite (recommended, not enabled by default)
 
