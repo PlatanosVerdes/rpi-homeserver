@@ -413,6 +413,14 @@
       {
         "formatName": "RAR pack (reject)",
         "score": -20000
+      },
+      {
+        "formatName": "Audio compatible TV",
+        "score": 400
+      },
+      {
+        "formatName": "DTS (any flavour)",
+        "score": -400
       }
     ],
     "minUpgradeFormatScore": 1,
@@ -835,6 +843,14 @@
       {
         "formatName": "RAR pack (reject)",
         "score": -20000
+      },
+      {
+        "formatName": "Audio compatible TV",
+        "score": 400
+      },
+      {
+        "formatName": "DTS (any flavour)",
+        "score": -400
       }
     ],
     "minUpgradeFormatScore": 1,
@@ -1257,6 +1273,14 @@
       {
         "formatName": "RAR pack (reject)",
         "score": -20000
+      },
+      {
+        "formatName": "Audio compatible TV",
+        "score": 400
+      },
+      {
+        "formatName": "DTS (any flavour)",
+        "score": -400
       }
     ],
     "minUpgradeFormatScore": 1,

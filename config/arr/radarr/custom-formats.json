@@ -139,7 +139,7 @@
         "fields": [
           {
             "name": "value",
-            "value": "\\b(castellano|espa[nñ]ol|spanish|esp|cast)\\b"
+            "value": "\\b(castellano|espa[n\u00f1]ol|spanish|esp|cast)\\b"
           }
         ]
       },
@@ -151,7 +151,7 @@
         "fields": [
           {
             "name": "value",
-            "value": "\\b(latino|latin|lat|espa[nñ]ol[ ._-]*latino)\\b"
+            "value": "\\b(latino|latin|lat|espa[n\u00f1]ol[ ._-]*latino)\\b"
           }
         ]
       }
@@ -169,7 +169,7 @@
         "fields": [
           {
             "name": "value",
-            "value": "\\b(vose|v\\.?o\\.?s\\.?e|sub(s|titulos|titulado)?[ ._-]*(esp|spa|castellano|espa[nñ]ol))\\b"
+            "value": "\\b(vose|v\\.?o\\.?s\\.?e|sub(s|titulos|titulado)?[ ._-]*(esp|spa|castellano|espa[n\u00f1]ol))\\b"
           }
         ]
       }
@@ -209,7 +209,7 @@
         "fields": [
           {
             "name": "value",
-            "value": "\\b(latino|latin|lat|espa[nñ]ol[ ._-]*latino)\\b"
+            "value": "\\b(latino|latin|lat|espa[n\u00f1]ol[ ._-]*latino)\\b"
           }
         ]
       }
@@ -246,6 +246,42 @@
           {
             "name": "value",
             "value": "^(GAZPROM|CEBRAY|GAZER)$"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Audio compatible TV",
+    "includeCustomFormatWhenRenaming": false,
+    "specifications": [
+      {
+        "name": "Audio compatible TV",
+        "implementation": "ReleaseTitleSpecification",
+        "negate": false,
+        "required": true,
+        "fields": [
+          {
+            "name": "value",
+            "value": "\\b(ac3|e[-. ]?ac3|ddp|dd\\+|dd[0-9]|aac)"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "DTS (any flavour)",
+    "includeCustomFormatWhenRenaming": false,
+    "specifications": [
+      {
+        "name": "DTS (any flavour)",
+        "implementation": "ReleaseTitleSpecification",
+        "negate": false,
+        "required": true,
+        "fields": [
+          {
+            "name": "value",
+            "value": "\\bdts\\b"
           }
         ]
       }
