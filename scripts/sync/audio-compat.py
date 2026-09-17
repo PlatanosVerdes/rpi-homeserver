@@ -42,7 +42,7 @@ from pathlib import Path
 
 PROJECT_DIR = Path(os.path.expanduser("~/rpi-homeserver"))
 DATA_ROOT = Path(os.environ.get("DATA_ROOT", "/mnt/data"))
-LIBRARIES = ("films", "tv")
+LIBRARIES = ("films", "series")
 EXTENSIONS = (".mkv", ".mp4", ".m4v")
 
 # What the TV decodes without help. TrueHD and DTS in every flavour are deliberately absent.
@@ -151,7 +151,10 @@ def verify(src_info, dst):
 def candidates():
     for library in LIBRARIES:
         root = DATA_ROOT / library
+        # Loud: this script is silent when it finds nothing, so a library skipped for being
+        # misnamed reads exactly like a library with nothing to convert.
         if not root.is_dir():
+            print(f"library {root} does not exist, nothing from it was checked", file=sys.stderr)
             continue
         for path in sorted(root.rglob("*")):
             if path.suffix.lower() in EXTENSIONS and path.is_file():
