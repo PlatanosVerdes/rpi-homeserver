@@ -76,6 +76,7 @@ services:
     volumes:
       - ${CONFIG_ROOT}/aceserve/acestream.conf:/acestream/acestream.conf:ro
       - ${CONFIG_ROOT}/aceserve/log-filter.awk:/acestream/log-filter.awk:ro
+      - ${CONFIG_ROOT}/aceserve/dnsproxyd.py:/acestream/dnsproxyd.py:ro
     command:
       - sh
       - -c
