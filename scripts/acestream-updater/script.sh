@@ -13,12 +13,6 @@ METRICS_FILE="/app/metrics.env"
 TEMP_COMBINED="/tmp/combined.m3u"
 TEMP_NEW="/tmp/new.m3u"
 
-# The peers aceserve dials to join the network. When an ISP blocks them every
-# channel fails at once, which looks identical to a broken stack. Read off the
-# engine's own sockets, so re-check them if the engine starts dialling others.
-BOOTSTRAP_ADDRS="64.227.119.64:8081 5.252.161.191:8081"
-BOOTSTRAP_TIMEOUT=5
-
 SUCCESS_CHANGES=0
 SUCCESS_NO_CHANGES=0
 ERRORS=0
@@ -33,7 +27,6 @@ fi
 TOTAL_RUNS=$((TOTAL_RUNS + 1))
 
 declare -A SOURCE_HTTP_CODES
-declare -A BOOTSTRAP_REACHABLE
 
 save_metrics_state() {
     cat <<EOF > "$METRICS_FILE"
@@ -42,19 +35,6 @@ SUCCESS_NO_CHANGES=$SUCCESS_NO_CHANGES
 ERRORS=$ERRORS
 TOTAL_RUNS=$TOTAL_RUNS
 EOF
-}
-
-check_bootstrap() {
-    local addr host port
-    for addr in $BOOTSTRAP_ADDRS; do
-        host="${addr%:*}"
-        port="${addr##*:}"
-        if timeout "$BOOTSTRAP_TIMEOUT" bash -c "exec 3<>/dev/tcp/${host}/${port}" 2>/dev/null; then
-            BOOTSTRAP_REACHABLE["$addr"]=1
-        else
-            BOOTSTRAP_REACHABLE["$addr"]=0
-        fi
-    done
 }
 
 push_metrics() {
@@ -87,24 +67,10 @@ EOF
         for host in "${!SOURCE_HTTP_CODES[@]}"; do
             echo "acestream_source_http_code{url=\"${host}\"} ${SOURCE_HTTP_CODES[$host]}"
         done
-        cat <<EOF
-# HELP acestream_bootstrap_reachable 1 if the engine bootstrap peer completes a TCP handshake, 0 if not
-# TYPE acestream_bootstrap_reachable gauge
-EOF
-        for addr in "${!BOOTSTRAP_REACHABLE[@]}"; do
-            echo "acestream_bootstrap_reachable{addr=\"${addr}\"} ${BOOTSTRAP_REACHABLE[$addr]}"
-        done
     } | curl -fsSL --connect-timeout 5 --data-binary @- "${PUSHGATEWAY_URL}/metrics/job/acestream_updater"
 }
 
 echo "Starting execution #$TOTAL_RUNS"
-
-check_bootstrap
-BOOTSTRAP_SUMMARY=""
-for addr in "${!BOOTSTRAP_REACHABLE[@]}"; do
-    BOOTSTRAP_SUMMARY+="${addr}=${BOOTSTRAP_REACHABLE[$addr]} "
-done
-echo "Bootstrap: ${BOOTSTRAP_SUMMARY}"
 
 IFS=',' read -ra URLS <<< "$SOURCE_URLS"
 DOWNLOAD_ERRORS=0
