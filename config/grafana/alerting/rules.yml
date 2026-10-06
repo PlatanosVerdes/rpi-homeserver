@@ -729,7 +729,8 @@ groups:
           description: >-
             This one was grabbed for the library, so nothing else is going to bring it: blocklist it
             in Radarr or Sonarr and let it search for a different release. Left alone, qbit-manage
-            removes it 12 hours after its last byte and the arr tries again on its own.
+            removes it 12 hours after its last byte, but nothing blocklists it, so the arr may grab
+            the same dead release again.
         noDataState: OK
         execErrState: KeepLast
         data:
@@ -1022,20 +1023,20 @@ groups:
       - uid: homelab-arr-orphan-queue
         title: 'Download nothing can import'
         condition: C
-        # Two hours, because a download that just finished can legitimately sit in the queue for a
-        # few minutes while the *arr decides what to do with it.
-        for: 2h
+        # Must outlast a public torrent's 2h seed plus one hourly qbit-manage run, which removes it
+        # and with it the queue item.
+        for: 4h
         labels:
           severity: warning
         annotations:
           summary: '{{ $labels.app }} cannot import {{ $labels.title }}'
           description: >-
-            Reason given: {{ $labels.reason }}. This usually means the movie or series was deleted
-            from the *arr while its download was still running, so the finished file has nothing to
-            import into and waits for a human. Radarr only re-announces it when it restarts, which
-            is why this rule exists. The torrent may still owe its tracker, so do not delete
-            anything: take it out of the *arr's category in qBittorrent. Deleting the queue entry
-            alone does not stick, the *arr rebuilds its queue from the download client.
+            Reason given: {{ $labels.reason }}. Either the title was deleted from the *arr while it
+            downloaded, or the release holds files the *arr will not import (an unmonitored or
+            unmatched episode in a pack). Public torrents leave on their own, so this one will seed
+            for days and sit in the queue all that time. It may still owe its tracker, so do not
+            delete anything: take it out of the *arr's category in qBittorrent. Deleting the queue
+            entry alone does not stick, the *arr rebuilds its queue from the download client.
         noDataState: OK
         execErrState: KeepLast
         data:
