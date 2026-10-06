@@ -126,6 +126,13 @@ Plex runs on the Pi, which is weak at video transcoding, so files should
   downloaded at all. Project Hail Mary is exactly that case, and this repo is choosing the empty
   shelf over 197 GB.
 - **Language preference:** Castilian Spanish > VOSE (original audio with Spanish subtitles) > English > Latin-American Spanish (avoided).
+- **Sonarr's `HD-1080p VOSE` profile** is for series watched in the original language. Spanish
+  audio scores 0 there instead of +2000, so a dual-audio release is still fine (Plex picks the
+  original track) but a dub no longer outranks the original. Spanish subtitles come from Bazarr,
+  as text, so they never force a video transcode. It also prefers x265 over x264 (+300 against 0):
+  roughly half the size per episode, and the TV decodes HEVC itself, so the Pi only passes it
+  through. Its `cutoffFormatScore` is 700, x265 plus TV-compatible audio, which a non-English
+  original (Dark, in German) can reach too, so no show stays in endless upgrade search.
 - **A film is considered finished at `cutoffFormatScore` 2200**, which is Spanish audio plus x264.
   This is the setting that decides when Radarr stops hunting for a better release, and it used to
   be **10000, a score nothing can reach**: the positive formats here add up to at most +6700 and
