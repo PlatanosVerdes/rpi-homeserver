@@ -5,7 +5,7 @@ Most of this repo pushes configuration into the apps (scripts/sync/*). This does
 the two whose settings are pure logic with no credentials in them and which no file here described:
 
   autobrr      its filters: what is worth grabbing, the size band, the daily cap
-  maintainerr  its rule group: watched more than two days ago, then delete
+  maintainerr  its rule groups: films and episodes watched more than two days ago, then delete
 
 Deliberately one-way, unlike the sync scripts that push git into an app: a wrong autobrr filter
 costs disk, a wrong Maintainerr rule deletes films, so pushing a deletion rule from a file nobody

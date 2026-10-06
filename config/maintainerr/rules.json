@@ -58,5 +58,72 @@
       }
     ],
     "useRules": true
+  },
+  {
+    "collection": {
+      "arrAction": 2,
+      "cleanupLeftoverFolders": false,
+      "deleteAfterDays": 0,
+      "description": "Episodes watched in Plex more than two days ago, only for series Sonarr manages",
+      "forceSeerr": false,
+      "id": 2,
+      "isActive": true,
+      "keepLogsForMonths": 6,
+      "libraryId": "2",
+      "listExclusions": false,
+      "manualCollection": false,
+      "manualCollectionName": "",
+      "mediaServerId": null,
+      "mediaServerSort": null,
+      "mediaServerType": "plex",
+      "overlayEnabled": false,
+      "overlayTemplateId": null,
+      "radarrQualityProfileId": null,
+      "radarrSettingsId": null,
+      "sonarrQualityProfileId": null,
+      "sonarrSettingsId": 1,
+      "sortTitle": null,
+      "sportarrQualityProfileId": null,
+      "sportarrSettingsId": null,
+      "tagInArr": false,
+      "tautulliWatchedPercentOverride": 95,
+      "title": "Watched episodes",
+      "type": "episode",
+      "visibleOnHome": false,
+      "visibleOnRecommended": false
+    },
+    "collectionId": 2,
+    "dataType": "episode",
+    "description": "Episodes watched in Plex more than two days ago, only for series Sonarr manages",
+    "id": 2,
+    "isActive": true,
+    "libraryId": "2",
+    "name": "Watched episodes",
+    "notifications": [],
+    "ruleHandlerCronSchedule": null,
+    "rules": [
+      {
+        "id": 4,
+        "isActive": true,
+        "ruleGroupId": 2,
+        "ruleJson": "{\"operator\":null,\"firstVal\":[0,7],\"action\":5,\"customVal\":{\"ruleTypeId\":0,\"value\":\"172800\"},\"section\":0}",
+        "section": 0
+      },
+      {
+        "id": 5,
+        "isActive": true,
+        "ruleGroupId": 2,
+        "ruleJson": "{\"operator\":0,\"firstVal\":[0,5],\"action\":0,\"customVal\":{\"ruleTypeId\":0,\"value\":\"0\"},\"section\":0}",
+        "section": 0
+      },
+      {
+        "id": 6,
+        "isActive": true,
+        "ruleGroupId": 2,
+        "ruleJson": "{\"operator\":0,\"firstVal\":[2,34],\"action\":18,\"section\":0}",
+        "section": 0
+      }
+    ],
+    "useRules": true
   }
 ]
