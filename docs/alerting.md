@@ -31,7 +31,7 @@ this repo is the source of truth.
 | Pi running hot | SoC above 75 C | 10m |
 | Seed cleanup failed | `seed_cleanup_last_status != 0` | 5m |
 | Seed cleanup not running | no pass in more than 3h | 15m |
-| Download nothing can import | a queue item the *arr cannot attribute to any title | 2h |
+| Download nothing can import | a queue item the *arr cannot import without a human | 4h |
 | Data in downloads that nothing owns | unclaimed bytes the library does not share either | 1h |
 | Video is being re-encoded | any client, any server | 5m |
 | Audio is being re-encoded | a client that is not a browser | 5m |
