@@ -14,8 +14,10 @@ Jellyfin (webhook)  ──┘             │  (container on media-network, no p
                           Sonarr API (monitor + EpisodeSearch)
 ```
 
-Deletion/cleanup of already-watched episodes is explicitly out of scope: this only fetches
-forward.
+Deletion of already-watched episodes is out of scope here: this only fetches forward. Maintainerr's
+"Watched episodes" rule does the deleting, two days after the watch, and only for series Sonarr
+manages. It unmonitors the episode as it goes, so Sonarr never fetches it again. One Pace is
+excluded in Maintainerr and is never deleted.
 
 ## Security
 
