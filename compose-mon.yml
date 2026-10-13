@@ -51,6 +51,8 @@ services:
   cadvisor:
     image: ghcr.io/google/cadvisor:${CADVISOR_VERSION}
     container_name: cadvisor
+    # The image's wget healthcheck leaves zombies: cadvisor runs as PID 1 and never reaps them.
+    init: true
     restart: unless-stopped
     mem_limit: 256m
     memswap_limit: 256m
@@ -71,8 +73,12 @@ services:
       # pi-metrics already covers that. referenced_memory reads /proc/<pid>/smaps
       # per process and logs a warning for each one it cannot read: 66 log lines per 80 s here, and
       # nothing graphs it. "accelerator" is not a metric kind in v0.60.5 and crash-loops the flag
-      # parse, so do not add it.
-      - --disable_metrics=advtcp,tcp,udp,percpu,sched,process,disk,diskIO,referenced_memory
+      # parse, so do not add it. The list replaces cadvisor's default one, so the kinds it
+      # disables by default (cpu_topology, cpuset, hugetlb, memory_numa, resctrl) must stay here.
+      - --disable_metrics=advtcp,tcp,udp,percpu,sched,process,disk,diskIO,referenced_memory,cpu_topology,cpuset,hugetlb,memory_numa,resctrl
+      # Only the labels the service-probes dashboard filters on, not every label on every series.
+      - --store_container_labels=false
+      - --whitelisted_container_labels=prometheus.probe,com.docker.compose.oneoff
     networks:
       - media-network
 

@@ -12,6 +12,8 @@ scrape_configs:
       - targets: ['host.docker.internal:9100']
 
   - job_name: 'cadvisor'
+    # Matches --housekeeping_interval: a 15s scrape only re-reads the same numbers.
+    scrape_interval: 30s
     static_configs:
       - targets: ['cadvisor:8080']
 
