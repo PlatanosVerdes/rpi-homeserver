@@ -89,6 +89,21 @@ print(yaml.safe_load(open('$conf'))['auth']['apikey'])" 2>/dev/null)
     fi
     [[ -n "$data" ]] || return 0
 
+    # Every settings POST restarts Bazarr's SignalR clients, and each restart leaks threads.
+    if sudo python3 - "$conf" "${radarr_key_val:-}" "${sonarr_key_val:-}" <<'EOF'
+import sys, yaml
+conf = yaml.safe_load(open(sys.argv[1]))
+wanted = {"radarr": (7878, sys.argv[2]), "sonarr": (8989, sys.argv[3])}
+sys.exit(any(
+    key and (conf.get(app, {}).get("ip"), conf.get(app, {}).get("port"), conf.get(app, {}).get("apikey")) != (app, port, key)
+    for app, (port, key) in wanted.items()
+))
+EOF
+    then
+        echo "bazarr: radarr/sonarr connection already current"
+        return 0
+    fi
+
     # Bazarr has no host-published port; reach it through a container on media-network.
     # timeout sobre el exec, no solo sobre el curl: hoy este docker exec se quedo colgado 53
     # minutos con el lock del despliegue cogido, y --max-time de curl no acota el exec.
