@@ -40,6 +40,8 @@ services:
   homepage:
     image: ghcr.io/gethomepage/homepage:${HOMEPAGE_VERSION}
     container_name: homepage
+    # next-server is PID 1 and never reaps the healthcheck's wget children.
+    init: true
     labels:
       prometheus.probe: "http://homepage:3000/"
     restart: unless-stopped
