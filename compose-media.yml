@@ -174,8 +174,9 @@ services:
     # Capped at one core: a SignalR reconnect loop against Radarr can leak threads until it eats a
     # whole one, and subtitles never need more.
     cpus: 1.0
-    mem_limit: 512m
-    memswap_limit: 512m
+    # 512m was its working size, not a ceiling: 25.8k limit hits in a day and a half.
+    mem_limit: 768m
+    memswap_limit: 768m
     profiles: [media, all]
     environment:
       - PUID=${PUID}

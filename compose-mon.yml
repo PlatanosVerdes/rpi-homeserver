@@ -203,8 +203,10 @@ services:
     build: ./services/pi-metrics
     container_name: pi-metrics
     restart: unless-stopped
-    mem_limit: 64m
-    memswap_limit: 64m
+    # The hourly disk walk holds every file of /mnt/data in a map. At 64m it sat at the limit: 294k
+    # hits and 8.5M pages re-read in a day and a half, with its API calls timing out meanwhile.
+    mem_limit: 192m
+    memswap_limit: 192m
     profiles: [moni, all]
     # Plex runs on the host network, so the playback collector reaches it through the gateway.
     extra_hosts:

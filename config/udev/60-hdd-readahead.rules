@@ -1,0 +1,5 @@
+# Spinning disks only. With the kernel's 128 KB default, two films read at once from the same disk
+# made the head seek between them every 128 KB: measured 2026-10-15 through mergerfs, 28 MB/s for
+# both together at 128 KB against 141 MB/s at 4 MB. One reader alone barely changes (133 -> 148).
+# mergerfs's own FUSE readahead made no difference on top, so only the backing disks are set.
+ACTION=="add|change", SUBSYSTEM=="block", KERNEL=="sd[a-z]", ATTR{queue/rotational}=="1", ATTR{queue/read_ahead_kb}="4096"

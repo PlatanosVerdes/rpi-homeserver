@@ -62,9 +62,10 @@ scripts/                    Operational scripts, grouped by what they do
   deploy/                   Runs on every push and every 30 min
     apply.sh                The orchestrator: pull, compose, then every sync below. Webhook + cron
 
-  setup/                    Host state apply.sh converges on each pass: cron and log rotation
+  setup/                    Host state apply.sh converges on each pass: cron, log rotation, udev
     install-crontab.sh      Merges both repos' crontab fragments and installs them
     install-logrotate.sh    Installs the log rotation policy for both repos
+    install-udev.sh         Installs config/udev/ rules (the media disks' readahead)
 
   recovery/                 Run by hand, after something broke
     rebuild-service.sh      Rebuild one compose service from scratch
