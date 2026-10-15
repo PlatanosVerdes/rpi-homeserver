@@ -41,8 +41,9 @@ services:
     labels:
       prometheus.probe: "http://flaresolverr:8191/"
     restart: unless-stopped
-    mem_limit: 768m
-    memswap_limit: 768m
+    # Headless Chromium. Peaked at 771 MB and hit 768m 16.7k times in a day and a half.
+    mem_limit: 1g
+    memswap_limit: 1g
     profiles: [media, all]
     dns:
       - 8.8.8.8

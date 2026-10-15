@@ -114,6 +114,7 @@ during an ARM Go build cost exactly one extra pass.
 | `scripts/sync/pihole-dns.sh` | every deploy | Pi-hole | the Caddy config, additive only |
 | `scripts/setup/install-crontab.sh` | every deploy | host crontab | both repos' `scripts/crontab` |
 | `scripts/setup/install-logrotate.sh` | every deploy | `/etc/logrotate.d` | `config/logrotate/rpi-homeserver` |
+| `scripts/setup/install-udev.sh` | every deploy | `/etc/udev/rules.d` | `config/udev/*.rules` |
 | the tracker-control service | :05 and :35 | Prowlarr, Radarr, autobrr | the measured ratio headroom |
 | qbit-manage | hourly | tags, share limits, deletes into the recycle bin | `config/qbit-manage/config.yml` |
 | `scripts/ops/cutoff-search.sh` | 05:00 | nothing, triggers a search | Radarr's own Wanted list |

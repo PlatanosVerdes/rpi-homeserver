@@ -49,6 +49,12 @@ APPDATA="${APP_CONFIG_PATH:-./appdata}"
 SERVICES_DIR="${SERVICES_DIR:-$HOME/rpi-services}"
 SERVICES_APPDATA="$SERVICES_DIR/appdata"
 
+# Grafana's database lives outside appdata when MON_DATA_ROOT moves it to a disk (compose-mon.yml)
+GRAFANA_DATA=""
+if [[ -n "${MON_DATA_ROOT:-}" && -d "$MON_DATA_ROOT/grafana" ]]; then
+    GRAFANA_DATA="${MON_DATA_ROOT%/}/grafana"
+fi
+
 DEST="${BACKUP_DEST:-${DATA_ROOT}/backups/appdata}"
 RETENTION="${BACKUP_RETENTION:-7}"
 
@@ -71,7 +77,8 @@ sudo tar \
     --exclude='*/logs/*' \
     --exclude='*.log' \
     --exclude='*.sock' \
-    -czf "$ARCHIVE" -C "$HOME" "${APPDATA#$HOME/}" $([ -d "$SERVICES_APPDATA" ] && echo "${SERVICES_APPDATA#$HOME/}") || tar_rc=$?
+    -czf "$ARCHIVE" -C "$HOME" "${APPDATA#$HOME/}" $([ -d "$SERVICES_APPDATA" ] && echo "${SERVICES_APPDATA#$HOME/}") \
+    $([ -n "$GRAFANA_DATA" ] && echo "-C / ${GRAFANA_DATA#/}") || tar_rc=$?
 
 # tar exit 1 = some files changed/vanished mid-read (benign for live caches); >1 = fatal
 if [ "$tar_rc" -gt 1 ]; then

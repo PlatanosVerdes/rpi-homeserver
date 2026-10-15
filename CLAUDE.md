@@ -62,9 +62,10 @@ scripts/                    Operational scripts, grouped by what they do
   deploy/                   Runs on every push and every 30 min
     apply.sh                The orchestrator: pull, compose, then every sync below. Webhook + cron
 
-  setup/                    Host state apply.sh converges on each pass: cron and log rotation
+  setup/                    Host state apply.sh converges on each pass: cron, log rotation, udev
     install-crontab.sh      Merges both repos' crontab fragments and installs them
     install-logrotate.sh    Installs the log rotation policy for both repos
+    install-udev.sh         Installs config/udev/ rules (the media disks' readahead)
 
   recovery/                 Run by hand, after something broke
     rebuild-service.sh      Rebuild one compose service from scratch
@@ -254,6 +255,7 @@ DATA_ROOT                      # External disk mount (e.g. /mnt/data)
 DATA_DB_ROOT                   # DB subdirectory
 CONFIG_ROOT=./config
 APP_CONFIG_PATH=./appdata
+MON_DATA_ROOT                  # Optional: Prometheus + Grafana data on a disk instead of appdata
 CF_API_TOKEN                   # Cloudflare DNS token for HTTPS certs
 TAILSCALE_API_KEY              # Optional, only for tailscale_peer_is_exit_node
 PLEX_LAN_NETWORKS              # Networks Plex treats as local (see Networking)

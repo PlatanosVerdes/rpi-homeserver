@@ -461,6 +461,9 @@ bash "$PROJECT_DIR/scripts/setup/install-crontab.sh" 2>&1 | while IFS= read -r l
 # And the logrotate policy that keeps the logs those cron jobs write from filling the disk
 bash "$PROJECT_DIR/scripts/setup/install-logrotate.sh" 2>&1 | while IFS= read -r line; do log "[logrotate] $line"; done
 
+# And the udev rules, today only the media disks' readahead
+bash "$PROJECT_DIR/scripts/setup/install-udev.sh" 2>&1 | while IFS= read -r line; do log "[udev] $line"; done
+
 # Converge Radarr/Sonarr custom formats and quality profiles to config/arr/. These are built by
 # hand through each app's own UI and live only in its appdata database, so without this a lost
 # Pi silently loses them. Needs both apps up, hence running here rather than before compose.

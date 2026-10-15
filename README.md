@@ -465,7 +465,7 @@ config/      Static config files (Caddyfile, Prometheus, Grafana dashboards, Hom
 services/    Custom services source, one Docker image each
 scripts/     Operational scripts, grouped by what they do:
   deploy/      apply.sh, the orchestrator the webhook and the cron call
-  setup/       host state apply.sh converges on each pass: cron and log rotation
+  setup/       host state apply.sh converges on each pass: cron, log rotation, udev
   recovery/    run by hand after something broke: rebuild a service, see what a human still owes
   sync/        pushes config that lives only in an app's appdata, every deploy
   ops/         everything else on a schedule (backup, heartbeat, searches)
