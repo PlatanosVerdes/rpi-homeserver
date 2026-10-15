@@ -34,6 +34,8 @@ VOLATILE = {"created_at", "updated_at", "last_run", "last_run_data", "lastRun", 
             "created", "updated", "dateAdded", "media", "totalSizeBytes",
             # Maintainerr keeps its running totals in the same object as its settings
             "handledMediaAmount", "handledMediaSizeBytes", "lastDurationInSeconds",
+            # The Plex collection's id, assigned by Plex once the rule first fills it
+            "mediaServerId",
             # autobrr reports these as 0 whatever the filter holds, so they say nothing
             "actions_count", "actions_enabled_count"}
 
