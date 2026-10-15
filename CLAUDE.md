@@ -255,7 +255,6 @@ DATA_ROOT                      # External disk mount (e.g. /mnt/data)
 DATA_DB_ROOT                   # DB subdirectory
 CONFIG_ROOT=./config
 APP_CONFIG_PATH=./appdata
-MON_DATA_ROOT                  # Optional: Prometheus + Grafana data on a disk instead of appdata
 CF_API_TOKEN                   # Cloudflare DNS token for HTTPS certs
 TAILSCALE_API_KEY              # Optional, only for tailscale_peer_is_exit_node
 PLEX_LAN_NETWORKS              # Networks Plex treats as local (see Networking)

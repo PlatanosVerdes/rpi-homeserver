@@ -9,7 +9,6 @@
 set -uo pipefail
 
 APPDATA_ROOT="/home/raspi/rpi-homeserver/appdata"
-MON_DATA_ROOT=$(grep -oP '^MON_DATA_ROOT=\K\S+' /home/raspi/rpi-homeserver/.env 2>/dev/null)
 
 check() {
     local label=$1 ok=$2 detail=$3
@@ -28,7 +27,7 @@ echo "Needs a human, at least once per rebuild:"
 # Grafana reads GF_DATABASE_WAL but 13.1.2's pure-Go sqlite driver did not convert an existing
 # database with it, so a rebuild is the moment to confirm the new one came up in WAL. Without it
 # an alert rule that fails to evaluate says nothing: execErrState is KeepLast everywhere.
-gf_db="${MON_DATA_ROOT:-$APPDATA_ROOT}/grafana/data/grafana.db"
+gf_db="$APPDATA_ROOT/grafana/data/grafana.db"
 if sudo test -f "$gf_db"; then
     mode=$(sudo python3 -c "import sqlite3;print(sqlite3.connect('file:$gf_db?mode=ro',uri=True).execute('pragma journal_mode').fetchone()[0])" 2>/dev/null)
     if [[ "$mode" == "wal" ]]; then
