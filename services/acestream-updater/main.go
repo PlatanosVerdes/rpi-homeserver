@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -202,17 +203,44 @@ func channelName(extinf string) string {
 }
 
 
+// triggerJellyfinRefresh runs "Refresh Guide", the task that rereads the M3U tuner. Looked up by
+// its Key: the id is an MD5 of the class name, and a hard-coded one ran "Refresh Channels" instead.
 func triggerJellyfinRefresh(jellyfinURL, apiKey string) int {
 	client := &http.Client{Timeout: 10 * time.Second}
-	req, _ := http.NewRequest("POST",
-		jellyfinURL+"/ScheduledTasks/Running/0c9ee3a88fc15547c6852205480da1fd", nil)
-	req.Header.Set("X-Emby-Token", apiKey)
-	resp, err := client.Do(req)
+	call := func(method, path string) (*http.Response, error) {
+		req, err := http.NewRequest(method, jellyfinURL+path, nil)
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("X-Emby-Token", apiKey)
+		return client.Do(req)
+	}
+
+	resp, err := call("GET", "/ScheduledTasks")
 	if err != nil {
 		return 0
 	}
 	defer resp.Body.Close()
-	return resp.StatusCode
+	if resp.StatusCode != http.StatusOK {
+		return resp.StatusCode
+	}
+	var tasks []struct{ Id, Key string }
+	if err := json.NewDecoder(resp.Body).Decode(&tasks); err != nil {
+		return 0
+	}
+	for _, task := range tasks {
+		if task.Key != "RefreshGuide" {
+			continue
+		}
+		run, err := call("POST", "/ScheduledTasks/Running/"+task.Id)
+		if err != nil {
+			return 0
+		}
+		run.Body.Close()
+		return run.StatusCode
+	}
+	log.Printf("Jellyfin has no RefreshGuide task")
+	return http.StatusNotFound
 }
 
 func prometheusLabel(s string) string {
