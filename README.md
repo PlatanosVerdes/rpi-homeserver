@@ -146,19 +146,19 @@ To link everything correctly, follow these steps:
 2. Host: `qbittorrent`, Port: `8080`.
 
 ### Acestream Live TV Integration
-- **How it works:** The `acestream-updater` container runs a background loop that fetches IPFS channels, converts them for aceserve, and saves a `.m3u` file.
+- **How it works:** [bifrost](https://github.com/PlatanosVerdes/bifrost) reads the channel list from IPFS through `kubo`, writes a `.m3u` with one stable URL per channel and a guide cut down to those channels, and is the proxy Jellyfin plays from. The engine (`aceserve`) sends only its HTTPS through `gluetun` (NordVPN); its P2P stays on the home line.
 
 - **Jellyfin Setup:** 
 1. Open Jellyfin Dashboard -> _Live TV._
 2. Add a _Tuner Setup (M3U)_.
-3. File path: `/data/channels_ace.m3u` (mapped from your appdata).
+3. File path: `/config/acestream/channels_ace.m3u`; the XMLTV guide is `/config/acestream/guide.xml`.
 
 ### Monitoring (Prometheus & Grafana)
 - **Grafana:** `http://<IP>:3000` (Default: admin/admin).
-- **Metrics:** Metrics are auto-provisioned (at least some of them). The `acestream-updater` sends data to the `pushgateway` which is then scraped by Prometheus.
-- **Daily Executions:** If the dashboard shows "No Data", trigger the script manually:
+- **Metrics:** Metrics are auto-provisioned (at least some of them). bifrost sends the `acestream_*` metrics to the `pushgateway`, which Prometheus scrapes.
+- **State right now** (list, what is playing, recent opens, whether Jellyfin copies or re-encodes):
 ```bash
-docker exec -it acestream-updater bash /app/script.sh
+docker exec bifrost wget -qO- http://127.0.0.1:6879/api/status
 ```
 
 ### Dashboard (Homepage)
