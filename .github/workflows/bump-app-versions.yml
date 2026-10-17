@@ -1,0 +1,56 @@
+name: Deploy app
+
+# Each app's release runs this with its own tag once the image is on GHCR; the commit triggers the deploy.
+# Only for images this repo pins from its own apps (bifrost); third-party versions stay hand-pinned.
+
+on:
+  workflow_dispatch:
+    inputs:
+      app:
+        description: App repo, e.g. laliga-fantasy
+        required: true
+      tag:
+        description: Published tag, e.g. v2026.10.17.1
+        required: true
+
+concurrency:
+  group: bump-app-versions
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Pin the tag in versions.env
+        env:
+          APP: ${{ inputs.app }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          # The deploy token can start this with any input, so nothing unchecked reaches the shell.
+          [[ "$APP" =~ ^[A-Za-z0-9._-]+$ ]] || { echo "::error::bad app: $APP"; exit 1; }
+          [[ "$TAG" =~ ^v[0-9]{4}\.[0-9]{2}\.[0-9]{2}(\.[0-9]+)?$ ]] || { echo "::error::bad tag: $TAG"; exit 1; }
+
+          image="ghcr.io/platanosverdes/${APP,,}"
+          var=$(perl -ne 'BEGIN{$i=shift} print "$1\n" if /image: \Q$i\E:\$\{([A-Z0-9_]+)\}/' "$image" compose-*.yml | head -1)
+          [[ -n "$var" ]] || { echo "::error::$image is not in any compose-*.yml"; exit 1; }
+          docker manifest inspect "$image:$TAG" >/dev/null ||
+            { echo "::error::$image:$TAG is not published"; exit 1; }
+
+          sed -i "s|^$var=.*|$var=$TAG|" versions.env
+          if git diff --quiet -- versions.env; then
+            echo "$APP is already on $TAG"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -qm "Deploy $APP $TAG" -- versions.env
+          git pull --rebase --quiet origin main
+          git push
