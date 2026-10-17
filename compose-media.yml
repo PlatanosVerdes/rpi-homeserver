@@ -73,11 +73,48 @@ services:
 
 
   # --- Acestream ---
+  # Only the engine goes through this tunnel. Spanish ISPs answer api.acestream.me with a fake
+  # certificate, so the engine resolves no channel at all; from abroad the certificate is real.
+  gluetun:
+    image: qmcgaw/gluetun:${GLUETUN_VERSION}
+    container_name: gluetun
+    profiles: [acestream, all]
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    mem_limit: 128m
+    memswap_limit: 128m
+    # The engine's API, published here because the engine lives in this namespace: the proxy,
+    # the updater and farnsworth keep reaching it at the host address as before.
+    ports:
+      - "6878:6878"
+    environment:
+      - TZ=${TZ}
+      - VPN_SERVICE_PROVIDER=${VPN_SERVICE_PROVIDER}
+      - VPN_TYPE=${VPN_TYPE}
+      - WIREGUARD_PRIVATE_KEY=${WIREGUARD_PRIVATE_KEY}
+      - OPENVPN_USER=${NORDVPN_USER}
+      - OPENVPN_PASSWORD=${NORDVPN_PASS}
+      - OPENVPN_PROTOCOL=${VPN_PROTOCOL}
+      - SERVER_COUNTRIES=${VPN_COUNTRY}
+      - FIREWALL_INPUT_PORTS=6878
+      # Nord retires servers and the list baked into the image goes stale with them.
+      - UPDATER_PERIOD=24h
+    volumes:
+      - ${APP_CONFIG_PATH}/gluetun:/gluetun
+    networks:
+      - media-network
+
   aceserve:
     image: jopsis/aceserve@${ACESERVE_DIGEST}
     container_name: aceserve
     profiles: [acestream, all]
-    network_mode: host
+    network_mode: "service:gluetun"
+    depends_on:
+      gluetun:
+        condition: service_healthy
     restart: unless-stopped
     # The engine buffers the live stream in RAM and fills a 1 GB cache, peaking at 1.153 GB: under
     # that the kernel OOM-kills it every 10-15 min of streaming.
