@@ -560,7 +560,7 @@ matches.
 Jellyfin setup: Live TV → tuner (M3U) `/config/acestream/channels_ace.m3u`; the XMLTV provider is
 pointed at `/config/acestream/guide.xml` by the deploy (`scripts/sync/jellyfin-guide.sh`).
 
-**State right now** (list, last Jellyfin refresh, what is playing, recent opens):
+**State right now** (list, last Jellyfin refresh, what is playing, recent opens, and whether Jellyfin copies or re-encodes):
 ```bash
 docker exec bifrost wget -qO- http://127.0.0.1:6879/api/status
 ```
