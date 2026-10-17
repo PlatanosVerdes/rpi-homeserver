@@ -202,6 +202,8 @@ services:
       - SOURCE_URLS=http://kubo:8080/ipns/k51qzi5uqu5di462t7j4vu4akwfhvtjhy88qbupktvoacqfqe9uforjvhyi4wr/hashes_acestream.m3u,https://ipfs.io/ipns/k51qzi5uqu5di462t7j4vu4akwfhvtjhy88qbupktvoacqfqe9uforjvhyi4wr/hashes_acestream.m3u,https://dweb.link/ipns/k51qzi5uqu5di462t7j4vu4akwfhvtjhy88qbupktvoacqfqe9uforjvhyi4wr/hashes_acestream.m3u
       - ACESERVE_URL=http://172.19.0.1:6878/ace/getstream?id=
       - STREAM_BASE_URL=http://acestream-proxy:6879/ace/getstream?id=
+      # One URL per channel that survives the list rotating its ids; the proxy picks a live source.
+      - CHANNEL_BASE_URL=http://acestream-proxy:6879/channel/
       - PUSHGATEWAY_URL=http://pushgateway:9091
       - JELLYFIN_URL=http://jellyfin:8096
       - JELLYFIN_API_KEY=${JELLYFIN_API_KEY}

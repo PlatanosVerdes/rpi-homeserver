@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -28,6 +29,7 @@ const (
 
 type config struct {
 	outputFile     string
+	channelBaseURL string // stable per-channel URLs through the proxy; empty keeps one entry per id
 	sourceURLs     []string
 	aceserveURL    string // used for health probes (direct to aceserve)
 	streamBaseURL  string // used for M3U URLs served to Jellyfin (may go via proxy)
@@ -49,6 +51,8 @@ type channel struct {
 	channel string // base name without quality suffix (for aggregation)
 	group   string // group-title from EXTINF
 	url     string // aceserve HTTP URL (acestream:// already rewritten)
+	hash    string
+	extinf  string
 }
 
 func mustEnv(key string) string {
@@ -73,6 +77,7 @@ func loadConfig() config {
 	}
 	return config{
 		outputFile:     mustEnv("OUTPUT_FILE"),
+		channelBaseURL: os.Getenv("CHANNEL_BASE_URL"),
 		sourceURLs:     urls,
 		aceserveURL:    aceserveURL,
 		streamBaseURL:  streamBaseURL,
@@ -166,17 +171,22 @@ func parseAndDedup(combined []byte, aceserveURL, streamBaseURL string) ([]channe
 			base := strings.TrimSpace(qualitySuffix.ReplaceAllString(name, ""))
 			healthURL := aceserveURL + hash  // direct to aceserve for health probes
 			m3uURL := streamBaseURL + hash   // via proxy for Jellyfin playback
-			channels = append(channels, channel{name: name, channel: base, group: group, url: healthURL})
+			channels = append(channels, channel{name: name, channel: base, group: group, url: healthURL,
+				hash: hash, extinf: extinf})
 			out.WriteString(extinf + "\n" + m3uURL + "\n")
 			extinf = ""
 		}
 	}
 
+	return channels, m3uHeader(urlTVG) + "\n" + out.String()
+}
+
+func m3uHeader(urlTVG string) string {
 	header := "#EXTM3U"
 	if urlTVG != "" {
 		header += fmt.Sprintf(` url-tvg="%s"`, urlTVG)
 	}
-	return channels, header + "\n" + out.String()
+	return header
 }
 
 // extractAttr extracts the value of a quoted attribute from an M3U tag line.
@@ -337,6 +347,18 @@ func run(cfg config) {
 
 	channels, newM3U := parseAndDedup(combined.Bytes(), cfg.aceserveURL, cfg.streamBaseURL)
 	log.Printf("Channels: %d unique after dedup", len(channels))
+
+	if cfg.channelBaseURL != "" {
+		order, groups := groupChannels(channels)
+		header := strings.SplitN(newM3U, "\n", 2)[0]
+		newM3U = stableM3U(header, cfg.channelBaseURL, order, groups)
+		table := filepath.Join(filepath.Dir(cfg.outputFile), "channels.json")
+		if changed, err := writeTable(table, groups); err != nil {
+			log.Printf("error writing %s: %v", table, err)
+		} else if changed {
+			log.Printf("Channel table: %d channels from %d sources", len(order), len(channels))
+		}
+	}
 
 	jellyfinCode := 0
 	existing, err := os.ReadFile(cfg.outputFile)
