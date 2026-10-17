@@ -122,6 +122,8 @@ services:
     memswap_limit: 1600m
     environment:
       - TZ=${TZ}
+    volumes:
+      - ./config/aceserve/resolv.conf:/etc/resolv.conf:ro
 
   # --- Acestream warmup proxy ---
   # Sits between Jellyfin and aceserve. Retries on HTTP 500 (stream not ready yet)
