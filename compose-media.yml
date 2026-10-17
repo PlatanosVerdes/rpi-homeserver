@@ -73,8 +73,9 @@ services:
 
 
   # --- Acestream ---
-  # Only the engine goes through this tunnel. Spanish ISPs answer api.acestream.me with a fake
-  # certificate, so the engine resolves no channel at all; from abroad the certificate is real.
+  # Spanish ISPs answer api.acestream.me with a fake certificate, so the engine cannot resolve a
+  # single channel. Only its HTTPS goes through this tunnel; the P2P stays on the home line, where
+  # channels start in about 2 s instead of the 30 s and failed starts of an inbound-less VPN.
   gluetun:
     image: qmcgaw/gluetun:${GLUETUN_VERSION}
     container_name: gluetun
@@ -86,10 +87,8 @@ services:
       - /dev/net/tun:/dev/net/tun
     mem_limit: 128m
     memswap_limit: 128m
-    # The engine's API, published here because the engine lives in this namespace: the proxy,
-    # the updater and farnsworth keep reaching it at the host address as before.
     ports:
-      - "6878:6878"
+      - "127.0.0.1:8888:8888"
     environment:
       - TZ=${TZ}
       - VPN_SERVICE_PROVIDER=${VPN_SERVICE_PROVIDER}
@@ -99,7 +98,9 @@ services:
       - OPENVPN_PASSWORD=${NORDVPN_PASS}
       - OPENVPN_PROTOCOL=${VPN_PROTOCOL}
       - SERVER_COUNTRIES=${VPN_COUNTRY}
-      - FIREWALL_INPUT_PORTS=6878
+      - HTTPPROXY=on
+      - HTTPPROXY_LISTENING_ADDRESS=:8888
+      - FIREWALL_INPUT_PORTS=8888
       # Nord retires servers and the list baked into the image goes stale with them.
       - UPDATER_PERIOD=24h
     volumes:
@@ -111,7 +112,7 @@ services:
     image: jopsis/aceserve@${ACESERVE_DIGEST}
     container_name: aceserve
     profiles: [acestream, all]
-    network_mode: "service:gluetun"
+    network_mode: host
     depends_on:
       gluetun:
         condition: service_healthy
@@ -122,8 +123,10 @@ services:
     memswap_limit: 1600m
     environment:
       - TZ=${TZ}
-    volumes:
-      - ./config/aceserve/resolv.conf:/etc/resolv.conf:ro
+      # The engine is Python and its API calls go through urllib, which honours these.
+      - https_proxy=http://127.0.0.1:8888
+      - HTTPS_PROXY=http://127.0.0.1:8888
+      - no_proxy=localhost,127.0.0.1
 
   # --- Acestream warmup proxy ---
   # Sits between Jellyfin and aceserve. Retries on HTTP 500 (stream not ready yet)
