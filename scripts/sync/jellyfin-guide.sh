@@ -1,8 +1,8 @@
 #!/bin/bash
-# Point Jellyfin's XMLTV guide at the guide.xml acestream-updater writes next to the playlist.
+# Point Jellyfin's XMLTV guide at the guide.xml bifrost writes next to the playlist.
 #
 # The published guide is 34 MB for 642 channels, and ours are about 23 of them: parsing all of it is
-# what made a Refresh Guide cost the Pi 4 two and a half minutes. The updater cuts it down, and this
+# what made a Refresh Guide cost the Pi 4 two and a half minutes. bifrost cuts it down, and this
 # keeps Jellyfin reading the cut-down copy. The provider is updated in place, keeping its id, so the
 # channel-to-guide mappings Jellyfin already holds survive.
 set -uo pipefail

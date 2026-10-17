@@ -128,26 +128,6 @@ services:
       - HTTPS_PROXY=http://127.0.0.1:8888
       - no_proxy=localhost,127.0.0.1
 
-  # --- Acestream warmup proxy ---
-  # Sits between Jellyfin and aceserve. Retries on HTTP 500 (stream not ready yet)
-  # for up to 45s so Jellyfin doesn't give up before the P2P swarm is established.
-  acestream-proxy:
-    build: ./services/acestream-proxy
-    container_name: acestream-proxy
-    restart: unless-stopped
-    mem_limit: 64m
-    memswap_limit: 64m
-    profiles: [acestream, all]
-    environment:
-      - ACESERVE_BASE_URL=http://172.19.0.1:6878
-      - LISTEN_ADDR=:6879
-      - PLAYLIST_PATH=/playlists/channels_ace.m3u
-    volumes:
-      # Read-only, only to turn the 40-hex content id into the channel name in the logs
-      - ${APP_CONFIG_PATH}/jellyfin/acestream:/playlists:ro
-    networks:
-      - media-network
-
   # --- IPFS node, the only unthrottled route to the Acestream playlist ---
   kubo:
     image: ipfs/kubo:${KUBO_VERSION}
@@ -161,7 +141,7 @@ services:
     mem_limit: 512m
     memswap_limit: 512m
     profiles: [acestream, all]
-    # No published ports: the gateway is for acestream-updater, over the docker network.
+    # No published ports: the gateway is for bifrost, over the docker network.
     environment:
       - TZ=${TZ}
       - IPFS_PROFILE=lowpower
@@ -178,10 +158,15 @@ services:
       retries: 3
       start_period: 60s
 
-  # --- Acestream playlist updater + channel health checker ---
-  acestream-updater:
-    build: ./services/acestream-updater
-    container_name: acestream-updater
+  # --- bifrost: the AceStream list and the proxy Jellyfin plays from (github.com/PlatanosVerdes/bifrost) ---
+  # Writes Jellyfin's playlist (one stable URL per channel) and a guide cut down to those channels,
+  # and serves /channel/<slug>, trying the sources one at a time and sharing one engine connection
+  # per channel. It never opens a channel on its own: this Pi plays one at a time.
+  bifrost:
+    image: ghcr.io/platanosverdes/bifrost:${BIFROST_VERSION}
+    container_name: bifrost
+    labels:
+      prometheus.probe: "http://bifrost:6879/healthz"
     restart: unless-stopped
     mem_limit: 128m
     memswap_limit: 128m
@@ -195,15 +180,12 @@ services:
       - kubo
     volumes:
       - ${APP_CONFIG_PATH}/jellyfin/acestream:/data
-      - ${APP_CONFIG_PATH}/acestream-updater:/app
+      - ${APP_CONFIG_PATH}/bifrost:/state
     environment:
       - TZ=${TZ}
-      - OUTPUT_FILE=/data/channels_ace.m3u
       - SOURCE_URLS=http://kubo:8080/ipns/k51qzi5uqu5di462t7j4vu4akwfhvtjhy88qbupktvoacqfqe9uforjvhyi4wr/hashes_acestream.m3u,https://ipfs.io/ipns/k51qzi5uqu5di462t7j4vu4akwfhvtjhy88qbupktvoacqfqe9uforjvhyi4wr/hashes_acestream.m3u,https://dweb.link/ipns/k51qzi5uqu5di462t7j4vu4akwfhvtjhy88qbupktvoacqfqe9uforjvhyi4wr/hashes_acestream.m3u
-      - ACESERVE_URL=http://172.19.0.1:6878/ace/getstream?id=
-      - STREAM_BASE_URL=http://acestream-proxy:6879/ace/getstream?id=
-      # One URL per channel that survives the list rotating its ids; the proxy picks a live source.
-      - CHANNEL_BASE_URL=http://acestream-proxy:6879/channel/
+      - ACESERVE_BASE_URL=http://172.19.0.1:6878
+      - CHANNEL_BASE_URL=http://bifrost:6879/channel/
       # Cut down to our channels into guide.xml, which Jellyfin reads (scripts/sync/jellyfin-guide.sh).
       - GUIDE_SOURCE_URL=https://raw.githubusercontent.com/davidmuma/EPG_dobleM/refs/heads/master/guiatv.xml
       - PUSHGATEWAY_URL=http://pushgateway:9091

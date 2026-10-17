@@ -404,7 +404,7 @@ for svc in (doc.get("services") or {}).values():
     if [ "$before" != "$after" ] || [[ -n "$retry" ]]; then
         # `--build` recreates every locally built container even when its image is identical, and a
         # recreate cuts what it was serving: Caddy's live connections, the stream Jellyfin is
-        # reading from acestream-proxy. So build only when the diff touches a build input. A retry
+        # reading from bifrost. So build only when the diff touches a build input. A retry
         # is exempt: a build that fails recreates nothing at all, so there is nothing to cut until
         # the day it works, which is the day it was supposed to.
         local changed rebuild_when
@@ -491,7 +491,7 @@ bash "$PROJECT_DIR/scripts/sync/plex-prefs.sh" 2>&1 | while IFS= read -r line; d
 # reason as the others: they live only in appdata and an unlimited qBittorrent will flatten this Pi.
 bash "$PROJECT_DIR/scripts/sync/qbit-config.sh" 2>&1 | while IFS= read -r line; do log "[qbit-config] $line"; done
 
-# Keep Jellyfin's XMLTV guide on the copy acestream-updater cuts down to our channels: the full one
+# Keep Jellyfin's XMLTV guide on the copy bifrost cuts down to our channels: the full one
 # is 34 MB, and parsing it on every Refresh Guide cost the Pi minutes of CPU.
 bash "$PROJECT_DIR/scripts/sync/jellyfin-guide.sh" 2>&1 | while IFS= read -r line; do log "[jellyfin-guide] $line"; done
 
