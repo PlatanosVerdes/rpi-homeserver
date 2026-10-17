@@ -1,6 +1,5 @@
 # Compiled binaries
 services/tailscale-metrics/tailscale-metrics
-services/acestream-updater/acestream-updater
 
 # Pi-specific compose overrides (local setup, not committed)
 docker-compose.override.yml
@@ -86,7 +85,5 @@ services/subtitle-links/subtitle-links
 services/watch-next/watch-next
 services/farnsworth/farnsworth
 services/tailscale-metrics/tailscale-metrics
-services/acestream-updater/acestream-updater
-services/acestream-proxy/acestream-proxy
 services/tracker-control/tracker-control
 services/pi-metrics/pi-metrics

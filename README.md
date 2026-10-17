@@ -440,7 +440,7 @@ Every service belongs to one or more profiles. Set `COMPOSE_PROFILES` in `.env` 
 | :--- | :--- |
 | `essential` | Caddy, Homepage, Pi-hole, Speedtest-tracker |
 | `moni` | Prometheus, Grafana, Pushgateway, node-exporter, cAdvisor, Pihole-exporter, Speedtest-tracker |
-| `acestream` | Aceserve, Acestream-updater, Jellyfin + Grafana/Prometheus/Pushgateway |
+| `acestream` | Aceserve, gluetun, bifrost, Jellyfin, farnsworth + Grafana/Prometheus/Pushgateway |
 | `media` | Plex, Seerr, Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr, Unpackerr, torrent-drop |
 | `bot` | Pol Academy Offers Bot |
 | `all` | Everything |
@@ -547,23 +547,27 @@ Caddy picks it up on next restart — no changes needed in this repo.
 - **Download client:** In Radarr/Sonarr → Settings → Download Clients → qBittorrent → host `qbittorrent`, port `8080`
 
 ### Acestream Live TV
-The `acestream-updater` (Go service in `services/acestream-updater/`) fetches IPFS channel lists, deduplicates them by acestream hash, writes a `.m3u` for Jellyfin, and runs concurrent health checks to verify each channel is actually serving bytes. It refreshes Jellyfin automatically when the playlist changes.
+[bifrost](https://github.com/PlatanosVerdes/bifrost) (an image, pinned as `BIFROST_VERSION`) reads
+the channel list from IPFS through `kubo`, writes Jellyfin's M3U with one stable URL per channel and
+an XMLTV guide cut down to those channels, and is the proxy Jellyfin plays from: it picks a live
+source per channel and shares one engine connection among everyone watching. It never opens a
+channel on its own, because this Pi plays one at a time.
 
-Jellyfin setup: Dashboard → Live TV → Add Tuner (M3U) → path `/data/channels_ace.m3u`
+The engine (`aceserve`) stays on the host network so its P2P uses the home line. Only its HTTPS goes
+through `gluetun` (NordVPN, `https_proxy`), because Spanish ISPs intercept the AceStream API during
+matches.
 
-**After changing Go source code** (rebuild required):
+Jellyfin setup: Live TV → tuner (M3U) `/config/acestream/channels_ace.m3u`; the XMLTV provider is
+pointed at `/config/acestream/guide.xml` by the deploy (`scripts/sync/jellyfin-guide.sh`).
+
+**State right now** (list, last Jellyfin refresh, what is playing, recent opens, and whether Jellyfin copies or re-encodes):
 ```bash
-docker compose -f compose-media.yml up -d --build acestream-updater
-```
-
-**Trigger a run immediately** (container restart runs before the first sleep):
-```bash
-docker compose -f compose-media.yml restart acestream-updater
+docker exec bifrost wget -qO- http://127.0.0.1:6879/api/status
 ```
 
 **View live logs:**
 ```bash
-docker logs -f acestream-updater
+docker logs -f bifrost
 ```
 
 ### Watch-next (auto-fetch on watch)
@@ -630,7 +634,7 @@ Metrics are pushed to Pushgateway and visible in the **Deploy Monitor** dashboar
   - `193` — cAdvisor (per-container resource usage)
 - **No data on a dashboard?** Trigger a run manually:
   ```bash
-  docker compose -f compose-media.yml restart acestream-updater
+  docker compose -f compose-media.yml restart bifrost
   bash /home/raspi/rpi-homeserver/scripts/deploy/apply.sh
   ```
 

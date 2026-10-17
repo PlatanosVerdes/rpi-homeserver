@@ -17,8 +17,8 @@ Named for Philo Farnsworth, who built the first working electronic television in
 ## How it works
 
 ```
-acestream-updater ──writes──► channels_ace.m3u
-                                     │ (mounted read-only)
+bifrost /api/channels ──► channel names and current sources
+                                     │ (fetched at most once a minute)
                                      ▼
    phone / laptop ──HTTPS──► Caddy ──► farnsworth :8086
                                      │  serves the page, logs the play
@@ -39,7 +39,7 @@ bottleneck and uses no bandwidth of its own.
 
 ## Three decisions worth knowing
 
-**It points at the engine, not at acestream-proxy.** The proxy holds a request until video actually
+**It points at the engine, not at bifrost's proxy.** The proxy holds a request until video actually
 arrives, so VLC would sit on a black screen for up to 45 seconds with no feedback and might give up
 on its own. Against the engine, VLC gets the redirect immediately and shows its own buffering, which
 is the same wait but a visible one.

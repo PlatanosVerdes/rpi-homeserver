@@ -1,12 +1,12 @@
 package main
 
 import (
-	"bufio"
+	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
-	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -14,12 +14,12 @@ import (
 )
 
 // Hands a channel to VLC and gets out of the way: the video never passes through here, it goes
-// straight from the engine to the player. Pointing at the engine rather than at acestream-proxy is
+// straight from the engine to the player. Pointing at the engine rather than at bifrost's proxy is
 // deliberate, see docs/farnsworth.md.
 func main() {
 	listenAddr := getenv("LISTEN_ADDR", ":8086")
 	streamBase := strings.TrimRight(getenv("STREAM_BASE", "http://192.168.1.180:6878"), "/")
-	playlist := &playlist{path: getenv("PLAYLIST_PATH", "/playlists/channels_ace.m3u")}
+	playlist := &playlist{url: strings.TrimRight(getenv("BIFROST_URL", "http://bifrost:6879"), "/") + "/api/channels"}
 
 	s := &server{playlist: playlist, streamBase: streamBase}
 	http.HandleFunc("/", s.index)
@@ -29,7 +29,7 @@ func main() {
 	http.HandleFunc("/icon.svg", icon)
 
 	log.Printf("farnsworth: %s, streams at %s, %d channels from %s",
-		listenAddr, streamBase, len(playlist.channels()), playlist.path)
+		listenAddr, streamBase, len(playlist.channels()), playlist.url)
 	log.Fatal(http.ListenAndServe(listenAddr, nil))
 }
 
@@ -135,12 +135,14 @@ type group struct {
 	Channels []channel
 }
 
+// playlist is bifrost's catalog. Jellyfin's M3U only carries bifrost's stable channel URLs, so the
+// content ids the engine needs come from /api/channels, each channel's last working source first.
 type playlist struct {
-	path string
+	url string
 
 	mu      sync.RWMutex
 	items   []channel
-	modTime time.Time
+	fetched time.Time
 }
 
 func (p *playlist) channels() []channel {
@@ -159,8 +161,8 @@ func (p *playlist) byID(id string) (channel, bool) {
 	return channel{}, false
 }
 
-// Groups keep the order the playlist gives them, since it is curated; channels inside a group are
-// sorted so the two entries of the same channel from different sources end up next to each other.
+// Groups keep the order the list gives them, since it is curated; channels inside a group are sorted
+// by name. bifrost has already folded each channel's sources into one entry.
 func (p *playlist) grouped() []group {
 	var out []group
 	index := map[string]int{}
@@ -185,75 +187,52 @@ func (p *playlist) grouped() []group {
 	return out
 }
 
-// The updater rewrites the playlist, so pick up a new one without a restart.
+// The catalog follows the list every few minutes; once a minute is fresh enough for a page.
 func (p *playlist) reload() {
-	st, err := os.Stat(p.path)
-	if err != nil {
-		return
-	}
 	p.mu.RLock()
-	fresh := st.ModTime().Equal(p.modTime)
+	fresh := time.Since(p.fetched) < time.Minute
 	p.mu.RUnlock()
 	if fresh {
 		return
 	}
 
-	items, err := parse(p.path)
+	items, err := fetch(p.url)
 	if err != nil {
-		log.Printf("farnsworth: cannot read %s: %v", p.path, err)
+		log.Printf("farnsworth: cannot read %s: %v", p.url, err)
 		return
 	}
 	p.mu.Lock()
-	p.items, p.modTime = items, st.ModTime()
+	p.items, p.fetched = items, time.Now()
 	p.mu.Unlock()
 }
 
-var attr = regexp.MustCompile(`([a-zA-Z-]+)="([^"]*)"`)
-
-func parse(path string) ([]channel, error) {
-	f, err := os.Open(path)
+func fetch(url string) ([]channel, error) {
+	resp, err := (&http.Client{Timeout: 10 * time.Second}).Get(url)
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
-
-	var out []channel
-	var pending channel
-	sc := bufio.NewScanner(f)
-	sc.Buffer(make([]byte, 0, 64*1024), 1024*1024)
-	for sc.Scan() {
-		line := strings.TrimSpace(sc.Text())
-		switch {
-		case strings.HasPrefix(line, "#EXTINF"):
-			pending = channel{}
-			for _, m := range attr.FindAllStringSubmatch(line, -1) {
-				switch m[1] {
-				case "tvg-logo":
-					pending.Logo = m[2]
-				case "group-title":
-					pending.Group = m[2]
-				}
-			}
-			if i := strings.LastIndex(line, ","); i >= 0 {
-				pending.Name = strings.TrimSpace(line[i+1:])
-			}
-		case line != "" && !strings.HasPrefix(line, "#"):
-			if id := contentID(line); id != "" && pending.Name != "" {
-				pending.ID = id
-				out = append(out, pending)
-			}
-			pending = channel{}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("HTTP %d", resp.StatusCode)
+	}
+	var body struct {
+		Channels []struct {
+			Name  string   `json:"name"`
+			Group string   `json:"group"`
+			Logo  string   `json:"logo"`
+			IDs   []string `json:"ids"`
+		} `json:"channels"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		return nil, err
+	}
+	out := make([]channel, 0, len(body.Channels))
+	for _, c := range body.Channels {
+		if len(c.IDs) > 0 {
+			out = append(out, channel{ID: c.IDs[0], Name: c.Name, Logo: c.Logo, Group: c.Group})
 		}
 	}
-	return out, sc.Err()
-}
-
-func contentID(rawURL string) string {
-	u, err := url.Parse(rawURL)
-	if err != nil {
-		return ""
-	}
-	return u.Query().Get("id")
+	return out, nil
 }
 
 func short(id string) string {
