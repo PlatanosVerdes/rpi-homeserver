@@ -133,9 +133,17 @@ else
     mv "${TEMP_NEW}" "${OUTPUT_FILE}"
     echo "Changes applied."
     SUCCESS_CHANGES=$((SUCCESS_CHANGES + 1))
-    JELLYFIN_REFRESH_HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 -X POST \
-        -H "X-Emby-Token: ${JELLYFIN_API_KEY}" \
-        "${JELLYFIN_URL}/ScheduledTasks/Running/0c9ee3a88fc15547c6852205480da1fd" 2>/dev/null || echo 0)
+    # "Refresh Guide" rereads the M3U. Found by its key: the hard-coded id was "Refresh Channels".
+    command -v jq >/dev/null || apk add --no-cache jq >/dev/null 2>&1
+    GUIDE_TASK_ID=$(curl -s --connect-timeout 5 -H "X-Emby-Token: ${JELLYFIN_API_KEY}" \
+        "${JELLYFIN_URL}/ScheduledTasks" 2>/dev/null | jq -r '.[] | select(.Key == "RefreshGuide") | .Id' 2>/dev/null)
+    if [[ -n "$GUIDE_TASK_ID" ]]; then
+        JELLYFIN_REFRESH_HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 -X POST \
+            -H "X-Emby-Token: ${JELLYFIN_API_KEY}" \
+            "${JELLYFIN_URL}/ScheduledTasks/Running/${GUIDE_TASK_ID}" 2>/dev/null || echo 0)
+    else
+        echo "Jellyfin RefreshGuide task not found"
+    fi
     echo "Jellyfin refresh HTTP code: $JELLYFIN_REFRESH_HTTP_CODE"
 fi
 
