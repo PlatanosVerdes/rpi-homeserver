@@ -43,7 +43,6 @@ config/                     Static config files committed to git
                             (scripts/sync/arr-config.sh) — otherwise they only exist in appdata
 
 services/                   Source code for custom services built in this repo
-  acestream-updater/        Go service — fetches IPFS channel lists, writes .m3u for Jellyfin
   tailscale-metrics/        Go service, Dockerized — Tailscale peer metrics for Prometheus
   deploy-webhook/           Python receiver (systemd) — deploys on GitHub push via Cloudflare tunnel
   watch-next/               Go service: monitors + searches the next Sonarr episode(s) on watch
@@ -78,7 +77,7 @@ scripts/                    Operational scripts, grouped by what they do
     pihole-dns.sh           Caddy's *.platanosverdes.com hosts -> Pi-hole custom DNS
     plex-prefs.sh           Plex LAN networks and the 95% played threshold
     qbit-config.sh          qBittorrent queue limits, upload cap and BT port
-    jellyfin-guide.sh       Jellyfin's XMLTV guide -> the copy acestream-updater cuts to our channels
+    jellyfin-guide.sh       Jellyfin's XMLTV guide -> the copy bifrost cuts to our channels
 
   ops/                      Everything else on a schedule
     backup.sh               Daily appdata backup, pushes metrics to Grafana
@@ -123,7 +122,7 @@ docker compose up -d
    `services/*` here and `config/caddy/` for Caddy), `versions.env`, or a compose file. `--build`
    recreates every locally built container even when its image is identical, and a recreate cuts
    what that container was serving — Caddy's live connections, the live stream Jellyfin is
-   reading from `acestream-proxy`. A Grafana or docs commit must not do that.
+   reading from `bifrost`. A Grafana or docs commit must not do that.
 4. If no change → `docker compose up -d --remove-orphans` (ensures containers are running)
 5. Installs the merged host crontab (`scripts/setup/install-crontab.sh`)
 6. Converges Radarr/Sonarr's custom formats and quality profiles (`scripts/sync/arr-config.sh`),
@@ -188,7 +187,7 @@ Controlled via `COMPOSE_PROFILES` in `.env`. No need to touch compose files.
 | :--- | :--- |
 | `essential` | Caddy, Homepage, Pi-hole, Speedtest-tracker |
 | `moni` | Prometheus, Grafana, Pushgateway, node-exporter, cAdvisor, Pihole-exporter, Speedtest-tracker |
-| `acestream` | Aceserve, Acestream-updater, Kubo, Jellyfin + Grafana/Prometheus/Pushgateway |
+| `acestream` | Aceserve, gluetun, bifrost, Kubo, Jellyfin, farnsworth + Grafana/Prometheus/Pushgateway |
 | `media` | Plex, Overseerr, Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr, Unpackerr, Bazarr, Maintainerr, Tautulli, watch-next, torrent-drop |
 | `bot` | Pol Academy Offers Bot |
 | `cal` | Google Calendar Bridge (cal-bridge) |
@@ -213,13 +212,13 @@ See [docs/add-service.md](docs/add-service.md) for the step-by-step guide. Short
 
 ## Custom services in `services/`
 
-### acestream-updater
-Go service, Dockerized. Built at compose time from `services/acestream-updater/`. Runs as a long-lived container, periodically fetches IPFS channel lists and updates Jellyfin's `.m3u` playlist.
-
-Rebuild after Go source changes:
-```bash
-docker compose -f compose-media.yml up -d --build acestream-updater
-```
+### bifrost (external image)
+The AceStream list and the proxy Jellyfin plays from, in its own repo:
+[PlatanosVerdes/bifrost](https://github.com/PlatanosVerdes/bifrost). Pinned as `BIFROST_VERSION`
+in `versions.env`, never built here. It writes Jellyfin's M3U (one stable URL per channel) and a
+guide cut down to those channels into `appdata/jellyfin/acestream/`, and serves `/channel/<slug>`,
+`/api/channels` (farnsworth reads it) and `/api/status`. The rules it must keep, and how the engine
+and gluetun around it are wired, are in its README.
 
 ### tailscale-metrics
 Go service, Dockerized, no published port. Prometheus scrapes `tailscale-metrics:9736/metrics`

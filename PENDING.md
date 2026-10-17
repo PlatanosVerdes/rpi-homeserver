@@ -146,29 +146,20 @@ end to end.
 
 ---
 
-## Acestream channel health metric (not implemented)
+## Acestream channel health metric — abandoned: probing a channel is opening it
 
-**Goal:** emit `acestream_channel_health{channel,group} = 1|0` from the `acestream-updater` Go
-service, so a channel-health dashboard is possible again (the old "Live TV" dashboard was deleted
-because this metric never existed).
+The idea was a per-channel `acestream_channel_health` metric from a background sweep that opened
+each channel briefly. It is dropped for good, not postponed. Probing an acestream channel is not an
+HTTP HEAD: the engine resolves the content and joins its swarm, which is the same as playing it, and
+this Pi plays one channel at a time. A sweep competes with whoever is watching and, on the channel
+being watched, takes the engine away from them (in October 2026 one such extra connection made
+Jellyfin's codec probe fail and the TV fall back to a software re-encode the Pi could not sustain).
+Channels in this list also change hash several times an hour, so a health value goes stale before
+the next sweep.
 
-**Why it is not done yet:** a previous naive approach saturated the Pi. The `healthURL` in
-`services/acestream-updater/main.go` (`aceserveURL + hash`) is the actual acestream **stream** URL,
-so probing it makes the P2P engine *start downloading* that channel. Doing that for all channels,
-concurrently and/or frequently, melts the Pi's CPU and network. Acestream health is inherently
-heavier than an HTTP HEAD because the engine must resolve the stream, so it must be done carefully.
-
-**Approach when implemented** (inside `acestream-updater`, which is already a long-lived container
-that pushes metrics — do NOT use an external cron, overlapping runs compound the load):
-
-1. A separate `time.Ticker` goroutine on a slow cadence (every 15-30 min).
-2. Bounded concurrency: worker pool of 2-3 (`sem := make(chan struct{}, 3)`), never all channels at once.
-3. Short per-channel timeout (`context.WithTimeout`, ~6s); on first 200/first bytes set health=1 and
-   `cancel()` immediately, then call acestream's stop/command URL to free the engine session. Never
-   read the full stream.
-4. Rolling subset per sweep (e.g. 10 channels/cycle) so all channels are covered over ~1h without spikes.
-5. Push to a SEPARATE pushgateway job (`.../job/acestream_health`): `pushMetrics` uses PUT to
-   `.../job/acestream_updater`, so mixing cadences would clobber it.
+What exists instead is passive: bifrost's `/api/status` reports how every real open went (which
+source, how long it took to start, or that no source produced video), and tries the next source by
+itself when one is dead. See [PlatanosVerdes/bifrost](https://github.com/PlatanosVerdes/bifrost).
 
 ---
 

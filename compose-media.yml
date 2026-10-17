@@ -304,9 +304,8 @@ services:
       # The address VLC will dial, so it must be one the phone or laptop can reach, never a
       # container name. The video goes straight from the engine to the player.
       - STREAM_BASE=http://${STATIC_IP}:6878
-      - PLAYLIST_PATH=/playlists/channels_ace.m3u
-    volumes:
-      - ${APP_CONFIG_PATH}/jellyfin/acestream:/playlists:ro
+      # The channel list and each channel's current source; Jellyfin's M3U only has bifrost's URLs.
+      - BIFROST_URL=http://bifrost:6879
     networks:
       - media-network
 
