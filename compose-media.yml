@@ -105,6 +105,7 @@ services:
       - ${CONFIG_ROOT}/aceserve/acestream.conf:/acestream/acestream.conf:ro
       - ${CONFIG_ROOT}/aceserve/log-filter.awk:/acestream/log-filter.awk:ro
       - ${CONFIG_ROOT}/aceserve/dnsproxyd.py:/acestream/dnsproxyd.py:ro
+      - ${CONFIG_ROOT}/aceserve/resolv.conf:/etc/resolv.conf:ro
     command:
       - sh
       - -c
