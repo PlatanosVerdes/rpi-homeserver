@@ -135,3 +135,37 @@ func TestDeadChannelAnswers503(t *testing.T) {
 		t.Errorf("status %d, want 503", resp.StatusCode)
 	}
 }
+
+// The engine writes in small pieces; a viewer reading at a normal pace must not be dropped for it.
+type smallWriterEngine struct{}
+
+func (smallWriterEngine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	piece := make([]byte, 1316) // seven TS packets, what the engine tends to hand over
+	for i := 0; ; i++ {
+		if _, err := w.Write(piece); err != nil {
+			return
+		}
+		w.(http.Flusher).Flush()
+		if i%400 == 0 { // bursts like the opening buffer, then a trickle
+			select {
+			case <-r.Context().Done():
+				return
+			case <-time.After(20 * time.Millisecond):
+			}
+		}
+	}
+}
+
+func TestSmallEngineWritesDoNotDropAViewer(t *testing.T) {
+	proxy := newTestProxy(t, smallWriterEngine{}, 5*time.Second, 100*time.Millisecond)
+	resp, err := http.Get(proxy.URL + "/ace/getstream?id=9c75f1d190c518cfe0f236415b8dccc1f676ef3b")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	time.Sleep(300 * time.Millisecond) // the viewer starts reading late, as a player does while it sets up
+	n, _ := io.ReadAtLeast(resp.Body, make([]byte, 2<<20), 2<<20)
+	if n < 2<<20 {
+		t.Errorf("viewer got %d bytes before being dropped, want 2 MB", n)
+	}
+}
