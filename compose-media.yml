@@ -73,10 +73,6 @@ services:
       - /dev/net/tun:/dev/net/tun
     mem_limit: 128m
     memswap_limit: 128m
-    # media-network's gateway: the engine resolves names against 1.1.1.1 and cannot find
-    # "gluetun", so it needs an address, and this one is unreachable from the LAN.
-    ports:
-      - "172.18.0.1:8888:8888"
     environment:
       - TZ=${TZ}
       - VPN_SERVICE_PROVIDER=nordvpn
@@ -111,13 +107,15 @@ services:
         max-file: "5"
     environment:
       # The engine is Python and its API calls go through urllib, which honours these.
-      - https_proxy=http://172.18.0.1:8888
-      - HTTPS_PROXY=http://172.18.0.1:8888
+      - https_proxy=http://gluetun:8888
+      - HTTPS_PROXY=http://gluetun:8888
       - no_proxy=localhost,127.0.0.1
     volumes:
       - ${CONFIG_ROOT}/aceserve/acestream.conf:/acestream/acestream.conf:ro
       - ${CONFIG_ROOT}/aceserve/log-filter.awk:/acestream/log-filter.awk:ro
       - ${CONFIG_ROOT}/aceserve/dnsproxyd.py:/acestream/dnsproxyd.py:ro
+      # Docker's own DNS, so the engine finds "gluetun" by name; see the file for why it is needed.
+      - ${CONFIG_ROOT}/aceserve/resolv.conf:/etc/resolv.conf:ro
     command:
       - sh
       - -c
@@ -125,23 +123,6 @@ services:
     dns:
       - 1.1.1.1
       - 1.0.0.1
-    networks:
-      - media-network
-
-  # One engine connection per channel, shared: Jellyfin plays and probes at once, the engine serves
-  # one connection, and a failed probe made Jellyfin re-encode instead of copying.
-  acestream-proxy:
-    build: ./services/acestream-proxy
-    container_name: acestream-proxy
-    restart: unless-stopped
-    mem_limit: 64m
-    memswap_limit: 64m
-    environment:
-      - ACESERVE_BASE_URL=http://aceserve:6878
-      - LISTEN_ADDR=:6879
-      - PLAYLIST_PATH=/playlists/channels_ace.m3u
-    volumes:
-      - ${APP_CONFIG_PATH}/jellyfin/acestream:/playlists:ro
     networks:
       - media-network
 
@@ -155,7 +136,7 @@ services:
     restart: unless-stopped
     mem_limit: 512m
     memswap_limit: 512m
-    # No published ports: the gateway is for acestream-updater, over the docker network.
+    # No published ports: the gateway is for bifrost, over the docker network.
     environment:
       - TZ=${TZ}
       - IPFS_PROFILE=lowpower
@@ -172,45 +153,34 @@ services:
       retries: 3
       start_period: 60s
 
-  # --- Cron to get IPFS ---
-  acestream-updater:
-    image: alpine:latest
-    container_name: acestream-updater
+  # --- bifrost: the AceStream list and the proxy Jellyfin plays from (github.com/PlatanosVerdes/bifrost) ---
+  # Same image as the main Pi. Writes Jellyfin's playlist (one stable URL per channel) and a guide cut
+  # down to those channels, and serves /channel/<slug>. It never opens a channel on its own.
+  bifrost:
+    image: ghcr.io/platanosverdes/bifrost:v2026.10.17.1
+    container_name: bifrost
     restart: unless-stopped
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "2"
+    mem_limit: 128m
+    memswap_limit: 128m
     dns:
       - 1.1.1.1
       - 1.0.0.1
     networks:
       - media-network
+    depends_on:
+      - kubo
     volumes:
       - ${APP_CONFIG_PATH}/jellyfin/acestream:/data
-      #- ${SCRIPTS_PATH}/acestream-updater/script.sh:/app/script.sh:ro
-      - ${SCRIPTS_PATH}/acestream-updater:/app
+      - ${APP_CONFIG_PATH}/bifrost:/state
     environment:
       - TZ=${TZ}
-      - OUTPUT_FILE=/data/channels_ace.m3u
       - SOURCE_URLS=http://kubo:8080/ipns/k51qzi5uqu5di462t7j4vu4akwfhvtjhy88qbupktvoacqfqe9uforjvhyi4wr/hashes_acestream.m3u,https://ipfs.io/ipns/k51qzi5uqu5di462t7j4vu4akwfhvtjhy88qbupktvoacqfqe9uforjvhyi4wr/hashes_acestream.m3u,https://dweb.link/ipns/k51qzi5uqu5di462t7j4vu4akwfhvtjhy88qbupktvoacqfqe9uforjvhyi4wr/hashes_acestream.m3u
-      - ACESERVE_URL=http://acestream-proxy:6879/ace/getstream?id=
+      - ACESERVE_BASE_URL=http://aceserve:6878
+      - CHANNEL_BASE_URL=http://bifrost:6879/channel/
+      - GUIDE_SOURCE_URL=https://raw.githubusercontent.com/davidmuma/EPG_dobleM/refs/heads/master/guiatv.xml
       - PUSHGATEWAY_URL=http://pushgateway:9091
       - JELLYFIN_URL=http://jellyfin:8096
       - JELLYFIN_API_KEY=${JELLYFIN_API_KEY}
-    depends_on:
-      - kubo
-    command: >
-      /bin/sh -c "
-        apk add --no-cache curl sed bash coreutils tzdata > /dev/null 2>&1;
-        echo '--- Acestream Updater Active ---';
-        while true; do
-          /bin/bash /app/script.sh;
-          TIME=\$$(( (RANDOM % 241) + 60 ));
-          echo \"\$(date '+%H:%M:%S') - Sync OK. Sleeping \$$((TIME/60))m...\";
-          sleep \$$TIME;
-        done"
 
 networks:
   media-network:
