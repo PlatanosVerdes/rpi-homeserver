@@ -60,13 +60,41 @@ services:
   #    - media-network
 
   # --- Acestream ---
+  # Only the engine goes through this tunnel. Spanish ISPs answer api.acestream.me with a fake
+  # certificate, so the engine resolves no channel at all; from abroad the certificate is real.
+  gluetun:
+    image: qmcgaw/gluetun:v3.41.3
+    container_name: gluetun
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    mem_limit: 128m
+    memswap_limit: 128m
+    ports:
+      - "6878:6878"
+    environment:
+      - TZ=${TZ}
+      - VPN_SERVICE_PROVIDER=nordvpn
+      - VPN_TYPE=wireguard
+      - WIREGUARD_PRIVATE_KEY=${WIREGUARD_PRIVATE_KEY}
+      - SERVER_COUNTRIES=${VPN_COUNTRY}
+      - FIREWALL_INPUT_PORTS=6878
+      # Nord retires servers and the list baked into the image goes stale with them.
+      - UPDATER_PERIOD=24h
+    volumes:
+      - ${APP_CONFIG_PATH}/gluetun:/gluetun
+    networks:
+      - media-network
+
   aceserve:
     image: jopsis/aceserve:latest
     container_name: aceserve
-    ports:
-      - "6878:6878"
-      - "8621:8621"
-      - "62062:62062"
+    network_mode: "service:gluetun"
+    depends_on:
+      gluetun:
+        condition: service_healthy
     restart: unless-stopped
     logging:
       driver: json-file
@@ -81,11 +109,6 @@ services:
       - sh
       - -c
       - python main.py --bind-all --live-cache-type memory --live-mem-cache-size 104857600 --disable-sentry --log-stdout --disable-upnp 2>&1 | awk -f /acestream/log-filter.awk
-    dns:
-      - 1.1.1.1
-      - 1.0.0.1
-    networks:
-      - media-network
 
   # --- IPFS node, the only unthrottled route to the Acestream playlist ---
   kubo:
@@ -137,7 +160,7 @@ services:
       - TZ=${TZ}
       - OUTPUT_FILE=/data/channels_ace.m3u
       - SOURCE_URLS=http://kubo:8080/ipns/k51qzi5uqu5di462t7j4vu4akwfhvtjhy88qbupktvoacqfqe9uforjvhyi4wr/hashes_acestream.m3u,https://ipfs.io/ipns/k51qzi5uqu5di462t7j4vu4akwfhvtjhy88qbupktvoacqfqe9uforjvhyi4wr/hashes_acestream.m3u,https://dweb.link/ipns/k51qzi5uqu5di462t7j4vu4akwfhvtjhy88qbupktvoacqfqe9uforjvhyi4wr/hashes_acestream.m3u
-      - ACESERVE_URL=http://aceserve:6878/ace/getstream?id=
+      - ACESERVE_URL=http://gluetun:6878/ace/getstream?id=
       - PUSHGATEWAY_URL=http://pushgateway:9091
       - JELLYFIN_URL=http://jellyfin:8096
       - JELLYFIN_API_KEY=${JELLYFIN_API_KEY}
