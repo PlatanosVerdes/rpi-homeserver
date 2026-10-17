@@ -78,6 +78,7 @@ scripts/                    Operational scripts, grouped by what they do
     pihole-dns.sh           Caddy's *.platanosverdes.com hosts -> Pi-hole custom DNS
     plex-prefs.sh           Plex LAN networks and the 95% played threshold
     qbit-config.sh          qBittorrent queue limits, upload cap and BT port
+    jellyfin-guide.sh       Jellyfin's XMLTV guide -> the copy acestream-updater cuts to our channels
 
   ops/                      Everything else on a schedule
     backup.sh               Daily appdata backup, pushes metrics to Grafana

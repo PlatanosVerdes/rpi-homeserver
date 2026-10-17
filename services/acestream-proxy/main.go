@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"io"
 	"log"
 	"net/http"
@@ -32,7 +33,11 @@ func main() {
 	log.Printf("acestream-proxy: %s -> %s (max wait %s, %d channel names from %s)",
 		listenAddr, aceserveBase, maxWait, names.count(), names.path)
 
+	table := &channelTable{path: getenv("CHANNELS_PATH", "/playlists/channels.json")}
 	h := newHub(aceserveBase, names, maxWait, getduration("LINGER", 10*time.Second))
+	h.table = table
+	h.sourceWait = getduration("SOURCE_WAIT", 25*time.Second)
+	h.channelWait = getduration("CHANNEL_MAX_WAIT", 90*time.Second)
 	http.HandleFunc("/", h.serve)
 	log.Fatal(http.ListenAndServe(listenAddr, nil))
 }
@@ -52,8 +57,24 @@ type hub struct {
 	linger  time.Duration
 	client  *http.Client
 
-	mu      sync.Mutex
-	streams map[string]*stream
+	// /channel/<slug>: one stable URL per channel, tried source by source. Below Jellyfin's 100 s.
+	table       *channelTable
+	sourceWait  time.Duration
+	channelWait time.Duration
+
+	mu       sync.Mutex
+	streams  map[string]*stream
+	lastGood map[string]string // slug -> the content id that last produced video
+}
+
+// plan is what a request resolves to: the sources to try, in order, for one shared stream.
+type plan struct {
+	key       string
+	label     string
+	slug      string
+	sources   []string // content ids
+	budget    time.Duration
+	perSource time.Duration
 }
 
 type stream struct {
@@ -74,12 +95,50 @@ type stream struct {
 
 func newHub(base string, names *channelNames, maxWait, linger time.Duration) *hub {
 	return &hub{base: base, names: names, maxWait: maxWait, linger: linger,
-		client: &http.Client{}, streams: map[string]*stream{}}
+		client: &http.Client{}, streams: map[string]*stream{}, lastGood: map[string]string{}}
+}
+
+func (h *hub) planFor(r *http.Request) (plan, bool) {
+	if slug, ok := strings.CutPrefix(r.URL.Path, "/channel/"); ok {
+		name, ids := h.table.lookup(slug)
+		if len(ids) == 0 {
+			return plan{label: slug}, false
+		}
+		h.mu.Lock()
+		good := h.lastGood[slug]
+		h.mu.Unlock()
+		ordered := make([]string, 0, len(ids))
+		for _, id := range ids {
+			if id == good {
+				ordered = append([]string{id}, ordered...)
+			} else {
+				ordered = append(ordered, id)
+			}
+		}
+		return plan{key: "channel:" + slug, label: name, slug: slug, sources: ordered,
+			budget: h.channelWait, perSource: h.sourceWait}, true
+	}
+	id := contentID(r.RequestURI)
+	return plan{key: id, label: h.label(id), sources: []string{id}, budget: h.maxWait, perSource: h.maxWait}, true
+}
+
+func (h *hub) label(id string) string {
+	if h.table != nil {
+		if name := h.table.nameOf(id); name != "" {
+			return name + " (" + short(id) + ")"
+		}
+	}
+	return h.names.label(id)
 }
 
 func (h *hub) serve(w http.ResponseWriter, r *http.Request) {
-	id := contentID(r.RequestURI)
-	s, viewer, shared := h.join(id, r)
+	p, ok := h.planFor(r)
+	if !ok {
+		log.Printf("[proxy] %s is not in the channel table", p.label)
+		http.Error(w, "unknown channel", http.StatusNotFound)
+		return
+	}
+	s, viewer, shared := h.join(p, r)
 	if shared {
 		log.Printf("[proxy] %s joined the running stream (%d watching)", s.label, s.count())
 	} else {
@@ -131,12 +190,12 @@ func (h *hub) serve(w http.ResponseWriter, r *http.Request) {
 }
 
 // join returns the channel's stream, starting it if nobody is on it yet, plus a fresh viewer queue.
-func (h *hub) join(id string, r *http.Request) (*stream, chan []byte, bool) {
+func (h *hub) join(p plan, r *http.Request) (*stream, chan []byte, bool) {
 	viewer := make(chan []byte, viewerBacklog)
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	if s, ok := h.streams[id]; ok {
+	if s, ok := h.streams[p.key]; ok {
 		s.mu.Lock()
 		if !s.done {
 			s.viewers[viewer] = struct{}{}
@@ -151,36 +210,66 @@ func (h *hub) join(id string, r *http.Request) (*stream, chan []byte, bool) {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	s := &stream{h: h, id: id, label: h.names.label(id), ready: make(chan struct{}),
+	s := &stream{h: h, id: p.key, label: p.label, ready: make(chan struct{}),
 		viewers: map[chan []byte]struct{}{viewer: {}}, cancel: cancel}
-	h.streams[id] = s
+	h.streams[p.key] = s
 
 	headers := r.Header.Clone()
 	headers.Del("Range") // live: there is nothing to seek to, and joiners never asked for it
-	go s.run(ctx, h.base+r.RequestURI, headers)
+	go s.run(ctx, p, headers)
 	return s, viewer, false
 }
 
-func (s *stream) run(ctx context.Context, target string, headers http.Header) {
+// run tries the plan's sources one at a time, never two at once: the Pi plays one channel.
+func (s *stream) run(ctx context.Context, p plan, headers http.Header) {
 	defer s.finish()
 	start := time.Now()
-	deadline := start.Add(s.h.maxWait)
+	deadline := start.Add(p.budget)
 
-	resp, ok := open(ctx, s.h.client, target, headers, s.label, deadline)
-	if !ok {
+	var resp *http.Response
+	var first []byte
+	for i, id := range p.sources {
+		if ctx.Err() != nil || !time.Now().Before(deadline) {
+			break
+		}
+		srcDeadline := time.Now().Add(p.perSource)
+		if srcDeadline.After(deadline) {
+			srcDeadline = deadline
+		}
+		label := s.label
+		if len(p.sources) > 1 {
+			label = s.label + " [" + short(id) + "]"
+		}
+		target := s.h.base + "/ace/getstream?id=" + id
+		r, ok := open(ctx, s.h.client, target, headers, label, srcDeadline)
+		if !ok {
+			continue
+		}
+		b, ok := awaitFirstBytes(ctx, r.Body, label, time.Now(), srcDeadline)
+		if !ok {
+			r.Body.Close()
+			if i < len(p.sources)-1 && ctx.Err() == nil {
+				log.Printf("[proxy] %s no video, trying the next source", label)
+			}
+			continue
+		}
+		resp, first = r, b
+		if p.slug != "" {
+			s.h.mu.Lock()
+			s.h.lastGood[p.slug] = id
+			s.h.mu.Unlock()
+		}
+		break
+	}
+	if resp == nil {
+		if ctx.Err() == nil {
+			log.Printf("[proxy] %s gave up, no source produced video in %s", s.label, time.Since(start).Round(time.Second))
+		}
 		close(s.ready)
 		return
 	}
 	defer resp.Body.Close()
 
-	first, ok := awaitFirstBytes(ctx, resp.Body, s.label, start, deadline)
-	if !ok {
-		if ctx.Err() == nil {
-			log.Printf("[proxy] %s gave up, no video after %s", s.label, s.h.maxWait)
-		}
-		close(s.ready)
-		return
-	}
 	log.Printf("[proxy] %s playing after %s", s.label, time.Since(start).Round(time.Second))
 	s.ok, s.header = true, resp.Header.Clone()
 	close(s.ready)
@@ -427,6 +516,77 @@ func parsePlaylist(path string) (map[string]string, error) {
 		}
 	}
 	return names, sc.Err()
+}
+
+// channelTable is channels.json, written whole by the updater on every pass: the ids of the moment
+// for each stable channel URL. Reloaded when it changes, like the playlist.
+type channelTable struct {
+	path string
+
+	mu      sync.RWMutex
+	modTime time.Time
+	byslug  map[string]tableEntry
+	idNames map[string]string
+}
+
+type tableEntry struct {
+	Name string   `json:"name"`
+	IDs  []string `json:"ids"`
+}
+
+func (c *channelTable) lookup(slug string) (string, []string) {
+	c.reload()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	e := c.byslug[slug]
+	return e.Name, append([]string(nil), e.IDs...)
+}
+
+func (c *channelTable) nameOf(id string) string {
+	c.reload()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.idNames[id]
+}
+
+func (c *channelTable) reload() {
+	st, err := os.Stat(c.path)
+	if err != nil {
+		return
+	}
+	c.mu.RLock()
+	fresh := st.ModTime().Equal(c.modTime)
+	c.mu.RUnlock()
+	if fresh {
+		return
+	}
+	data, err := os.ReadFile(c.path)
+	if err != nil {
+		return
+	}
+	var parsed struct {
+		Channels map[string]tableEntry `json:"channels"`
+	}
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		log.Printf("[proxy] cannot read the channel table at %s: %v", c.path, err)
+		return
+	}
+	names := map[string]string{}
+	for _, e := range parsed.Channels {
+		for _, id := range e.IDs {
+			names[id] = e.Name
+		}
+	}
+	c.mu.Lock()
+	c.byslug, c.idNames, c.modTime = parsed.Channels, names, st.ModTime()
+	c.mu.Unlock()
+}
+
+func short(id string) string {
+	if len(id) > 8 {
+		return id[:8]
+	}
+	return id
 }
 
 func contentID(requestURI string) string {

@@ -491,6 +491,10 @@ bash "$PROJECT_DIR/scripts/sync/plex-prefs.sh" 2>&1 | while IFS= read -r line; d
 # reason as the others: they live only in appdata and an unlimited qBittorrent will flatten this Pi.
 bash "$PROJECT_DIR/scripts/sync/qbit-config.sh" 2>&1 | while IFS= read -r line; do log "[qbit-config] $line"; done
 
+# Keep Jellyfin's XMLTV guide on the copy acestream-updater cuts down to our channels: the full one
+# is 34 MB, and parsing it on every Refresh Guide cost the Pi minutes of CPU.
+bash "$PROJECT_DIR/scripts/sync/jellyfin-guide.sh" 2>&1 | while IFS= read -r line; do log "[jellyfin-guide] $line"; done
+
 # Aggregate status: error(1)>changed(0)>no-change(2)
 if [ $RESULT_HOME -eq 1 ] || [ $RESULT_SERVICES -eq 1 ]; then
     DEPLOY_ERRORS=$((DEPLOY_ERRORS + 1))

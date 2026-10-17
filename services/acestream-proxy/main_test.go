@@ -5,6 +5,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -167,5 +169,92 @@ func TestSmallEngineWritesDoNotDropAViewer(t *testing.T) {
 	n, _ := io.ReadAtLeast(resp.Body, make([]byte, 2<<20), 2<<20)
 	if n < 2<<20 {
 		t.Errorf("viewer got %d bytes before being dropped, want 2 MB", n)
+	}
+}
+
+// perIDEngine answers 500 for the ids it is told are dead and streams the rest; it records the order
+// in which ids were asked for.
+type perIDEngine struct {
+	fakeEngine
+	deadIDs map[string]bool
+	mu      sync.Mutex
+	asked   []string
+}
+
+func (e *perIDEngine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	e.mu.Lock()
+	e.asked = append(e.asked, id)
+	e.mu.Unlock()
+	if e.deadIDs[id] {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	e.fakeEngine.ServeHTTP(w, r)
+}
+
+func (e *perIDEngine) order() []string {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	var out []string
+	for _, id := range e.asked {
+		if len(out) == 0 || out[len(out)-1] != id {
+			out = append(out, id)
+		}
+	}
+	return out
+}
+
+func newChannelProxy(t *testing.T, engine http.Handler, table string) *httptest.Server {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "channels.json")
+	if err := os.WriteFile(path, []byte(table), 0644); err != nil {
+		t.Fatal(err)
+	}
+	upstream := httptest.NewServer(engine)
+	t.Cleanup(upstream.Close)
+	h := newHub(upstream.URL, &channelNames{path: "/nonexistent"}, time.Second, 50*time.Millisecond)
+	h.table = &channelTable{path: path}
+	h.sourceWait, h.channelWait = 400*time.Millisecond, 3*time.Second
+	proxy := httptest.NewServer(http.HandlerFunc(h.serve))
+	t.Cleanup(proxy.Close)
+	return proxy
+}
+
+const twoSources = `{"channels":{"dazn-laliga-1080p":{"name":"DAZN LaLiga 1080p","ids":["dead000000000000000000000000000000000000","good000000000000000000000000000000000000"]}}}`
+
+func TestDeadSourceFallsThroughToTheNext(t *testing.T) {
+	engine := &perIDEngine{deadIDs: map[string]bool{"dead000000000000000000000000000000000000": true}}
+	proxy := newChannelProxy(t, engine, twoSources)
+	url := proxy.URL + "/channel/dazn-laliga-1080p"
+
+	if n, _ := readSome(context.Background(), url, 8192); n < 8192 {
+		t.Fatalf("got %d bytes, want video from the second source", n)
+	}
+	if got := engine.order(); len(got) != 2 || got[0][:4] != "dead" || got[1][:4] != "good" {
+		t.Errorf("sources tried %v, want dead then good, one at a time", got)
+	}
+
+	time.Sleep(200 * time.Millisecond) // past the linger, so the next open is a fresh start
+	engine.mu.Lock()
+	engine.asked = nil
+	engine.mu.Unlock()
+	if n, _ := readSome(context.Background(), url, 8192); n < 8192 {
+		t.Fatalf("second open got %d bytes", n)
+	}
+	if got := engine.order(); len(got) != 1 || got[0][:4] != "good" {
+		t.Errorf("second open tried %v, want the source that worked first", got)
+	}
+}
+
+func TestUnknownChannelIs404(t *testing.T) {
+	proxy := newChannelProxy(t, &perIDEngine{}, twoSources)
+	resp, err := http.Get(proxy.URL + "/channel/not-a-channel")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusNotFound {
+		t.Errorf("status %d, want 404", resp.StatusCode)
 	}
 }
