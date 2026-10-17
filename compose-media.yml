@@ -204,6 +204,8 @@ services:
       - STREAM_BASE_URL=http://acestream-proxy:6879/ace/getstream?id=
       # One URL per channel that survives the list rotating its ids; the proxy picks a live source.
       - CHANNEL_BASE_URL=http://acestream-proxy:6879/channel/
+      # Cut down to our channels into guide.xml, which Jellyfin reads (scripts/sync/jellyfin-guide.sh).
+      - GUIDE_SOURCE_URL=https://raw.githubusercontent.com/davidmuma/EPG_dobleM/refs/heads/master/guiatv.xml
       - PUSHGATEWAY_URL=http://pushgateway:9091
       - JELLYFIN_URL=http://jellyfin:8096
       - JELLYFIN_API_KEY=${JELLYFIN_API_KEY}

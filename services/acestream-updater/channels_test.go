@@ -89,3 +89,35 @@ func TestTableIsReplacedWhole(t *testing.T) {
 		}
 	}
 }
+
+const fullGuide = `<?xml version="1.0" encoding="UTF-8"?>
+<tv generator-info-name="test">
+  <channel id="DAZN LaLiga HD"><display-name>DAZN LaLiga</display-name></channel>
+  <channel id="Some Other"><display-name>Other</display-name></channel>
+  <programme start="20261018200000 +0200" stop="20261018220000 +0200" channel="DAZN LaLiga HD"><title>Betis - Sevilla</title></programme>
+  <programme start="20261018200000 +0200" stop="20261018220000 +0200" channel="Some Other"><title>Not ours</title></programme>
+</tv>`
+
+func TestGuideKeepsOnlyOurChannels(t *testing.T) {
+	dir := t.TempDir()
+	full, out := filepath.Join(dir, "full.xml"), filepath.Join(dir, "guide.xml")
+	if err := os.WriteFile(full, []byte(fullGuide), 0644); err != nil {
+		t.Fatal(err)
+	}
+	_, groups := build(t, sample)
+	ids := tvgIDs(groups)
+	if !sameIDs(ids, []string{"DAZN LaLiga HD", "M+ LaLiga HD"}) {
+		t.Fatalf("tvg ids = %v", ids)
+	}
+	if changed, err := trimGuide(full, out, ids); err != nil || !changed {
+		t.Fatalf("trim: changed=%v err=%v", changed, err)
+	}
+	got, _ := os.ReadFile(out)
+	if !strings.Contains(string(got), "Betis - Sevilla") || strings.Contains(string(got), "Not ours") ||
+		strings.Contains(string(got), `id="Some Other"`) {
+		t.Errorf("trimmed guide:\n%s", got)
+	}
+	if changed, _ := trimGuide(full, out, ids); changed {
+		t.Error("an identical guide was rewritten")
+	}
+}

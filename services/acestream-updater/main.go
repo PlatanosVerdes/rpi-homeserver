@@ -22,6 +22,9 @@ import (
 var qualitySuffix = regexp.MustCompile(`\s+(?:(?:720p|1080p)\s+)?\*+$`)
 
 const (
+	guideCache      = "/app/guide-full.xml"
+	guideMaxAge     = 24 * time.Hour
+	refreshDebounce = 2 * time.Minute // a channel that drops out and back in costs one refresh, not two
 	stateFile  = "/app/metrics.env"
 	sleepMin   = 60  // seconds
 	sleepRange = 241 // rand(0..240) + sleepMin = 60..300s
@@ -30,6 +33,7 @@ const (
 type config struct {
 	outputFile     string
 	channelBaseURL string // stable per-channel URLs through the proxy; empty keeps one entry per id
+	guideSourceURL string // full XMLTV guide, cut down to our channels into guide.xml; empty skips it
 	sourceURLs     []string
 	aceserveURL    string // used for health probes (direct to aceserve)
 	streamBaseURL  string // used for M3U URLs served to Jellyfin (may go via proxy)
@@ -78,6 +82,7 @@ func loadConfig() config {
 	return config{
 		outputFile:     mustEnv("OUTPUT_FILE"),
 		channelBaseURL: os.Getenv("CHANNEL_BASE_URL"),
+		guideSourceURL: os.Getenv("GUIDE_SOURCE_URL"),
 		sourceURLs:     urls,
 		aceserveURL:    aceserveURL,
 		streamBaseURL:  streamBaseURL,
@@ -308,6 +313,12 @@ func pushMetrics(pushURL string, s state, channels []channel, jellyfinCode int,
 	}
 }
 
+// Between passes: when Jellyfin is due a refresh, and the guide ids it was last trimmed for.
+var (
+	refreshDue time.Time
+	guideIDs   []string
+)
+
 func run(cfg config) {
 	s := loadState()
 	s.totalRuns++
@@ -348,15 +359,36 @@ func run(cfg config) {
 	channels, newM3U := parseAndDedup(combined.Bytes(), cfg.aceserveURL, cfg.streamBaseURL)
 	log.Printf("Channels: %d unique after dedup", len(channels))
 
+	changed := false
 	if cfg.channelBaseURL != "" {
 		order, groups := groupChannels(channels)
 		header := strings.SplitN(newM3U, "\n", 2)[0]
 		newM3U = stableM3U(header, cfg.channelBaseURL, order, groups)
 		table := filepath.Join(filepath.Dir(cfg.outputFile), "channels.json")
-		if changed, err := writeTable(table, groups); err != nil {
+		if tableChanged, err := writeTable(table, groups); err != nil {
 			log.Printf("error writing %s: %v", table, err)
-		} else if changed {
+		} else if tableChanged {
 			log.Printf("Channel table: %d channels from %d sources", len(order), len(channels))
+		}
+
+		if cfg.guideSourceURL != "" {
+			fresh, err := fetchGuide(cfg.guideSourceURL, guideCache, guideMaxAge)
+			if err != nil {
+				log.Printf("warning: guide download failed, keeping the last one: %v", err)
+			}
+			ids := tvgIDs(groups)
+			if fresh || !sameIDs(ids, guideIDs) {
+				guide := filepath.Join(filepath.Dir(cfg.outputFile), "guide.xml")
+				if guideChanged, err := trimGuide(guideCache, guide, ids); err != nil {
+					log.Printf("error trimming the guide: %v", err)
+				} else {
+					guideIDs = ids
+					if guideChanged {
+						log.Printf("Guide: cut down to %d channels", len(ids))
+						changed = true
+					}
+				}
+			}
 		}
 	}
 
@@ -368,15 +400,24 @@ func run(cfg config) {
 		} else {
 			log.Printf("Changes applied.")
 			s.successChanges++
-			jellyfinCode = triggerJellyfinRefresh(cfg.jellyfinURL, cfg.jellyfinAPIKey)
-			log.Printf("Jellyfin refresh: %d", jellyfinCode)
-			if jellyfinCode == 204 {
-				s.jellyfinLastRefreshTS = time.Now().Unix()
-			}
+			changed = true
 		}
 	} else {
 		log.Printf("No changes detected.")
 		s.successNoChanges++
+	}
+
+	if changed {
+		refreshDue = time.Now().Add(refreshDebounce)
+		log.Printf("Jellyfin refresh due after %s without further changes", refreshDebounce)
+	}
+	if !refreshDue.IsZero() && !time.Now().Before(refreshDue) {
+		jellyfinCode = triggerJellyfinRefresh(cfg.jellyfinURL, cfg.jellyfinAPIKey)
+		log.Printf("Jellyfin refresh: %d", jellyfinCode)
+		if jellyfinCode == 204 {
+			s.jellyfinLastRefreshTS = time.Now().Unix()
+			refreshDue = time.Time{}
+		}
 	}
 
 	saveState(s)
