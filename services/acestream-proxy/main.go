@@ -187,8 +187,10 @@ func (s *stream) run(ctx context.Context, target string, headers http.Header) {
 	s.broadcast(first)
 
 	for {
+		// Whole chunks, so the backlog is the 8 MB it claims: the engine's reads come in a few KB at
+		// a time, and 256 of those filled in the opening burst and dropped the TV the second it began.
 		buf := make([]byte, chunkSize)
-		n, err := resp.Body.Read(buf)
+		n, err := io.ReadFull(resp.Body, buf)
 		if n > 0 {
 			s.broadcast(buf[:n])
 		}
