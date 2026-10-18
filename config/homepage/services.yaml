@@ -127,7 +127,6 @@
           password: "{{HOMEPAGE_VAR_QBIT_PASSWORD}}"
     - FlareSolverr:
         icon: flaresolverr.png
-        href: http://{{HOMEPAGE_VAR_TAILSCALE_IP}}:8191
         server: my-docker
         container: flaresolverr
     - autobrr:

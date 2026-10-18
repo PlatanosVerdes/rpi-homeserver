@@ -26,7 +26,7 @@ services:
       - ${APP_CONFIG_PATH}/qbittorrent:/config
       - ${DATA_ROOT}/downloads:/data/downloads
     ports:
-      - "${QBIT_WEBUI_PORT}:${QBIT_WEBUI_PORT}"
+      - "127.0.0.1:${QBIT_WEBUI_PORT}:${QBIT_WEBUI_PORT}"
       # Not 6881: that range is the obvious one to throttle. In .env so a public repo does not
       # advertise it, and scripts/sync/qbit-config.sh pushes the same number into qBittorrent, or the
       # published port and the one it listens on disagree and no peer ever connects.
@@ -51,8 +51,6 @@ services:
     environment:
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - TZ=${TZ}
-    ports:
-      - "8191:8191"
     networks:
       - media-network
 
@@ -74,7 +72,7 @@ services:
     volumes:
       - ${APP_CONFIG_PATH}/prowlarr:/config
     ports:
-      - "9696:9696"
+      - "127.0.0.1:9696:9696"
     networks:
       - media-network
 
@@ -100,7 +98,7 @@ services:
       - ${APP_CONFIG_PATH}/radarr:/config
       - ${DATA_ROOT}:/data
     ports:
-      - "7878:7878"
+      - "127.0.0.1:7878:7878"
     networks:
       - media-network
 
@@ -123,7 +121,7 @@ services:
       - ${APP_CONFIG_PATH}/sonarr:/config
       - ${DATA_ROOT}:/data
     ports:
-      - "8989:8989"
+      - "127.0.0.1:8989:8989"
     networks:
       - media-network
 

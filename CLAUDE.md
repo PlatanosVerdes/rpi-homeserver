@@ -79,6 +79,9 @@ scripts/                    Operational scripts, grouped by what they do
     qbit-config.sh          qBittorrent queue limits, upload cap and BT port
     jellyfin-guide.sh       Jellyfin's XMLTV guide -> the copy bifrost cuts to our channels
 
+  ci/                       Run by GitHub Actions
+    ports.py                Host ports both repos' containers take; fails on a clash
+
   ops/                      Everything else on a schedule
     backup.sh               Daily appdata backup, pushes metrics to Grafana
     heartbeat.sh            Dead man's switch ping to an external check, every minute
@@ -203,7 +206,8 @@ Main Pi: `COMPOSE_PROFILES=all`. Secondary Pi: e.g. `COMPOSE_PROFILES=essential,
 See [docs/add-service.md](docs/add-service.md) for the step-by-step guide. Short version:
 1. Add service to the appropriate `compose-*.yml`, with a `prometheus.probe` label holding the
    URL its liveness probe should hit (that label is the whole monitoring setup; leave it out only
-   if the service serves no HTTP)
+   if the service serves no HTTP). No `ports:` unless something on the host needs it, and then on
+   `127.0.0.1`; on the host network, a `host.ports` label instead (CI checks both repos for clashes)
 2. Add HTTPS route to `config/caddy/Caddyfile`
 3. Add DNS record in Pi-hole pointing to `TAILSCALE_IP`
 4. Add to Homepage `config/homepage/services.yaml` (optional)

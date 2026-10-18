@@ -50,6 +50,17 @@ FILEBROWSER_VERSION=v2.32.0
 
 > Do NOT add `ports:` for services that go through Caddy — Caddy reaches them by container name over `media-network`. Only add `ports:` if you need direct host access.
 
+When something on the host does need it, such as a script in `scripts/` calling
+`http://localhost:<port>`, publish on the loopback address only (`"127.0.0.1:7878:7878"`): the
+script works and the port is not open to the LAN or the tailnet. A service on the host network
+publishes nothing, so it declares what it binds in a `host.ports` label instead
+(`host.ports: "8096/tcp 7359/udp"`, or `"none"`).
+
+The **Host ports** workflow runs `scripts/ci/ports.py` on every PR, against this repo and
+rpi-services together since both run on the same Pi. It fails when two containers claim the same
+host port, or when a host-network service has no `host.ports` label, and its job summary lists
+every port in use. Run it locally with `python3 scripts/ci/ports.py . ../rpi-services`.
+
 The `prometheus.probe` label is the whole monitoring setup: Prometheus asks Docker for the
 containers carrying it and probes that URL every 15s, so the service appears in the **Service
 probes** dashboard and in the "Service not answering" alert without anyone editing
@@ -152,6 +163,7 @@ docker exec caddy caddy reload --config /etc/caddy/Caddyfile
 
 - [ ] Service added to correct compose file with `networks: media-network`
 - [ ] `prometheus.probe` label set, or the service genuinely serves no HTTP
+- [ ] No `ports:` unless the host needs it (then `127.0.0.1:`), and `host.ports` if on the host network
 - [ ] HTTPS route added (Caddyfile or rpi-services `*.caddy`)
 - [ ] Version pinned in `versions.env`, image referenced as `${SERVICE_VERSION}`
 - [ ] Secrets added to `.env` and `.env.example`
