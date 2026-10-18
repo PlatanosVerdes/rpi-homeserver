@@ -343,8 +343,9 @@ for svc in (doc.get("services") or {}).values():
     fi
 
     # `caddy reload` and not `docker restart`: it swaps the config in place without dropping live
-    # connections or re-reading the certificate store.
-    if [[ "$label" == "homeserver" && "$before" != "$after" ]] &&
+    # connections or re-reading the certificate store. Both repos: Caddy also imports rpi-services'
+    # config/caddy/ (EXT_CADDY_PATH), and a route added there stayed unloaded until a manual reload.
+    if [[ "$before" != "$after" ]] &&
         git diff --name-only "$before" "$after" | grep -q '^config/caddy/' &&
         docker ps --format '{{.Names}}' | grep -qx caddy; then
         if timeout 60 docker exec caddy caddy reload --config /etc/caddy/Caddyfile >/dev/null 2>&1; then
