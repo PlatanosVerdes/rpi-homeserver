@@ -7,7 +7,7 @@
 
 - Watch:
     - Jellyfin:
-        icon: jellyfin.png
+        icon: jellyfin.svg
         href: https://jellyfin.platanosverdes.com
         server: my-docker
         container: jellyfin
@@ -17,7 +17,7 @@
           key: "{{HOMEPAGE_VAR_JELLYFIN_TOKEN}}"
           enableNowPlaying: true
     - Plex:
-        icon: plex.png
+        icon: plex.svg
         href: http://{{HOMEPAGE_VAR_STATIC_IP}}:32400/web
         server: my-docker
         container: plex
@@ -26,7 +26,7 @@
           url: http://{{HOMEPAGE_VAR_TAILSCALE_IP}}:32400
           key: "{{HOMEPAGE_VAR_PLEX_TOKEN}}" #https://www.plexopedia.com/plex-media-server/general/plex-token/
     - Seerr:
-        icon: overseerr.png
+        icon: seerr.svg
         href: https://seerr.platanosverdes.com
         server: my-docker
         container: seerr
@@ -37,7 +37,7 @@
 
 - Library:
     - Radarr:
-        icon: radarr.png
+        icon: radarr.svg
         href: https://radarr.platanosverdes.com
         server: my-docker
         container: radarr
@@ -46,7 +46,7 @@
           url: http://radarr:7878
           key: "{{HOMEPAGE_VAR_RADARR_TOKEN}}"
     - Sonarr:
-        icon: sonarr.png
+        icon: sonarr.svg
         href: https://sonarr.platanosverdes.com
         server: my-docker
         container: sonarr
@@ -55,7 +55,7 @@
           url: http://sonarr:8989
           key: "{{HOMEPAGE_VAR_SONARR_TOKEN}}"
     - Prowlarr:
-        icon: prowlarr.png
+        icon: prowlarr.svg
         href: https://prowlarr.platanosverdes.com
         server: my-docker
         container: prowlarr
@@ -78,13 +78,13 @@
         server: my-docker
         container: farnsworth
     - bifrost:
-        icon: mdi-bridge
+        icon: https://bifrost.platanosverdes.com/favicon.svg
         href: https://bifrost.platanosverdes.com
         description: Acestream channels, their state and what is playing
         server: my-docker
         container: bifrost
     - sleipnir:
-        icon: mdi-horse-variant
+        icon: https://sleipnir.platanosverdes.com/icon.svg
         href: https://sleipnir.platanosverdes.com
         description: VPN tunnels, where each one exits, and moving them
         server: my-docker
@@ -95,28 +95,34 @@
         description: Drop a .torrent, cross-seed follows on its own
         server: my-docker
         container: torrent-drop
+    - torre:
+        icon: https://torre.platanosverdes.com/icon.svg
+        href: https://torre.platanosverdes.com
+        description: AENA departures and arrivals, with flight alerts
+        server: my-docker
+        container: torre
 
 - Monitoring:
     - Grafana:
-        icon: grafana.png
+        icon: grafana.svg
         href: https://grafana.platanosverdes.com
         server: my-docker
         container: grafana
     - VictoriaLogs:
-        icon: mdi-text-box-search
+        icon: victoriametrics.svg
         href: https://logs.platanosverdes.com/select/vmui/
         server: my-docker
         container: victorialogs
 
 - Downloads:
     - Bazarr:
-        icon: bazarr.png
+        icon: bazarr.svg
         href: https://bazarr.platanosverdes.com
         description: Subtitle downloader
         server: my-docker
         container: bazarr
     - qBittorrent:
-        icon: qbittorrent.png
+        icon: qbittorrent.svg
         href: https://torrent.platanosverdes.com
         server: my-docker
         container: qbittorrent
@@ -126,11 +132,11 @@
           username: admin
           password: "{{HOMEPAGE_VAR_QBIT_PASSWORD}}"
     - FlareSolverr:
-        icon: flaresolverr.png
+        icon: flaresolverr.svg
         server: my-docker
         container: flaresolverr
     - autobrr:
-        icon: autobrr.png
+        icon: autobrr.svg
         href: https://autobrr.platanosverdes.com
         description: Grabs freeleech off the tracker's IRC announce
         server: my-docker
@@ -140,17 +146,17 @@
           url: http://autobrr:7474
           key: "{{HOMEPAGE_VAR_AUTOBRR_KEY}}"
     - qbit-manage:
-        icon: qbittorrent.png
+        icon: qbittorrent.svg
         description: Tags torrents by tracker and hardlink state
         server: my-docker
         container: qbit-manage
     - Maintainerr:
-        icon: maintainerr.png
+        icon: maintainerr.svg
         href: https://maintainerr.platanosverdes.com
         server: my-docker
         container: maintainerr
     - Tautulli:
-        icon: tautulli.png
+        icon: tautulli.svg
         href: https://tautulli.platanosverdes.com
         server: my-docker
         container: tautulli
@@ -161,7 +167,7 @@
 
 - Network:
     - Pi-hole:
-        icon: pi-hole.png
+        icon: pi-hole.svg
         href: https://pihole.platanosverdes.com/admin
         server: my-docker
         container: pihole
@@ -173,6 +179,8 @@
     - Speedtest:
         icon: https://img.icons8.com/?size=100&id=12995&format=png&color=000000
         href: https://speedtest.platanosverdes.com
+        server: my-docker
+        container: speedtest-tracker
         widget:
             type: speedtest
             url: http://speedtest-tracker:80
@@ -181,7 +189,7 @@
 
 - Services:
     - Offers Bot:
-        icon: telegram.png
+        icon: telegram.svg
         description: Pol Academy Offers Hunter
         server: my-docker
         container: pol-academy-offers-bot
@@ -196,7 +204,7 @@
 
 - Internals:
     - Prometheus:
-        icon: prometheus.png
+        icon: prometheus.svg
         href: https://prometheus.platanosverdes.com
         server: my-docker
         container: prometheus
@@ -204,7 +212,7 @@
             type: prometheus
             url: http://prometheus:9090
     - Pushgateway:
-        icon: https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/png/prometheus.png
+        icon: prometheus.svg
         href: https://push.platanosverdes.com
         server: my-docker
         container: pushgateway
