@@ -361,9 +361,35 @@ services:
       - ${APP_CONFIG_PATH}/gluetun/servers.json:/servers.json:ro
     networks:
       - media-network
-      - sleipnir-docker
+      - docker-api
 
-  # Read-only Docker API for sleipnir, and only the container list: no exec, no start, no images.
+  # --- muninn: who uses each bot and how much traffic reaches it (github.com/PlatanosVerdes/muninn) ---
+  # Bots are found by the muninn.stats label, through the same socket proxy as sleipnir; muninn
+  # reads each one's /bot-stats over the muninn network, holds no token and sends nothing.
+  muninn:
+    image: ghcr.io/platanosverdes/muninn:${MUNINN_VERSION}
+    container_name: muninn
+    labels:
+      prometheus.probe: "http://muninn:8095/healthz"
+    restart: unless-stopped
+    mem_limit: 64m
+    memswap_limit: 64m
+    profiles: [bots, all]
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      - docker-socket-proxy
+    environment:
+      - TZ=${TZ}
+      - DOCKER_HOST_URL=http://docker-socket-proxy:2375
+      - MUNINN_NAME=${MUNINN_NAME:-}
+    networks:
+      - media-network
+      - docker-api
+      - muninn
+
+  # Read-only Docker API for the panels that find containers by label (sleipnir, muninn), and only the
+  # container list: no exec, no start, no images.
   # On its own internal network so nothing else here can reach it.
   docker-socket-proxy:
     image: tecnativa/docker-socket-proxy:${DOCKER_SOCKET_PROXY_VERSION}
@@ -371,13 +397,13 @@ services:
     restart: unless-stopped
     mem_limit: 64m
     memswap_limit: 64m
-    profiles: [vpn, all]
+    profiles: [vpn, bots, all]
     environment:
       - CONTAINERS=1
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
-      - sleipnir-docker
+      - docker-api
 
   # A tunnel to try the panel on: huginn lives in it and reports the exit it sees, so a switch can
   # be checked by eye. It must exit through a country other than the main tunnel's, since both use
@@ -430,5 +456,10 @@ services:
 networks:
   media-network:
     external: true
-  sleipnir-docker:
+  docker-api:
+    internal: true
+  # What muninn and the bots it watches share, and nothing else: a public bot (torre) joins it
+  # without joining media-network. Named, so the bots' own compose files can attach to it.
+  muninn:
+    name: muninn
     internal: true

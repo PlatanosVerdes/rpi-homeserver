@@ -194,6 +194,7 @@ Controlled via `COMPOSE_PROFILES` in `.env`. No need to touch compose files.
 | `media` | Plex, Overseerr, Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr, Unpackerr, Bazarr, Maintainerr, Tautulli, watch-next, torrent-drop |
 | `bot` | Pol Academy Offers Bot |
 | `vpn` | sleipnir, docker-socket-proxy, gluetun-test, huginn (see docs/sleipnir.md) |
+| `bots` | muninn, docker-socket-proxy |
 | `tunnel` | Cloudflared (publishes only the GitHub deploy webhook — see docs/deploy-webhook.md) |
 | `all` | Everything except `tunnel` (it needs a token, so it is opt-in) |
 
@@ -229,6 +230,15 @@ The gluetun tunnel panel and its exit check huginn, in their own repo:
 [PlatanosVerdes/sleipnir](https://github.com/PlatanosVerdes/sleipnir). One image, pinned as
 `SLEIPNIR_VERSION`, run twice (`huginn` via `command`). Tunnels opt in with the `sleipnir.enable`
 label; see [docs/sleipnir.md](docs/sleipnir.md).
+
+### muninn (external image)
+Who uses each bot and how much traffic reaches it, in its own repo:
+[PlatanosVerdes/muninn](https://github.com/PlatanosVerdes/muninn). Pinned as `MUNINN_VERSION`. Bots
+opt in with a `muninn.stats` label (the URL of their `/bot-stats`, on an unpublished port: it holds
+names); Go bots serve it with `github.com/PlatanosVerdes/gonana/botstats`. Shares
+docker-socket-proxy with sleipnir on the internal `docker-api` network. Bots reach muninn, and
+muninn them, on the internal `muninn` network: a bot joins it in its own compose
+(`networks: muninn: external: true`), so a public bot like torre stays off media-network.
 
 ### tailscale-metrics
 Go service, Dockerized, no published port. Prometheus scrapes `tailscale-metrics:9736/metrics`
