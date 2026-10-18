@@ -191,6 +191,7 @@ services:
       - PUSHGATEWAY_URL=http://pushgateway:9091
       - JELLYFIN_URL=http://jellyfin:8096
       - JELLYFIN_API_KEY=${JELLYFIN_API_KEY}
+      - BIFROST_NAME=Raspberry
 
   # --- BAZARR (auto-download subtitles; Spanish, for the whole library) ---
   bazarr:

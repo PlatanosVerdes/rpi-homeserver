@@ -77,6 +77,12 @@
         description: Acestream channels in your player
         server: my-docker
         container: farnsworth
+    - bifrost:
+        icon: mdi-bridge
+        href: https://bifrost.platanosverdes.com
+        description: Acestream channels, their state and what is playing
+        server: my-docker
+        container: bifrost
     - Torrent drop:
         icon: https://drop.platanosverdes.com/icon.svg
         href: https://drop.platanosverdes.com
