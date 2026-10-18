@@ -57,3 +57,5 @@ secrets/
 credentials/
 # Local pre-change backups, not stack config
 .backups/
+.deploy.lock
+apply.log
