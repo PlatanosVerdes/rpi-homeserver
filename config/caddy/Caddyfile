@@ -69,6 +69,11 @@ https://farnsworth.platanosverdes.com {
     import cf_tls
     reverse_proxy farnsworth:8086
 }
+
+https://bifrost.platanosverdes.com {
+    import cf_tls
+    reverse_proxy bifrost:6879
+}
 https://grafana.platanosverdes.com {
     log
     # Same reason as homepage above: an open Grafana tab holds a websocket and pings /api/login
