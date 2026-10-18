@@ -55,7 +55,7 @@ services:
       - TZ=${TZ}
       - DB_CONNECTION=sqlite
       - APP_KEY=${SPEEDTEST_KEY}
-      - SPEEDTEST_SCHEDULE="0 * * * *" #"*/15 * * * *"
+      - SPEEDTEST_SCHEDULE=0 * * * *
       - PRUNE_RESULTS_OLDER_THAN=2
     volumes:
       - ${APP_CONFIG_PATH}/speedtest-tracker:/config
