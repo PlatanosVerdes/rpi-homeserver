@@ -154,6 +154,10 @@ https://drop.platanosverdes.com {
     import cf_tls
     reverse_proxy torrent-drop:8087
 }
+https://sleipnir.platanosverdes.com {
+    import cf_tls
+    reverse_proxy sleipnir:8090
+}
 # --- HTTP (LAN short names) ---
 http://raspi http://homepage {
     log

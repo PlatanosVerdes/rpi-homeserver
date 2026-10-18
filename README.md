@@ -442,6 +442,7 @@ Every service belongs to one or more profiles. Set `COMPOSE_PROFILES` in `.env` 
 | `moni` | Prometheus, Grafana, Pushgateway, node-exporter, cAdvisor, Pihole-exporter, Speedtest-tracker |
 | `acestream` | Aceserve, gluetun, bifrost, Jellyfin, farnsworth + Grafana/Prometheus/Pushgateway |
 | `media` | Plex, Seerr, Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr, Unpackerr, torrent-drop |
+| `vpn` | sleipnir, docker-socket-proxy, gluetun-test, huginn |
 | `bot` | Pol Academy Offers Bot |
 | `all` | Everything |
 
@@ -648,6 +649,13 @@ Full guide, including what is deliberately not collected: [docs/logging.md](docs
 Browsers cannot play the MPEG-TS these channels arrive as, and the Pi cannot re-encode 20 Mbps of
 1080p in real time (measured at 0.32x). Farnsworth lists the channels and hands one to VLC, which
 plays them natively. Full guide: [docs/farnsworth.md](docs/farnsworth.md).
+
+### VPN tunnels (sleipnir)
+[sleipnir](https://github.com/PlatanosVerdes/sleipnir) (an image, pinned as `SLEIPNIR_VERSION`) at
+`https://sleipnir.platanosverdes.com` lists every gluetun tunnel on the machine, found by the
+`sleipnir.enable` label, and moves its exit country or server in place; whatever uses the tunnel
+carries on. `gluetun-test` and `huginn` are there to try it. Needs `GLUETUN_API_KEY` in `.env`.
+Full guide: [docs/sleipnir.md](docs/sleipnir.md).
 
 ### Backups & Recovery
 `scripts/ops/backup.sh` (daily cron at 04:00) snapshots `appdata/` to a compressed, rotated
