@@ -8,7 +8,7 @@ services:
     mem_limit: 128m
     memswap_limit: 128m
     profiles: [moni, acestream, all]
-    # Persisted, or a restart wipes the one-shot job metrics (deploy, backup, cal-bridge). One
+    # Persisted, or a restart wipes the one-shot job metrics (deploy, backup). One
     # snapshot file rewritten every 5m, so it does not grow.
     command:
       - --persistence.file=/data/metrics

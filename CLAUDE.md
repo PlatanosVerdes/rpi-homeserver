@@ -4,7 +4,7 @@
 
 A modular Docker-based home server running on a Raspberry Pi. All services run as Docker containers managed by Docker Compose. The repo is the source of truth: a push to `main` deploys within seconds via a GitHub webhook, with a cron every 30 minutes as the fallback (`scripts/deploy/apply.sh` handles both).
 
-**Two-repo architecture:** Both repos are public. The split is *generic vs personal*, not private vs public: this repo is meant to be clonable and useful to anyone, so nothing personal lives here. Personal/custom services (Telegram bot, calendar bridge, AirTag tracker) live in [`rpi-services`](https://github.com/PlatanosVerdes/rpi-services). Both run on the same Pi, share `media-network`, are deployed by the same script, and extend the same Caddy instance via the services import mechanism (see Networking section below).
+**Two-repo architecture:** Both repos are public. The split is *generic vs personal*, not private vs public: this repo is meant to be clonable and useful to anyone, so nothing personal lives here. Personal/custom services (Telegram bots, the Fantasy panel, torre) live in [`rpi-services`](https://github.com/PlatanosVerdes/rpi-services). Both run on the same Pi, share `media-network`, are deployed by the same script, and extend the same Caddy instance via the services import mechanism (see Networking section below).
 
 **Conventions both repos must follow** (they are one system, so drift hurts):
 - Image/app versions in a committed `versions.env`, never `:latest` and never inline in compose.
@@ -190,7 +190,6 @@ Controlled via `COMPOSE_PROFILES` in `.env`. No need to touch compose files.
 | `acestream` | Aceserve, gluetun, bifrost, Kubo, Jellyfin, farnsworth + Grafana/Prometheus/Pushgateway |
 | `media` | Plex, Overseerr, Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr, Unpackerr, Bazarr, Maintainerr, Tautulli, watch-next, torrent-drop |
 | `bot` | Pol Academy Offers Bot |
-| `cal` | Google Calendar Bridge (cal-bridge) |
 | `vpn` | sleipnir, docker-socket-proxy, gluetun-test, huginn (see docs/sleipnir.md) |
 | `tunnel` | Cloudflared (publishes only the GitHub deploy webhook — see docs/deploy-webhook.md) |
 | `all` | Everything except `tunnel` (it needs a token, so it is opt-in) |

@@ -2,8 +2,8 @@
 
 Persistent container state lives in `appdata/` (not in git). `scripts/ops/backup.sh` snapshots it
 to a compressed, rotated archive on the external disk and reports health to Grafana. It backs
-up **both** `rpi-homeserver/appdata` and `rpi-services/appdata` (the latter holds the AirTag
-keys, cal-bridge tokens, and the Telegram bot DB).
+up **both** `rpi-homeserver/appdata` and `rpi-services/appdata` (the latter holds the personal
+apps' data, such as the Telegram bot DB).
 
 Storage note: the media/data volume `/mnt/data` is a **mergerfs pool** of two disks
 (`/mnt/disk1` + `/mnt/disk2`); backups land on the pool, which is a different physical device
@@ -20,7 +20,7 @@ Everything under `appdata/` **except** regenerable or huge data:
 | `*/log/`, `*/logs/`, `*.log` | Logs |
 
 So the important state (Pi-hole, Grafana, *arr* databases, qBittorrent, Seerr,
-speedtest-tracker, vaultwarden, the Telegram bot DB, cal-bridge tokens) is all included.
+speedtest-tracker, vaultwarden, the Telegram bot DB) is all included.
 
 ## Configuration (`.env`)
 
