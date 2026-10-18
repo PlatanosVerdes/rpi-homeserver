@@ -15,7 +15,8 @@ quicklaunch:
   provider: google            
 
 statusStyle: dot              
-showStats: true               
+# Stats on demand (click a card's dot): each one is a docker stats call, 2-4 s on the Pi, times 25 cards.
+showStats: false
 hideVersion: true            
 disableUpdateCheck: false
 
