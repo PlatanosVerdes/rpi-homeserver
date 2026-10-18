@@ -37,7 +37,7 @@ https://raspi.platanosverdes.com {
 https://jellyfin.platanosverdes.com {
     log
     import cf_tls
-    reverse_proxy jellyfin:8096
+    reverse_proxy host.docker.internal:8096
 }
 https://seerr.platanosverdes.com {
     log
@@ -165,7 +165,7 @@ http://raspi http://homepage {
 }
 http://jellyfin {
     log
-    reverse_proxy jellyfin:8096
+    reverse_proxy host.docker.internal:8096
 }
 http://seerr {
     log

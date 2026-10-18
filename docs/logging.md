@@ -123,7 +123,7 @@ pipeline and no file on disk to rotate.
 It exists because nothing else knows which services actually get *used*. Prometheus measures whether
 they are up; being up and being opened are different questions, and only this answers the second.
 
-The blackbox probes hit containers directly (`http://jellyfin:8096/health`), not these routes, so
+The blackbox probes hit containers directly (`http://seerr:5055/`), not these routes, so
 the access log is real browser traffic rather than a health check every 30 seconds.
 
 Which hosts you opened, busiest first:

@@ -221,6 +221,7 @@ services:
       # the collector rather than failing it.
       - PLEX_API_TOKEN=${PLEX_API_TOKEN:-}
       - JELLYFIN_API_KEY=${JELLYFIN_API_KEY:-}
+      - JELLYFIN_URL=http://host.docker.internal:8096
     volumes:
       # The arrs' API keys live in their config.xml and nowhere else, so they are read rather than
       # duplicated into .env. Whole directories and not the single file: git and the apps replace
