@@ -157,7 +157,7 @@ services:
   # Same image as the main Pi. Writes Jellyfin's playlist (one stable URL per channel) and a guide cut
   # down to those channels, and serves /channel/<slug>. It never opens a channel on its own.
   bifrost:
-    image: ghcr.io/platanosverdes/bifrost:v2026.10.17.4
+    image: ghcr.io/platanosverdes/bifrost:v2026.10.18.2
     container_name: bifrost
     restart: unless-stopped
     mem_limit: 128m
