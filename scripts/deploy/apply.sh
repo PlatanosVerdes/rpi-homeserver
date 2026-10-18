@@ -105,6 +105,16 @@ stream_logged() {
     return "$status"
 }
 
+# Quiet on success, where `up` prints a line per container every pass; a failure logs why and counts as an error.
+ensure_up() {
+    local label=$1 out
+    if ! out=$(docker compose up -d --remove-orphans 2>&1); then
+        while IFS= read -r line; do log "[$label] $line"; done <<<"$out"
+        log "[$label] Docker Compose failed, nothing was applied."
+        return 1
+    fi
+}
+
 push_metrics() {
     local status=$1
     # Legacy job (keeps existing deploy dashboard working)
@@ -413,7 +423,7 @@ for svc in (doc.get("services") or {}).values():
         if [[ -z "$retry" ]] && [[ -n "$changed" ]] &&
             ! grep -qE "^(${rebuild_when})" <<<"$changed"; then
             log "[$label] Nothing an image is built from changed, skipping rebuild..."
-            docker compose up -d --remove-orphans 2>/dev/null
+            ensure_up "$label" || return 1
             return 2  # no-op, nothing to rebuild
         fi
 
@@ -435,7 +445,7 @@ for svc in (doc.get("services") or {}).values():
         return 0  # changed
     else
         log "[$label] No changes, ensuring containers are running..."
-        docker compose up -d --remove-orphans 2>/dev/null
+        ensure_up "$label" || return 1
         return 2  # no change
     fi
 }
