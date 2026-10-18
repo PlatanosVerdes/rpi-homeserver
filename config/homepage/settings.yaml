@@ -1,8 +1,8 @@
 # https://gethomepage.dev/configs/settings/
 
-title: "RaspiHome"
+title: "Streamhalla"
 favicon: https://img.icons8.com/?size=100&id=12229&format=png&color=000000
-base: http://100.120.107.32:3001
+base: https://streamhalla.platanosverdes.com
 
 #background:
 #  image: https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=2070&auto=format&fit=crop
