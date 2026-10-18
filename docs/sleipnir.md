@@ -50,9 +50,9 @@ page, set on the machine whose page you open:
 
 ```bash
 SLEIPNIR_NAME=Raspberry
-SLEIPNIR_PEERS=streamhalla=http://100.120.107.32:8091
+SLEIPNIR_PEERS=streamhalla=http://100.120.107.32:8092
 SLEIPNIR_TOKEN=<same random string on every machine>
 ```
 
-Peers answer on `:8091`, published on the Tailscale address only, and that listener exists only when
+Peers answer on `:8092`, published on the Tailscale address only, and that listener exists only when
 `SLEIPNIR_TOKEN` is set. A peer that does not answer shows as "No answer".
