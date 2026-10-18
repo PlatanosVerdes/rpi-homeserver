@@ -365,7 +365,7 @@ services:
 
   # --- muninn: who uses each bot and how much traffic reaches it (github.com/PlatanosVerdes/muninn) ---
   # Bots are found by the muninn.stats label, through the same socket proxy as sleipnir; muninn
-  # reads each one's /bot-stats over media-network, holds no token and sends nothing.
+  # reads each one's /bot-stats over the muninn network, holds no token and sends nothing.
   muninn:
     image: ghcr.io/platanosverdes/muninn:${MUNINN_VERSION}
     container_name: muninn
@@ -386,6 +386,7 @@ services:
     networks:
       - media-network
       - docker-api
+      - muninn
 
   # Read-only Docker API for the panels that find containers by label (sleipnir, muninn), and only the
   # container list: no exec, no start, no images.
@@ -456,4 +457,9 @@ networks:
   media-network:
     external: true
   docker-api:
+    internal: true
+  # What muninn and the bots it watches share, and nothing else: a public bot (torre) joins it
+  # without joining media-network. Named, so the bots' own compose files can attach to it.
+  muninn:
+    name: muninn
     internal: true

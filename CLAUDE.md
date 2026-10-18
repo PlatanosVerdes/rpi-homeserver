@@ -236,7 +236,9 @@ Who uses each bot and how much traffic reaches it, in its own repo:
 [PlatanosVerdes/muninn](https://github.com/PlatanosVerdes/muninn). Pinned as `MUNINN_VERSION`. Bots
 opt in with a `muninn.stats` label (the URL of their `/bot-stats`, on an unpublished port: it holds
 names); Go bots serve it with `github.com/PlatanosVerdes/gonana/botstats`. Shares
-docker-socket-proxy with sleipnir on the internal `docker-api` network.
+docker-socket-proxy with sleipnir on the internal `docker-api` network. Bots reach muninn, and
+muninn them, on the internal `muninn` network: a bot joins it in its own compose
+(`networks: muninn: external: true`), so a public bot like torre stays off media-network.
 
 ### tailscale-metrics
 Go service, Dockerized, no published port. Prometheus scrapes `tailscale-metrics:9736/metrics`

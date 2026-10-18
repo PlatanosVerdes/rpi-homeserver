@@ -662,7 +662,8 @@ Full guide: [docs/sleipnir.md](docs/sleipnir.md).
 [muninn](https://github.com/PlatanosVerdes/muninn) (an image, pinned as `MUNINN_VERSION`) at
 `https://muninn.platanosverdes.com` shows who uses each bot, its messages per minute and what it
 turned away. A bot opts in with a `muninn.stats` label holding the URL of its `/bot-stats`
-document, served on a port that is never published since it holds names. Prometheus scrapes the
+document, served on a port that is never published since it holds names, and joins the internal
+`muninn` network, which only muninn and the bots it watches share. Prometheus scrapes the
 same figures from `muninn:8095/metrics`, never with names.
 
 ### Backups & Recovery
