@@ -53,8 +53,6 @@ services:
       - 1.1.1.1
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    ports:
-      - "3001:3000"
     environment:
       - HOMEPAGE_ALLOWED_HOSTS=*
       - HOMEPAGE_VAR_TAILSCALE_IP=${TAILSCALE_IP}
@@ -103,8 +101,6 @@ services:
     volumes:
       - ${APP_CONFIG_PATH}/speedtest-tracker:/config
       - ${DATA_DB_ROOT}/speedtest.sqlite:/config/database.sqlite
-    ports:
-      - "8443:80"
     networks:
       - media-network
   # First login is speedtest-tracker's default: admin@example.com / password
@@ -113,6 +109,7 @@ services:
   pihole:
     container_name: pihole
     labels:
+      host.ports: "53/tcp 53/udp 123/udp 8081/tcp"
       prometheus.probe: "http://host.docker.internal:8081/"
     image: pihole/pihole:${PIHOLE_VERSION}
     restart: unless-stopped
@@ -142,6 +139,8 @@ services:
   cloudflared:
     image: cloudflare/cloudflared:${CLOUDFLARED_VERSION}
     container_name: cloudflared
+    labels:
+      host.ports: "2000/tcp"
     restart: unless-stopped
     mem_limit: 128m
     memswap_limit: 128m

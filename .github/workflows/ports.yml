@@ -1,0 +1,22 @@
+name: Host ports
+
+# Fails a PR that has two containers claiming the same host port, in this repo or against
+# rpi-services, which runs on the same Pi. The job summary lists every port in use.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: PlatanosVerdes/rpi-services
+          path: rpi-services
+      # The example's TAILSCALE_IP is a placeholder compose rejects as an address.
+      - run: sed 's/^TAILSCALE_IP=.*/TAILSCALE_IP=100.64.0.1/' .env.example > .env
+      - run: python3 scripts/ci/ports.py . rpi-services

@@ -5,6 +5,7 @@ services:
     image: lscr.io/linuxserver/plex:${PLEX_VERSION}
     container_name: plex
     labels:
+      host.ports: "32400/tcp 1901/udp 32410/udp 32412/udp 32413/udp 32414/udp"
       prometheus.probe: "http://host.docker.internal:32400/identity"
     restart: unless-stopped
     profiles: [media, all]
@@ -24,6 +25,7 @@ services:
     image: lscr.io/linuxserver/jellyfin:${JELLYFIN_VERSION}
     container_name: jellyfin
     labels:
+      host.ports: "8096/tcp 7359/udp"
       prometheus.probe: "http://host.docker.internal:8096/health"
     restart: unless-stopped
     profiles: [acestream, all]
@@ -68,7 +70,7 @@ services:
     volumes:
       - ${APP_CONFIG_PATH}/seerr:/app/config
     ports:
-      - "5055:5055"
+      - "127.0.0.1:5055:5055"
     networks:
       - media-network
 
@@ -118,6 +120,8 @@ services:
   aceserve:
     image: jopsis/aceserve@${ACESERVE_DIGEST}
     container_name: aceserve
+    labels:
+      host.ports: "6878/tcp 62062/tcp 8621/udp"
     profiles: [acestream, all]
     network_mode: host
     depends_on:
