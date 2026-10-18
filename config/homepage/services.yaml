@@ -1,7 +1,7 @@
 - Media:
     - Jellyfin:
-        icon: jellyfin.png
-        href: http://{{HOMEPAGE_VAR_TAILSCALE_IP}}:8096
+        icon: jellyfin.svg
+        href: https://jellyfin.streamhalla.platanosverdes.com
         server: my-docker
         container: jellyfin
         widget:
@@ -10,16 +10,23 @@
           key: "{{HOMEPAGE_VAR_JELLYFIN_TOKEN}}"
           enableNowPlaying: true
 
+    - bifrost:
+        icon: https://bifrost.streamhalla.platanosverdes.com/favicon.svg
+        href: https://bifrost.streamhalla.platanosverdes.com
+        description: Acestream channels, their state and what is playing
+        server: my-docker
+        container: bifrost
+
 - Monitoring:
     - Grafana:
-        icon: grafana.png
-        href: http://{{HOMEPAGE_VAR_TAILSCALE_IP}}:3000
+        icon: grafana.svg
+        href: https://grafana.streamhalla.platanosverdes.com
         server: my-docker
         container: grafana
 
     - Prometheus:
-        icon: prometheus.png
-        href: http://{{HOMEPAGE_VAR_TAILSCALE_IP}}:9090
+        icon: prometheus.svg
+        href: https://prometheus.streamhalla.platanosverdes.com
         server: my-docker
         container: prometheus
         widget:
@@ -27,15 +34,24 @@
             url: http://prometheus:9090
 
     - Pushgateway:
-        icon: https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/png/prometheus.png
+        icon: prometheus.svg
         href: http://{{HOMEPAGE_VAR_TAILSCALE_IP}}:9091
         server: my-docker
         container: pushgateway
 
 - Management:
+    - VPN tunnel:
+        icon: https://sleipnir.platanosverdes.com/icon.svg
+        href: https://sleipnir.platanosverdes.com
+        description: The engine's exit, shown and moved from the Raspberry's sleipnir
+        server: my-docker
+        container: gluetun
+
     - Network:
         icon: https://img.icons8.com/?size=100&id=12995&format=png&color=000000
         href: http://{{HOMEPAGE_VAR_TAILSCALE_IP}}:8443
+        server: my-docker
+        container: speedtest-tracker
         widget:
             type: speedtest
             url: http://speedtest-tracker:80
