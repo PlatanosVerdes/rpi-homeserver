@@ -334,7 +334,7 @@ services:
       - docker-socket-proxy
     # Only for the panels on other machines, over Tailscale; opened only with SLEIPNIR_TOKEN set.
     ports:
-      - "${TAILSCALE_IP:-127.0.0.1}:8091:8091"
+      - "${TAILSCALE_IP:-127.0.0.1}:8092:8092"
     environment:
       - TZ=${TZ}
       - DOCKER_HOST_URL=http://docker-socket-proxy:2375
@@ -342,7 +342,7 @@ services:
       - SLEIPNIR_NAME=${SLEIPNIR_NAME:-}
       - SLEIPNIR_PEERS=${SLEIPNIR_PEERS:-}
       - SLEIPNIR_TOKEN=${SLEIPNIR_TOKEN:-}
-      - PEER_LISTEN_ADDR=:8091
+      - PEER_LISTEN_ADDR=:8092
     volumes:
       # gluetun's own server list, kept current by its updater: the countries a tunnel can pick.
       - ${APP_CONFIG_PATH}/gluetun/servers.json:/servers.json:ro
