@@ -16,7 +16,7 @@ services:
     ports:
       - "3001:3000"
     environment:
-      - HOMEPAGE_ALLOWED_HOSTS=192.168.1.180,192.168.1.180:3001,100.120.107.32,100.120.107.32:3001,streamhalla:3001,ras.pi:3001,streamhalla
+      - HOMEPAGE_ALLOWED_HOSTS=192.168.1.180,192.168.1.180:3001,100.120.107.32,100.120.107.32:3001,streamhalla:3001,ras.pi:3001,streamhalla,streamhalla.platanosverdes.com
       - HOMEPAGE_VAR_TAILSCALE_IP=${TAILSCALE_IP}
       #- HOMEPAGE_VAR_PLEX_TOKEN=${PLEX_API_TOKEN}
       - HOMEPAGE_VAR_PIHOLE_TOKEN=${PIHOLE_PASSWORD}

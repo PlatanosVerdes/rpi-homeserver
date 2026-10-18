@@ -177,6 +177,8 @@ services:
       - media-network
     ports:
       - "127.0.0.1:6879:6879"
+      # The status page, for the Pi's Caddy (bifrost.streamhalla.platanosverdes.com), over Tailscale only.
+      - "${TAILSCALE_IP}:6879:6879"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
