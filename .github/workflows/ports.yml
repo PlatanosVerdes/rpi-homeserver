@@ -17,6 +17,10 @@ jobs:
         with:
           repository: PlatanosVerdes/rpi-services
           path: rpi-services
+      # The Pi's compose: the runner's older one rejects the modules each declaring media-network.
+      - uses: docker/setup-compose-action@v2
+        with:
+          version: v5.0.2
       # The example's TAILSCALE_IP is a placeholder compose rejects as an address.
       - run: sed 's/^TAILSCALE_IP=.*/TAILSCALE_IP=100.64.0.1/' .env.example > .env
       - run: python3 scripts/ci/ports.py . rpi-services
