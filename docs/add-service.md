@@ -130,7 +130,10 @@ trigger it by hand:
 bash ~/rpi-homeserver/scripts/deploy/apply.sh
 ```
 
-### Reload Caddy only (if you only changed a Caddyfile):
+The deploy reloads Caddy on its own when a push changes `config/caddy/` in either repo, so a new
+route in rpi-services goes live with the push like one here.
+
+### Reload Caddy by hand (an edit on the Pi that is not pushed yet):
 ```bash
 docker exec caddy caddy reload --config /etc/caddy/Caddyfile
 ```
