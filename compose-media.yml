@@ -20,6 +20,8 @@ services:
   jellyfin:
     image: lscr.io/linuxserver/jellyfin:latest
     container_name: jellyfin
+    labels:
+      host.ports: "8096/tcp 7359/udp"
     restart: unless-stopped
     logging:
       driver: json-file

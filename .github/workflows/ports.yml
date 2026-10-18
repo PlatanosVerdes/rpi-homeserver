@@ -1,0 +1,19 @@
+name: Host ports
+
+# Fails a push that leaves two containers claiming the same host port on streamhalla. The job
+# summary lists every port in use.
+
+on:
+  push:
+    branches: [streamhalla]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # The machine's compose: the runner's older one rejects the modules each declaring media-network.
+      - uses: docker/setup-compose-action@v2
+        with:
+          version: v5.0.2
+      - run: python3 scripts/ci/ports.py .
