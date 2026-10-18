@@ -191,6 +191,7 @@ Controlled via `COMPOSE_PROFILES` in `.env`. No need to touch compose files.
 | `media` | Plex, Overseerr, Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr, Unpackerr, Bazarr, Maintainerr, Tautulli, watch-next, torrent-drop |
 | `bot` | Pol Academy Offers Bot |
 | `cal` | Google Calendar Bridge (cal-bridge) |
+| `vpn` | sleipnir, docker-socket-proxy, gluetun-test, huginn (see docs/sleipnir.md) |
 | `tunnel` | Cloudflared (publishes only the GitHub deploy webhook — see docs/deploy-webhook.md) |
 | `all` | Everything except `tunnel` (it needs a token, so it is opt-in) |
 
@@ -219,6 +220,12 @@ in `versions.env`, never built here. It writes Jellyfin's M3U (one stable URL pe
 guide cut down to those channels into `appdata/jellyfin/acestream/`, and serves `/channel/<slug>`,
 `/api/channels` (farnsworth reads it) and `/api/status`. The rules it must keep, and how the engine
 and gluetun around it are wired, are in its README.
+
+### sleipnir (external image)
+The gluetun tunnel panel and its exit check huginn, in their own repo:
+[PlatanosVerdes/sleipnir](https://github.com/PlatanosVerdes/sleipnir). One image, pinned as
+`SLEIPNIR_VERSION`, run twice (`huginn` via `command`). Tunnels opt in with the `sleipnir.enable`
+label; see [docs/sleipnir.md](docs/sleipnir.md).
 
 ### tailscale-metrics
 Go service, Dockerized, no published port. Prometheus scrapes `tailscale-metrics:9736/metrics`

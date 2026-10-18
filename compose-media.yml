@@ -81,6 +81,9 @@ services:
     container_name: gluetun
     profiles: [acestream, all]
     restart: unless-stopped
+    labels:
+      sleipnir.enable: "true"
+      sleipnir.used-by: "aceserve (HTTPS)"
     cap_add:
       - NET_ADMIN
     devices:
@@ -101,6 +104,9 @@ services:
       - HTTPPROXY=on
       - HTTPPROXY_LISTENING_ADDRESS=:8888
       - FIREWALL_INPUT_PORTS=8888
+      # The control server sleipnir drives; every route needs this key. gluetun exits on an empty
+      # one, so compose refuses to run without it and a missing key leaves the running tunnel alone.
+      - 'HTTP_CONTROL_SERVER_AUTH_DEFAULT_ROLE={"auth":"apikey","apikey":"${GLUETUN_API_KEY:?set GLUETUN_API_KEY in .env, see docs/sleipnir.md}"}'
       # Nord retires servers and the list baked into the image goes stale with them.
       - UPDATER_PERIOD=24h
     volumes:
@@ -310,6 +316,106 @@ services:
     networks:
       - media-network
 
+  # --- sleipnir: see and move every gluetun tunnel on this machine (github.com/PlatanosVerdes/sleipnir) ---
+  # Tunnels are found by the sleipnir.enable label, through a socket proxy that only lets it list
+  # containers. It changes where a tunnel exits; which container uses which tunnel stays in compose.
+  sleipnir:
+    image: ghcr.io/platanosverdes/sleipnir:${SLEIPNIR_VERSION}
+    container_name: sleipnir
+    labels:
+      prometheus.probe: "http://sleipnir:8090/healthz"
+    restart: unless-stopped
+    mem_limit: 64m
+    memswap_limit: 64m
+    profiles: [vpn, all]
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      - docker-socket-proxy
+    # Only for the panels on other machines, over Tailscale; opened only with SLEIPNIR_TOKEN set.
+    ports:
+      - "${TAILSCALE_IP:-127.0.0.1}:8091:8091"
+    environment:
+      - TZ=${TZ}
+      - DOCKER_HOST_URL=http://docker-socket-proxy:2375
+      - GLUETUN_API_KEY=${GLUETUN_API_KEY}
+      - SLEIPNIR_NAME=${SLEIPNIR_NAME:-}
+      - SLEIPNIR_PEERS=${SLEIPNIR_PEERS:-}
+      - SLEIPNIR_TOKEN=${SLEIPNIR_TOKEN:-}
+      - PEER_LISTEN_ADDR=:8091
+    volumes:
+      # gluetun's own server list, kept current by its updater: the countries a tunnel can pick.
+      - ${APP_CONFIG_PATH}/gluetun/servers.json:/servers.json:ro
+    networks:
+      - media-network
+      - sleipnir-docker
+
+  # Read-only Docker API for sleipnir, and only the container list: no exec, no start, no images.
+  # On its own internal network so nothing else here can reach it.
+  docker-socket-proxy:
+    image: tecnativa/docker-socket-proxy:${DOCKER_SOCKET_PROXY_VERSION}
+    container_name: docker-socket-proxy
+    restart: unless-stopped
+    mem_limit: 64m
+    memswap_limit: 64m
+    profiles: [vpn, all]
+    environment:
+      - CONTAINERS=1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - sleipnir-docker
+
+  # A tunnel to try the panel on: huginn lives in it and reports the exit it sees, so a switch can
+  # be checked by eye. It must exit through a country other than the main tunnel's, since both use
+  # the same WireGuard key and two sessions on one server drop each other.
+  gluetun-test:
+    image: qmcgaw/gluetun:${GLUETUN_VERSION}
+    container_name: gluetun-test
+    restart: unless-stopped
+    profiles: [vpn, all]
+    labels:
+      sleipnir.enable: "true"
+      sleipnir.used-by: "huginn"
+      sleipnir.probe: "http://gluetun-test:8080/json"
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    mem_limit: 128m
+    memswap_limit: 128m
+    environment:
+      - TZ=${TZ}
+      - VPN_SERVICE_PROVIDER=${VPN_SERVICE_PROVIDER}
+      - VPN_TYPE=${VPN_TYPE}
+      - WIREGUARD_PRIVATE_KEY=${WIREGUARD_PRIVATE_KEY}
+      - OPENVPN_USER=${NORDVPN_USER}
+      - OPENVPN_PASSWORD=${NORDVPN_PASS}
+      - OPENVPN_PROTOCOL=${VPN_PROTOCOL}
+      - SERVER_COUNTRIES=${VPN_TEST_COUNTRY:-Turkey}
+      - FIREWALL_INPUT_PORTS=8080
+      - 'HTTP_CONTROL_SERVER_AUTH_DEFAULT_ROLE={"auth":"apikey","apikey":"${GLUETUN_API_KEY:?set GLUETUN_API_KEY in .env, see docs/sleipnir.md}"}'
+      - UPDATER_PERIOD=24h
+    volumes:
+      - ${APP_CONFIG_PATH}/gluetun-test:/gluetun
+    networks:
+      - media-network
+
+  huginn:
+    image: ghcr.io/platanosverdes/sleipnir:${SLEIPNIR_VERSION}
+    command: ["huginn"]
+    container_name: huginn
+    restart: unless-stopped
+    mem_limit: 32m
+    memswap_limit: 32m
+    profiles: [vpn, all]
+    network_mode: "service:gluetun-test"
+    depends_on:
+      gluetun-test:
+        condition: service_healthy
+
 networks:
   media-network:
     external: true
+  sleipnir-docker:
+    internal: true
