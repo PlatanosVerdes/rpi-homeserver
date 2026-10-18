@@ -209,17 +209,3 @@
         href: https://push.platanosverdes.com
         server: my-docker
         container: pushgateway
-
-# Routed in Caddy and reachable, but never finished being set up. Uncomment when they are.
-#- Personal:
-#    - AirTag:
-#        icon: mdi-map-marker
-#        href: https://airtag.platanosverdes.com
-#        server: my-docker
-#        container: air-tag
-#    - Calendar:
-#        icon: mdi-calendar
-#        href: https://cal.platanosverdes.com
-#        server: my-docker
-#        container: cal-bridge
-

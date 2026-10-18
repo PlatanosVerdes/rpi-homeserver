@@ -45,7 +45,7 @@ cd "$PROJECT_DIR"
 APPDATA="${APP_CONFIG_PATH:-./appdata}"
 [[ "$APPDATA" != /* ]] && APPDATA="$PROJECT_DIR/${APPDATA#./}"
 
-# Companion repo appdata (AirTag keys, cal-bridge tokens, bot DB) — backed up too if present
+# Companion repo appdata (the personal apps' data) — backed up too if present
 SERVICES_DIR="${SERVICES_DIR:-$HOME/rpi-services}"
 SERVICES_APPDATA="$SERVICES_DIR/appdata"
 

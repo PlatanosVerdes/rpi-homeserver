@@ -22,7 +22,7 @@ A modular, Docker-based home server for Raspberry Pi. Uses Docker Compose's `inc
 Nothing is deployed by hand. A push is the only trigger, and the repo is the source of truth.
 
 ```
- cal-bridge      one-pace-downloader      air-tag      PolFerrerAcademyOffers
+ torre           one-pace-downloader      wallabot     PolFerrerAcademyOffers
      │                   │                   │                  │
      └──── push to main ─┴───────────────────┴──────────────────┘
                               │

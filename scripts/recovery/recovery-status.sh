@@ -51,10 +51,3 @@ if [[ "$jf_status" == "true" ]]; then
 else
     check Jellyfin 0 "setup wizard not completed — open Jellyfin and create the admin user + libraries"
 fi
-
-airtag_account="/home/raspi/rpi-services/appdata/air-tag/account.json"
-if sudo test -s "$airtag_account"; then
-    check air-tag 1 "Apple session present"
-else
-    check air-tag 0 "no Apple session — log in through air-tag once (APPLE_ID/APPLE_PASSWORD come from .env, but Apple may ask for a 2FA code)"
-fi

@@ -165,7 +165,7 @@ recovers cleanly rather than certainly. Nothing here stops the containers first,
 deliberate trade for a backup that never needs a maintenance window.
 
 After a restore, `scripts/recovery/recovery-status.sh` reports what no archive can put back: Plex's
-claim token, Jellyfin's setup wizard, and the AirTag 2FA code.
+claim token and Jellyfin's setup wizard.
 
 ---
 
