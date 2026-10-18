@@ -67,6 +67,9 @@ services:
   gluetun:
     image: qmcgaw/gluetun:v3.41.3
     container_name: gluetun
+    labels:
+      sleipnir.enable: "true"
+      sleipnir.used-by: "aceserve (HTTPS)"
     restart: unless-stopped
     cap_add:
       - NET_ADMIN
@@ -85,6 +88,8 @@ services:
       - FIREWALL_INPUT_PORTS=8888
       # Nord retires servers and the list baked into the image goes stale with them.
       - UPDATER_PERIOD=24h
+      # sleipnir moves the tunnel through gluetun's control server, which takes this key only.
+      - HTTP_CONTROL_SERVER_AUTH_DEFAULT_ROLE={"auth":"apikey","apikey":"${GLUETUN_API_KEY}"}
     volumes:
       - ${APP_CONFIG_PATH}/gluetun:/gluetun
     networks:
@@ -187,6 +192,52 @@ services:
       - JELLYFIN_URL=http://host.docker.internal:8096
       - JELLYFIN_API_KEY=${JELLYFIN_API_KEY}
 
+  # --- sleipnir ---
+  # No page of its own here: it only answers the Raspberry's panel, over Tailscale, which shows
+  # this machine's tunnel next to its own (SLEIPNIR_PEERS there).
+  sleipnir:
+    image: ghcr.io/platanosverdes/sleipnir:v2026.10.18.2
+    container_name: sleipnir
+    restart: unless-stopped
+    mem_limit: 64m
+    memswap_limit: 64m
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      - docker-socket-proxy
+    ports:
+      - "${TAILSCALE_IP:-127.0.0.1}:8092:8092"
+    environment:
+      - TZ=${TZ}
+      - DOCKER_HOST_URL=http://docker-socket-proxy:2375
+      - GLUETUN_API_KEY=${GLUETUN_API_KEY}
+      - SLEIPNIR_NAME=${SLEIPNIR_NAME:-}
+      - SLEIPNIR_TOKEN=${SLEIPNIR_TOKEN:-}
+      - PEER_LISTEN_ADDR=:8092
+    volumes:
+      # gluetun's own server list, kept current by its updater: the countries a tunnel can pick.
+      - ${APP_CONFIG_PATH}/gluetun/servers.json:/servers.json:ro
+    networks:
+      - media-network
+      - sleipnir-docker
+
+  # Read-only Docker API for sleipnir, and only the container list: no exec, no start, no images.
+  # On its own internal network so nothing else here can reach it.
+  docker-socket-proxy:
+    image: tecnativa/docker-socket-proxy:v0.5.0
+    container_name: docker-socket-proxy
+    restart: unless-stopped
+    mem_limit: 64m
+    memswap_limit: 64m
+    environment:
+      - CONTAINERS=1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - sleipnir-docker
+
 networks:
   media-network:
     external: true
+  sleipnir-docker:
+    internal: true
