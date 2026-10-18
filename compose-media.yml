@@ -194,6 +194,7 @@ services:
       - GUIDE_SOURCE_URL=https://raw.githubusercontent.com/davidmuma/EPG_dobleM/refs/heads/master/guiatv.xml
       - PUSHGATEWAY_URL=http://pushgateway:9091
       - JELLYFIN_URL=http://host.docker.internal:8096
+      - BIFROST_NAME=streamhalla
       - JELLYFIN_API_KEY=${JELLYFIN_API_KEY}
 
   # --- sleipnir ---
