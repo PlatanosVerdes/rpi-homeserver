@@ -443,6 +443,7 @@ Every service belongs to one or more profiles. Set `COMPOSE_PROFILES` in `.env` 
 | `acestream` | Aceserve, gluetun, bifrost, Jellyfin, farnsworth + Grafana/Prometheus/Pushgateway |
 | `media` | Plex, Seerr, Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr, Unpackerr, torrent-drop |
 | `vpn` | sleipnir, docker-socket-proxy, gluetun-test, huginn |
+| `bots` | muninn, docker-socket-proxy |
 | `bot` | Pol Academy Offers Bot |
 | `all` | Everything |
 
@@ -656,6 +657,13 @@ plays them natively. Full guide: [docs/farnsworth.md](docs/farnsworth.md).
 `sleipnir.enable` label, and moves its exit country or server in place; whatever uses the tunnel
 carries on. `gluetun-test` and `huginn` are there to try it. Needs `GLUETUN_API_KEY` in `.env`.
 Full guide: [docs/sleipnir.md](docs/sleipnir.md).
+
+### Bots (muninn)
+[muninn](https://github.com/PlatanosVerdes/muninn) (an image, pinned as `MUNINN_VERSION`) at
+`https://muninn.platanosverdes.com` shows who uses each bot, its messages per minute and what it
+turned away. A bot opts in with a `muninn.stats` label holding the URL of its `/bot-stats`
+document, served on a port that is never published since it holds names. Prometheus scrapes the
+same figures from `muninn:8095/metrics`, never with names.
 
 ### Backups & Recovery
 `scripts/ops/backup.sh` (daily cron at 04:00) snapshots `appdata/` to a compressed, rotated

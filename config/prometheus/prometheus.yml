@@ -61,6 +61,11 @@ scrape_configs:
   #
   # The relabeling leaves `instance` as the probed URL and `service` as the container name, which is
   # what the dashboards and the alert rule read.
+  # Each bot's users and traffic, as muninn reads them from the bots' /bot-stats.
+  - job_name: 'muninn'
+    static_configs:
+      - targets: ['muninn:8095']
+
   - job_name: 'blackbox'
     metrics_path: /probe
     params:

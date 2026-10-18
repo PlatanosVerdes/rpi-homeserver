@@ -89,6 +89,12 @@
         description: VPN tunnels, where each one exits, and moving them
         server: my-docker
         container: sleipnir
+    - muninn:
+        icon: https://muninn.platanosverdes.com/icon.svg
+        href: https://muninn.platanosverdes.com
+        description: Who uses each bot, and how much traffic reaches it
+        server: my-docker
+        container: muninn
     - Torrent drop:
         icon: https://drop.platanosverdes.com/icon.svg
         href: https://drop.platanosverdes.com
