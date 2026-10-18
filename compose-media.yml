@@ -30,15 +30,16 @@ services:
       - PUID=${PUID}
       - PGID=${PGID}
       - TZ=${TZ}
+      - JELLYFIN_PublishedServerUrl=http://192.168.0.250:8096
     volumes:
       - ${APP_CONFIG_PATH}/jellyfin:/config
       - ${DATA_ROOT}:/data
-    ports:
-      - "8096:8096"
+    # Host network so the live stream URLs Jellyfin hands to TVs carry the LAN address, not the container one.
+    network_mode: host
+    extra_hosts:
+      - "bifrost:127.0.0.1"
     devices:
       - /dev/dri:/dev/dri
-    networks:
-      - media-network
 
   # --- OVERSEERR (Request Management) ---
   #overseerr:
@@ -167,6 +168,10 @@ services:
       - 1.0.0.1
     networks:
       - media-network
+    ports:
+      - "127.0.0.1:6879:6879"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       - kubo
     volumes:
@@ -179,7 +184,7 @@ services:
       - CHANNEL_BASE_URL=http://bifrost:6879/channel/
       - GUIDE_SOURCE_URL=https://raw.githubusercontent.com/davidmuma/EPG_dobleM/refs/heads/master/guiatv.xml
       - PUSHGATEWAY_URL=http://pushgateway:9091
-      - JELLYFIN_URL=http://jellyfin:8096
+      - JELLYFIN_URL=http://host.docker.internal:8096
       - JELLYFIN_API_KEY=${JELLYFIN_API_KEY}
 
 networks:
