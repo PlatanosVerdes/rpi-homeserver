@@ -200,7 +200,7 @@ services:
   # No page of its own here: it only answers the Raspberry's panel, over Tailscale, which shows
   # this machine's tunnel next to its own (SLEIPNIR_PEERS there).
   sleipnir:
-    image: ghcr.io/platanosverdes/sleipnir:v2026.10.18.2
+    image: ghcr.io/platanosverdes/sleipnir:v2026.10.18.3
     container_name: sleipnir
     restart: unless-stopped
     mem_limit: 64m
