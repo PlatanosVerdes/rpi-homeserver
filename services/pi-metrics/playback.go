@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"path"
 	"strings"
+	"time"
 )
 
 // What each media server is re-encoding right now, and for whom.
@@ -13,7 +15,9 @@ import (
 // different problem: `stream`, because video is what costs this Pi its CPU and audio is not;
 // `browser`, because a browser's audio re-encode is the one kind with no fix on this end; and
 // `codec`, so the message names what to go and change. The table behind all three, and the month of
-// sessions it was measured from, is in docs/alerting.md.
+// sessions it was measured from, is in docs/alerting.md. Audio carries a fourth, `cause`, because a
+// client that turned direct play off has every codec but AAC re-encoded, and no file change fixes
+// that (cause.go).
 //
 // A remux is not a transcode and is not counted as one, or the acestream Live TV channels would
 // report several a day for something free. Jellyfin says which it is with IsVideoDirect and
@@ -36,6 +40,8 @@ type session struct {
 	browser bool
 	method  string            // directplay, directstream or transcode
 	recodes map[string]string // video/audio -> the source codec being re-encoded
+	cause   string            // why the audio is re-encoded, see cause.go
+	file    string            // as the server sees it, so under its own mount
 }
 
 func isBrowser(product, platform string) bool {
@@ -99,11 +105,49 @@ func plexSessions() ([]session, error) {
 			if str(transcode, "audioDecision") == "transcode" {
 				current.method = "transcode"
 				current.recodes[streamAudio] = orQ(str(transcode, "sourceAudioCodec"))
+				current.cause = plexAudioCause(path.Base(str(transcode, "key")))
 			}
+		}
+		if learnable(current) != "" {
+			current.file = plexFile(str(row, "ratingKey"), objs(row, "Media"))
 		}
 		out = append(out, current)
 	}
 	return out, nil
+}
+
+// plexFile asks the library, because a session's Media and Part describe the stream being sent:
+// mid-transcode they say mp4 and aac and carry no file at all.
+func plexFile(ratingKey string, playing []map[string]any) string {
+	if ratingKey == "" {
+		return ""
+	}
+	var answer struct {
+		MediaContainer struct {
+			Metadata []map[string]any `json:"Metadata"`
+		} `json:"MediaContainer"`
+	}
+	headers := map[string]string{"Accept": "application/json", "X-Plex-Token": plexToken}
+	if err := fetch(plexURL+"/library/metadata/"+ratingKey, headers, &answer); err != nil {
+		return ""
+	}
+	wanted := ""
+	if len(playing) > 0 {
+		wanted = str(playing[0], "id")
+	}
+	for _, item := range answer.MediaContainer.Metadata {
+		for _, media := range objs(item, "Media") {
+			if wanted != "" && str(media, "id") != wanted {
+				continue
+			}
+			for _, part := range objs(media, "Part") {
+				if file := str(part, "file"); file != "" {
+					return file
+				}
+			}
+		}
+	}
+	return ""
 }
 
 func jellyfinSessions() ([]session, error) {
@@ -126,6 +170,7 @@ func jellyfinSessions() ([]session, error) {
 			browser: isBrowser(str(row, "Client"), str(row, "DeviceName")),
 			method:  "directplay",
 			recodes: map[string]string{},
+			file:    str(playing, "Path"),
 		}
 
 		// IsVideoDirect/IsAudioDirect are what separate a remux from a re-encode: TranscodingInfo is
@@ -139,6 +184,7 @@ func jellyfinSessions() ([]session, error) {
 			if !truthy(info, "IsAudioDirect") {
 				current.method = "transcode"
 				current.recodes[streamAudio] = sourceCodec(playing, state, "Audio")
+				current.cause = jellyfinAudioCause(info["TranscodeReasons"])
 			}
 		}
 		out = append(out, current)
@@ -198,6 +244,7 @@ func playback() ([]string, []string) {
 	if len(problems) > 0 && len(found) == 0 {
 		return nil, problems
 	}
+	ledgerObserve(found, time.Now().Unix())
 
 	// Every method is published for every configured app, zero included, so a panel reads as "nobody
 	// is watching" instead of going blank. A re-encode cannot be published that way: its labels only
@@ -212,7 +259,11 @@ func playback() ([]string, []string) {
 	for _, current := range found {
 		counts[current.app+"\x00"+current.method]++
 		for kind, codec := range current.recodes {
-			key := strings.Join([]string{current.app, kind, codec, current.client, fmt.Sprint(current.browser)}, "\x00")
+			cause := ""
+			if kind == streamAudio {
+				cause = current.cause
+			}
+			key := strings.Join([]string{current.app, kind, codec, current.client, fmt.Sprint(current.browser), cause}, "\x00")
 			recodes[key]++
 		}
 	}
@@ -232,8 +283,8 @@ func playback() ([]string, []string) {
 	for _, key := range sorted(recodes) {
 		parts := strings.Split(key, "\x00")
 		lines = append(lines, fmt.Sprintf(
-			"media_transcode_sessions{app=%q,stream=%q,codec=%q,client=%q,browser=%q} %d",
-			parts[0], parts[1], parts[2], parts[3], parts[4], recodes[key]))
+			"media_transcode_sessions{app=%q,stream=%q,codec=%q,client=%q,browser=%q,cause=%q} %d",
+			parts[0], parts[1], parts[2], parts[3], parts[4], parts[5], recodes[key]))
 	}
 	return lines, problems
 }
