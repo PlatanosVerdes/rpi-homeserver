@@ -12,12 +12,14 @@ server tuning fixes it.
 Adding an AC3 5.1 track removes the transcode entirely. Every original track stays in the file, so
 nothing is lost: the AC3 is only what plays by default.
 
-Which codecs count as undecodable is learned, not listed. pi-metrics records every audio codec a
-real client had re-encoded while its video was copied, and the file it happened on, in
-appdata/pi-metrics/audio-recodes.json (why only those sessions: services/pi-metrics/recodes.go).
+Which codecs count as undecodable is learned, not listed. pi-metrics records every audio codec the
+server refused for a real client that had allowed direct play, and the file it happened on, in
+appdata/pi-metrics/audio-recodes.json. A re-encode alone is not that: a client that turns direct
+play off gets a fallback that takes only AAC, and every other codec is re-encoded, the AC3 this adds
+included (services/pi-metrics/cause.go and recodes.go).
 A file is converted when every audio track it has is in that set or in SEED. The files recorded
 there go first, newest first, so the file that set off the alert is the first one the next run
-fixes. A codec nobody has had re-encoded yet is left alone. The hand-kept list this replaced
+fixes. A codec no server has refused for a client yet is left alone. The hand-kept list this replaced
 counted EAC3 as playable, and the Plex app on a Samsung TV re-encodes it.
 
 A file that is still hardlinked is left alone, and that is the whole reason this runs on a timer

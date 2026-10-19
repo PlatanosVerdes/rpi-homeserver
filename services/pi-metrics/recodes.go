@@ -14,11 +14,12 @@ import (
 // scripts/sync/audio-compat.py. That script converts what this has watched fail, rather than what a
 // list in git guesses a TV cannot decode.
 //
-// A session only counts when its client is not a browser and its video was copied. A browser
-// re-encodes every surround codec and nothing on this end changes that. When the video is
-// re-encoded too, the audio goes along with it whatever its codec, because the client asked for a
-// lower bitrate or a container it can take: Jellyfin's Live TV re-encodes aac that way every day,
-// and learning from it would mark aac, the codec every client plays, as one none of them can.
+// A session only counts when the server says the codec itself was refused (cause.go), its client
+// is not a browser, and its video was copied. A re-encode alone proves nothing: a Samsung TV that
+// turned direct play off had EAC3 re-encoded, then the AC3 added for it, because that fallback
+// takes only AAC. A browser re-encodes every surround codec and nothing on this end changes that.
+// When the video is re-encoded too, the audio goes along whatever its codec: Jellyfin's Live TV
+// re-encodes aac that way every day, and learning from it would mark the codec every client plays.
 //
 // Nothing here forgets a codec on its own. One that a client update fixed is removed from the file
 // by hand and the container restarted, since what is in memory is written back on the next change.
@@ -53,7 +54,7 @@ var (
 
 // learnable is the source audio codec of a session that says something about the client, or "".
 func learnable(current session) string {
-	if current.browser {
+	if current.browser || current.cause != causeCodec {
 		return ""
 	}
 	if _, video := current.recodes[streamVideo]; video {

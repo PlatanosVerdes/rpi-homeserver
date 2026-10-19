@@ -233,6 +233,9 @@ services:
       # container does not read as "qbit-manage has not run" until the next hour; and which audio
       # codecs clients had re-encoded, which scripts/sync/audio-compat.py reads from the host.
       - ${APP_CONFIG_PATH}/pi-metrics:/state
+      # Read-only. Plex's sessions never say whether the client asked for direct play, and only that
+      # separates "this codec is unsupported" from "the client gave up on direct play" (cause.go).
+      - "${APP_CONFIG_PATH}/plex/Library/Application Support/Plex Media Server/Logs:/plex-logs:ro"
     networks:
       - media-network
 

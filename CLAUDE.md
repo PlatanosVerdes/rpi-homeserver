@@ -78,7 +78,7 @@ scripts/                    Operational scripts, grouped by what they do
     plex-prefs.sh           Plex LAN networks and the 95% played threshold
     qbit-config.sh          qBittorrent queue limits, upload cap and BT port
     jellyfin-guide.sh       Jellyfin's XMLTV guide -> the copy bifrost cuts to our channels
-    audio-compat.py         Nightly: an AC3 track for files whose audio a client had re-encoded
+    audio-compat.py         Nightly: an AC3 track for files whose audio codec a client refused
 
   ci/                       Run by GitHub Actions
     ports.py                Host ports both repos' containers take; fails on a clash

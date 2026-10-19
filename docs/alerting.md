@@ -156,12 +156,12 @@ Two things follow, and both are already handled:
 
 "Something is transcoding" sounds like one alert and is really three situations, only two of which
 anyone can act on. `media_transcode_sessions`, from the `playback` collector in `services/pi-metrics`,
-carries the labels that separate them: `stream` (video or audio) and `browser`.
+carries the labels that separate them: `stream` (video or audio) and `browser`, plus `cause` on audio.
 
 | What is happening | Alerted | Why |
 | :--- | :--- | :--- |
 | **Video** re-encoded, any client | yes | The whole picture through ffmpeg. This is what makes a film buffer and the rest of the box crawl |
-| **Audio** re-encoded, TV or phone, video copied | yes | The file has no track that client can decode, and `scripts/sync/audio-compat.py` adds one |
+| **Audio** re-encoded, TV or phone, video copied | yes | The message depends on `cause`: only `codec` is a file `scripts/sync/audio-compat.py` can fix (below) |
 | **Audio** re-encoded along with the video | no | The audio follows the video's re-encode whatever its codec, and the video rule has already fired |
 | **Audio** re-encoded, browser | no | No browser decodes TrueHD, DTS or AC3. Plex Web re-encodes them always and nothing here changes that |
 | **Remux** | no | Container change, streams copied. Jellyfin does it to the acestream Live TV channels several times a day and it is free |
@@ -175,24 +175,41 @@ one seek, is not a message.
 
 ### Which audio codecs get converted is learned
 
-`audio-compat.py` used to carry a list of codecs "the TV decodes without help", and EAC3 was on it.
-The Plex app on a Samsung TV re-encodes EAC3 to AAC, so the alert promised a fix the script would
-never apply. A list kept by hand is wrong the day a client disagrees with it, so there is no list.
+`audio-compat.py` used to carry a list of codecs "the TV decodes without help". A list kept by hand
+is wrong the day a client disagrees with it, so there is no list. But "a client had this codec
+re-encoded" is not proof the client cannot play it either, and the difference is the `cause` label
+on `media_transcode_sessions`:
 
-The `playback` collector in pi-metrics writes `appdata/pi-metrics/audio-recodes.json` instead: every
-audio codec a client that is not a browser had re-encoded *while its video was copied*, with which
-clients, and the last hundred files it happened on. The video condition is what keeps it honest.
-When the video is re-encoded too, the audio is re-encoded with it whatever its codec, and Jellyfin's
-Live TV does that to AAC every day; learning from it would mark the one codec every client plays.
+| `cause` | Meaning | Can a file change fix it |
+| :--- | :--- | :--- |
+| `codec` | Direct play was allowed and the client's profile refused this audio codec | Yes, an added track in another codec |
+| `no_direct_play` | Plex: the client did not ask for direct play | No |
+| `other` | Jellyfin: its `TranscodeReasons` name something other than the audio codec | No |
+| `unknown` | Nothing says which | Not known, so nothing is done |
+
+`no_direct_play` is the trap. The Plex app on a Samsung TV turns direct play off itself for some 4K
+files, and Plex then builds a DASH stream (video and audio cut into short segments over HTTP) whose
+profile takes only AAC. EAC3 is re-encoded; once an AC3 track is added, the AC3 is re-encoded just
+the same. Plex's session API does not say whether direct play was requested, only the decision
+request in its log does (`directPlay=0` or `1`, keyed by the transcode session's id), so pi-metrics
+mounts Plex's `Logs` directory read-only. Those requests are logged at debug level, Plex's default;
+with debug logging off, every Plex session reads `unknown`. Jellyfin reports its own reasons, and
+`AudioCodecNotSupported` is the one that means `codec`.
+
+The `playback` collector writes `appdata/pi-metrics/audio-recodes.json` from `codec` sessions only:
+the audio codec, which clients, and the last hundred files it happened on. It also requires the video
+to have been copied. When the video is re-encoded too, the audio goes along whatever its codec, and
+Jellyfin's Live TV does that to AAC every day.
 
 At 01:30 `audio-compat.py` reads that file. A library file is converted when every audio track it
 has is in a codec recorded there or in its seed (DTS and TrueHD, what it converted before anything
 was measured). The recorded files go first, newest first, so the film that set off the alert is
 the first one fixed. What it does **not** do:
 
-- **Convert on a guess.** A codec nobody has had re-encoded yet is left alone.
-- **Help a client that cannot play AC3.** AC3 is what it adds, so if AC3 itself shows up as
-  re-encoded it says so in `audio-compat.log` and ignores it; the alert says the same.
+- **Convert on a guess.** A codec no server has refused for a client yet is left alone.
+- **Help a client that cannot play AC3.** AC3 is what it adds, so if AC3 itself is recorded as
+  refused it says so in `audio-compat.log` and ignores it; the alert says the same.
+- **Fix a client that turned direct play off.** That is in the client, not the file.
 - **Pick a track for the client.** A file with an EAC3 track and an AAC one already has something
   playable, so it is skipped, and if the client still chose the EAC3 the log says so the next night.
 - **Forget.** A codec a client update fixed stays recorded until it is deleted from the JSON by hand,
