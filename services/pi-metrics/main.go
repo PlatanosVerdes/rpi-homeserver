@@ -143,6 +143,8 @@ func main() {
 	// two session endpoints are one cheap request each rather than the media pass's five APIs.
 	playbackEvery := seconds("PLAYBACK_INTERVAL", 60)
 
+	// Before the playback collector starts, or its first write would be overwritten by the load.
+	ledgerLoad()
 	go collect("media", mediaEvery, media)
 	go collect("disk", diskEvery, disk)
 	go collect("playback", playbackEvery, playback)

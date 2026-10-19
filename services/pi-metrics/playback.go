@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 )
 
 // What each media server is re-encoding right now, and for whom.
@@ -36,6 +37,7 @@ type session struct {
 	browser bool
 	method  string            // directplay, directstream or transcode
 	recodes map[string]string // video/audio -> the source codec being re-encoded
+	file    string            // as the server sees it, so under its own mount
 }
 
 func isBrowser(product, platform string) bool {
@@ -86,6 +88,7 @@ func plexSessions() ([]session, error) {
 			browser: isBrowser(str(player, "product"), str(player, "platform")),
 			method:  "directplay",
 			recodes: map[string]string{},
+			file:    plexFile(row),
 		}
 
 		// No TranscodeSession at all is a direct play. With one, its two decisions say which stream
@@ -104,6 +107,17 @@ func plexSessions() ([]session, error) {
 		out = append(out, current)
 	}
 	return out, nil
+}
+
+func plexFile(row map[string]any) string {
+	for _, media := range objs(row, "Media") {
+		for _, part := range objs(media, "Part") {
+			if file := str(part, "file"); file != "" {
+				return file
+			}
+		}
+	}
+	return ""
 }
 
 func jellyfinSessions() ([]session, error) {
@@ -126,6 +140,7 @@ func jellyfinSessions() ([]session, error) {
 			browser: isBrowser(str(row, "Client"), str(row, "DeviceName")),
 			method:  "directplay",
 			recodes: map[string]string{},
+			file:    str(playing, "Path"),
 		}
 
 		// IsVideoDirect/IsAudioDirect are what separate a remux from a re-encode: TranscodingInfo is
@@ -198,6 +213,7 @@ func playback() ([]string, []string) {
 	if len(problems) > 0 && len(found) == 0 {
 		return nil, problems
 	}
+	ledgerObserve(found, time.Now().Unix())
 
 	// Every method is published for every configured app, zero included, so a panel reads as "nobody
 	// is watching" instead of going blank. A re-encode cannot be published that way: its labels only

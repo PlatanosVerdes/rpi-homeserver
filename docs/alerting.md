@@ -161,7 +161,8 @@ carries the labels that separate them: `stream` (video or audio) and `browser`.
 | What is happening | Alerted | Why |
 | :--- | :--- | :--- |
 | **Video** re-encoded, any client | yes | The whole picture through ffmpeg. This is what makes a film buffer and the rest of the box crawl |
-| **Audio** re-encoded, TV or phone | yes | The file has no track that client can decode, and `scripts/sync/audio-compat.py` adds one |
+| **Audio** re-encoded, TV or phone, video copied | yes | The file has no track that client can decode, and `scripts/sync/audio-compat.py` adds one |
+| **Audio** re-encoded along with the video | no | The audio follows the video's re-encode whatever its codec, and the video rule has already fired |
 | **Audio** re-encoded, browser | no | No browser decodes TrueHD, DTS or AC3. Plex Web re-encodes them always and nothing here changes that |
 | **Remux** | no | Container change, streams copied. Jellyfin does it to the acestream Live TV channels several times a day and it is free |
 
@@ -171,6 +172,37 @@ transcode" would have been right about the facts and useless twice out of three 
 
 Both rules wait `for: 5m`, so a re-encode that lasts a few frames while a client picks its stream, or
 one seek, is not a message.
+
+### Which audio codecs get converted is learned
+
+`audio-compat.py` used to carry a list of codecs "the TV decodes without help", and EAC3 was on it.
+The Plex app on a Samsung TV re-encodes EAC3 to AAC, so the alert promised a fix the script would
+never apply. A list kept by hand is wrong the day a client disagrees with it, so there is no list.
+
+The `playback` collector in pi-metrics writes `appdata/pi-metrics/audio-recodes.json` instead: every
+audio codec a client that is not a browser had re-encoded *while its video was copied*, with which
+clients, and the last hundred files it happened on. The video condition is what keeps it honest.
+When the video is re-encoded too, the audio is re-encoded with it whatever its codec, and Jellyfin's
+Live TV does that to AAC every day; learning from it would mark the one codec every client plays.
+
+At 01:30 `audio-compat.py` reads that file. A library file is converted when every audio track it
+has is in a codec recorded there or in its seed (DTS and TrueHD, what it converted before anything
+was measured). The recorded files go first, newest first, so the film that set off the alert is
+the first one fixed. What it does **not** do:
+
+- **Convert on a guess.** A codec nobody has had re-encoded yet is left alone.
+- **Help a client that cannot play AC3.** AC3 is what it adds, so if AC3 itself shows up as
+  re-encoded it says so in `audio-compat.log` and ignores it; the alert says the same.
+- **Pick a track for the client.** A file with an EAC3 track and an AAC one already has something
+  playable, so it is skipped, and if the client still chose the EAC3 the log says so the next night.
+- **Forget.** A codec a client update fixed stays recorded until it is deleted from the JSON by hand,
+  followed by `docker restart pi-metrics`: the collector holds the file in memory and would write the
+  codec straight back.
+- **Touch a file that is still seeding**, for the hardlink reason in the script's docstring.
+
+Adding a codec can put a lot of the library in the queue at once, and every conversion keeps the
+old file as `.original` beside the new one, so the disk pays for both until those are pruned.
+`MAX_PER_RUN` (two a night) is what spreads that out.
 
 ## The *arrs notify on their own
 

@@ -12,6 +12,14 @@ server tuning fixes it.
 Adding an AC3 5.1 track removes the transcode entirely. Every original track stays in the file, so
 nothing is lost: the AC3 is only what plays by default.
 
+Which codecs count as undecodable is learned, not listed. pi-metrics records every audio codec a
+real client had re-encoded while its video was copied, and the file it happened on, in
+appdata/pi-metrics/audio-recodes.json (why only those sessions: services/pi-metrics/recodes.go).
+A file is converted when every audio track it has is in that set or in SEED. The files recorded
+there go first, newest first, so the file that set off the alert is the first one the next run
+fixes. A codec nobody has had re-encoded yet is left alone. The hand-kept list this replaced
+counted EAC3 as playable, and the Plex app on a Samsung TV re-encodes it.
+
 A file that is still hardlinked is left alone, and that is the whole reason this runs on a timer
 instead of on import. A remux cannot edit the file in place, so the new copy never shares an inode
 with the one qBittorrent seeds, and the link count drops to 1. qbit-manage reads that count as "the
@@ -38,16 +46,26 @@ import os
 import shutil
 import subprocess
 import sys
-from pathlib import Path
+import tempfile
+import time
+from itertools import chain
+from pathlib import Path, PurePosixPath
 
 PROJECT_DIR = Path(os.path.expanduser("~/rpi-homeserver"))
 DATA_ROOT = Path(os.environ.get("DATA_ROOT", "/mnt/data"))
 LIBRARIES = ("films", "series")
 EXTENSIONS = (".mkv", ".mp4", ".m4v")
 
-# What the TV decodes without help. TrueHD and DTS in every flavour are deliberately absent.
-COMPATIBLE = {"ac3", "eac3", "aac", "mp3", "flac", "opus", "vorbis",
-              "pcm_s16le", "pcm_s24le", "pcm_dvd"}
+LEDGER = Path(os.environ.get("AUDIO_RECODES", PROJECT_DIR / "appdata" / "pi-metrics" / "audio-recodes.json"))
+
+# Known before anything was measured, so a fresh install or an empty ledger converts what it always did.
+SEED = {"dts", "truehd"}
+# What this adds. A client that had it re-encoded cannot be helped by adding more of it.
+TARGET = "ac3"
+# The ledger keeps each server's own name for a codec; ffprobe has its own, and Plex says dca for DTS.
+FFPROBE_NAMES = {"dca": "dts"}
+# A recorded file that needs nothing is reported once, the night after it played, not every night.
+RECENT_SECONDS = 24 * 3600
 
 AC3_BITRATE = "640k"
 AC3_MAX_CHANNELS = 6
@@ -78,9 +96,53 @@ def audio_streams(info):
     return [s for s in info.get("streams", ()) if s.get("codec_type") == "audio"]
 
 
-def needs_work(info):
+def ffprobe_name(codec):
+    base = codec.lower().split("-")[0]
+    return FFPROBE_NAMES.get(base, base)
+
+
+def load_ledger():
+    try:
+        return json.loads(LEDGER.read_text())
+    except FileNotFoundError:
+        return {}
+    except (OSError, json.JSONDecodeError) as err:
+        print(f"{LEDGER}: unreadable ({err}), only {sorted(SEED)} count as incompatible", file=sys.stderr)
+        return {}
+
+
+def incompatible_codecs(ledger):
+    learned = {}
+    for codec, seen in (ledger.get("codecs") or {}).items():
+        learned[ffprobe_name(codec)] = seen
+    if TARGET in learned:
+        clients = ", ".join(learned.pop(TARGET).get("clients") or ["?"])
+        print(f"{TARGET} was re-encoded for {clients}: adding {TARGET} cannot help there, "
+              f"so it is not treated as incompatible", file=sys.stderr)
+    return SEED | set(learned)
+
+
+def library_path(reported):
+    """The host path of a file as a media server reported it, from the library folder down."""
+    parts = PurePosixPath(reported).parts
+    for position, part in enumerate(parts):
+        if part in LIBRARIES:
+            return DATA_ROOT.joinpath(*parts[position:])
+    return None
+
+
+def reported_files(ledger):
+    out = {}
+    for entry in ledger.get("files") or ():
+        path = library_path(entry.get("path") or "")
+        if path is not None and path not in out:
+            out[path] = entry
+    return out
+
+
+def needs_work(info, incompatible):
     tracks = audio_streams(info)
-    return bool(tracks) and not any(t.get("codec_name") in COMPATIBLE for t in tracks)
+    return bool(tracks) and all(t.get("codec_name") in incompatible for t in tracks)
 
 
 def default_audio_index(tracks):
@@ -95,13 +157,55 @@ def default_audio_index(tracks):
     return 0
 
 
-def remux(src, dst, source_position, channels):
+def is_cover(stream):
+    return stream.get("codec_type") == "video" and bool(stream.get("disposition", {}).get("attached_pic"))
+
+
+def tag(stream, name):
+    for key, value in (stream.get("tags") or {}).items():
+        if key.lower() == name:
+            return value
+    return None
+
+
+def cover_args(src, info, dst, workdir):
+    """The arguments that carry every cover across as a cover, or a failure."""
+    covers = [s for s in info.get("streams", ()) if is_cover(s)]
+    if dst.suffix.lower() != ".mkv":
+        return [arg for s in covers for arg in ("-map", f"0:{s['index']}")], None
+
+    # Matroska keeps a cover as an attachment. ffmpeg reads it back as a video stream and, mapped
+    # as one, writes a one-frame video track instead, so it is extracted and attached again.
+    attachments = sum(1 for s in info.get("streams", ()) if s.get("codec_type") == "attachment")
+    args = []
+    for position, stream in enumerate(covers):
+        name = tag(stream, "filename") or f"cover{position}"
+        image = Path(workdir) / f"{position}-{Path(name).name}"
+        try:
+            subprocess.run(
+                ["ffmpeg", "-nostdin", "-y", "-v", "error", "-i", str(src),
+                 "-map", f"0:{stream['index']}", "-c", "copy", "-frames:v", "1",
+                 "-f", "image2", str(image)],
+                capture_output=True, text=True, timeout=FFPROBE_TIMEOUT, check=True)
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError) as err:
+            return None, f"cover {name} could not be extracted: {err}"
+        output = attachments + position
+        args += ["-attach", str(image), f"-metadata:s:t:{output}", f"filename={name}"]
+        if tag(stream, "mimetype"):
+            args += [f"-metadata:s:t:{output}", f"mimetype={tag(stream, 'mimetype')}"]
+    return args, None
+
+
+def remux(src, dst, info, source_position, channels, workdir):
     """Prepend an AC3 track built from one existing track, copying everything else untouched."""
+    covers, failure = cover_args(src, info, dst, workdir)
+    if failure:
+        return failure
     cmd = [
         "nice", "-n", "10", "ionice", "-c", "3",
         "ffmpeg", "-nostdin", "-y", "-i", str(src),
-        "-map", "0:v:0", "-map", f"0:a:{source_position}", "-map", "0:a",
-        "-map", "0:s?", "-map", "0:t?",
+        "-map", "0:V", "-map", f"0:a:{source_position}", "-map", "0:a",
+        "-map", "0:s?", "-map", "0:t?", *covers,
         "-c:v", "copy", "-c:s", "copy", "-c:t", "copy", "-c:a", "copy",
         "-c:a:0", "ac3", "-b:a:0", AC3_BITRATE,
     ]
@@ -122,6 +226,10 @@ def remux(src, dst, source_position, channels):
     return None
 
 
+def kind(stream):
+    return "cover" if is_cover(stream) else stream.get("codec_type")
+
+
 def verify(src_info, dst):
     """Reject the new file unless it carries the whole of the old one plus one audio track."""
     info = probe(dst)
@@ -136,12 +244,12 @@ def verify(src_info, dst):
     if abs(after - before) > DURATION_TOLERANCE:
         return f"duration moved: {before:.3f} -> {after:.3f}"
 
-    for kind in ("video", "audio", "subtitle"):
-        was = sum(1 for s in src_info.get("streams", ()) if s.get("codec_type") == kind)
-        now = sum(1 for s in info.get("streams", ()) if s.get("codec_type") == kind)
-        expected = was + 1 if kind == "audio" else was
+    for wanted in ("video", "cover", "audio", "subtitle"):
+        was = sum(1 for s in src_info.get("streams", ()) if kind(s) == wanted)
+        now = sum(1 for s in info.get("streams", ()) if kind(s) == wanted)
+        expected = was + 1 if wanted == "audio" else was
         if now != expected:
-            return f"{kind} streams: {was} -> {now}, expected {expected}"
+            return f"{wanted} streams: {was} -> {now}, expected {expected}"
 
     if audio_streams(info)[0].get("codec_name") != "ac3":
         return "first audio track is not the new AC3"
@@ -162,15 +270,28 @@ def candidates():
 
 
 def main():
+    ledger = load_ledger()
+    incompatible = incompatible_codecs(ledger)
+    reported = reported_files(ledger)
+    now = time.time()
     done = 0
     deferred = []
 
-    for path in candidates():
+    queue = chain((p for p in reported if p.is_file()), (p for p in candidates() if p not in reported))
+    for path in queue:
         if done >= MAX_PER_RUN:
             break
 
         info = probe(path)
-        if info is None or not needs_work(info):
+        if info is None:
+            continue
+        if not needs_work(info, incompatible):
+            entry = reported.get(path)
+            if entry and now - (entry.get("seen") or 0) < RECENT_SECONDS:
+                kept = sorted({t.get("codec_name") for t in audio_streams(info)} - incompatible)
+                print(f"{path.name}: {entry.get('app')} re-encoded its {entry.get('codec')} for "
+                      f"{entry.get('client')}, but it also carries {', '.join(kept) or 'no audio'}; "
+                      f"nothing to add, the client played another track or cannot play those either")
             continue
 
         if path.stat().st_nlink > 1:
@@ -188,7 +309,8 @@ def main():
         tmp = path.with_name(".audio-compat.in-progress" + path.suffix)
         tmp.unlink(missing_ok=True)
 
-        failure = remux(path, tmp, position, channels) or verify(info, tmp)
+        with tempfile.TemporaryDirectory(dir=path.parent, prefix=".audio-compat.") as workdir:
+            failure = remux(path, tmp, info, position, channels, workdir) or verify(info, tmp)
         if failure:
             tmp.unlink(missing_ok=True)
             print(f"{path.name}: {failure}", file=sys.stderr)
