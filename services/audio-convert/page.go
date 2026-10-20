@@ -20,9 +20,9 @@ func icon(w http.ResponseWriter, r *http.Request) {
 
 // A speaker with an arrow turning into it. Filled shapes, since Homepage draws it at 34 px.
 const iconSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="14" fill="#1d1530"/>
-  <path fill="#a78bfa" d="M12 26h8l11-9v30l-11-9h-8z"/>
-  <path d="M38 24a11 11 0 0 1 0 16M43 18a19 19 0 0 1 0 28" stroke="#a78bfa" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+  <rect width="64" height="64" rx="14" fill="#1c2321"/>
+  <path fill="#c9a764" d="M12 26h8l11-9v30l-11-9h-8z"/>
+  <path d="M38 24a11 11 0 0 1 0 16M43 18a19 19 0 0 1 0 28" stroke="#c9a764" stroke-width="4.5" stroke-linecap="round" fill="none"/>
 </svg>`
 
 const pageHTML = `<!doctype html>
@@ -33,73 +33,98 @@ const pageHTML = `<!doctype html>
 <title>Audio convert</title>
 <link rel="icon" href="/icon.svg">
 <style>
-  :root { color-scheme: dark; --bg:#110d1c; --card:#1b1530; --line:#2d2547; --ink:#f1ecff; --dim:#a99fc6;
-          --accent:#a78bfa; --ok:#34d399; --warn:#fbbf24; --bad:#f87171; }
-  * { box-sizing: border-box; }
-  body { margin:0; padding:1.5rem 1rem 3rem; background:var(--bg); color:var(--ink);
-         font:16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-  header, main, footer { max-width:52rem; margin-left:auto; margin-right:auto; }
-  header { margin-bottom:1.25rem; display:flex; align-items:center; gap:.75rem; }
-  header img { width:34px; height:34px; }
-  h1 { font-size:1.35rem; margin:0; letter-spacing:-.02em; }
-  header p { margin:.15rem 0 0; color:var(--dim); font-size:.85rem; }
-  .facts { display:flex; gap:1rem; flex-wrap:wrap; color:var(--dim); font-size:.8rem; margin-bottom:.75rem; }
-  .banner { background:#2a2140; border:1px solid var(--warn); color:var(--warn); border-radius:.6rem;
-            padding:.6rem .9rem; font-size:.85rem; margin-bottom:.75rem; }
-  .banner:empty { display:none; }
-  h2 { font-size:.78rem; text-transform:uppercase; letter-spacing:.09em; color:var(--dim);
-       margin:2rem 0 .75rem; font-weight:600; }
-  .t { background:var(--card); border:1px solid var(--line); border-radius:.7rem; padding:.8rem .9rem; margin-bottom:.6rem; }
-  .t.off { opacity:.55; }
-  .t .name { font-weight:600; font-size:.95rem; word-break:break-word; }
-  .t .why { color:var(--dim); font-size:.82rem; }
-  .t .plan { margin:.4rem 0 .2rem; font-size:.88rem; }
-  .t .meta { display:flex; gap:.7rem; align-items:center; flex-wrap:wrap; color:var(--dim); font-size:.8rem; margin-top:.35rem; }
-  .tag { border:1px solid var(--line); border-radius:.35rem; padding:0 .4rem; font-size:.75rem; }
-  .tag.warn { color:var(--warn); border-color:var(--warn); }
-  .tag.ok { color:var(--ok); border-color:var(--ok); }
-  .tag.bad { color:var(--bad); border-color:var(--bad); }
-  .bar { height:8px; background:#0d0a17; border-radius:4px; margin:.6rem 0 .3rem; overflow:hidden; }
-  .bar i { display:block; height:100%; background:var(--accent); transition:width .8s linear; }
-  .btn { background:var(--accent); color:#1d1530; border:0; border-radius:.5rem; font-weight:700;
-         padding:.45rem .9rem; font-size:.85rem; cursor:pointer; margin-left:auto; }
-  .btn.ghost { background:transparent; color:var(--accent); border:1px solid var(--accent); font-weight:600; }
-  .btn[disabled] { opacity:.45; cursor:default; }
-  .empty { color:var(--dim); text-align:center; padding:1.5rem 0; font-size:.88rem; }
-  .h { display:grid; grid-template-columns: 1fr auto; gap:.1rem .8rem; font-size:.82rem; padding:.45rem 0;
-       border-bottom:1px solid var(--line); }
-  .h .sub { color:var(--dim); grid-column: 1 / -1; }
-  #msg { font-size:.85rem; min-height:1.25rem; color:var(--warn); }
-  footer { margin-top:2.5rem; color:var(--dim); font-size:.78rem; border-top:1px solid var(--line); padding-top:1rem; }
-  code { background:#0d0a17; padding:.1rem .35rem; border-radius:.25rem; font-size:.75rem; }
+  :root {
+    color-scheme: light dark;
+    --paper:#eef0ee; --ink:#1c2321; --quiet:#6b7571; --hair:#d5dad7; --brass:#9a7b3f; --brass-ink:#fbf8f1;
+    --ok:#3f7a5a; --bad:#a6453a; --warn:#8a6420;
+    --serif:"Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", ui-serif, Georgia, serif;
+    --sans:-apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --paper:#151a19; --ink:#e6eae7; --quiet:#8e9893; --hair:#2a322f; --brass:#c9a764; --brass-ink:#151a19;
+            --ok:#7fbf99; --bad:#e08a7e; --warn:#d9b26a; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink); font:16px/1.55 var(--sans);
+         font-variant-numeric:tabular-nums; -webkit-font-smoothing:antialiased; }
+  .page { max-width:40rem; margin:0 auto; padding:4.5rem 1.5rem 4rem; }
+
+  .brand { display:flex; align-items:center; gap:.6rem; color:var(--quiet); font-size:.85rem; margin-bottom:3rem; }
+  .brand img { width:22px; height:22px; border-radius:5px; }
+
+  .now { font:400 2.3rem/1.15 var(--serif); letter-spacing:-.01em; margin:0; text-wrap:balance; }
+  .now-detail { color:var(--quiet); margin:.9rem 0 0; font-size:.95rem; }
+  .line { height:2px; background:var(--hair); margin:1.6rem 0 0; overflow:hidden; }
+  .line i { display:block; height:100%; width:0; background:var(--brass); transition:width 1s linear; }
+  .line[hidden] { display:none; }
+  .facts { color:var(--quiet); font-size:.82rem; margin:1.6rem 0 0; }
+  .notice { color:var(--warn); font-size:.88rem; margin:1rem 0 0; }
+  .notice:empty { display:none; }
+
+  section { margin-top:4rem; }
+  h2 { font:italic 400 1.15rem/1.3 var(--serif); color:var(--quiet); margin:0 0 1.2rem; }
+
+  .item { padding:1.4rem 0; border-top:1px solid var(--hair); }
+  .item:last-child { border-bottom:1px solid var(--hair); }
+  .item.off { color:var(--quiet); }
+  .item .name { font:400 1.35rem/1.25 var(--serif); margin:0; word-break:break-word; }
+  .item .why { color:var(--quiet); font-size:.85rem; margin:.3rem 0 0; }
+  .item .plan { margin:.8rem 0 0; font-size:.95rem; max-width:34rem; }
+  .item .cost { color:var(--quiet); font-size:.85rem; margin:.5rem 0 0; }
+  .item .row { display:flex; align-items:center; gap:1rem; flex-wrap:wrap; margin-top:1rem; }
+  .state { font-size:.85rem; color:var(--quiet); }
+  .state.ok { color:var(--ok); } .state.bad { color:var(--bad); } .state.warn { color:var(--warn); }
+  .item .line { margin-top:1rem; }
+
+  button { font:500 .9rem/1 var(--sans); cursor:pointer; border-radius:999px; padding:.65rem 1.25rem; }
+  .go { background:var(--brass); color:var(--brass-ink); border:1px solid var(--brass); }
+  .go:hover { filter:brightness(1.06); }
+  .plain { background:transparent; color:var(--ink); border:1px solid var(--hair); }
+  .plain:hover { border-color:var(--quiet); }
+  button:focus-visible { outline:2px solid var(--brass); outline-offset:3px; }
+  button[disabled] { opacity:.4; cursor:default; filter:none; }
+  .push { margin-left:auto; }
+
+  .empty { color:var(--quiet); font-size:.95rem; margin:0; }
+  .h { display:flex; justify-content:space-between; gap:1rem; padding:.85rem 0; border-top:1px solid var(--hair); font-size:.9rem; }
+  .h:last-child { border-bottom:1px solid var(--hair); }
+  .h .sub { color:var(--quiet); font-size:.82rem; margin-top:.15rem; }
+  .h .res { white-space:nowrap; font-size:.85rem; }
+
+  footer { margin-top:4.5rem; color:var(--quiet); font-size:.82rem; max-width:34rem; }
+  code { font-size:.8rem; }
+  @media (max-width:520px) { .page { padding-top:2.5rem; } .now { font-size:1.85rem; } }
+  @media (prefers-reduced-motion: reduce) { .line i { transition:none; } }
 </style>
 </head>
 <body>
-<header>
-  <img src="/icon.svg" alt="">
-  <div>
-    <h1>Audio convert</h1>
-    <p>Files whose audio a server had to re-encode for a client, and what it takes to stop that happening.</p>
-  </div>
-</header>
+<div class="page">
+  <div class="brand"><img src="/icon.svg" alt="">Audio convert</div>
 
-<main>
-  <div class="facts" id="facts"></div>
-  <div class="banner" id="banner"></div>
-  <div id="msg"></div>
+  <header>
+    <h1 class="now" id="now">Checking the library</h1>
+    <p class="now-detail" id="now-detail"></p>
+    <div class="line" id="now-line" hidden><i></i></div>
+    <p class="facts" id="facts"></p>
+    <p class="notice" id="msg"></p>
+  </header>
 
-  <h2>To convert</h2>
-  <div id="list"><div class="empty">Loading…</div></div>
+  <section>
+    <h2>Waiting for a new audio track</h2>
+    <div id="list"></div>
+  </section>
 
-  <h2>History</h2>
-  <div id="history"><div class="empty">Nothing converted yet.</div></div>
-</main>
+  <section>
+    <h2>Converted</h2>
+    <div id="history"></div>
+  </section>
 
-<footer>
-  Runs <code>scripts/sync/audio-compat.py --file</code>, the same as the 01:30 pass: it puts an AC3
-  track first, keeps every other track and leaves the previous file beside it as <code>.original</code>.
-  One conversion at a time; while the nightly pass is working, the queue waits.
-</footer>
+  <footer>
+    Each conversion runs <code>scripts/sync/audio-compat.py --file</code>, the same script as the 01:30
+    pass. It puts an AC3 track first, keeps every other track, and leaves the previous file beside it as
+    <code>.original</code>. One conversion runs at a time, and the queue waits while the nightly pass works.
+  </footer>
+</div>
 
 <script>
 function human(bytes) {
@@ -126,10 +151,19 @@ function codecName(codec) { return ({ dca: "dts" }[(codec || "?").toLowerCase()]
 
 function channels(n) { return { 1: "mono", 2: "stereo", 6: "5.1", 8: "7.1" }[n] || (n + " channels"); }
 
+// The servers report ISO 639-2 codes, which Intl.DisplayNames does not take.
+var LANGUAGES = { eng: "English", spa: "Spanish", jpn: "Japanese", fre: "French", fra: "French", ger: "German",
+  deu: "German", ita: "Italian", por: "Portuguese", kor: "Korean", chi: "Chinese", zho: "Chinese", hin: "Hindi",
+  rus: "Russian", dut: "Dutch", nld: "Dutch" };
+
+function language(code) { return LANGUAGES[(code || "").toLowerCase()] || code; }
+
 function trackName(t) {
   if (t.title) return t.title;
-  return [t.language, (t.codec || "").toUpperCase(), t.channels ? channels(t.channels) : ""].filter(Boolean).join(" ");
+  return [language(t.language), (t.codec || "").toUpperCase(), t.channels ? channels(t.channels) : ""].filter(Boolean).join(" ");
 }
+
+function appName(app) { return ({ plex: "Plex", jellyfin: "Jellyfin" })[app] || app; }
 
 function planText(p) {
   return "Add " + p.target_codec.toUpperCase() + " " + channels(p.target_channels) + " (" + p.target_bitrate_kbps +
@@ -142,6 +176,13 @@ function el(tag, cls, text) {
   if (cls) e.className = cls;
   if (text !== undefined) e.textContent = text;
   return e;
+}
+
+function line(pct) {
+  var bar = el("div", "line"), fill = el("i");
+  fill.style.width = pct.toFixed(1) + "%";
+  bar.appendChild(fill);
+  return bar;
 }
 
 function say(text) { document.getElementById("msg").textContent = text || ""; }
@@ -170,88 +211,114 @@ function play(it, button) {
   });
 }
 
-function card(it, state) {
-  var actionable = it.actionable;
-  var box = el("div", "t" + (actionable ? "" : " off"));
-  box.appendChild(el("div", "name", it.title || it.library_path || it.path));
-  var who = it.client + " (" + it.app + ") refused " + codecName(it.codec) + " · " + when(it.seen);
-  box.appendChild(el("div", "why", who));
+function progress(state) {
+  var job = state.running.job;
+  return job.duration ? Math.min(100, job.seconds / job.duration * 100) : 0;
+}
 
-  if (!actionable) {
-    box.appendChild(el("div", "plan", it.reason ? it.reason.charAt(0).toUpperCase() + it.reason.slice(1) + "." : ""));
+function item(it, state) {
+  var box = el("article", "item" + (it.actionable ? "" : " off"));
+  box.appendChild(el("h3", "name", it.title || it.library_path || it.path));
+  var what = it.cause === "codec" ? " refused " + codecName(it.codec) : " had its " + codecName(it.codec) + " re-encoded";
+  box.appendChild(el("p", "why", it.client + " in " + appName(it.app) + what + ", " + when(it.seen)));
+
+  if (!it.actionable) {
+    box.appendChild(el("p", "plan", it.reason ? it.reason.charAt(0).toUpperCase() + it.reason.slice(1) + "." : ""));
     return box;
   }
 
-  box.appendChild(el("div", "plan", it.plan ? planText(it.plan) :
-    "The server did not list the tracks; the script will use the default one."));
+  box.appendChild(el("p", "plan", it.plan ? planText(it.plan) :
+    "The server did not list the tracks, so the script will use the default one."));
 
-  if (it.status === "converting" && state.running) {
-    var job = state.running.job;
-    var pct = job.duration ? Math.min(100, job.seconds / job.duration * 100) : 0;
-    var bar = el("div", "bar"), fill = el("i");
-    fill.style.width = pct.toFixed(1) + "%";
-    bar.appendChild(fill);
-    box.appendChild(bar);
-  }
-
-  var meta = el("div", "meta");
   var pending = it.status !== "done" && it.status !== "missing";
-  if (it.plan && pending) meta.appendChild(el("span", "", "+" + human(it.plan.extra_bytes) + " for the new track"));
-  if (it.exists && pending) meta.appendChild(el("span", "", "plus " + human(it.size) + " for the .original until it is deleted"));
-
-  if (it.status === "converting" && state.running) {
-    var job2 = state.running.job;
-    var pct2 = job2.duration ? Math.round(job2.seconds / job2.duration * 100) : 0;
-    meta.appendChild(el("span", "tag ok", "convirtiendo " + pct2 + "%"));
-    meta.appendChild(el("span", "", clock(state.running.eta) + " left at " + job2.speed.toFixed(0) + "×"));
-    if (job2.source) meta.appendChild(el("span", "", "from track " + job2.source.position + " (" + trackName(job2.source) + ")"));
-  } else if (it.duration && pending) {
-    meta.appendChild(el("span", "", "~" + clock(it.eta) + " (" + clock(it.duration) + " of film)"));
+  var running = it.status === "converting" && state.running;
+  if (pending && !running) {
+    var cost = [];
+    if (it.plan) cost.push(human(it.plan.extra_bytes) + " for the new track");
+    if (it.exists) cost.push(human(it.size) + " for the .original until it is deleted");
+    if (it.duration) cost.push("about " + clock(it.eta) + " for " + clock(it.duration) + " of film");
+    if (cost.length) box.appendChild(el("p", "cost", cost.join(", ")));
   }
-  if (it.links > 1) meta.appendChild(el("span", "tag warn", "still seeding (hardlinked)"));
-  if (it.exists && !it.enough_space) meta.appendChild(el("span", "tag bad", "not enough space"));
+
+  if (running) box.appendChild(line(progress(state)));
+
+  var row = el("div", "row");
+  if (running) {
+    var job = state.running.job;
+    row.appendChild(el("span", "state", Math.round(progress(state)) + "%, " + clock(state.running.eta) +
+      " left at " + job.speed.toFixed(0) + "× the film's speed"));
+  }
+  if (it.links > 1 && pending) row.appendChild(el("span", "state warn", "Still seeding"));
+  if (it.exists && !it.enough_space && pending) row.appendChild(el("span", "state bad", "Not enough free space"));
 
   var button;
   switch (it.status) {
     case "ready":
-      button = el("button", "btn", "▶ Convert");
+      button = el("button", "go push", "Convert");
       button.disabled = !it.enough_space;
       button.onclick = function () { play(it, button); };
       break;
     case "queued":
-      meta.appendChild(el("span", "tag", "queued"));
-      button = el("button", "btn ghost", "Remove");
+      row.appendChild(el("span", "state", "Queued"));
+      button = el("button", "plain push", "Remove from queue");
       button.onclick = function () { post("/api/cancel", { library_path: it.library_path }).then(refresh); };
       break;
     case "done":
-      meta.appendChild(el("span", "tag ok", "done" + (it.outcome.mode === "nightly" ? " by the nightly pass" : "") + " · " + when(it.outcome.time)));
+      row.appendChild(el("span", "state ok", "Converted " + (it.outcome.mode === "nightly" ? "by the nightly pass " : "") +
+        "on " + when(it.outcome.time)));
       break;
     case "failed":
-      meta.appendChild(el("span", "tag bad", "failed: " + it.outcome.reason));
-      button = el("button", "btn ghost", "Retry");
+      row.appendChild(el("span", "state bad", "Failed: " + it.outcome.reason));
+      button = el("button", "plain push", "Try again");
       button.disabled = !it.enough_space;
       button.onclick = function () { play(it, button); };
       break;
     case "missing":
-      meta.appendChild(el("span", "tag", "the file is gone (replaced?)"));
+      row.appendChild(el("span", "state", "The file is gone, probably replaced"));
       break;
   }
-  if (button) meta.appendChild(button);
-  box.appendChild(meta);
+  if (button) row.appendChild(button);
+  if (row.childNodes.length) box.appendChild(row);
   return box;
 }
 
 function historyRow(h) {
-  var row = el("div", "h");
-  row.appendChild(el("span", "", h.name));
-  var ok = h.result === "done";
-  row.appendChild(el("span", "tag " + (ok ? "ok" : "bad"), ok ? "done" : "failed"));
-  var bits = [when(h.time), h.mode === "nightly" ? "nightly pass" : "from here"];
-  if (h.seconds) bits.push(clock(h.seconds));
-  if (h.speed) bits.push(h.speed.toFixed(0) + "× realtime");
+  var row = el("div", "h"), left = el("div");
+  left.appendChild(el("div", "", h.name));
+  var bits = [when(h.time), h.mode === "nightly" ? "nightly pass" : "from this page"];
+  if (h.seconds) bits.push("took " + clock(h.seconds));
+  if (h.speed) bits.push(h.speed.toFixed(0) + "× the film's speed");
   if (h.reason) bits.push(h.reason);
-  row.appendChild(el("span", "sub", bits.join(" · ")));
+  left.appendChild(el("div", "sub", bits.join(", ")));
+  row.appendChild(left);
+  var ok = h.result === "done";
+  row.appendChild(el("span", "res state " + (ok ? "ok" : "bad"), ok ? "Converted" : "Failed"));
   return row;
+}
+
+function headline(d) {
+  var now = document.getElementById("now"), detail = document.getElementById("now-detail");
+  var bar = document.getElementById("now-line");
+  var ready = (d.items || []).filter(function (it) { return it.actionable && it.status === "ready"; });
+  bar.hidden = true;
+  detail.textContent = "";
+  if (d.running) {
+    var job = d.running.job, pct = progress(d);
+    now.textContent = "Converting " + (d.running.title || job.title || "a file") + ", " + Math.round(pct) + "%";
+    detail.textContent = clock(d.running.eta) + " left.";
+    bar.hidden = false;
+    bar.firstChild.style.width = pct.toFixed(1) + "%";
+  } else if (d.holder) {
+    var file = (d.holder.file || "").split("/").pop();
+    now.textContent = d.holder.mode === "nightly" ? "The nightly pass is working" : "Another conversion is running";
+    detail.textContent = (file ? "It is on " + file + ". " : "") + "The queue starts when it finishes.";
+  } else if (ready.length) {
+    now.textContent = ready.length === 1 ? "One film can play without re-encoding" : ready.length + " films can play without re-encoding";
+    detail.textContent = "Each needs an audio track the TV reads. Convert it below.";
+  } else {
+    now.textContent = "Every file plays as it is";
+    detail.textContent = "When a client has its audio re-encoded, the file appears here with a plan to fix it.";
+  }
 }
 
 var timer = null;
@@ -259,32 +326,21 @@ var timer = null;
 function refresh() {
   return fetch("/api/state").then(function (r) { return r.json(); }).then(function (d) {
     if (d.error) say(d.error);
-    var facts = document.getElementById("facts");
-    facts.textContent = "";
-    facts.appendChild(el("span", "", human(d.free) + " free (" + human(d.minFree) + " kept free)"));
-    facts.appendChild(el("span", "", "average speed " + d.speed.toFixed(0) + "× realtime"));
-    if (d.queue && d.queue.length) facts.appendChild(el("span", "", d.queue.length + " queued"));
+    headline(d);
 
-    var banner = document.getElementById("banner");
-    banner.textContent = "";
-    if (d.holder && !d.running) {
-      var file = (d.holder.file || "").split("/").pop();
-      banner.textContent = d.holder.mode === "nightly"
-        ? "The nightly pass is " + (file ? "converting " + file : "checking the library") + "; the queue waits for it."
-        : "Another conversion holds the lock" + (file ? " (" + file + ")" : "") + "; the queue waits.";
-    }
+    var facts = [human(d.free) + " free, " + human(d.minFree) + " always kept back",
+                 "conversions run at about " + d.speed.toFixed(0) + "× the film's speed"];
+    if (d.queue && d.queue.length) facts.push(d.queue.length + " queued");
+    document.getElementById("facts").textContent = facts.join(", ") + ".";
 
     var list = document.getElementById("list");
     list.textContent = "";
-    if (!d.items || !d.items.length) {
-      list.appendChild(el("div", "empty", "No client has needed its audio re-encoded yet."));
-    } else {
-      d.items.forEach(function (it) { list.appendChild(card(it, d)); });
-    }
+    if (!d.items || !d.items.length) list.appendChild(el("p", "empty", "Nothing is waiting."));
+    else d.items.forEach(function (it) { list.appendChild(item(it, d)); });
 
     var hist = document.getElementById("history");
     hist.textContent = "";
-    if (!d.history || !d.history.length) hist.appendChild(el("div", "empty", "Nothing converted yet."));
+    if (!d.history || !d.history.length) hist.appendChild(el("p", "empty", "Nothing has been converted yet."));
     else d.history.forEach(function (h) { hist.appendChild(historyRow(h)); });
 
     clearTimeout(timer);
