@@ -1,0 +1,28 @@
+# Overrides for a second node that runs the AceStream + Jellyfin subset and is read from the main
+# one over Tailscale (its Prometheus, bifrost's status page). Loaded only where `.env` says
+#   COMPOSE_FILE=docker-compose.yml:overrides/secondary-node.yml
+# so the main node's containers are untouched. Lists such as `ports` are appended to the base file;
+# `command` replaces it.
+services:
+  jellyfin:
+    environment:
+      # The address the TV app is handed on the LAN.
+      - JELLYFIN_PublishedServerUrl=${JELLYFIN_PUBLISHED_SERVER_URL}
+
+  bifrost:
+    ports:
+      - "${TAILSCALE_IP}:6879:6879"
+    environment:
+      # aceserve is on the host network; the bridge gateway the main node uses is not stable here.
+      - ACESERVE_BASE_URL=http://host.docker.internal:6878
+      - BIFROST_NAME=${BIFROST_NAME}
+
+  prometheus:
+    ports:
+      - "${TAILSCALE_IP}:9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      # An SD card, not a disk: bound what it keeps.
+      - '--storage.tsdb.retention.time=${PROMETHEUS_RETENTION_TIME:-7d}'
+      - '--storage.tsdb.retention.size=${PROMETHEUS_RETENTION_SIZE:-3GB}'
