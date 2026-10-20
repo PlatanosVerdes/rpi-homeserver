@@ -222,7 +222,12 @@ Controlled via `COMPOSE_PROFILES` in `.env`. No need to touch compose files.
 | `tunnel` | Cloudflared (publishes only the GitHub deploy webhook — see docs/deploy-webhook.md) |
 | `all` | Everything except `tunnel` (it needs a token, so it is opt-in) |
 
-Main Pi: `COMPOSE_PROFILES=all`. Secondary Pi: e.g. `COMPOSE_PROFILES=essential,moni`.
+Every service also has a profile named after itself, so a node that runs a subset lists exactly
+what it runs instead of taking a whole group: e.g. streamhalla runs
+`COMPOSE_PROFILES=jellyfin,gluetun,aceserve,kubo,bifrost,sleipnir,docker-socket-proxy,speedtest-tracker,prometheus,pushgateway,node-exporter,cadvisor`.
+Profiles are not part of a container's config hash, so adding one recreates nothing.
+
+Main Pi: `COMPOSE_PROFILES=all`. Secondary Pi: a group (`essential,moni`) or a list of services.
 
 ---
 
