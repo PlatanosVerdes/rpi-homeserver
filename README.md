@@ -63,8 +63,9 @@ scripts/deploy/apply.sh
    ├─ git pull rpi-homeserver
    ├─ render alerting ......... template (git) + secrets (.env)
    │                            └─► appdata/grafana-alerting/
-   ├─ docker compose up -d ..... --build only if a build context, versions.env
-   │                              or a compose file changed
+   ├─ docker compose build ..... only the services whose build context changed
+   │                              (all of them if versions.env or a compose file did)
+   ├─ docker compose up -d ..... recreates only what changed
    ├─ git pull rpi-services  ──► docker compose up -d (same rule)
    ├─ scripts/setup/install-crontab.sh ...... homeserver fragment + services fragment
    │                            └─► host crontab (and undoes any manual drift)
@@ -515,7 +516,7 @@ top of the exit node, and why it must never be put behind the reverse proxy
 ### Reverse Proxy (Caddy)
 Caddy provides short HTTP names on LAN (`http://jellyfin`, `http://raspi`, etc.) and HTTPS via Cloudflare DNS challenge for remote access (`https://*.platanosverdes.com`).
 
-Caddy uses a custom Docker image that includes the Cloudflare DNS plugin (see `config/caddy/Dockerfile`). Certificates are issued automatically on first request and renewed by Caddy.
+Caddy uses a custom Docker image that includes the Cloudflare DNS plugin (see `services/caddy/Dockerfile`). Certificates are issued automatically on first request and renewed by Caddy.
 
 **Extending Caddy from a companion repo (e.g. rpi-services):**
 

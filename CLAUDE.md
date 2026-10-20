@@ -30,7 +30,6 @@ compose-mon.yml             Prometheus, Grafana, Pushgateway, node-exporter, cAd
 
 config/                     Static config files committed to git
   caddy/Caddyfile           Reverse proxy rules (HTTPS + HTTP short names)
-  caddy/Dockerfile          Custom Caddy image with Cloudflare DNS plugin
   caddy/services/           Extra route files for this repo (auto-imported by Caddy)
   caddy/ext-services/       Mount point for a companion repo's routes (see EXT_CADDY_PATH)
   vector/ext-logs/          Mount point for a companion repo's cron logs (see EXT_LOGS_PATH)
@@ -43,6 +42,8 @@ config/                     Static config files committed to git
                             (scripts/sync/arr-config.sh) — otherwise they only exist in appdata
 
 services/                   Source code for custom services built in this repo
+  caddy/                    Custom Caddy image with the Cloudflare DNS plugin. Not next to the
+                            Caddyfile: a build context there made every route change a rebuild
   tailscale-metrics/        Go service, Dockerized — Tailscale peer metrics for Prometheus
   deploy-webhook/           Python receiver (systemd) — deploys on GitHub push via Cloudflare tunnel
   watch-next/               Go service: monitors + searches the next Sonarr episode(s) on watch
@@ -121,12 +122,15 @@ docker compose up -d
    template in git with the secrets in `.env` before Grafana starts. That is this step. It writes
    `config/grafana/alerting/*` into `appdata/grafana-alerting/` with the values filled in, which
    is what Grafana actually mounts. See [docs/alerting.md](docs/alerting.md).
-3. If HEAD changed → `docker compose up -d --remove-orphans`, with `--build` **only** when the
-   diff touches something an image is built from: a local build context (read from compose, so
-   `services/*` here and `config/caddy/` for Caddy), `versions.env`, or a compose file. `--build`
-   recreates every locally built container even when its image is identical, and a recreate cuts
-   what that container was serving — Caddy's live connections, the live stream Jellyfin is
-   reading from `bifrost`. A Grafana or docs commit must not do that.
+3. If HEAD changed → `docker compose build` for **only** the services whose local build context
+   holds a changed file (read from compose, so `services/*`), or all of them when `versions.env`
+   or a compose file changed; then `docker compose up -d --remove-orphans` without `--build`.
+   A recreate cuts what that container was serving — Caddy's live connections, the live stream
+   Jellyfin is reading from `bifrost` — so only a container whose image actually changed may be
+   recreated. Two things make that hold: `--build` recreates every built container even when its
+   image is identical, and BuildKit's default provenance attestation is timestamped, so a cached
+   rebuild still got a new id; the deploy exports `BUILDX_NO_DEFAULT_ATTESTATIONS=1`. Route
+   changes in `config/caddy/` are applied by `caddy reload`, never a rebuild.
 4. If no change → `docker compose up -d --remove-orphans` (ensures containers are running)
 5. Installs the merged host crontab (`scripts/setup/install-crontab.sh`)
 6. Converges Radarr/Sonarr's custom formats and quality profiles (`scripts/sync/arr-config.sh`),

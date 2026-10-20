@@ -3,7 +3,7 @@ services:
   # --- CADDY (Reverse proxy) ---
   caddy:
     build:
-      context: ./config/caddy/
+      context: ./services/caddy/
       args:
         CADDY_VERSION: ${CADDY_VERSION}
     container_name: caddy
