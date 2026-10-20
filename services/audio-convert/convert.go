@@ -25,7 +25,8 @@ type job struct {
 	Library         string `json:"library_path"`
 	Title           string `json:"title"`
 	AllowHardlinked bool   `json:"allow_hardlinked"`
-	Track           *int   `json:"track,omitempty"` // the audio position pi-metrics planned from
+	Track           *int   `json:"track,omitempty"`  // the audio position pi-metrics planned from
+	Target          string `json:"target,omitempty"` // the codec to add; empty is the script's default
 	Added           int64  `json:"added"`
 }
 
@@ -169,6 +170,8 @@ func (s *server) worker() {
 		s.mu.Unlock()
 		if busy {
 			time.Sleep(s.retry)
+		} else {
+			s.requestRescan()
 		}
 	}
 }
@@ -191,6 +194,9 @@ func (s *server) run(j job) (outcome, bool) {
 	}
 	if j.Track != nil {
 		args = append(args, "--track", strconv.Itoa(*j.Track))
+	}
+	if j.Target != "" {
+		args = append(args, "--target", j.Target)
 	}
 	cmd := exec.Command(s.python, args...)
 	var stderr bytes.Buffer

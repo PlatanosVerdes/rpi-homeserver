@@ -16,8 +16,8 @@ Three pieces, and each one does a single job:
 | Piece | Job |
 | :--- | :--- |
 | `services/pi-metrics` (`recodes.go`, `plan.go`) | Watches the sessions, decides whether a file change can help, and writes the plan into `appdata/pi-metrics/audio-recodes.json` |
-| `scripts/sync/audio-compat.py` | The only code that converts: remux, verify, rename. Nightly over the library, or `--file` for one |
-| `services/audio-convert` | The page: lists the plans, queues a file, runs `audio-compat.py --file`, shows its progress |
+| `scripts/sync/audio-compat.py` | The only code that converts: remux, verify, rename. Nightly over the library, `--file` for one, `--scan` to list what the nightly pass would convert |
+| `services/audio-convert` | The page: lists the plans and the library scan, queues a file, runs `audio-compat.py --file`, shows its progress |
 
 The page never touches ffmpeg itself. The container carries Python and ffmpeg and runs the very
 same script the cron runs, mounted from `scripts/sync/` rather than copied into the image, so a
@@ -42,6 +42,17 @@ that it works out the same thing `audio-compat.py` would:
   gets the AC3; a DTS 5.1 with an AC3 5.1 of the same mix does not. `assess` in the script and
   `decide` in `plan.go` are the same rule.
 - **The target** is AC3 at 640 kb/s, with the source's channels up to 5.1. A 7.1 source becomes 5.1.
+  On the page the codec can be changed per file, among the ones `TARGETS` in the script defines
+  (AC3 5.1, EAC3 5.1, AAC stereo); AC3 stays selected by default and is the only one the nightly
+  pass adds. A codec the client refused is offered but disabled, since it would be re-encoded the same.
+
+## Before any client plays a file
+
+The page's "In the library" section, folded by default, lists every library file the nightly pass
+would convert, from `audio-compat.py --scan`: the same rule, run over the library without
+converting anything. The page runs it on start, every `SCAN_INTERVAL` (6 h by default) and after
+each conversion, keeps the result in `appdata/audio-convert/library.json`, and leaves out files the
+ledger already lists. Those files can be converted from there too, ahead of the night run.
 - **The cost** is 640 kb/s times the duration, about 576 MB for two hours. On top of that, the old
   file stays beside the new one as `.original` until someone deletes it.
 - **The time** is the duration divided by how fast conversions run. That starts at 20× realtime,
@@ -102,8 +113,8 @@ file does not fit.
 ## What it does not do
 
 - **Delete `.original` files.** Pruning those is a decision, not a timer, here as in the nightly pass.
-- **Convert anything pi-metrics did not list as fixable.** The page only queues files whose ledger
-  entry says `actionable`, and only by their path inside the library.
+- **Convert anything nobody listed as fixable.** The page only queues files whose ledger entry says
+  `actionable` or that the last library scan found, and only by their path inside the library.
 - **Forget.** An entry stays in the ledger until a hundred newer ones push it out. A file already
   converted shows as done; if a client then has it re-encoded again, it is listed again with a
   fresh plan.
@@ -117,6 +128,10 @@ file does not fit.
 scripts/sync/audio-compat.py --file "/mnt/data/films/Some Film (2020)/Some Film.mkv"
 # Machine-readable, as the page reads it: one JSON object per line
 scripts/sync/audio-compat.py --file "/mnt/data/films/..." --progress
+# Another codec for the added track: ac3 (default), eac3 or aac
+scripts/sync/audio-compat.py --file "/mnt/data/films/..." --target eac3
+# What the nightly pass would convert, as JSON, converting nothing
+scripts/sync/audio-compat.py --scan
 ```
 
 Exit code 0 is converted, 1 failed (the reason is on stderr, or in the `failed` event), 75 busy:

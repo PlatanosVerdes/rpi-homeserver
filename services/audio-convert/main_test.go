@@ -284,3 +284,58 @@ func TestItemsStatus(t *testing.T) {
 		t.Fatalf("running: %+v", items[0])
 	}
 }
+
+func TestLibraryScan(t *testing.T) {
+	scan := `{"time":7,"files":[
+		{"library_path":"films/A/a.mkv","title":"A","codec":"dts","cause":"library","actionable":true},
+		{"library_path":"films/C/c.mkv","title":"C","codec":"truehd","cause":"library","actionable":true}]}`
+	s, _ := fixture(t, "echo '"+strings.ReplaceAll(scan, "\n", "")+"'")
+	s.scan()
+
+	ledger, _ := readLedger(s.ledgerFile)
+	last, files := s.libraryFiles(ledger)
+	if last.Time != 7 || last.Error != "" || len(files) != 1 || files[0].Library != "films/C/c.mkv" {
+		t.Fatalf("a file the ledger lists must not be listed twice: %+v %+v", last, files)
+	}
+
+	raw, _ := os.ReadFile(s.scanFile())
+	if !strings.Contains(string(raw), "films/C/c.mkv") {
+		t.Errorf("scan not persisted: %s", raw)
+	}
+
+	os.WriteFile(s.script, []byte("echo not-json"), 0o755)
+	s.scan()
+	if last, files := s.libraryFiles(ledger); last.Error == "" || len(files) != 1 {
+		t.Errorf("a failed scan must keep the last list and say why: %+v %+v", last, files)
+	}
+
+	os.MkdirAll(filepath.Join(s.dataRoot, "films", "C"), 0o755)
+	os.WriteFile(filepath.Join(s.dataRoot, "films", "C", "c.mkv"), []byte("x"), 0o644)
+	r := httptest.NewRequest("POST", "/api/play", strings.NewReader(url.Values{"library_path": {"films/C/c.mkv"}}.Encode()))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+	s.play(w, r)
+	if w.Code == http.StatusBadRequest {
+		t.Errorf("a file the library scan found must be playable: %d %s", w.Code, w.Body)
+	}
+}
+
+func TestPlayTarget(t *testing.T) {
+	scan := `{"time":7,"files":[],"default_target":"ac3","targets":{"ac3":{"codec":"ac3"},"eac3":{"codec":"eac3"}}}`
+	s, _ := fixture(t, "echo '"+scan+"'")
+	s.scan()
+	s.dataRoot, _ = filepath.Abs(s.dataRoot)
+	post := func(target string) int {
+		r := httptest.NewRequest("POST", "/api/play", strings.NewReader(url.Values{"library_path": {"films/A/a.mkv"}, "target": {target}}.Encode()))
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+		s.play(w, r)
+		return w.Code
+	}
+	if code := post("flac"); code != http.StatusBadRequest {
+		t.Errorf("a codec the script does not take was accepted: %d", code)
+	}
+	if code := post("eac3"); code == http.StatusOK && (len(s.queue) != 1 || s.queue[0].Target != "eac3") {
+		t.Errorf("the chosen codec was not queued: %+v", s.queue)
+	}
+}
