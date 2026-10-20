@@ -316,6 +316,8 @@ services:
   # pi-metrics works out the plan, scripts/sync/audio-compat.py --file does the conversion; this
   # lists the first and runs the second. Tailnet only, like every page Caddy serves without Access.
   audio-convert:
+    # Built by CI and pulled; build: is only the fallback, see docs/service-images.md.
+    image: ghcr.io/platanosverdes/rpi-homeserver-audio-convert:${AUDIO_CONVERT_IMAGE_TAG}
     build:
       context: ./services/audio-convert
       args:
