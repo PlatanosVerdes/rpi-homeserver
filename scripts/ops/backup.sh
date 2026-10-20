@@ -93,7 +93,13 @@ done
 # Optional offsite copy: set BACKUP_RCLONE_REMOTE (e.g. "b2:my-bucket/rpi") in .env
 if [[ -n "${BACKUP_RCLONE_REMOTE:-}" ]] && command -v rclone >/dev/null 2>&1; then
     log "Copying to offsite remote $BACKUP_RCLONE_REMOTE"
-    rclone copy "$ARCHIVE" "$BACKUP_RCLONE_REMOTE" || log "Offsite copy failed (non-fatal)"
+    if rclone copy "$ARCHIVE" "$BACKUP_RCLONE_REMOTE"; then
+        # copy never deletes, so without this the remote keeps every archive forever
+        rclone delete --min-age "${RETENTION}d" --include 'appdata-*.tar.gz' "$BACKUP_RCLONE_REMOTE" ||
+            log "Pruning the remote failed (non-fatal)"
+    else
+        log "Offsite copy failed (non-fatal)"
+    fi
 fi
 
 push_metrics 0 "$SIZE" "$APPDATA_SIZE"
