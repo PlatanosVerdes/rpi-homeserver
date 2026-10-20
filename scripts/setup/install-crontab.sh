@@ -20,7 +20,23 @@ SERVICES_DIR="${SERVICES_DIR:-$HOME/rpi-services}"
 MERGED="$PROJECT_DIR/.crontab.merged"
 trap 'rm -f "$MERGED"' EXIT
 
-cat "$PROJECT_DIR/scripts/crontab" > "$MERGED"
+# The compose services this machine runs, for the `# when:` lines. Unreadable config keeps every
+# job, which is what this did before the lines existed.
+active=$(cd "$PROJECT_DIR" && COMPOSE_ENV_FILES=versions.env,.env docker compose config --services 2>/dev/null || echo '*')
+
+awk -v dir="$PROJECT_DIR" -v active="$active" '
+    BEGIN { n = split(active, list, "\n"); for (i = 1; i <= n; i++) on[list[i]] = 1 }
+    /^# when: / {
+        need = substr($0, 9)
+        if (need ~ /^file /) keep = (system("test -e \"" dir "/" substr(need, 6) "\"") == 0)
+        else keep = (on["*"] || on[need])
+        pending = 1
+        next
+    }
+    pending && /^[^#[:space:]]/ { pending = 0; if (!keep) next }
+    !/^#/ { gsub(/@PROJECT_DIR@/, dir) }
+    { print }
+' "$PROJECT_DIR/scripts/crontab" > "$MERGED"
 
 if [[ -f "$SERVICES_DIR/scripts/crontab" ]]; then
     printf '\n' >> "$MERGED"

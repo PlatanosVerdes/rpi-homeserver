@@ -11,10 +11,12 @@
 # maxsize, not just weekly: logrotate runs daily here (logrotate.timer), and apply.log alone
 # gains a few lines every 30 minutes.
 #
+# The @...@ placeholders are this machine's paths and user, filled in by install-logrotate.sh.
+#
 # Dry run: sudo logrotate -d /etc/logrotate.d/rpi-homeserver
 
-/home/raspi/rpi-homeserver/*.log
-/home/raspi/rpi-services/*.log {
+@PROJECT_DIR@/*.log
+@SERVICES_DIR@/*.log {
     weekly
     rotate 4
     maxsize 5M
@@ -23,5 +25,5 @@
     missingok
     notifempty
     copytruncate
-    su raspi raspi
+    su @USER@ @GROUP@
 }
