@@ -48,6 +48,36 @@ FILEBROWSER_VERSION=v2.32.0
       prometheus.probe: "http://filebrowser:80/"
 ```
 
+### A service whose code lives in `services/`
+
+It still gets a compose entry like the one above, with `build:` pointing at its directory **and**
+an `image:` line, and its tag goes in `versions.env` as a value the workflow did not write:
+
+```bash
+# versions.env, under "built here"
+MYTOOL_IMAGE_TAG=unbuilt
+```
+
+```yaml
+  mytool:
+    image: ghcr.io/platanosverdes/rpi-homeserver-mytool:${MYTOOL_IMAGE_TAG}
+    build:
+      context: ./services/mytool
+      args:
+        ALPINE_VERSION: ${MYTOOL_ALPINE_VERSION}   # base image versions, also in versions.env
+```
+
+Nothing else to register. On the merge, the **Service images** workflow sees `unbuilt`, builds the
+image on an arm64 runner, publishes it to GHCR and commits the real tag, and that commit is what the
+Pi deploys: it pulls the image instead of compiling it. Every later change under the directory, or
+to one of its build args in `versions.env`, does the same. Its pull request builds it too, without
+publishing anything.
+
+Leave the `image:` line out and the workflow only checks that it builds; the Pi then builds it
+itself on every change, as everything here used to. Add a `.dockerignore` that lets through only
+what the Dockerfile copies. The whole mechanism, and what it does not do:
+[service-images.md](service-images.md).
+
 > Do NOT add `ports:` for services that go through Caddy — Caddy reaches them by container name over `media-network`. Only add `ports:` if you need direct host access.
 
 When something on the host does need it, such as a script in `scripts/` calling
@@ -166,6 +196,8 @@ docker exec caddy caddy reload --config /etc/caddy/Caddyfile
 - [ ] No `ports:` unless the host needs it (then `127.0.0.1:`), and `host.ports` if on the host network
 - [ ] HTTPS route added (Caddyfile or rpi-services `*.caddy`)
 - [ ] Version pinned in `versions.env`, image referenced as `${SERVICE_VERSION}`
+- [ ] Built from `services/`: `image: ghcr.io/platanosverdes/rpi-homeserver-<name>:${<NAME>_IMAGE_TAG}`
+      beside `build:`, `<NAME>_IMAGE_TAG=unbuilt` in `versions.env`, a `.dockerignore`
 - [ ] Secrets added to `.env` and `.env.example`
 - [ ] Homepage entry added (optional)
 - [ ] Deployed and tested

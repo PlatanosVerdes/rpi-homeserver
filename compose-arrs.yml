@@ -182,6 +182,8 @@ services:
   # acts in the same pass, and is scraped rather than pushing: a wedged loop used to look healthy.
   # DRY_RUN=1 reports what it would change and writes nothing.
   tracker-control:
+    # Built by CI and pulled; build: is only the fallback, see docs/service-images.md.
+    image: ghcr.io/platanosverdes/rpi-homeserver-tracker-control:${TRACKER_CONTROL_IMAGE_TAG}
     build: ./services/tracker-control
     container_name: tracker-control
     restart: unless-stopped
@@ -255,6 +257,7 @@ services:
   # It also asks cross-seed about every torrent as it completes, which is what turns that daemon's
   # once-a-day sweep into something immediate.
   torrent-drop:
+    image: ghcr.io/platanosverdes/rpi-homeserver-torrent-drop:${TORRENT_DROP_IMAGE_TAG}
     build: ./services/torrent-drop
     container_name: torrent-drop
     labels:

@@ -276,6 +276,8 @@ services:
   # See docs/watch-next.md. Never published to the host, so WATCH_NEXT_TOKEN is defence in depth
   # rather than the only thing between it and the internet.
   watch-next:
+    # Built by CI and pulled; build: is only the fallback, see docs/service-images.md.
+    image: ghcr.io/platanosverdes/rpi-homeserver-watch-next:${WATCH_NEXT_IMAGE_TAG}
     build: ./services/watch-next
     container_name: watch-next
     restart: unless-stopped
@@ -293,6 +295,7 @@ services:
 
   # --- subtitle-links: a page listing movies with a downloadable text subtitle, filtered by language ---
   subtitle-links:
+    image: ghcr.io/platanosverdes/rpi-homeserver-subtitle-links:${SUBTITLE_LINKS_IMAGE_TAG}
     build: ./services/subtitle-links
     container_name: subtitle-links
     labels:
@@ -313,6 +316,8 @@ services:
   # pi-metrics works out the plan, scripts/sync/audio-compat.py --file does the conversion; this
   # lists the first and runs the second. Tailnet only, like every page Caddy serves without Access.
   audio-convert:
+    # Built by CI and pulled; build: is only the fallback, see docs/service-images.md.
+    image: ghcr.io/platanosverdes/rpi-homeserver-audio-convert:${AUDIO_CONVERT_IMAGE_TAG}
     build:
       context: ./services/audio-convert
       args:
@@ -356,6 +361,7 @@ services:
   # --- farnsworth: a page that hands an Acestream channel to VLC ---
   # Named for Philo Farnsworth, who built the first working electronic television.
   farnsworth:
+    image: ghcr.io/platanosverdes/rpi-homeserver-farnsworth:${FARNSWORTH_IMAGE_TAG}
     build: ./services/farnsworth
     container_name: farnsworth
     labels:

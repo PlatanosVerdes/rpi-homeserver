@@ -36,8 +36,11 @@ here.
 openssl rand -hex 32              # put it in .env as WATCH_NEXT_TOKEN
 # WATCH_NEXT_MARGIN=3 is the default (also in .env.example); lower it for a tighter margin
 export COMPOSE_ENV_FILES=versions.env,.env
-docker compose up -d --build watch-next tautulli
+docker compose up -d watch-next tautulli
 ```
+
+watch-next's image is built by CI and pulled, not compiled on the Pi
+([service-images.md](service-images.md)).
 
 If Tautulli is new, open `https://tautulli.platanosverdes.com` and run its setup wizard once to
 pair it with Plex (`http://host.docker.internal:32400`).

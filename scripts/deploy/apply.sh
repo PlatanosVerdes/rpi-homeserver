@@ -195,13 +195,17 @@ render_grafana_alerting() {
     sudo chmod 600 "$dst/contact-points.yml"
 }
 
-# The services whose image has to be built again, from the changed paths on stdin: a service
-# whose local build context holds a changed file, or every built service when versions.env or a
-# compose file changed (remote contexts only move with those). Read from compose itself so neither
-# repo keeps a list. Building only these matters because a rebuilt image recreates its container,
-# and Caddy's recreate cuts every site for a route change that `caddy reload` applies on its own.
-# "*" means all of them; empty, none.
-services_to_build() {
+# What each service compose builds needs this pass, from the changed paths on stdin, one per line:
+#   pull <service> <image>  published by CI (docs/service-images.md): pulled if the pinned tag is not
+#                           here yet, never built, so a source push changes nothing until CI pins it
+#   build <service>         built on this Pi: its local build context holds a changed file, or
+#                           versions.env or a compose file changed (remote contexts only move with those)
+#   config                  versions.env or a compose file changed, so `up` has something to apply
+# "all" as the argument builds every service of the second kind; DEPLOY_BUILD_LOCAL=1 treats the
+# first kind as the second. Read from compose itself so neither repo keeps a list. A recreate cuts
+# what the container was serving, Caddy's every site among them, so only these may change an image.
+# A lone "*" means the config was unreadable: build everything.
+image_plan() {
     local config
     config=$(docker compose config --format json 2>/dev/null)
     if [[ -z "$config" ]]; then
@@ -211,7 +215,7 @@ services_to_build() {
         echo '*'
         return
     fi
-    CHANGED=$(cat) python3 -c '
+    CHANGED=$(cat) ALL="${1:-}" LOCAL="${DEPLOY_BUILD_LOCAL:-}" python3 -c '
 import json, os, re, sys
 try:
     config = json.load(sys.stdin)
@@ -220,20 +224,28 @@ except Exception:
     sys.exit(0)
 changed = [line for line in os.environ["CHANGED"].splitlines() if line]
 everything = any(re.match(r"(versions\.env|docker-compose\.yml|compose-[^/]*\.yml)$", path) for path in changed)
+if everything:
+    print("config")
+everything = everything or os.environ["ALL"] == "all"
 root = os.getcwd()
 for name, service in sorted((config.get("services") or {}).items()):
     context = (service.get("build") or {}).get("context")
     if not context:
         continue
+    image = service.get("image") or ""
+    registry = image.split("/")[0] if "/" in image else ""
+    if ("." in registry or ":" in registry) and os.environ["LOCAL"] != "1":
+        print("pull", name, image)
+        continue
     if everything:
-        print(name)
+        print("build", name)
         continue
     if "://" in context:
         continue
     relative = os.path.relpath(context, root).rstrip("/") + "/"
     if not relative.startswith("..") and any(path.startswith(relative) for path in changed):
-        print(name)
-' <<<"$config" | tr '\n' ' ' | sed 's/ $//'
+        print("build", name)
+' <<<"$config"
 }
 
 deploy_repo() {
@@ -423,32 +435,64 @@ for svc in (doc.get("services") or {}).values():
     (( attempts > 0 && attempts <= BUILD_RETRIES )) && retry=1
 
     if [ "$before" != "$after" ] || [[ -n "$retry" ]]; then
-        # Build only what changed, then `up` without `--build`: `--build` recreates every locally
-        # built container even when its image is identical, and a recreate cuts what it was serving:
-        # Caddy's live connections, the stream Jellyfin is reading from bifrost. A retry rebuilds
-        # everything: a build that fails recreates nothing, so there is nothing to cut until it works.
-        local to_build
+        # Pull or build only what changed, then `up` without `--build`: `--build` recreates every
+        # locally built container even when its image is identical, and a recreate cuts what it was
+        # serving: Caddy's live connections, the stream Jellyfin is reading from bifrost. A retry
+        # rebuilds everything: a build that fails recreates nothing, so there is nothing to cut until it works.
+        local plan kind svc image config_changed="" build_all=""
+        local to_pull=() to_build=()
+        local -A image_of=()
         if [[ -n "$retry" ]]; then
-            to_build='*'
+            plan=$(image_plan all </dev/null)
             log "[$label] The last build failed and no image was recreated; retrying it (attempt $((attempts + 1)) of $((BUILD_RETRIES + 1)))."
         else
-            to_build=$(git diff --name-only "$before" "$after" | services_to_build)
+            plan=$(git diff --name-only "$before" "$after" | image_plan)
         fi
-        if [[ -z "$to_build" ]]; then
+        while read -r kind svc image; do
+            case "$kind" in
+                '*') build_all=1 ;;
+                config) config_changed=1 ;;
+                build) to_build+=("$svc") ;;
+                # Tags are immutable, so one already here is the one pinned: no registry round trip.
+                pull) docker image inspect "$image" >/dev/null 2>&1 || { to_pull+=("$svc"); image_of[$svc]=$image; } ;;
+            esac
+        done <<<"$plan"
+
+        if [[ -z "$build_all" && ${#to_pull[@]} -eq 0 && ${#to_build[@]} -eq 0 ]]; then
+            if [[ -n "$config_changed" ]]; then
+                log "[$label] Compose or versions.env changed, applying..."
+                ensure_up "$label" || return 1
+                rm -f "$failed_file"
+                return 0  # changed
+            fi
             log "[$label] Nothing an image is built from changed, skipping rebuild..."
             ensure_up "$label" || return 1
+            # A retry can find nothing left to do: the image it was owed arrived some other way.
+            rm -f "$failed_file"
             return 2  # no-op, nothing to rebuild
         fi
 
-        local build_args=()
-        if [[ "$to_build" == '*' ]]; then
-            log "[$label] Changes detected, rebuilding every image..."
-        else
-            read -ra build_args <<<"$to_build"
-            log "[$label] Changes detected, rebuilding: $to_build"
+        if (( ${#to_pull[@]} )); then
+            log "[$label] New images pinned, pulling: ${to_pull[*]}"
+            stream_logged "$label" docker compose pull "${to_pull[@]}" || true
+            # Checked image by image: compose's exit status says something failed, not what.
+            for svc in "${to_pull[@]}"; do
+                if ! docker image inspect "${image_of[$svc]}" >/dev/null 2>&1; then
+                    log "[$label] WARNING: could not pull ${image_of[$svc]}, building $svc here instead"
+                    to_build+=("$svc")
+                fi
+            done
         fi
-        if ! stream_logged "$label" docker compose build "${build_args[@]}" ||
-            ! stream_logged "$label" docker compose up -d --remove-orphans; then
+
+        local ok=1
+        if [[ -n "$build_all" ]]; then
+            log "[$label] Changes detected, rebuilding every image..."
+            stream_logged "$label" docker compose build || ok=""
+        elif (( ${#to_build[@]} )); then
+            log "[$label] Changes detected, rebuilding: ${to_build[*]}"
+            stream_logged "$label" docker compose build "${to_build[@]}" || ok=""
+        fi
+        if [[ -z "$ok" ]] || ! stream_logged "$label" docker compose up -d --remove-orphans; then
             attempts=$((attempts + 1))
             printf '%s\n' "$attempts" > "$failed_file"
             log "[$label] Docker Compose failed ($attempts in a row)."
@@ -539,8 +583,8 @@ if [[ ! -f "$PRUNE_MARKER" ]] || find "$PRUNE_MARKER" -mmin +1380 -print 2>/dev/
     # No sudo: the deploy user is in the docker group, and one less sudo is one less thing
     # that breaks depending on who invoked the script
     docker image prune -f > /dev/null
-    # `image prune` does not touch the build cache, and every push rebuilds ten local
-    # services into it. A week is kept so the next deploy still hits warm layers.
+    # `image prune` does not touch the build cache, which every build made on this Pi lands in.
+    # A week is kept so the next deploy still hits warm layers.
     log "Cleaning up build cache older than a week (daily)..."
     docker builder prune -f --filter until=168h > /dev/null
     touch "$PRUNE_MARKER"
