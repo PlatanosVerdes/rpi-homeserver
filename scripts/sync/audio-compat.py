@@ -95,8 +95,15 @@ FFPROBE_NAMES = {"dca": "dts"}
 # A recorded file that needs nothing is reported once, the night after it played, not every night.
 RECENT_SECONDS = 24 * 3600
 
-AC3_BITRATE = "640k"
-AC3_MAX_CHANNELS = 6
+# What --target can ask for. The nightly pass always adds TARGET: AC3 is the one every TV decodes.
+TARGETS = {
+    "ac3": {"codec": "ac3", "bitrate": "640k", "max_channels": 6},
+    "eac3": {"codec": "eac3", "bitrate": "640k", "max_channels": 6},
+    "aac": {"codec": "aac", "bitrate": "256k", "max_channels": 2},
+}
+AC3_BITRATE = TARGETS["ac3"]["bitrate"]
+AC3_MAX_CHANNELS = TARGETS["ac3"]["max_channels"]
+LAYOUTS = {1: "mono", 2: "stereo", 6: "5.1", 8: "7.1"}
 MAX_PER_RUN = 2
 FFPROBE_TIMEOUT = 60
 # 20x realtime measured on this Pi, so a long film lands near ten minutes.
@@ -340,8 +347,14 @@ def run_ffmpeg(cmd, on_progress):
     return None
 
 
-def remux(src, dst, info, source_position, channels, workdir, on_progress=None):
-    """Prepend an AC3 track built from one existing track, copying everything else untouched."""
+def target_title(target, channels):
+    out = min(channels, TARGETS[target]["max_channels"])
+    return f"{target.upper()} {LAYOUTS.get(out, f'{out}ch')} (compatible TV)"
+
+
+def remux(src, dst, info, source_position, channels, workdir, on_progress=None, target=TARGET):
+    """Prepend a target track built from one existing track, copying everything else untouched."""
+    spec = TARGETS[target]
     covers, failure = cover_args(src, info, dst, workdir)
     if failure:
         return failure
@@ -351,13 +364,13 @@ def remux(src, dst, info, source_position, channels, workdir, on_progress=None):
         "-map", "0:V", "-map", f"0:a:{source_position}", "-map", "0:a",
         "-map", "0:s?", "-map", "0:t?", *covers,
         "-c:v", "copy", "-c:s", "copy", "-c:t", "copy", "-c:a", "copy",
-        "-c:a:0", "ac3", "-b:a:0", AC3_BITRATE,
+        "-c:a:0", spec["codec"], "-b:a:0", spec["bitrate"],
     ]
-    if channels > AC3_MAX_CHANNELS:
-        cmd += ["-ac:a:0", str(AC3_MAX_CHANNELS)]
+    if channels > spec["max_channels"]:
+        cmd += ["-ac:a:0", str(spec["max_channels"])]
     cmd += [
         "-disposition:a", "0", "-disposition:a:0", "default",
-        "-metadata:s:a:0", "title=AC3 5.1 (compatible TV)",
+        "-metadata:s:a:0", f"title={target_title(target, channels)}",
         str(dst),
     ]
     return run_ffmpeg(cmd, on_progress)
@@ -367,7 +380,7 @@ def kind(stream):
     return "cover" if is_cover(stream) else stream.get("codec_type")
 
 
-def verify(src_info, dst):
+def verify(src_info, dst, target=TARGET):
     """Reject the new file unless it carries the whole of the old one plus one audio track."""
     info = probe(dst)
     if info is None:
@@ -388,8 +401,8 @@ def verify(src_info, dst):
         if now != expected:
             return f"{wanted} streams: {was} -> {now}, expected {expected}"
 
-    if audio_streams(info)[0].get("codec_name") != "ac3":
-        return "first audio track is not the new AC3"
+    if audio_streams(info)[0].get("codec_name") != TARGETS[target]["codec"]:
+        return f"first audio track is not the new {target.upper()}"
     return None
 
 
@@ -458,7 +471,7 @@ def record(mode, path, outcome):
         print(f"{HISTORY}: {err}", file=sys.stderr)
 
 
-def convert(path, info, position, mode, on_progress=None):
+def convert(path, info, position, mode, on_progress=None, target=TARGET):
     """Remux, verify and swap one file in. Returns the outcome written to the history."""
     tracks = audio_streams(info)
     source = tracks[position]
@@ -469,9 +482,10 @@ def convert(path, info, position, mode, on_progress=None):
 
     started = time.monotonic()
     with tempfile.TemporaryDirectory(dir=path.parent, prefix=".audio-compat.") as workdir:
-        failure = remux(path, tmp, info, position, channels, workdir, on_progress) or verify(info, tmp)
+        failure = (remux(path, tmp, info, position, channels, workdir, on_progress, target)
+                   or verify(info, tmp, target))
     seconds = time.monotonic() - started
-    outcome = {"source_position": position, "source_codec": source.get("codec_name"),
+    outcome = {"source_position": position, "source_codec": source.get("codec_name"), "target": target,
                "duration": duration, "seconds": round(seconds, 1),
                "speed": round(duration / seconds, 2) if seconds > 0 and duration > 0 else None}
     if failure:
@@ -581,7 +595,7 @@ def resolve(given):
     return library_path(given) or path
 
 
-def convert_file(given, machine, allow_hardlinked, track=None):
+def convert_file(given, machine, allow_hardlinked, track=None, target=TARGET):
     out = Reporter(machine)
     path = resolve(given)
     if not path.is_file():
@@ -616,16 +630,57 @@ def convert_file(given, machine, allow_hardlinked, track=None):
                  source={"position": position, "index": tracks[position].get("index"),
                          "codec": tracks[position].get("codec_name"),
                          "channels": tracks[position].get("channels"),
-                         "language": tag(tracks[position], "language")})
+                         "language": tag(tracks[position], "language")}, target=target)
         holding(path)
-        failure, outcome = convert(path, info, position, "app", out.progress(duration, frame_rate(info)))
+        failure, outcome = convert(path, info, position, "app", out.progress(duration, frame_rate(info)), target)
     if failure:
         return out.failed(path, failure)
     if machine:
         out.emit("done", **outcome)
     else:
-        print(f"{path.name}: added AC3 from track {outcome['source_position']}, old file kept as .original")
+        print(f"{path.name}: added {target.upper()} from track {outcome['source_position']}, "
+              f"old file kept as .original")
     return 0
+
+
+def scan():
+    """Every library file the nightly pass would convert, shaped like a pi-metrics ledger entry.
+
+    services/audio-convert lists these under the files a client actually had re-encoded, so the
+    rule that picks them stays here and the page never has a second copy of it.
+    """
+    incompatible = incompatible_codecs(load_ledger())
+    bitrate = int(AC3_BITRATE.rstrip("k"))
+    found = []
+    for path in candidates():
+        info = probe(path)
+        if info is None:
+            continue
+        position, why_not = assess(info, incompatible)
+        if why_not:
+            continue
+        main = audio_streams(info)[position]
+        duration = float(info.get("format", {}).get("duration") or 0)
+        relative = path.relative_to(DATA_ROOT)
+        title = path.parent.name if relative.parts[0] == "films" else path.stem
+        channels = int(main.get("channels") or AC3_MAX_CHANNELS)
+        found.append({
+            "path": str(path), "library_path": relative.as_posix(), "title": title,
+            "codec": main.get("codec_name"), "cause": "library", "actionable": True, "duration": duration,
+            "plan": {
+                "source": {"position": position, "codec": main.get("codec_name"),
+                           "language": tag(main, "language"), "channels": channels,
+                           "default": bool(main.get("disposition", {}).get("default")),
+                           "title": tag(main, "title") or ""},
+                "target_codec": TARGET, "target_bitrate_kbps": bitrate,
+                "target_channels": min(channels, AC3_MAX_CHANNELS),
+                "extra_bytes": int(bitrate * 1000 / 8 * duration),
+            },
+        })
+    targets = {name: {"codec": spec["codec"], "bitrate_kbps": int(spec["bitrate"].rstrip("k")),
+                      "max_channels": spec["max_channels"]} for name, spec in TARGETS.items()}
+    json.dump({"time": int(time.time()), "files": found, "targets": targets, "default_target": TARGET}, sys.stdout)
+    print()
 
 
 if __name__ == "__main__":
@@ -633,11 +688,19 @@ if __name__ == "__main__":
     parser.add_argument("--file", help="convert this one file instead of the nightly pass")
     parser.add_argument("--progress", action="store_true", help="with --file: JSON lines on stdout")
     parser.add_argument("--allow-hardlinked", action="store_true", help="with --file: convert a seeding file")
+    parser.add_argument("--target", choices=sorted(TARGETS), default=TARGET,
+                        help="with --file: the codec of the added track (default %(default)s)")
+    parser.add_argument("--scan", action="store_true", help="list, as JSON, the files the nightly pass would "
+                                                              "convert; converts nothing")
     parser.add_argument("--track", type=int, help="with --file: the audio track (0:a:N) the client played, "
                                                    "instead of the default one")
     args = parser.parse_args()
+    if args.scan:
+        if args.file:
+            parser.error("--scan lists the whole library; it does not take --file")
+        sys.exit(scan())
     if args.file:
-        sys.exit(convert_file(args.file, args.progress, args.allow_hardlinked, args.track))
-    if args.progress or args.allow_hardlinked or args.track is not None:
-        parser.error("--progress, --allow-hardlinked and --track only apply with --file")
+        sys.exit(convert_file(args.file, args.progress, args.allow_hardlinked, args.track, args.target))
+    if args.progress or args.allow_hardlinked or args.track is not None or args.target != TARGET:
+        parser.error("--progress, --allow-hardlinked, --track and --target only apply with --file")
     main()

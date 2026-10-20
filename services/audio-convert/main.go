@@ -48,6 +48,10 @@ type server struct {
 	running *progress
 	waiting map[string]any
 	wake    chan struct{}
+
+	scanEvery time.Duration
+	rescan    chan struct{}
+	library   libraryScan
 }
 
 func newServer() *server {
@@ -64,7 +68,16 @@ func newServer() *server {
 		retry:      30 * time.Second,
 		results:    map[string]outcome{},
 		wake:       make(chan struct{}, 1),
+		scanEvery:  scanInterval(),
+		rescan:     make(chan struct{}, 1),
 	}
+}
+
+func scanInterval() time.Duration {
+	if d, err := time.ParseDuration(os.Getenv("SCAN_INTERVAL")); err == nil && d > 0 {
+		return d
+	}
+	return 6 * time.Hour
 }
 
 func main() {
@@ -73,6 +86,7 @@ func main() {
 		log.Fatalf("audio-convert: %v", err)
 	}
 	s.load()
+	s.loadScan()
 
 	http.HandleFunc("/", s.index)
 	http.HandleFunc("/icon.svg", icon)
@@ -81,6 +95,7 @@ func main() {
 	http.HandleFunc("/api/cancel", s.cancel)
 
 	go s.worker()
+	go s.scanner()
 
 	log.Printf("audio-convert: %s, ledger %s, library %s", listenAddr, s.ledgerFile, s.dataRoot)
 	log.Fatal(http.ListenAndServe(listenAddr, nil))
@@ -174,6 +189,12 @@ func (s *server) state(w http.ResponseWriter, r *http.Request) {
 	history, _ := readHistory(s.history)
 	speed := averageSpeed(history)
 	listed := s.items(files, history, speed)
+	scanned, libraryOnly := s.libraryFiles(files)
+	library := map[string]any{"time": scanned.Time, "items": s.items(libraryOnly, history, speed),
+		"targets": scanned.Targets, "default_target": scanned.DefaultTarget}
+	if scanned.Error != "" {
+		library["error"] = scanned.Error
+	}
 
 	recent := make([]historyEntry, 0, historyShown)
 	for i := len(history) - 1; i >= 0 && len(recent) < historyShown; i-- {
@@ -205,6 +226,7 @@ func (s *server) state(w http.ResponseWriter, r *http.Request) {
 
 	payload := map[string]any{
 		"items":   listed,
+		"library": library,
 		"queue":   queue,
 		"running": runningView,
 		"holder":  holder,
@@ -226,13 +248,21 @@ func (s *server) play(w http.ResponseWriter, r *http.Request) {
 	}
 	library := strings.TrimSpace(r.FormValue("library_path"))
 	allowHardlinked := r.FormValue("allow_hardlinked") != ""
+	chosen := strings.TrimSpace(r.FormValue("target"))
+	if chosen != "" && !s.validTarget(chosen) {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "unknown target codec " + chosen})
+		return
+	}
 
-	// Only what pi-metrics listed as fixable can be queued, so this is no way to remux any path.
+	// Only what pi-metrics listed as fixable, or the library scan found, can be queued, so this is
+	// no way to remux any path.
 	files, err := readLedger(s.ledgerFile)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
 	}
+	_, scanned := s.libraryFiles(files)
+	files = append(files, scanned...)
 	i := slices.IndexFunc(files, func(f ledgerFile) bool { return f.Library == library })
 	if i < 0 || !files[i].Actionable {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "that file is not listed as fixable"})
@@ -260,7 +290,7 @@ func (s *server) play(w http.ResponseWriter, r *http.Request) {
 	if title == "" {
 		title = filepath.Base(full)
 	}
-	queued := job{Library: library, Title: title, AllowHardlinked: allowHardlinked, Added: time.Now().Unix()}
+	queued := job{Library: library, Title: title, AllowHardlinked: allowHardlinked, Target: chosen, Added: time.Now().Unix()}
 	if p := files[i].Plan; p != nil {
 		position := p.Source.Position
 		queued.Track = &position

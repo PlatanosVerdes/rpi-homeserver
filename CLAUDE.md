@@ -85,7 +85,8 @@ scripts/                    Operational scripts, grouped by what they do
     qbit-config.sh          qBittorrent queue limits, upload cap and BT port
     jellyfin-guide.sh       Jellyfin's XMLTV guide -> the copy bifrost cuts to our channels
     audio-compat.py         Nightly: an AC3 track for files whose audio codec a client refused.
-                            --file converts one, and is what audio-convert runs
+                            --file converts one, and is what audio-convert runs; --scan lists
+                            what the nightly pass would convert
 
   ci/                       Run by GitHub Actions
     ports.py                Host ports both repos' containers take; fails on a clash

@@ -68,8 +68,20 @@ const pageHTML = `<!doctype html>
               border-bottom:1px solid var(--line); display:flex; gap:.5rem; }
   .group h2 .n { color:var(--faint); }
   .empty { color:var(--faint); padding:.75rem .85rem; margin:0; }
+  details.group > summary { list-style:none; cursor:pointer; padding:.55rem .85rem; font-size:12px; font-weight:500;
+                            color:var(--dim); display:flex; gap:.5rem; align-items:center; user-select:none; }
+  details.group > summary::-webkit-details-marker { display:none; }
+  details.group > summary::before { content:""; width:6px; height:6px; border-right:1.5px solid var(--faint);
+                                    border-bottom:1.5px solid var(--faint); transform:rotate(-45deg); margin:0 .2rem 0 .1rem;
+                                    transition:transform .15s; }
+  details.group[open] > summary::before { transform:rotate(45deg); }
+  details.group[open] > summary { border-bottom:1px solid var(--line); }
+  details.group > summary:hover { color:var(--ink); }
+  details.group > summary .n { color:var(--faint); }
+  details.group > summary .when { margin-left:auto; color:var(--faint); font-weight:400; }
+  #library > .row:first-child { border-top:0; }
 
-  .row { display:grid; grid-template-columns:14px minmax(0,1fr) 9.5rem 5.5rem 5.5rem 6rem; align-items:center;
+  .row { display:grid; grid-template-columns:14px minmax(0,1fr) 10.5rem 5.5rem 5.5rem 6rem; align-items:center;
          gap:.75rem; min-height:2.6rem; padding:0 .85rem; border-top:1px solid var(--line); cursor:default; }
   #list > .row:first-child, #history > .row:first-child { border-top:0; }
   .row.click { cursor:pointer; }
@@ -86,11 +98,18 @@ const pageHTML = `<!doctype html>
   .span2 { grid-column:4 / 6; }
   .span3 { grid-column:3 / 6; }
   .span4 { grid-column:3 / 7; }
+  .rest { grid-column:4 / 7; }
 
   .meta { display:contents; }
   .bar { height:4px; background:var(--line); border-radius:2px; overflow:hidden; }
   .bar i { display:block; height:100%; background:var(--accent); transition:width 1s linear; }
 
+  .change { display:flex; align-items:center; gap:.35rem; }
+  select { font:inherit; color:var(--ink); background:transparent; border:1px solid transparent; border-radius:5px;
+           padding:.15rem .2rem; cursor:pointer; }
+  select:hover { border-color:var(--line); background:var(--hover); }
+  select:focus { outline:none; }
+  select:focus-visible { border-color:var(--faint); background:var(--hover); }
   button { justify-self:end; font:500 12px/1 inherit; font-family:inherit; color:var(--ink); background:var(--hover);
            border:1px solid var(--line); border-radius:6px; padding:.4rem .7rem; cursor:pointer; }
   button:hover { border-color:var(--faint); }
@@ -138,10 +157,16 @@ const pageHTML = `<!doctype html>
     <div id="history"></div>
   </div>
 
+  <details class="group" id="library-group">
+    <summary>In the library <span class="n" id="library-count"></span><span class="when" id="library-when"></span></summary>
+    <div id="library"></div>
+  </details>
+
   <footer>
     Runs <code>audio-compat.py --file</code>, the same script as the 01:30 pass: an AC3 track goes first, every
     other track stays, and the previous file is kept beside it as <code>.original</code>. One at a time; the
-    queue waits while the nightly pass works. Click a file for its details.
+    queue waits while the nightly pass works. "In the library" lists what the same rule would convert before
+    any client has played it. Click a file for its details.
   </footer>
 </div>
 
@@ -199,8 +224,42 @@ function post(url, data) {
   return fetch(url, { method: "POST", body: body }).then(function (r) { return r.json(); });
 }
 
-function play(it, button) {
+// What --target takes, from audio-compat.py's last library scan; empty until the first one.
+var targets = {}, defaultTarget = "ac3", chosen = {};
+
+function sourceChannels(it) { return it.plan && it.plan.source.channels ? it.plan.source.channels : 6; }
+
+function targetLabel(name, it) {
+  var spec = targets[name];
+  return name.toUpperCase() + " " + channels(Math.min(sourceChannels(it), spec ? spec.max_channels : 6));
+}
+
+// A target in the codec the client refused would be re-encoded all the same.
+function usable(name, it) { return !targets[name] || targets[name].codec !== codecName(it.codec).toLowerCase(); }
+
+// The default first, then the most channels: JSON objects keep no order once Go has sorted the keys.
+function targetNames() {
+  return Object.keys(targets).sort(function (a, b) {
+    return (b === defaultTarget) - (a === defaultTarget) ||
+      targets[b].max_channels - targets[a].max_channels || (a < b ? -1 : 1);
+  });
+}
+
+function pick(it) {
+  var names = targetNames(), want = chosen[it.library_path] || defaultTarget;
+  if (usable(want, it)) return want;
+  return names.filter(function (n) { return usable(n, it); })[0] || want;
+}
+
+function extraBytes(it, name) {
+  var spec = targets[name];
+  if (spec && it.duration) return spec.bitrate_kbps * 1000 / 8 * it.duration;
+  return it.plan ? it.plan.extra_bytes : 0;
+}
+
+function play(it, button, target) {
   var data = { library_path: it.library_path };
+  if (target && targets[target]) data.target = target;
   if (it.links > 1) {
     var ok = confirm((it.title || it.library_path) + " is still seeding (hardlinked to the torrent).\n\n" +
       "Converting it keeps the current file as .original, still linked to the torrent, so the torrent is unaffected. " +
@@ -227,8 +286,15 @@ var opened = {};
 function details(it) {
   var more = el("div", "more" + (opened[it.library_path] ? " open" : ""));
   var lines = [];
-  var verb = it.cause === "codec" ? " refused " : " had its audio re-encoded from ";
-  lines.push([it.client + " in " + appName(it.app) + verb, codecName(it.codec), " on " + when(it.seen) + "."]);
+  if (it.cause === "library") {
+    lines.push(["No client has played it yet. Its main track is ", codecName(it.codec),
+      ", which the nightly pass treats as one the TV cannot play."]);
+    lines.push(["", it.links > 1 ? "The nightly pass waits until it stops seeding" :
+      "The nightly pass converts it on its own, two files a night", "; Convert does it now."]);
+  } else {
+    var verb = it.cause === "codec" ? " refused " : " had its audio re-encoded from ";
+    lines.push([it.client + " in " + appName(it.app) + verb, codecName(it.codec), " on " + when(it.seen) + "."]);
+  }
   if (!it.actionable && it.reason) lines.push(["", it.reason.charAt(0).toUpperCase() + it.reason.slice(1) + ".", ""]);
   if (it.plan) {
     var p = it.plan;
@@ -272,8 +338,27 @@ function item(it, state) {
     meta.appendChild(el("div", "c span4", it.reason_code === "no_direct_play" || it.cause === "no_direct_play"
       ? "Client setting: turn on Force Direct Play" : (it.reason || "Nothing to fix in the file")));
   } else {
-    var change = codecName(it.codec) + " → " + (it.plan ? it.plan.target_codec.toUpperCase() + " " + channels(it.plan.target_channels) : "AC3");
-    meta.appendChild(el("div", "c", change));
+    var target = pick(it), names = targetNames();
+    var choosable = names.length && (it.status === "ready" || it.status === "failed");
+    var change = el("div", "c change", codecName(it.codec) + " → ");
+    if (choosable) {
+      var select = el("select");
+      select.setAttribute("aria-label", "Codec of the added track");
+      names.forEach(function (n) {
+        var option = el("option", "", targetLabel(n, it) + (usable(n, it) ? "" : " (refused)"));
+        option.value = n;
+        option.disabled = !usable(n, it);
+        select.appendChild(option);
+      });
+      select.value = target;
+      select.onclick = function (e) { e.stopPropagation(); };
+      select.onchange = function () { chosen[it.library_path] = select.value; select.blur(); refresh(); };
+      change.appendChild(select);
+    } else {
+      change.appendChild(document.createTextNode(names.length ? targetLabel(target, it) :
+        it.plan ? it.plan.target_codec.toUpperCase() + " " + channels(it.plan.target_channels) : "AC3"));
+    }
+    meta.appendChild(change);
     if (running) {
       var bar = el("div", "bar"), fill = el("i");
       fill.style.width = progress(state).toFixed(1) + "%";
@@ -281,11 +366,12 @@ function item(it, state) {
       meta.appendChild(bar);
       meta.appendChild(el("div", "c r", Math.round(progress(state)) + "%, " + clock(state.running.eta)));
     } else if (it.status === "done") {
-      meta.appendChild(el("div", "c span3", "Converted " + when(it.outcome.time) + (it.outcome.mode === "nightly" ? " by the nightly pass" : "")));
+      meta.appendChild(el("div", "c rest", "Converted " + when(it.outcome.time) + (it.outcome.mode === "nightly" ? " by the nightly pass" : "")));
     } else if (it.status === "missing") {
-      meta.appendChild(el("div", "c span3", "File replaced since"));
+      meta.appendChild(el("div", "c rest", "File replaced since"));
     } else {
-      meta.appendChild(el("div", "c r", it.plan ? "+" + human(it.plan.extra_bytes) : ""));
+      var extra = extraBytes(it, target);
+      meta.appendChild(el("div", "c r", extra ? "+" + human(extra) : ""));
       meta.appendChild(el("div", "c r", it.status === "queued" ? "queued" :
         it.status === "failed" ? "failed" : it.duration ? "~" + clock(it.eta) : ""));
     }
@@ -293,16 +379,17 @@ function item(it, state) {
 
   var button = null;
   if (it.actionable && (it.status === "ready" || it.status === "failed")) {
-    button = el("button", it.status === "ready" ? "primary" : "", it.status === "ready" ? "Convert" : "Retry");
-    button.disabled = !it.enough_space;
-    if (!it.enough_space) button.title = "Not enough free space";
-    button.onclick = function (e) { e.stopPropagation(); play(it, button); };
+    var go = el("button", it.status === "ready" ? "primary" : "", it.status === "ready" ? "Convert" : "Retry");
+    go.disabled = !it.enough_space;
+    if (!it.enough_space) go.title = "Not enough free space";
+    go.onclick = function (e) { e.stopPropagation(); play(it, go, select ? select.value : ""); };
+    button = go;
   } else if (it.status === "queued") {
     button = el("button", "", "Remove");
     button.onclick = function (e) { e.stopPropagation(); post("/api/cancel", { library_path: it.library_path }).then(refresh); };
   }
   if (button) row.appendChild(button);
-  else if (it.actionable) row.appendChild(el("span"));
+  else if (running) row.appendChild(el("span"));
 
   var more = details(it);
   row.onclick = function () {
@@ -337,6 +424,8 @@ var timer = null;
 function refresh() {
   return fetch("/api/state").then(function (r) { return r.json(); }).then(function (d) {
     if (d.error) say(d.error);
+    targets = (d.library && d.library.targets) || {};
+    defaultTarget = (d.library && d.library.default_target) || "ac3";
     var facts = document.getElementById("facts");
     facts.textContent = "";
     if (d.holder && !d.running) {
@@ -353,6 +442,17 @@ function refresh() {
     document.getElementById("count").textContent = todo ? todo + " to convert" : "";
     if (!items.length) list.appendChild(el("p", "empty", "Nothing yet. A file shows up here when a client has its audio re-encoded."));
     else items.forEach(function (it) { list.appendChild(item(it, d)); });
+
+    var lib = d.library || {}, libItems = lib.items || [];
+    var libList = document.getElementById("library");
+    libList.textContent = "";
+    var pendingLib = libItems.filter(function (it) { return it.status !== "done" && it.status !== "missing"; }).length;
+    document.getElementById("library-count").textContent = pendingLib ? pendingLib + " would be converted" : "";
+    document.getElementById("library-when").textContent = lib.error ? lib.error :
+      lib.time ? "checked " + when(lib.time) : "not checked yet";
+    if (!libItems.length) libList.appendChild(el("p", "empty", lib.time ? "Every file in the library has audio the TV plays." :
+      "The first check of the library runs when the app starts."));
+    else libItems.forEach(function (it) { libList.appendChild(item(it, d)); });
 
     var hist = document.getElementById("history");
     hist.textContent = "";
