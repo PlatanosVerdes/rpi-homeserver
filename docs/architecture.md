@@ -399,7 +399,7 @@ the action are the same pass, so there is nothing old to act on.
 | :--- | :--- |
 | `setup/install-crontab.sh` | Merges both repos' cron fragments, installs only if it differs, prints the diff |
 | `setup/install-logrotate.sh` | Installs the rotation policy root-owned 0644, because logrotate silently ignores anything else |
-| `recovery/rebuild-service.sh` | Rebuilds one compose service from scratch, by hand |
+| `recovery/rebuild-service.sh` | Rebuilds one compose service from scratch, by hand. For one CI publishes, this is the build-from-source fallback ([service-images.md](service-images.md)) |
 | `recovery/recovery-status.sh` | After a rebuild, the three steps no API can do: Plex claim, Jellyfin wizard, Apple 2FA |
 | `sync/arr-config.sh` | Custom formats then quality profiles, in that order: profiles score formats by name and the id only exists once the format does |
 | `sync/arr-links.sh` | Seerr and Bazarr's connection to the arrs. Bazarr publishes no port, so its call is proxied through the network |

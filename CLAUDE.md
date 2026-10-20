@@ -42,7 +42,9 @@ config/                     Static config files committed to git
   arr/radarr, arr/sonarr    Custom formats + quality profiles, pushed into each app on deploy
                             (scripts/sync/arr-config.sh) — otherwise they only exist in appdata
 
-services/                   Source code for custom services built in this repo
+services/                   Source code for custom services built in this repo. CI builds each
+                            one compose builds and publishes it to GHCR; the Pi pulls it
+                            (docs/service-images.md)
   caddy/                    Custom Caddy image with the Cloudflare DNS plugin. Not next to the
                             Caddyfile: a build context there made every route change a rebuild
   tailscale-metrics/        Go service, Dockerized — Tailscale peer metrics for Prometheus
@@ -87,6 +89,7 @@ scripts/                    Operational scripts, grouped by what they do
 
   ci/                       Run by GitHub Actions
     ports.py                Host ports both repos' containers take; fails on a clash
+    service-images.py       Which services/ images are due, and their pins in versions.env
 
   ops/                      Everything else on a schedule
     backup.sh               Daily appdata backup, pushes metrics to Grafana
@@ -97,6 +100,8 @@ scripts/                    Operational scripts, grouped by what they do
     config-export.py        Pulls autobrr's filters and Maintainerr's rules into git; --check on deploy
 
 appdata/                    Persistent container data (NOT in git, lives on disk)
+.github/workflows/          ports.yml (host port clashes), service-images.yml (build services/,
+                            publish, pin), bump-app-versions.yml (pin an app repo's release)
 docs/                       Setup guides
   architecture.md           What talks to what, and what may overwrite which app's config
 ```
@@ -126,15 +131,23 @@ docker compose up -d
    template in git with the secrets in `.env` before Grafana starts. That is this step. It writes
    `config/grafana/alerting/*` into `appdata/grafana-alerting/` with the values filled in, which
    is what Grafana actually mounts. See [docs/alerting.md](docs/alerting.md).
-3. If HEAD changed → `docker compose build` for **only** the services whose local build context
-   holds a changed file (read from compose, so `services/*`), or all of them when `versions.env`
-   or a compose file changed; then `docker compose up -d --remove-orphans` without `--build`.
+3. If HEAD changed → for each service compose builds (read from compose, so `services/*`):
+   - one with a published image (`image: ghcr.io/...:${<NAME>_IMAGE_TAG}` beside its `build:`) is
+     **pulled**, and only when its pinned tag is not on the Pi yet. GitHub Actions builds it and
+     commits the new pin ("Deploy <service> <tag>"); that commit is what deploys it, not the source
+     push. A failed pull falls back to building it here. See [docs/service-images.md](docs/service-images.md).
+   - one without is **built** when its local build context holds a changed file, or when
+     `versions.env` or a compose file changed.
+
+   Then `docker compose up -d --remove-orphans` without `--build`.
    A recreate cuts what that container was serving — Caddy's live connections, the live stream
    Jellyfin is reading from `bifrost` — so only a container whose image actually changed may be
-   recreated. Two things make that hold: `--build` recreates every built container even when its
-   image is identical, and BuildKit's default provenance attestation is timestamped, so a cached
-   rebuild still got a new id; the deploy exports `BUILDX_NO_DEFAULT_ATTESTATIONS=1`. Route
-   changes in `config/caddy/` are applied by `caddy reload`, never a rebuild.
+   recreated. Three things make that hold: a pinned tag moves only when that service's directory or
+   build args changed; `--build` recreates every built container even when its image is identical;
+   and BuildKit's default provenance attestation is timestamped, so a cached rebuild still got a new
+   id, hence the deploy exports `BUILDX_NO_DEFAULT_ATTESTATIONS=1`. Route changes in `config/caddy/`
+   are applied by `caddy reload`, never a rebuild. `DEPLOY_BUILD_LOCAL=1` builds the published
+   services from source on this pass instead, for when CI or GHCR is down.
 4. If no change → `docker compose up -d --remove-orphans` (ensures containers are running)
 5. Installs the merged host crontab (`scripts/setup/install-crontab.sh`)
 6. Converges Radarr/Sonarr's custom formats and quality profiles (`scripts/sync/arr-config.sh`),
@@ -221,6 +234,9 @@ See [docs/add-service.md](docs/add-service.md) for the step-by-step guide. Short
 2. Add HTTPS route to `config/caddy/Caddyfile`
 3. Add DNS record in Pi-hole pointing to `TAILSCALE_IP`
 4. Add to Homepage `config/homepage/services.yaml` (optional)
+5. Built from `services/`? Give it an `image: ghcr.io/platanosverdes/rpi-homeserver-<name>:${<NAME>_IMAGE_TAG}`
+   line beside `build:` and `<NAME>_IMAGE_TAG=unbuilt` in `versions.env`, and CI builds and pins it
+   ([docs/service-images.md](docs/service-images.md))
 
 ---
 
@@ -268,10 +284,9 @@ container name only). Monitors and searches the next `WATCH_NEXT_MARGIN` Sonarr 
 Tautulli or Jellyfin reports one watched, so a season fills in progressively instead of all at
 once. Setup in [docs/watch-next.md](docs/watch-next.md).
 
-Rebuild after Go source changes:
-```bash
-docker compose -f compose-media.yml up -d --build watch-next
-```
+A Go source change deploys once CI has published the image and pinned `WATCH_NEXT_IMAGE_TAG`, a few
+minutes after the push (see [docs/service-images.md](docs/service-images.md)). To build it on the Pi
+instead: `bash scripts/recovery/rebuild-service.sh watch-next`.
 
 ---
 
@@ -398,7 +413,8 @@ All image versions live in a single committed file, **`versions.env`** (the equi
 nothing uses `:latest`. This keeps deploys reproducible and prevents an upstream release from
 silently breaking the stack on the next rebuild. Images with no published version tag
 (aceserve, pihole6_exporter) are pinned by digest; Caddy's version is passed to its Dockerfile
-as a build arg.
+as a build arg. The `*_IMAGE_TAG` lines are the images built from `services/`, and the Service
+images workflow writes them, not a person (docs/service-images.md).
 
 `versions.env` holds only versions (no secrets) so it IS tracked in git (`.gitignore` has a
 `!versions.env` exception to the `*.env` rule).

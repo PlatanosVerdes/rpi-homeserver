@@ -63,7 +63,9 @@ scripts/deploy/apply.sh
    ├─ git pull rpi-homeserver
    ├─ render alerting ......... template (git) + secrets (.env)
    │                            └─► appdata/grafana-alerting/
-   ├─ docker compose build ..... only the services whose build context changed
+   ├─ docker compose pull ...... the services/ images whose pinned tag is new
+   │                              (built by CI: docs/service-images.md)
+   ├─ docker compose build ..... only a built-here service whose build context changed
    │                              (all of them if versions.env or a compose file did)
    ├─ docker compose up -d ..... recreates only what changed
    ├─ git pull rpi-services  ──► docker compose up -d (same rule)
@@ -76,7 +78,9 @@ scripts/deploy/apply.sh
 ```
 
 Details: [docs/deploy-webhook.md](docs/deploy-webhook.md) for the webhook and tunnel,
-[docs/alerting.md](docs/alerting.md) for the alert rules and the dead man's switch.
+[docs/alerting.md](docs/alerting.md) for the alert rules and the dead man's switch,
+[docs/service-images.md](docs/service-images.md) for the images built from `services/`: GitHub
+Actions builds and publishes them, and its "Deploy <service> <tag>" commit is what the Pi pulls.
 
 ---
 
@@ -465,7 +469,7 @@ COMPOSE_PROFILES=essential,acestream
 
 ```
 config/      Static config files (Caddyfile, Prometheus, Grafana dashboards, Homepage)
-services/    Custom services source, one Docker image each
+services/    Custom services source, one Docker image each, built by CI and pulled from GHCR
 scripts/     Operational scripts, grouped by what they do:
   deploy/      apply.sh, the orchestrator the webhook and the cron call
   setup/       host state apply.sh converges on each pass: cron, log rotation, udev
@@ -618,11 +622,12 @@ scrapes it at `tailscale-metrics:9736/metrics` over `media-network`.
 
 It mounts `/var/run/tailscale/tailscaled.sock` read-only to read peer status from tailscaled's
 LocalAPI, and optionally calls the Tailscale control API with `TAILSCALE_API_KEY` to mark which
-peers are approved exit nodes. Nothing to build by hand: compose builds it like every other
-service in `services/`.
+peers are approved exit nodes. Nothing to build by hand: CI builds and publishes it like every
+other service in `services/`, and the deploy pulls it.
 
 ### Auto-Deployment (`scripts/deploy/apply.sh`)
-Pulls latest git changes every 15 minutes and rebuilds only when something changed.
+Pulls latest git changes every 15 minutes and pulls or rebuilds only the images that changed
+(the ones from `services/` are built by CI, see [docs/service-images.md](docs/service-images.md)).
 
 ```bash
 # Cron entry (set up during install)

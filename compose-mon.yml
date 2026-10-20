@@ -218,6 +218,8 @@ services:
   # instead, so its death is visible: a pushed metric outlives the thing that pushed it.
   # Collects in the background and answers the last snapshot, see services/pi-metrics/main.py.
   pi-metrics:
+    # Built by CI and pulled; build: is only the fallback, see docs/service-images.md.
+    image: ghcr.io/platanosverdes/rpi-homeserver-pi-metrics:${PI_METRICS_IMAGE_TAG}
     build: ./services/pi-metrics
     container_name: pi-metrics
     restart: unless-stopped
@@ -303,6 +305,7 @@ services:
   # TAILSCALE_API_KEY is optional and only fills tailscale_peer_is_exit_node. It is an API key, not
   # an auth key: https://login.tailscale.com/admin/settings/keys
   tailscale-metrics:
+    image: ghcr.io/platanosverdes/rpi-homeserver-tailscale-metrics:${TAILSCALE_METRICS_IMAGE_TAG}
     build: ./services/tailscale-metrics
     container_name: tailscale-metrics
     restart: unless-stopped
