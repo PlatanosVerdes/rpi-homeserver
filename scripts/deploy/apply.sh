@@ -36,6 +36,9 @@ LOCK_FILE="$PROJECT_DIR/.deploy.lock"
 BUILD_RETRIES=${DEPLOY_BUILD_RETRIES:-5}
 # A normal run takes a minute and an ARM Go build five, so past this it is stuck, not slow.
 STUCK_AFTER=${DEPLOY_STUCK_AFTER:-2700}
+# BuildKit's default provenance attestation is timestamped, so a fully cached build still got a new
+# image id and `up` recreated the container. Measured 2026-10-20: without it, two builds give one id.
+export BUILDX_NO_DEFAULT_ATTESTATIONS=1
 
 # Append, not truncate: `9>` empties the file on open, wiping the working deploy's pid.
 exec 9>>"$LOCK_FILE"
