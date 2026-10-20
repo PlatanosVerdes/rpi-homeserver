@@ -280,6 +280,20 @@ deploy_repo() {
     fi
     after=$(git rev-parse HEAD 2>/dev/null || echo "none")
 
+    # bash reads this file as it runs, so a pull that changes it keeps executing the old code: #75
+    # deployed with the very rebuild logic it replaced. Start over on the new one, handing it the
+    # pre-pull commit so it still sees what changed. The lock stays held across the exec.
+    if [[ "$label" == "homeserver" ]]; then
+        if [[ -n "${DEPLOY_SELF_BEFORE:-}" ]]; then
+            before=$DEPLOY_SELF_BEFORE
+            unset DEPLOY_SELF_BEFORE
+        elif [[ "$before" != "$after" ]] &&
+            git diff --name-only "$before" "$after" | grep -qx 'scripts/deploy/apply.sh'; then
+            log "[$label] apply.sh itself changed, starting over on the new version"
+            DEPLOY_SELF_BEFORE=$before exec "$0" "${SCRIPT_ARGS[@]}"
+        fi
+    fi
+
     # The Pi keeps deploying happily while commits made here exist nowhere else, and an SD card
     # is the one copy that dies.
     local unpushed
