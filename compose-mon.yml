@@ -166,6 +166,10 @@ services:
       # Every link in a notification is built from the root URL, and Telegram silently refuses to
       # linkify the default localhost one, which reads as a broken alert rather than a missing setting.
       - GF_SERVER_ROOT_URL=https://grafana.platanosverdes.com
+      # The local Prometheus datasource's name, which is what a Node selector shows next to a
+      # companion repo's datasources. Renaming an existing install needs the row renamed first:
+      # provisioning matches by name and refuses a second datasource with the same uid.
+      - GRAFANA_PROMETHEUS_NAME=${GRAFANA_PROMETHEUS_NAME:-Prometheus}
       # Behind Cloudflare Access, users sign in with whatever Access accepts (Google): Grafana
       # reads the token Access adds to every request, creates the user on first visit and gives
       # it Viewer, or GrafanaAdmin to GRAFANA_ADMIN_EMAIL. Without the header (the tailnet, through
