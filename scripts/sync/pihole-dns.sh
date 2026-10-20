@@ -7,6 +7,10 @@
 #
 # Additive only: a hostname is touched only if it was derived from Caddy, and only when its IP is
 # stale. An entry added by hand for something else is never read as ours and never deleted.
+#
+# PIHOLE_DNS_PUBLIC_HOSTS (space separated) are hosts that must resolve to their public record
+# even on the tailnet, e.g. one behind Cloudflare Access that signs you in there: they are not
+# written, and our own entry for them (pointing at TAILSCALE_IP) is removed.
 set -uo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -38,6 +42,18 @@ fi
 
 current=$(curl -sf "$PIHOLE_BASE/config/dns/hosts?sid=$sid" | jq -r '.config.dns.hosts[]? // empty')
 
+public=$(tr ' ' '\n' <<< "${PIHOLE_DNS_PUBLIC_HOSTS:-}" | awk 'NF' | sort -u)
+removed=0
+while IFS= read -r host; do
+    [[ -z "$host" ]] && continue
+    if printf '%s\n' "$current" | awk -v h="$host" -v ip="$TAILSCALE_IP" '$1==ip && $2==h{f=1} END{exit !f}'; then
+        value=$(jq -rn --arg v "$TAILSCALE_IP $host" '$v|@uri')
+        curl -s -o /dev/null -X DELETE "$PIHOLE_BASE/config/dns/hosts/$value?sid=$sid"
+        removed=$((removed + 1))
+    fi
+done <<< "$public"
+[[ -n "$public" ]] && wanted=$(comm -23 <(printf '%s\n' "$wanted") <(printf '%s\n' "$public"))
+
 added=0 updated=0 unchanged=0
 while IFS= read -r host; do
     [[ -z "$host" ]] && continue
@@ -66,4 +82,4 @@ done <<< "$wanted"
 left_alone=$(comm -23 \
     <(printf '%s\n' "$current" | awk 'NF{print $2}' | sort -u) \
     <(printf '%s\n' "$wanted" | sort -u) | grep -c . || true)
-echo "pihole DNS: $added added, $updated re-pointed, $unchanged unchanged, $left_alone unrelated entries left untouched"
+echo "pihole DNS: $added added, $updated re-pointed, $unchanged unchanged, $removed left to public DNS, $left_alone unrelated entries left untouched"
