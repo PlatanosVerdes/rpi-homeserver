@@ -1,7 +1,7 @@
 apiVersion: 1
 
 datasources:
-  - name: Prometheus
+  - name: $GRAFANA_PROMETHEUS_NAME
     uid: prometheus
     type: prometheus
     access: proxy
