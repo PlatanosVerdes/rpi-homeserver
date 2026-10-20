@@ -192,38 +192,45 @@ render_grafana_alerting() {
     sudo chmod 600 "$dst/contact-points.yml"
 }
 
-# The paths that make a rebuild necessary, read from compose itself so neither repo keeps a list:
-# every local build context, plus versions.env and the compose files. Remote contexts are left out
-# on purpose, only versions.env can move those.
-build_triggers() {
-    local config paths triggers
+# The services whose image has to be built again, from the changed paths on stdin: a service
+# whose local build context holds a changed file, or every built service when versions.env or a
+# compose file changed (remote contexts only move with those). Read from compose itself so neither
+# repo keeps a list. Building only these matters because a rebuilt image recreates its container,
+# and Caddy's recreate cuts every site for a route change that `caddy reload` applies on its own.
+# "*" means all of them; empty, none.
+services_to_build() {
+    local config
     config=$(docker compose config --format json 2>/dev/null)
     if [[ -z "$config" ]]; then
         # Unreadable config is worth rebuilding blindly: a needless rebuild costs a restart, a
         # skipped one ships stale code.
-        log "[$label] WARNING: cannot read the compose config, rebuilding to be safe"
-        echo '.*'
+        log "[$label] WARNING: cannot read the compose config, rebuilding to be safe" >&2
+        echo '*'
         return
     fi
-    paths=$(printf '%s' "$config" | python3 -c '
-import json, os, sys
+    CHANGED=$(cat) python3 -c '
+import json, os, re, sys
 try:
     config = json.load(sys.stdin)
 except Exception:
+    print("*")
     sys.exit(0)
+changed = [line for line in os.environ["CHANGED"].splitlines() if line]
+everything = any(re.match(r"(versions\.env|docker-compose\.yml|compose-[^/]*\.yml)$", path) for path in changed)
 root = os.getcwd()
-for service in (config.get("services") or {}).values():
+for name, service in sorted((config.get("services") or {}).items()):
     context = (service.get("build") or {}).get("context")
-    if not context or "://" in context:
+    if not context:
         continue
-    relative = os.path.relpath(context, root)
-    if not relative.startswith(".."):
-        print(relative.rstrip("/") + "/")
-' | sort -u | tr '\n' '|')
-    triggers='versions\.env|docker-compose\.yml|compose-[^/]*\.yml'
-    # Never leave a trailing separator: an empty alternative matches every line.
-    [[ -n "${paths%|}" ]] && triggers="${triggers}|${paths%|}"
-    echo "$triggers"
+    if everything:
+        print(name)
+        continue
+    if "://" in context:
+        continue
+    relative = os.path.relpath(context, root).rstrip("/") + "/"
+    if not relative.startswith("..") and any(path.startswith(relative) for path in changed):
+        print(name)
+' <<<"$config" | tr '\n' ' ' | sed 's/ $//'
 }
 
 deploy_repo() {
@@ -413,27 +420,32 @@ for svc in (doc.get("services") or {}).values():
     (( attempts > 0 && attempts <= BUILD_RETRIES )) && retry=1
 
     if [ "$before" != "$after" ] || [[ -n "$retry" ]]; then
-        # `--build` recreates every locally built container even when its image is identical, and a
-        # recreate cuts what it was serving: Caddy's live connections, the stream Jellyfin is
-        # reading from bifrost. So build only when the diff touches a build input. A retry
-        # is exempt: a build that fails recreates nothing at all, so there is nothing to cut until
-        # the day it works, which is the day it was supposed to.
-        local changed rebuild_when
-        changed=$(git diff --name-only "$before" "$after")
-        rebuild_when=$(build_triggers)
-        if [[ -z "$retry" ]] && [[ -n "$changed" ]] &&
-            ! grep -qE "^(${rebuild_when})" <<<"$changed"; then
+        # Build only what changed, then `up` without `--build`: `--build` recreates every locally
+        # built container even when its image is identical, and a recreate cuts what it was serving:
+        # Caddy's live connections, the stream Jellyfin is reading from bifrost. A retry rebuilds
+        # everything: a build that fails recreates nothing, so there is nothing to cut until it works.
+        local to_build
+        if [[ -n "$retry" ]]; then
+            to_build='*'
+            log "[$label] The last build failed and no image was recreated; retrying it (attempt $((attempts + 1)) of $((BUILD_RETRIES + 1)))."
+        else
+            to_build=$(git diff --name-only "$before" "$after" | services_to_build)
+        fi
+        if [[ -z "$to_build" ]]; then
             log "[$label] Nothing an image is built from changed, skipping rebuild..."
             ensure_up "$label" || return 1
             return 2  # no-op, nothing to rebuild
         fi
 
-        if [[ -n "$retry" ]]; then
-            log "[$label] The last build failed and no image was recreated; retrying it (attempt $((attempts + 1)) of $((BUILD_RETRIES + 1)))."
+        local build_args=()
+        if [[ "$to_build" == '*' ]]; then
+            log "[$label] Changes detected, rebuilding every image..."
         else
-            log "[$label] Changes detected, rebuilding..."
+            read -ra build_args <<<"$to_build"
+            log "[$label] Changes detected, rebuilding: $to_build"
         fi
-        if ! stream_logged "$label" docker compose up -d --build --remove-orphans; then
+        if ! stream_logged "$label" docker compose build "${build_args[@]}" ||
+            ! stream_logged "$label" docker compose up -d --remove-orphans; then
             attempts=$((attempts + 1))
             printf '%s\n' "$attempts" > "$failed_file"
             log "[$label] Docker Compose failed ($attempts in a row)."

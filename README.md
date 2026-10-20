@@ -515,7 +515,7 @@ top of the exit node, and why it must never be put behind the reverse proxy
 ### Reverse Proxy (Caddy)
 Caddy provides short HTTP names on LAN (`http://jellyfin`, `http://raspi`, etc.) and HTTPS via Cloudflare DNS challenge for remote access (`https://*.platanosverdes.com`).
 
-Caddy uses a custom Docker image that includes the Cloudflare DNS plugin (see `config/caddy/Dockerfile`). Certificates are issued automatically on first request and renewed by Caddy.
+Caddy uses a custom Docker image that includes the Cloudflare DNS plugin (see `services/caddy/Dockerfile`). Certificates are issued automatically on first request and renewed by Caddy.
 
 **Extending Caddy from a companion repo (e.g. rpi-services):**
 
