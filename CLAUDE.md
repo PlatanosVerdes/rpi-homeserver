@@ -125,7 +125,9 @@ docker compose up -d
 ## How auto-deploy works
 
 `scripts/deploy/apply.sh` runs on every GitHub push (webhook) and every 30 minutes via cron:
-1. `git pull origin main`
+1. `git pull origin main`. If the pull changed `apply.sh` itself, it `exec`s the new version (bash
+   reads the file as it runs, so the old code would carry on otherwise), passing the pre-pull
+   commit along so the new run still sees what changed
 2. **Renders Grafana's alerting config** (`render_grafana_alerting`): compose only interpolates
    `${VAR}` inside its own YAML, never inside a config file, so something has to combine the
    template in git with the secrets in `.env` before Grafana starts. That is this step. It writes
