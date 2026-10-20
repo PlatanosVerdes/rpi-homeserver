@@ -206,6 +206,12 @@ services:
     mem_limit: 128m
     memswap_limit: 128m
     profiles: [moni, all]
+    # Public resolvers, not Pi-hole: a public URL has to be probed the way the internet reaches it,
+    # and Pi-hole answers *.platanosverdes.com with the tailnet door instead. Container names still
+    # resolve through Docker's own DNS, which only forwards the rest here.
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
