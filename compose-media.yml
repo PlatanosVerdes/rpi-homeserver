@@ -8,7 +8,7 @@ services:
       host.ports: "32400/tcp 1901/udp 32410/udp 32412/udp 32413/udp 32414/udp"
       prometheus.probe: "http://host.docker.internal:32400/identity"
     restart: unless-stopped
-    profiles: [media, all]
+    profiles: [plex, media, all]
     network_mode: host
     environment:
       - PUID=${PUID}
@@ -28,7 +28,7 @@ services:
       host.ports: "8096/tcp 7359/udp"
       prometheus.probe: "http://host.docker.internal:8096/health"
     restart: unless-stopped
-    profiles: [acestream, all]
+    profiles: [jellyfin, acestream, all]
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
@@ -60,7 +60,7 @@ services:
     labels:
       prometheus.probe: "http://seerr:5055/"
     restart: unless-stopped
-    profiles: [media, all]
+    profiles: [seerr, media, all]
     # Its own resolver, because Pi-hole blocks some of the metadata hosts it reads.
     dns:
       - 8.8.8.8
@@ -82,7 +82,7 @@ services:
   gluetun:
     image: qmcgaw/gluetun:${GLUETUN_VERSION}
     container_name: gluetun
-    profiles: [acestream, all]
+    profiles: [gluetun, acestream, all]
     restart: unless-stopped
     labels:
       sleipnir.enable: "true"
@@ -122,7 +122,7 @@ services:
     container_name: aceserve
     labels:
       host.ports: "6878/tcp 62062/tcp 8621/udp"
-    profiles: [acestream, all]
+    profiles: [aceserve, acestream, all]
     network_mode: host
     depends_on:
       gluetun:
@@ -151,7 +151,7 @@ services:
     restart: unless-stopped
     mem_limit: 512m
     memswap_limit: 512m
-    profiles: [acestream, all]
+    profiles: [kubo, acestream, all]
     # No published ports: the gateway is for bifrost, over the docker network.
     environment:
       - TZ=${TZ}
@@ -181,7 +181,7 @@ services:
     restart: unless-stopped
     mem_limit: 128m
     memswap_limit: 128m
-    profiles: [acestream, all]
+    profiles: [bifrost, acestream, all]
     dns:
       - 1.1.1.1
       - 1.0.0.1
@@ -222,7 +222,7 @@ services:
     # 512m was its working size, not a ceiling: 25.8k limit hits in a day and a half.
     mem_limit: 768m
     memswap_limit: 768m
-    profiles: [media, all]
+    profiles: [bazarr, media, all]
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
@@ -242,7 +242,7 @@ services:
     restart: unless-stopped
     mem_limit: 256m
     memswap_limit: 256m
-    profiles: [media, all]
+    profiles: [maintainerr, media, all]
     user: "${PUID}:${PGID}"
     environment:
       - TZ=${TZ}
@@ -260,7 +260,7 @@ services:
     restart: unless-stopped
     mem_limit: 256m
     memswap_limit: 256m
-    profiles: [media, all]
+    profiles: [tautulli, media, all]
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
@@ -283,7 +283,7 @@ services:
     restart: unless-stopped
     mem_limit: 64m
     memswap_limit: 64m
-    profiles: [media, all]
+    profiles: [watch-next, media, all]
     environment:
       - WATCH_NEXT_TOKEN=${WATCH_NEXT_TOKEN}
       - WATCH_NEXT_MARGIN=${WATCH_NEXT_MARGIN}
@@ -303,7 +303,7 @@ services:
     restart: unless-stopped
     mem_limit: 64m
     memswap_limit: 64m
-    profiles: [media, all]
+    profiles: [subtitle-links, media, all]
     environment:
       - JELLYFIN_API_KEY=${JELLYFIN_API_KEY}
       - JELLYFIN_URL=http://host.docker.internal:8096
@@ -332,7 +332,7 @@ services:
     # ffmpeg holds a few MB per stream for a remux; the AC3 encode is the only real work.
     mem_limit: 256m
     memswap_limit: 256m
-    profiles: [media, all]
+    profiles: [audio-convert, media, all]
     # The owner of every library file, so a converted file and its .original keep it.
     user: "${PUID}:${PGID}"
     security_opt:
@@ -369,7 +369,7 @@ services:
     restart: unless-stopped
     mem_limit: 64m
     memswap_limit: 64m
-    profiles: [acestream, all]
+    profiles: [farnsworth, acestream, all]
     environment:
       # The address VLC will dial, so it must be one the phone or laptop can reach, never a
       # container name. The video goes straight from the engine to the player.
@@ -390,7 +390,7 @@ services:
     restart: unless-stopped
     mem_limit: 64m
     memswap_limit: 64m
-    profiles: [vpn, all]
+    profiles: [sleipnir, vpn, all]
     security_opt:
       - no-new-privileges:true
     depends_on:
@@ -424,7 +424,7 @@ services:
     restart: unless-stopped
     mem_limit: 64m
     memswap_limit: 64m
-    profiles: [bots, all]
+    profiles: [muninn, bots, all]
     security_opt:
       - no-new-privileges:true
     depends_on:
@@ -447,7 +447,7 @@ services:
     restart: unless-stopped
     mem_limit: 64m
     memswap_limit: 64m
-    profiles: [vpn, bots, all]
+    profiles: [docker-socket-proxy, vpn, bots, all]
     environment:
       - CONTAINERS=1
     volumes:
@@ -462,7 +462,7 @@ services:
     image: qmcgaw/gluetun:${GLUETUN_VERSION}
     container_name: gluetun-test
     restart: unless-stopped
-    profiles: [vpn, all]
+    profiles: [gluetun-test, vpn, all]
     labels:
       sleipnir.enable: "true"
       sleipnir.used-by: "huginn"
@@ -497,7 +497,7 @@ services:
     restart: unless-stopped
     mem_limit: 32m
     memswap_limit: 32m
-    profiles: [vpn, all]
+    profiles: [huginn, vpn, all]
     network_mode: "service:gluetun-test"
     depends_on:
       gluetun-test:

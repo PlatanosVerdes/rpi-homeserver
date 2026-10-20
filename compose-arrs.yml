@@ -7,7 +7,7 @@ services:
     labels:
       prometheus.probe: "http://qbittorrent:8080/"
     restart: unless-stopped
-    profiles: [media, all]
+    profiles: [qbittorrent, media, all]
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
@@ -44,7 +44,7 @@ services:
     # Headless Chromium. Peaked at 771 MB and hit 768m 16.7k times in a day and a half.
     mem_limit: 1g
     memswap_limit: 1g
-    profiles: [media, all]
+    profiles: [flaresolverr, media, all]
     dns:
       - 8.8.8.8
       - 1.1.1.1
@@ -61,7 +61,7 @@ services:
     labels:
       prometheus.probe: "http://prowlarr:9696/"
     restart: unless-stopped
-    profiles: [media, all]
+    profiles: [prowlarr, media, all]
     dns:
       - 8.8.8.8
       - 1.1.1.1
@@ -83,7 +83,7 @@ services:
     labels:
       prometheus.probe: "http://radarr:7878/"
     restart: unless-stopped
-    profiles: [media, all]
+    profiles: [radarr, media, all]
     dns:
       - 8.8.8.8
       - 1.1.1.1
@@ -109,7 +109,7 @@ services:
     labels:
       prometheus.probe: "http://sonarr:8989/"
     restart: unless-stopped
-    profiles: [media, all]
+    profiles: [sonarr, media, all]
     dns:
       - 8.8.8.8
       - 1.1.1.1
@@ -133,7 +133,7 @@ services:
     container_name: qbit-manage
     restart: unless-stopped
     mem_limit: 512m
-    profiles: [media, all]
+    profiles: [qbit-manage, media, all]
     user: "${PUID}:${PGID}"
     security_opt:
       - no-new-privileges:true
@@ -165,7 +165,7 @@ services:
       prometheus.probe: "http://autobrr:7474/"
     restart: unless-stopped
     mem_limit: 512m
-    profiles: [media, all]
+    profiles: [autobrr, media, all]
     user: "${PUID}:${PGID}"
     security_opt:
       - no-new-privileges:true
@@ -189,7 +189,7 @@ services:
     restart: unless-stopped
     mem_limit: 64m
     memswap_limit: 64m
-    profiles: [media, all]
+    profiles: [tracker-control, media, all]
     environment:
       - TZ=${TZ}
       - QBIT_USER=${QBIT_USER}
@@ -232,7 +232,7 @@ services:
       prometheus.probe: "http://cross-seed:2468/"
     restart: unless-stopped
     mem_limit: 1g
-    profiles: [media, all]
+    profiles: [cross-seed, media, all]
     user: "${PUID}:${PGID}"
     security_opt:
       - no-new-privileges:true
@@ -265,7 +265,7 @@ services:
     restart: unless-stopped
     mem_limit: 64m
     memswap_limit: 64m
-    profiles: [media, all]
+    profiles: [torrent-drop, media, all]
     security_opt:
       - no-new-privileges:true
     environment:
@@ -281,7 +281,7 @@ services:
     restart: unless-stopped
     mem_limit: 256m
     memswap_limit: 256m
-    profiles: [media, all]
+    profiles: [unpackerr, media, all]
     user: "${PUID}:${PGID}"
     environment:
       - TZ=${TZ}

@@ -14,7 +14,7 @@ services:
     restart: unless-stopped
     mem_limit: 128m
     memswap_limit: 128m
-    profiles: [essential, all]
+    profiles: [caddy, essential, all]
     ports:
       - "80:80"
       - "443:443"
@@ -50,7 +50,7 @@ services:
     restart: unless-stopped
     mem_limit: 256m
     memswap_limit: 256m
-    profiles: [essential, all]
+    profiles: [homepage, essential, all]
     dns:
       - 8.8.8.8
       - 1.1.1.1
@@ -89,7 +89,7 @@ services:
     restart: unless-stopped
     mem_limit: 256m
     memswap_limit: 256m
-    profiles: [essential, moni, all]
+    profiles: [speedtest-tracker, essential, moni, all]
     dns:
       - 8.8.8.8
       - 1.1.1.1
@@ -118,7 +118,7 @@ services:
     restart: unless-stopped
     mem_limit: 256m
     memswap_limit: 256m
-    profiles: [essential, all]
+    profiles: [pihole, essential, all]
     dns:
       - 1.1.1.1
       - 8.8.8.8
@@ -149,7 +149,7 @@ services:
     memswap_limit: 128m
     # Deliberately NOT in `all`: with an empty TUNNEL_TOKEN it would crash-loop, so it only
     # starts when `tunnel` is added to COMPOSE_PROFILES explicitly.
-    profiles: [tunnel]
+    profiles: [cloudflared, tunnel]
     # 0.0.0.0 rather than 127.0.0.1: Prometheus scrapes it through host.docker.internal
     command: tunnel --no-autoupdate --metrics 0.0.0.0:2000 run
     environment:

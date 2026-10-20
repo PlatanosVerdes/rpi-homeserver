@@ -7,7 +7,7 @@ services:
     restart: unless-stopped
     mem_limit: 128m
     memswap_limit: 128m
-    profiles: [moni, acestream, all]
+    profiles: [pushgateway, moni, acestream, all]
     # Persisted, or a restart wipes the one-shot job metrics (deploy, backup). One
     # snapshot file rewritten every 5m, so it does not grow.
     command:
@@ -31,7 +31,7 @@ services:
     restart: unless-stopped
     mem_limit: 128m
     memswap_limit: 128m
-    profiles: [moni, all]
+    profiles: [node-exporter, moni, all]
     network_mode: host
     pid: host
     volumes:
@@ -58,7 +58,7 @@ services:
     restart: unless-stopped
     mem_limit: 256m
     memswap_limit: 256m
-    profiles: [moni, all]
+    profiles: [cadvisor, moni, all]
     privileged: true
     devices:
       - /dev/kmsg
@@ -91,7 +91,7 @@ services:
     labels:
       prometheus.probe: "http://prometheus:9090/-/healthy"
     restart: unless-stopped
-    profiles: [moni, acestream, all]
+    profiles: [prometheus, moni, acestream, all]
     user: "root"
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -115,7 +115,7 @@ services:
     labels:
       prometheus.probe: "http://grafana:3000/"
     restart: unless-stopped
-    profiles: [moni, acestream, all]
+    profiles: [grafana, moni, acestream, all]
     user: "root"
     dns:
       - 8.8.8.8
@@ -205,7 +205,7 @@ services:
     restart: unless-stopped
     mem_limit: 128m
     memswap_limit: 128m
-    profiles: [moni, all]
+    profiles: [blackbox-exporter, moni, all]
     # Public resolvers, not Pi-hole: a public URL has to be probed the way the internet reaches it,
     # and Pi-hole answers *.platanosverdes.com with the tailnet door instead. Container names still
     # resolve through Docker's own DNS, which only forwards the rest here.
@@ -233,7 +233,7 @@ services:
     # hits and 8.5M pages re-read in a day and a half, with its API calls timing out meanwhile.
     mem_limit: 192m
     memswap_limit: 192m
-    profiles: [moni, all]
+    profiles: [pi-metrics, moni, all]
     # Plex runs on the host network, so the playback collector reaches it through the gateway.
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -276,7 +276,7 @@ services:
     restart: unless-stopped
     mem_limit: 128m
     memswap_limit: 128m
-    profiles: [moni, all]
+    profiles: [qbittorrent-exporter, moni, all]
     environment:
       - QBITTORRENT_HOST=qbittorrent
       - QBITTORRENT_PORT=8080
@@ -294,7 +294,7 @@ services:
     restart: unless-stopped
     mem_limit: 128m
     memswap_limit: 128m
-    profiles: [moni, all]
+    profiles: [pihole-exporter, moni, all]
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
@@ -317,7 +317,7 @@ services:
     restart: unless-stopped
     mem_limit: 64m
     memswap_limit: 64m
-    profiles: [moni, all]
+    profiles: [tailscale-metrics, moni, all]
     volumes:
       - /var/run/tailscale/tailscaled.sock:/var/run/tailscale/tailscaled.sock:ro
     environment:
@@ -335,7 +335,7 @@ services:
     restart: unless-stopped
     mem_limit: 512m
     memswap_limit: 512m
-    profiles: [moni, all]
+    profiles: [victorialogs, moni, all]
     command:
       - -storageDataPath=/victoria-logs-data
       - -retentionPeriod=30d
@@ -353,7 +353,7 @@ services:
     restart: unless-stopped
     mem_limit: 256m
     memswap_limit: 256m
-    profiles: [moni, all]
+    profiles: [vector, moni, all]
     depends_on:
       - victorialogs
     volumes:
