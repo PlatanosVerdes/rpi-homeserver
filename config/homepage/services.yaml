@@ -228,3 +228,22 @@
         href: https://push.platanosverdes.com
         server: my-docker
         container: pushgateway
+
+# The second node. Its own homepage is gone: everything it serves is linked from here, through this
+# node's Caddy over Tailscale. No container status, since that would need its Docker socket.
+- streamhalla:
+    - Jellyfin:
+        icon: jellyfin.svg
+        href: https://jellyfin.streamhalla.platanosverdes.com
+        description: The TV's Jellyfin, on streamhalla
+    - bifrost:
+        icon: https://bifrost.platanosverdes.com/favicon.svg
+        href: https://bifrost.streamhalla.platanosverdes.com
+        description: streamhalla's Acestream channels
+    - Grafana:
+        icon: grafana.svg
+        href: https://grafana.platanosverdes.com/d/acestream-monitor?var-datasource=prometheus-streamhalla
+        description: Its Acestream dashboard, on this Grafana
+    - Prometheus:
+        icon: prometheus.svg
+        href: https://prometheus.streamhalla.platanosverdes.com

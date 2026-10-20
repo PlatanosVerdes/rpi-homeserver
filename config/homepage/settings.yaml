@@ -51,6 +51,9 @@ layout:
   Internals:
     style: grid
     columns: 2
+  streamhalla:
+    style: grid
+    columns: 4
 
 appearance:
   fontFamily: "Inter"
