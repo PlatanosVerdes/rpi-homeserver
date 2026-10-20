@@ -39,31 +39,8 @@ services:
     networks:
       - media-network
 
-  # --- GRAFANA (Dashboard visual) ---
-  grafana:
-    image: grafana/grafana:latest
-    container_name: grafana
-    restart: unless-stopped
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "2"
-    user: "root"
-    dns:
-      - 8.8.8.8
-      - 1.1.1.1
-    ports:
-      - "3000:3000"
-    environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-    volumes:
-      - ${APP_CONFIG_PATH}/grafana/data:/var/lib/grafana
-      - ${CONFIG_ROOT}/grafana/provisioning:/etc/grafana/provisioning:ro
-      - ${CONFIG_ROOT}/grafana/dashboards_json:/etc/grafana/dashboards_json:ro
-    networks:
-      - media-network
+  # No Grafana here: the raspi's reads this Prometheus over Tailscale (its "streamhalla"
+  # datasource), behind the Google sign-in. Its data stays in appdata/grafana if it is ever needed.
 
   # --- NODE EXPORTER (System metrics: CPU, RAM, disk, network) ---
   node-exporter:

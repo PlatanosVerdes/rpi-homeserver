@@ -20,9 +20,8 @@
 - Monitoring:
     - Grafana:
         icon: grafana.svg
-        href: https://grafana.streamhalla.platanosverdes.com
-        server: my-docker
-        container: grafana
+        href: https://grafana.platanosverdes.com/d/acestream-monitor?var-datasource=prometheus-streamhalla
+        description: The raspi's Grafana, on this node's data
 
     - Prometheus:
         icon: prometheus.svg
