@@ -123,6 +123,24 @@ There is an alternative, and it is worse: adding `172.16.0.0/12` to LAN Networks
 proxied connections count as local too. But then *every* client behind Caddy looks local, per-user
 bandwidth limits stop applying to anyone, and the statistics can no longer tell who was where.
 
+## Step 4 — Keep Plex's own Remote Access off
+
+Settings → Remote Access in Plex is a different thing from everything above, and it works against
+it. Turned on, Plex maps a port on the router (UPnP) and publishes the home **public** address to
+plex.tv as one more connection, `local=false`.
+
+That is harmless until the house has a public IP of its own, and then it is not. With a public IP
+the router loops that address back to the Pi, so a TV sitting on the LAN can reach Plex both ways.
+The client tries every published connection at once and keeps the first to answer; on 2026-10-20
+the public one won by 13 ms, Plex saw the TV arrive from the public address, called it remote, and
+the TV in the living room asked for a Remote Watch Pass.
+
+Nothing here needs it: away from home the tailnet reaches the RFC1918 addresses of step 1, which
+are the ones Plex calls local. So it stays off (`PublishServerOnPlexOnlineKey="0"` in
+`Preferences.xml`), which also closes the port it had opened on the router. With it off, the
+connection list from the curl above has the `192.168.1.x` entries as `local=true` and no public
+address at all.
+
 ## Letting other people watch
 
 Sharing the Pi as a Tailscale machine does not work. Tailscale states why: *"Shared machines do not advertise subnets to the tailnets they're shared
@@ -165,6 +183,8 @@ curl -s -o /dev/null -w '%{http_code}\n' http://192.168.1.180:32400/identity
 - **Everything broke right after someone ran `tailscale up`.** That command resets what it was not
   told to keep: the routes are gone and so is `--accept-dns=false`. Re-run the `tailscale set` line
   from step 1, then check `/etc/resolv.conf` still points at `127.0.0.1`.
+- **The paywall shows up at home, on the LAN.** Check Remote Access is still off (step 4). Plex's
+  log names the address each request came from: the home public address tagged `(WAN)` is this.
 - **LAN Networks is empty again.** The container rewrites its preferences file when it shuts down.
   `bash scripts/sync/plex-prefs.sh` puts it back, and any deploy does that automatically.
 
