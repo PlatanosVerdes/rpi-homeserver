@@ -821,7 +821,7 @@
         "query": "prometheus",
         "current": {
           "selected": true,
-          "text": "Prometheus",
+          "text": "raspi",
           "value": "prometheus"
         },
         "hide": 0,
