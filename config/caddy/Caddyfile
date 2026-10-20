@@ -84,6 +84,15 @@ https://grafana.platanosverdes.com {
     import cf_tls
     reverse_proxy grafana:3000
 }
+# The tailnet's own way into Grafana, with the login form: grafana.platanosverdes.com resolves to
+# Cloudflare Access everywhere (PIHOLE_DNS_PUBLIC_HOSTS), and this is the door left when Cloudflare is not.
+https://grafana-tailnet.platanosverdes.com {
+    log
+    @grafana_keepalive path /api/live/ws /api/login/ping
+    log_skip @grafana_keepalive
+    import cf_tls
+    reverse_proxy grafana:3000
+}
 https://prometheus.platanosverdes.com {
     log
     import cf_tls
