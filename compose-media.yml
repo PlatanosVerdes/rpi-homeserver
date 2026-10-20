@@ -338,8 +338,10 @@ services:
       - AUDIO_RECODES=/ledger/audio-recodes.json
       - AUDIO_CONVERT_STATE=/state
     volumes:
-      # Read-write: a conversion writes the new file beside the old one and renames both.
-      - ${DATA_ROOT}:/mnt/data
+      # Read-write: a conversion writes the new file beside the old one and renames both. Only the
+      # two libraries, so downloads and everything else on the disk stay out of its reach.
+      - ${DATA_ROOT}/films:/mnt/data/films
+      - ${DATA_ROOT}/series:/mnt/data/series
       # pi-metrics' ledger with each file's plan, read-only.
       - ${APP_CONFIG_PATH}/pi-metrics:/ledger:ro
       # The queue, the shared lock and history.jsonl. The host's audio-compat.py uses the same
