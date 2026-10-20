@@ -18,7 +18,26 @@
   "timezone": "browser",
   "timepicker": {},
   "templating": {
-    "list": []
+    "list": [
+      {
+        "name": "datasource",
+        "label": "Node",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {
+          "selected": true,
+          "text": "raspi",
+          "value": "prometheus"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "options": [],
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false
+      }
+    ]
   },
   "links": [],
   "annotations": {
@@ -56,7 +75,7 @@
       "title": "CPU Temp",
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${datasource}"
       },
       "gridPos": {
         "h": 4,
@@ -112,7 +131,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "node_thermal_zone_temp{type=\"cpu-thermal\"}",
@@ -127,7 +146,7 @@
       "title": "Load (1m)",
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${datasource}"
       },
       "gridPos": {
         "h": 4,
@@ -183,7 +202,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "node_load1",
@@ -198,7 +217,7 @@
       "title": "RAM used",
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${datasource}"
       },
       "gridPos": {
         "h": 4,
@@ -252,7 +271,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "(1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100",
@@ -267,7 +286,7 @@
       "title": "Disk / (OS)",
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${datasource}"
       },
       "gridPos": {
         "h": 4,
@@ -321,7 +340,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "100 - (node_filesystem_avail_bytes{mountpoint=\"/\",fstype=\"ext4\"} / node_filesystem_size_bytes{mountpoint=\"/\",fstype=\"ext4\"} * 100)",
@@ -336,7 +355,7 @@
       "title": "Disk /mnt/data",
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${datasource}"
       },
       "gridPos": {
         "h": 4,
@@ -390,7 +409,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "100 - (node_filesystem_avail_bytes{mountpoint=\"/mnt/data\"} / node_filesystem_size_bytes{mountpoint=\"/mnt/data\"} * 100)",
@@ -405,7 +424,7 @@
       "title": "Uptime",
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${datasource}"
       },
       "gridPos": {
         "h": 4,
@@ -454,7 +473,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "node_time_seconds - node_boot_time_seconds",
@@ -469,7 +488,7 @@
       "title": "OOM kills (24h)",
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${datasource}"
       },
       "gridPos": {
         "h": 4,
@@ -521,7 +540,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "sum(max by (name) (max_over_time(container_oom_events_total{name!=\"\"}[24h]))) or vector(0)",
@@ -550,7 +569,7 @@
       "title": "Up",
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${datasource}"
       },
       "gridPos": {
         "h": 4,
@@ -599,7 +618,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "count(time() - container_last_seen{name!=\"\",name!~\".*POD.*\"} < 60)",
@@ -614,7 +633,7 @@
       "title": "Down / Stale",
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${datasource}"
       },
       "gridPos": {
         "h": 4,
@@ -666,7 +685,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "count(time() - container_last_seen{name!=\"\",name!~\".*POD.*\"} >= 60) or vector(0)",
@@ -681,7 +700,7 @@
       "title": "Total",
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${datasource}"
       },
       "gridPos": {
         "h": 4,
@@ -730,7 +749,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "count(container_last_seen{name!=\"\",name!~\".*POD.*\"})",
@@ -745,7 +764,7 @@
       "title": "Homeserver deploy",
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${datasource}"
       },
       "gridPos": {
         "h": 4,
@@ -822,7 +841,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "deploy_repo_last_status{repo=\"homeserver\"}",
@@ -837,7 +856,7 @@
       "title": "Services deploy",
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${datasource}"
       },
       "gridPos": {
         "h": 4,
@@ -914,7 +933,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "deploy_repo_last_status{repo=\"services\"}",
@@ -929,7 +948,7 @@
       "title": "Homeserver last run",
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${datasource}"
       },
       "gridPos": {
         "h": 4,
@@ -985,7 +1004,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "time() - deploy_repo_last_run_timestamp{repo=\"homeserver\"}",
@@ -1000,7 +1019,7 @@
       "title": "Services last run",
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${datasource}"
       },
       "gridPos": {
         "h": 4,
@@ -1056,7 +1075,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "time() - deploy_repo_last_run_timestamp{repo=\"services\"}",
@@ -1084,7 +1103,7 @@
       "title": "Top CPU consumers (%)",
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${datasource}"
       },
       "gridPos": {
         "h": 8,
@@ -1127,7 +1146,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "topk(10, sum by (name) (rate(container_cpu_usage_seconds_total{name!=\"\",name!~\".*POD.*\"}[5m])) * 100)",
@@ -1145,7 +1164,7 @@
       "title": "Top memory consumers",
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${datasource}"
       },
       "gridPos": {
         "h": 8,
@@ -1189,7 +1208,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "topk(10, sum by (name) (container_memory_working_set_bytes{name!=\"\",name!~\".*POD.*\"}))",
@@ -1207,7 +1226,7 @@
       "description": "Each container against its own mem_limit, not against the Pi's total RAM. Reaching 100% means the kernel kills it, so anything sitting above the 80% line needs a bigger cap or a look at what it is holding. Containers without mem_limit report a limit of 0 and are filtered out: their real ceiling is host RAM, on the RAM used gauge above.",
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${datasource}"
       },
       "gridPos": {
         "h": 9,
@@ -1272,7 +1291,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "topk(10, container_memory_working_set_bytes{name!=\"\",name!~\".*POD.*\"} / (container_spec_memory_limit_bytes{name!=\"\",name!~\".*POD.*\"} > 0) * 100)",
@@ -1289,7 +1308,7 @@
       "title": "Network throughput",
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${datasource}"
       },
       "gridPos": {
         "h": 7,
@@ -1332,7 +1351,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "sum(rate(container_network_receive_bytes_total{name!=\"\",name!~\".*POD.*\"}[5m]))",
@@ -1344,7 +1363,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "sum(rate(container_network_transmit_bytes_total{name!=\"\",name!~\".*POD.*\"}[5m]))",
@@ -1374,7 +1393,7 @@
       "title": "CPU",
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${datasource}"
       },
       "gridPos": {
         "h": 16,
@@ -1386,7 +1405,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "topk(8, sum by (name) (rate(container_cpu_usage_seconds_total{name!=\"\",name!~\".*POD.*\"}[5m])) * 100)",
@@ -1476,7 +1495,7 @@
       "title": "Memory",
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${datasource}"
       },
       "gridPos": {
         "h": 16,
@@ -1488,7 +1507,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "topk(8, sum by (name) (container_memory_working_set_bytes{name!=\"\",name!~\".*POD.*\"}))",
@@ -1578,7 +1597,7 @@
       "title": "Uptime",
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${datasource}"
       },
       "gridPos": {
         "h": 16,
@@ -1622,7 +1641,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "topk(50, time() - max by (name) (container_start_time_seconds{name!=\"\",name!~\".*POD.*\"}))",
