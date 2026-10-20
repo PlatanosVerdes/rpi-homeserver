@@ -169,6 +169,16 @@ deploy_repo_last_run_timestamp{repo="${repo}"} $ts
 EOF
 }
 
+# Whether this node runs a compose service (its COMPOSE_PROFILES). A node that runs a subset of the
+# stack must not have steps for services it lacks failing or installing things on every pass.
+# Unreadable config answers yes, which is what every step did before this existed.
+runs() {
+    local active
+    active=$(cd "$PROJECT_DIR" && COMPOSE_ENV_FILES=versions.env,.env docker compose config --services 2>/dev/null) ||
+        return 0
+    grep -qxF "$1" <<<"$active"
+}
+
 render_grafana_alerting() {
     # Grafana reads alerting from appdata and not from git, because the Telegram token must not be
     # committed: rules copied as-is, the contact point rendered from its .tmpl with .env values.
@@ -303,14 +313,14 @@ deploy_repo() {
     fi
 
     # Must happen after the pull and before compose can restart Grafana
-    [[ "$label" == "homeserver" ]] && render_grafana_alerting
+    [[ "$label" == "homeserver" ]] && runs grafana && render_grafana_alerting
 
     # Docker creates a missing bind-mount target as root, which locks out any container running as
     # PUID:PGID. Pre-create only those: appdata also holds ten that are legitimately root-owned. The
     # list comes from the resolved compose config, so a new service is covered without editing this.
     if [[ "$label" == "homeserver" ]]; then
         local appdata_dirs
-        appdata_dirs=$(cd "$PROJECT_DIR" && docker compose --profile all config --format json 2>/dev/null |
+        appdata_dirs=$(cd "$PROJECT_DIR" && docker compose config --format json 2>/dev/null |
             python3 -c '
 import json, sys
 try:
@@ -336,7 +346,7 @@ for svc in (doc.get("services") or {}).values():
 
     # qbit_manage rewrites its own config on every run, so it cannot be handed the git copy: the
     # working tree would stay dirty and the next pull would abort.
-    if [[ "$label" == "homeserver" && -f "$PROJECT_DIR/config/qbit-manage/config.yml" ]]; then
+    if [[ "$label" == "homeserver" && -f "$PROJECT_DIR/config/qbit-manage/config.yml" ]] && runs qbit-manage; then
         if ! cmp -s "$PROJECT_DIR/config/qbit-manage/config.yml" \
             "$PROJECT_DIR/appdata/qbit-manage/config.yml"; then
             cp "$PROJECT_DIR/config/qbit-manage/config.yml" \
@@ -347,7 +357,9 @@ for svc in (doc.get("services") or {}).values():
 
     # A host systemd service: a pull updates its files while the old process keeps serving, so
     # apply them here. Safe to restart from inside its own deploy, thanks to KillMode=process.
+    # Only where it is installed: a node without the webhook must not get one started on a pull.
     if [[ "$label" == "homeserver" && "$before" != "$after" ]] &&
+        systemctl cat deploy-webhook >/dev/null 2>&1 &&
         git diff --name-only "$before" "$after" | grep -q '^services/deploy-webhook/'; then
         local unit=/etc/systemd/system/deploy-webhook.service
         if ! sudo cmp -s services/deploy-webhook/deploy-webhook.service "$unit"; then
@@ -557,7 +569,9 @@ bash "$PROJECT_DIR/scripts/sync/arr-config.sh" 2>&1 | while IFS= read -r line; d
 # filters and Maintainerr's rule. Both are written by hand in a UI and held in a database, so git
 # only has them because they were exported. This reports drift rather than pushing, because a wrong
 # Maintainerr rule deletes films. See scripts/ops/config-export.py.
-"$PROJECT_DIR/scripts/ops/config-export.py" --check 2>&1 | while IFS= read -r line; do log "[config-drift] $line"; done
+if runs autobrr || runs maintainerr; then
+    "$PROJECT_DIR/scripts/ops/config-export.py" --check 2>&1 | while IFS= read -r line; do log "[config-drift] $line"; done
+fi
 
 # Converge Pi-hole's custom DNS to the *.platanosverdes.com hosts declared in Caddy. Additive
 # only (see the script), so it never touches an entry it did not derive from Caddy.
