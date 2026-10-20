@@ -26,7 +26,7 @@ const iconSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
 </svg>`
 
 const pageHTML = `<!doctype html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -79,7 +79,7 @@ const pageHTML = `<!doctype html>
   <img src="/icon.svg" alt="">
   <div>
     <h1>Audio convert</h1>
-    <p>Ficheros cuyo audio tuvo que recodificarse para un cliente, con lo que haría falta para que no vuelva a pasar.</p>
+    <p>Files whose audio a server had to re-encode for a client, and what it takes to stop that happening.</p>
   </div>
 </header>
 
@@ -88,26 +88,20 @@ const pageHTML = `<!doctype html>
   <div class="banner" id="banner"></div>
   <div id="msg"></div>
 
-  <h2>Por convertir</h2>
-  <div id="list"><div class="empty">Cargando…</div></div>
+  <h2>To convert</h2>
+  <div id="list"><div class="empty">Loading…</div></div>
 
-  <h2>Historial</h2>
-  <div id="history"><div class="empty">Nada convertido todavía.</div></div>
+  <h2>History</h2>
+  <div id="history"><div class="empty">Nothing converted yet.</div></div>
 </main>
 
 <footer>
-  Convierte <code>scripts/sync/audio-compat.py --file</code>, lo mismo que la pasada de las 01:30: añade
-  una pista AC3 delante, conserva todas las demás y deja el fichero anterior como <code>.original</code>.
-  Una conversión a la vez; si la pasada nocturna está trabajando, la cola espera.
+  Runs <code>scripts/sync/audio-compat.py --file</code>, the same as the 01:30 pass: it puts an AC3
+  track first, keeps every other track and leaves the previous file beside it as <code>.original</code>.
+  One conversion at a time; while the nightly pass is working, the queue waits.
 </footer>
 
 <script>
-var REASONS = {
-  direct_play_off: "El cliente desactivó la reproducción directa: activa «Force Direct Play» en el cliente. Cambiar el fichero no ayuda.",
-  refuses_target: "El cliente tampoco acepta AC3, que es lo que se añadiría. Cambiar el fichero no ayuda.",
-  not_library: "No está en films/ ni series/, así que no hay fichero que cambiar."
-};
-
 function human(bytes) {
   if (!bytes) return "0 B";
   var units = ["B", "KB", "MB", "GB", "TB"], i = 0, n = bytes;
@@ -124,13 +118,13 @@ function clock(seconds) {
 }
 
 function when(epoch) {
-  return new Date(epoch * 1000).toLocaleString("es-ES", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  return new Date(epoch * 1000).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
 // Plex calls DTS dca, as audio-compat's FFPROBE_NAMES knows.
 function codecName(codec) { return ({ dca: "dts" }[(codec || "?").toLowerCase()] || codec || "?").toUpperCase(); }
 
-function channels(n) { return { 1: "mono", 2: "estéreo", 6: "5.1", 8: "7.1" }[n] || (n + " canales"); }
+function channels(n) { return { 1: "mono", 2: "stereo", 6: "5.1", 8: "7.1" }[n] || (n + " channels"); }
 
 function trackName(t) {
   if (t.title) return t.title;
@@ -138,9 +132,9 @@ function trackName(t) {
 }
 
 function planText(p) {
-  return "Añadir " + p.target_codec.toUpperCase() + " " + channels(p.target_channels) + " (" + p.target_bitrate_kbps +
-    " kb/s) desde la pista «" + trackName(p.source) + "»" + (p.source["default"] ? ", la marcada por defecto" : "") +
-    ". Se conservan todas las pistas.";
+  return "Add " + p.target_codec.toUpperCase() + " " + channels(p.target_channels) + " (" + p.target_bitrate_kbps +
+    " kb/s) from the " + trackName(p.source) + " track" + (p.source.played ? ", the one the client played" :
+    p.source["default"] ? ", the default one" : "") + ". Every track is kept.";
 }
 
 function el(tag, cls, text) {
@@ -161,10 +155,10 @@ function post(url, data) {
 function play(it, button) {
   var data = { library_path: it.library_path };
   if (it.links > 1) {
-    var ok = confirm("«" + (it.title || it.library_path) + "» sigue sembrando (tiene un hardlink con el torrent).\n\n" +
-      "Convertirlo deja el fichero actual como .original, que sigue enlazado al torrent, así que el torrent no se entera. " +
-      "Pero el disco guarda las dos copias: " + human(it.size) + " más hasta que el torrent se borre y se elimine el .original.\n\n" +
-      "¿Convertir igualmente?");
+    var ok = confirm((it.title || it.library_path) + " is still seeding (hardlinked to the torrent).\n\n" +
+      "Converting it keeps the current file as .original, still linked to the torrent, so the torrent is unaffected. " +
+      "But the disk holds both copies: " + human(it.size) + " more until the torrent is removed and .original deleted.\n\n" +
+      "Convert it anyway?");
     if (!ok) return;
     data.allow_hardlinked = "1";
   }
@@ -180,20 +174,16 @@ function card(it, state) {
   var actionable = it.actionable;
   var box = el("div", "t" + (actionable ? "" : " off"));
   box.appendChild(el("div", "name", it.title || it.library_path || it.path));
-  var who = it.client + " (" + it.app + ") no aceptó " + codecName(it.codec) + " · " + when(it.seen);
+  var who = it.client + " (" + it.app + ") refused " + codecName(it.codec) + " · " + when(it.seen);
   box.appendChild(el("div", "why", who));
 
   if (!actionable) {
-    var reason = REASONS[it.reason_code];
-    if (it.reason_code === "has_playable") {
-      reason = "Ya tiene «" + it.reason_detail + "», un códec que ningún cliente ha rechazado: elige esa pista en el reproductor.";
-    }
-    box.appendChild(el("div", "plan", reason || it.reason || ""));
+    box.appendChild(el("div", "plan", it.reason ? it.reason.charAt(0).toUpperCase() + it.reason.slice(1) + "." : ""));
     return box;
   }
 
   box.appendChild(el("div", "plan", it.plan ? planText(it.plan) :
-    "El servidor no dio las pistas; el script elegirá la marcada por defecto."));
+    "The server did not list the tracks; the script will use the default one."));
 
   if (it.status === "converting" && state.running) {
     var job = state.running.job;
@@ -206,44 +196,44 @@ function card(it, state) {
 
   var meta = el("div", "meta");
   var pending = it.status !== "done" && it.status !== "missing";
-  if (it.plan && pending) meta.appendChild(el("span", "", "+" + human(it.plan.extra_bytes) + " de pista nueva"));
-  if (it.exists && pending) meta.appendChild(el("span", "", "y el .original ocupa " + human(it.size) + " hasta que se borre"));
+  if (it.plan && pending) meta.appendChild(el("span", "", "+" + human(it.plan.extra_bytes) + " for the new track"));
+  if (it.exists && pending) meta.appendChild(el("span", "", "plus " + human(it.size) + " for the .original until it is deleted"));
 
   if (it.status === "converting" && state.running) {
     var job2 = state.running.job;
     var pct2 = job2.duration ? Math.round(job2.seconds / job2.duration * 100) : 0;
     meta.appendChild(el("span", "tag ok", "convirtiendo " + pct2 + "%"));
-    meta.appendChild(el("span", "", "quedan " + clock(state.running.eta) + " a " + job2.speed.toFixed(0) + "×"));
-    if (job2.source) meta.appendChild(el("span", "", "desde la pista " + job2.source.position + " (" + trackName(job2.source) + ")"));
+    meta.appendChild(el("span", "", clock(state.running.eta) + " left at " + job2.speed.toFixed(0) + "×"));
+    if (job2.source) meta.appendChild(el("span", "", "from track " + job2.source.position + " (" + trackName(job2.source) + ")"));
   } else if (it.duration && pending) {
-    meta.appendChild(el("span", "", "~" + clock(it.eta) + " (" + clock(it.duration) + " de película)"));
+    meta.appendChild(el("span", "", "~" + clock(it.eta) + " (" + clock(it.duration) + " of film)"));
   }
-  if (it.links > 1) meta.appendChild(el("span", "tag warn", "sigue sembrando (hardlink)"));
-  if (it.exists && !it.enough_space) meta.appendChild(el("span", "tag bad", "no hay sitio"));
+  if (it.links > 1) meta.appendChild(el("span", "tag warn", "still seeding (hardlinked)"));
+  if (it.exists && !it.enough_space) meta.appendChild(el("span", "tag bad", "not enough space"));
 
   var button;
   switch (it.status) {
     case "ready":
-      button = el("button", "btn", "▶ Convertir");
+      button = el("button", "btn", "▶ Convert");
       button.disabled = !it.enough_space;
       button.onclick = function () { play(it, button); };
       break;
     case "queued":
-      meta.appendChild(el("span", "tag", "en cola"));
-      button = el("button", "btn ghost", "Quitar");
+      meta.appendChild(el("span", "tag", "queued"));
+      button = el("button", "btn ghost", "Remove");
       button.onclick = function () { post("/api/cancel", { library_path: it.library_path }).then(refresh); };
       break;
     case "done":
-      meta.appendChild(el("span", "tag ok", "hecho " + (it.outcome.mode === "nightly" ? "por la noche" : "") + " · " + when(it.outcome.time)));
+      meta.appendChild(el("span", "tag ok", "done" + (it.outcome.mode === "nightly" ? " by the nightly pass" : "") + " · " + when(it.outcome.time)));
       break;
     case "failed":
-      meta.appendChild(el("span", "tag bad", "falló: " + it.outcome.reason));
-      button = el("button", "btn ghost", "Reintentar");
+      meta.appendChild(el("span", "tag bad", "failed: " + it.outcome.reason));
+      button = el("button", "btn ghost", "Retry");
       button.disabled = !it.enough_space;
       button.onclick = function () { play(it, button); };
       break;
     case "missing":
-      meta.appendChild(el("span", "tag", "el fichero ya no está (¿reemplazado?)"));
+      meta.appendChild(el("span", "tag", "the file is gone (replaced?)"));
       break;
   }
   if (button) meta.appendChild(button);
@@ -255,10 +245,10 @@ function historyRow(h) {
   var row = el("div", "h");
   row.appendChild(el("span", "", h.name));
   var ok = h.result === "done";
-  row.appendChild(el("span", "tag " + (ok ? "ok" : "bad"), ok ? "hecho" : "falló"));
-  var bits = [when(h.time), h.mode === "nightly" ? "pasada nocturna" : "desde aquí"];
+  row.appendChild(el("span", "tag " + (ok ? "ok" : "bad"), ok ? "done" : "failed"));
+  var bits = [when(h.time), h.mode === "nightly" ? "nightly pass" : "from here"];
   if (h.seconds) bits.push(clock(h.seconds));
-  if (h.speed) bits.push(h.speed.toFixed(0) + "× tiempo real");
+  if (h.speed) bits.push(h.speed.toFixed(0) + "× realtime");
   if (h.reason) bits.push(h.reason);
   row.appendChild(el("span", "sub", bits.join(" · ")));
   return row;
@@ -271,30 +261,30 @@ function refresh() {
     if (d.error) say(d.error);
     var facts = document.getElementById("facts");
     facts.textContent = "";
-    facts.appendChild(el("span", "", human(d.free) + " libres (se dejan " + human(d.minFree) + ")"));
-    facts.appendChild(el("span", "", "velocidad media " + d.speed.toFixed(0) + "× tiempo real"));
-    if (d.queue && d.queue.length) facts.appendChild(el("span", "", d.queue.length + " en cola"));
+    facts.appendChild(el("span", "", human(d.free) + " free (" + human(d.minFree) + " kept free)"));
+    facts.appendChild(el("span", "", "average speed " + d.speed.toFixed(0) + "× realtime"));
+    if (d.queue && d.queue.length) facts.appendChild(el("span", "", d.queue.length + " queued"));
 
     var banner = document.getElementById("banner");
     banner.textContent = "";
     if (d.holder && !d.running) {
       var file = (d.holder.file || "").split("/").pop();
       banner.textContent = d.holder.mode === "nightly"
-        ? "La pasada nocturna está " + (file ? "convirtiendo " + file : "revisando la biblioteca") + "; la cola espera a que acabe."
-        : "Otra conversión tiene el cerrojo" + (file ? " (" + file + ")" : "") + "; la cola espera.";
+        ? "The nightly pass is " + (file ? "converting " + file : "checking the library") + "; the queue waits for it."
+        : "Another conversion holds the lock" + (file ? " (" + file + ")" : "") + "; the queue waits.";
     }
 
     var list = document.getElementById("list");
     list.textContent = "";
     if (!d.items || !d.items.length) {
-      list.appendChild(el("div", "empty", "Ningún cliente ha necesitado recodificar audio todavía."));
+      list.appendChild(el("div", "empty", "No client has needed its audio re-encoded yet."));
     } else {
       d.items.forEach(function (it) { list.appendChild(card(it, d)); });
     }
 
     var hist = document.getElementById("history");
     hist.textContent = "";
-    if (!d.history || !d.history.length) hist.appendChild(el("div", "empty", "Nada convertido todavía."));
+    if (!d.history || !d.history.length) hist.appendChild(el("div", "empty", "Nothing converted yet."));
     else d.history.forEach(function (h) { hist.appendChild(historyRow(h)); });
 
     clearTimeout(timer);

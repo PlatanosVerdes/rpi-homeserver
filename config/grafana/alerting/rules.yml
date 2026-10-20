@@ -1374,7 +1374,7 @@ groups:
             refused {{ $labels.codec }}. Open https://audio.platanosverdes.com: the file is listed there
             with its plan (which track the AC3 5.1 is built from, the extra space, how long it takes),
             and Play converts it now. Otherwise scripts/sync/audio-compat.py does it at 01:30, unless it
-            is still seeding or already has a track in another codec; the page says which.{{ end }}{{ else if eq $labels.cause "other" }}Jellyfin gave a reason
+            is still seeding or already has a track that plays in its place; the page says which.{{ end }}{{ else if eq $labels.cause "other" }}Jellyfin gave a reason
             other than the audio codec (its TranscodeReasons), so nothing was recorded and no file
             will be changed.{{ else }}Nothing says whether the client asked for direct play (for
             Plex, that is read from its debug log), so nothing was recorded and no file will be

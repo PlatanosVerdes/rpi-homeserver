@@ -17,7 +17,10 @@ server refused for a real client that had allowed direct play, and the file it h
 appdata/pi-metrics/audio-recodes.json. A re-encode alone is not that: a client that turns direct
 play off gets a fallback that takes only AAC, and every other codec is re-encoded, the AC3 this adds
 included (services/pi-metrics/cause.go and recodes.go).
-A file is converted when every audio track it has is in that set or in SEED. The files recorded
+A file is converted when its main track, the one flagged default (else the first), is in that set
+or in SEED, and nothing else in it would play in that track's place: a compatible track in the same
+language with as many channels, up to 5.1, and not a commentary. A stereo commentary or an MP3
+beside a DTS-X main mix is not what the TV plays, so it does not count. The files recorded
 there go first, newest first, so the file that set off the alert is the first one the next run
 fixes. A codec no server has refused for a client yet is left alone. The hand-kept list this replaced
 counted EAC3 as playable, and the Plex app on a Samsung TV re-encodes it.
@@ -43,13 +46,14 @@ old file is kept as .original; pruning those is a decision, not a timer.
 Silent unless something happened.
 
     audio-compat.py                       the nightly pass over the library
-    audio-compat.py --file PATH [--progress] [--allow-hardlinked]
+    audio-compat.py --file PATH [--progress] [--allow-hardlinked] [--track N]
 
 `--file` converts one file through the same checks, remux, verify and rename, and is what
 services/audio-convert runs when its Play button is pressed. `--progress` makes it print one JSON
 object per line instead of prose: a plan, progress from ffmpeg's own -progress output, and a done or
-failed with the reason. `--allow-hardlinked` is the page's explicit "convert it anyway" for a file
-still seeding. The rename keeps the old inode under .original, so the torrent's link survives and
+failed with the reason. `--track` builds the AC3 from the audio track the client played, as
+pi-metrics recorded it, instead of the default one. `--allow-hardlinked` is the page's explicit
+"convert it anyway" for a file still seeding. The rename keeps the old inode under .original, so the torrent's link survives and
 qbit-manage still counts 2; what it costs is the file's size again until the torrent is gone and
 .original pruned.
 
@@ -170,9 +174,54 @@ def reported_files(ledger):
     return out
 
 
-def needs_work(info, incompatible):
+def describe(track):
+    words = [tag(track, "language"), (track.get("codec_name") or "?").upper()]
+    if track.get("channels"):
+        words.append(f"{track['channels']}ch")
+    return " ".join(w for w in words if w)
+
+
+def same_language(a, b):
+    a, b = (tag(a, "language") or "und").lower(), (tag(b, "language") or "und").lower()
+    return a == b or "und" in (a, b)
+
+
+def stand_in(tracks, main, incompatible):
+    """A compatible track that would play in the main track's place, or None."""
+    wanted = min(int(main.get("channels") or AC3_MAX_CHANNELS), AC3_MAX_CHANNELS)
+    for track in tracks:
+        if track is main or track.get("codec_name") in incompatible:
+            continue
+        if track.get("disposition", {}).get("comment") or not same_language(track, main):
+            continue
+        if int(track.get("channels") or 0) >= wanted:
+            return track
+    return None
+
+
+def assess(info, incompatible, position=None):
+    """The audio position to build the AC3 from, and why not when there is nothing to do.
+
+    The same rule is in services/pi-metrics/plan.go; change both together.
+    """
     tracks = audio_streams(info)
-    return bool(tracks) and all(t.get("codec_name") in incompatible for t in tracks)
+    if not tracks:
+        return None, "it has no audio"
+    if position is None:
+        position = default_audio_index(tracks)
+    if not 0 <= position < len(tracks):
+        return None, f"it has no audio track {position}"
+    main = tracks[position]
+    if main.get("codec_name") not in incompatible:
+        return None, f"its main track is {describe(main)}, a codec no client has been refused"
+    other = stand_in(tracks, main, incompatible)
+    if other is not None:
+        return None, f"it already has {describe(other)}, which plays in place of the {describe(main)}"
+    return position, None
+
+
+def needs_work(info, incompatible):
+    return assess(info, incompatible)[1] is None
 
 
 def default_audio_index(tracks):
@@ -409,10 +458,9 @@ def record(mode, path, outcome):
         print(f"{HISTORY}: {err}", file=sys.stderr)
 
 
-def convert(path, info, mode, on_progress=None):
+def convert(path, info, position, mode, on_progress=None):
     """Remux, verify and swap one file in. Returns the outcome written to the history."""
     tracks = audio_streams(info)
-    position = default_audio_index(tracks)
     source = tracks[position]
     channels = int(source.get("channels") or AC3_MAX_CHANNELS)
     duration = float(info.get("format", {}).get("duration") or 0)
@@ -461,13 +509,13 @@ def main():
             info = probe(path)
             if info is None:
                 continue
-            if not needs_work(info, incompatible):
+            position, why_not = assess(info, incompatible)
+            if why_not:
                 entry = reported.get(path)
                 if entry and now - (entry.get("seen") or 0) < RECENT_SECONDS:
-                    kept = sorted({t.get("codec_name") for t in audio_streams(info)} - incompatible)
                     print(f"{path.name}: {entry.get('app')} re-encoded its {entry.get('codec')} for "
-                          f"{entry.get('client')}, but it also carries {', '.join(kept) or 'no audio'}; "
-                          f"nothing to add, the client played another track or cannot play those either")
+                          f"{entry.get('client')}, but {why_not}; nothing to add, the client played "
+                          f"another track or cannot play that one either")
                 continue
 
             if path.stat().st_nlink > 1:
@@ -480,7 +528,7 @@ def main():
                 continue
 
             holding(path)
-            failure, outcome = convert(path, info, "nightly")
+            failure, outcome = convert(path, info, position, "nightly")
             holding(None)
             if failure:
                 print(f"{path.name}: {failure}", file=sys.stderr)
@@ -533,7 +581,7 @@ def resolve(given):
     return library_path(given) or path
 
 
-def convert_file(given, machine, allow_hardlinked):
+def convert_file(given, machine, allow_hardlinked, track=None):
     out = Reporter(machine)
     path = resolve(given)
     if not path.is_file():
@@ -551,9 +599,9 @@ def convert_file(given, machine, allow_hardlinked):
         if info is None:
             return out.failed(path, "ffprobe cannot read it")
         incompatible = incompatible_codecs(load_ledger())
-        if not needs_work(info, incompatible):
-            kept = sorted({t.get("codec_name") for t in audio_streams(info)} - incompatible)
-            return out.failed(path, f"nothing to add: it already carries {', '.join(kept) or 'no audio'}")
+        position, why_not = assess(info, incompatible, track)
+        if why_not:
+            return out.failed(path, f"nothing to add: {why_not}")
 
         stat = path.stat()
         if stat.st_nlink > 1 and not allow_hardlinked:
@@ -563,7 +611,6 @@ def convert_file(given, machine, allow_hardlinked):
                                     f"left after a copy of the file")
 
         tracks = audio_streams(info)
-        position = default_audio_index(tracks)
         duration = float(info.get("format", {}).get("duration") or 0)
         out.emit("plan", path=str(path), duration=duration, size=stat.st_size, links=stat.st_nlink,
                  source={"position": position, "index": tracks[position].get("index"),
@@ -571,7 +618,7 @@ def convert_file(given, machine, allow_hardlinked):
                          "channels": tracks[position].get("channels"),
                          "language": tag(tracks[position], "language")})
         holding(path)
-        failure, outcome = convert(path, info, "app", out.progress(duration, frame_rate(info)))
+        failure, outcome = convert(path, info, position, "app", out.progress(duration, frame_rate(info)))
     if failure:
         return out.failed(path, failure)
     if machine:
@@ -586,9 +633,11 @@ if __name__ == "__main__":
     parser.add_argument("--file", help="convert this one file instead of the nightly pass")
     parser.add_argument("--progress", action="store_true", help="with --file: JSON lines on stdout")
     parser.add_argument("--allow-hardlinked", action="store_true", help="with --file: convert a seeding file")
+    parser.add_argument("--track", type=int, help="with --file: the audio track (0:a:N) the client played, "
+                                                   "instead of the default one")
     args = parser.parse_args()
     if args.file:
-        sys.exit(convert_file(args.file, args.progress, args.allow_hardlinked))
-    if args.progress or args.allow_hardlinked:
-        parser.error("--progress and --allow-hardlinked only apply with --file")
+        sys.exit(convert_file(args.file, args.progress, args.allow_hardlinked, args.track))
+    if args.progress or args.allow_hardlinked or args.track is not None:
+        parser.error("--progress, --allow-hardlinked and --track only apply with --file")
     main()

@@ -34,6 +34,7 @@ type ledgerFile struct {
 			Language string `json:"language"`
 			Channels int    `json:"channels"`
 			Default  bool   `json:"default"`
+			Played   bool   `json:"played"`
 			Title    string `json:"title"`
 		} `json:"source"`
 		TargetCodec   string `json:"target_codec"`

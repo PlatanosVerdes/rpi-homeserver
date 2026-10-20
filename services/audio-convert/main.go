@@ -210,7 +210,7 @@ func (s *server) state(w http.ResponseWriter, r *http.Request) {
 		"holder":  holder,
 		"history": recent,
 		"speed":   speed,
-		"free":    freeBytes(s.dataRoot),
+		"free":    freeBytes(filepath.Join(s.dataRoot, libraries[0])),
 		"minFree": minFreeBytes,
 	}
 	if ledgerErr != nil {
@@ -235,24 +235,24 @@ func (s *server) play(w http.ResponseWriter, r *http.Request) {
 	}
 	i := slices.IndexFunc(files, func(f ledgerFile) bool { return f.Library == library })
 	if i < 0 || !files[i].Actionable {
-		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "ese fichero no está en la lista de convertibles"})
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "that file is not listed as fixable"})
 		return
 	}
 	full, ok := insideLibrary(s.dataRoot, library)
 	if !ok {
-		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "ruta fuera de la biblioteca"})
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "not a path inside the library"})
 		return
 	}
 	facts := inspect(full)
 	switch {
 	case !facts.exists:
-		writeJSON(w, http.StatusNotFound, map[string]any{"error": "el fichero ya no está; quizá se reemplazó"})
+		writeJSON(w, http.StatusNotFound, map[string]any{"error": "the file is gone; it may have been replaced"})
 		return
 	case facts.links > 1 && !allowHardlinked:
-		writeJSON(w, http.StatusConflict, map[string]any{"error": "sigue sembrando", "confirm": true})
+		writeJSON(w, http.StatusConflict, map[string]any{"error": "still seeding (hardlinked); confirm to convert it anyway", "confirm": true})
 		return
 	case facts.free < uint64(facts.size)+minFreeBytes:
-		writeJSON(w, http.StatusConflict, map[string]any{"error": "no hay sitio: tras copiar el fichero deben quedar 40 GiB libres"})
+		writeJSON(w, http.StatusConflict, map[string]any{"error": "not enough free space: 40 GiB must be left after a copy of the file"})
 		return
 	}
 
@@ -260,8 +260,13 @@ func (s *server) play(w http.ResponseWriter, r *http.Request) {
 	if title == "" {
 		title = filepath.Base(full)
 	}
-	if !s.enqueue(job{Library: library, Title: title, AllowHardlinked: allowHardlinked, Added: time.Now().Unix()}) {
-		writeJSON(w, http.StatusConflict, map[string]any{"error": "ya está en la cola"})
+	queued := job{Library: library, Title: title, AllowHardlinked: allowHardlinked, Added: time.Now().Unix()}
+	if p := files[i].Plan; p != nil {
+		position := p.Source.Position
+		queued.Track = &position
+	}
+	if !s.enqueue(queued) {
+		writeJSON(w, http.StatusConflict, map[string]any{"error": "already queued"})
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"queued": true})
@@ -273,7 +278,7 @@ func (s *server) cancel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !s.dequeue(strings.TrimSpace(r.FormValue("library_path"))) {
-		writeJSON(w, http.StatusNotFound, map[string]any{"error": "no estaba en la cola (o ya ha empezado)"})
+		writeJSON(w, http.StatusNotFound, map[string]any{"error": "not in the queue (or already started)"})
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})

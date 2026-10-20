@@ -34,7 +34,9 @@ type track struct {
 	Language string `json:"language,omitempty"`
 	Channels int    `json:"channels,omitempty"`
 	Default  bool   `json:"default,omitempty"`
-	Title    string `json:"title,omitempty"` // the server's own description of it
+	Comment  bool   `json:"comment,omitempty"`
+	Played   bool   `json:"played,omitempty"` // the track the session was playing, when it said
+	Title    string `json:"title,omitempty"`  // the server's own description of it
 }
 
 // Why a file is listed but cannot be fixed, for a page that words it in its own language.
@@ -42,6 +44,7 @@ const (
 	reasonDirectPlayOff = "direct_play_off"
 	reasonRefusesTarget = "refuses_target"
 	reasonHasPlayable   = "has_playable"
+	reasonMainPlayable  = "main_playable"
 	reasonNotLibrary    = "not_library"
 )
 
@@ -103,14 +106,43 @@ func sortTracks(tracks []track) []track {
 	return tracks
 }
 
-// defaultTrack is audio-compat's default_audio_index: the track flagged default, else the first.
-func defaultTrack(tracks []track) track {
+// mainTrack is the one the client had re-encoded when the session said which, and otherwise
+// audio-compat's default_audio_index: the track flagged default, else the first.
+func mainTrack(tracks []track) track {
+	for _, candidate := range tracks {
+		if candidate.Played {
+			return candidate
+		}
+	}
 	for _, candidate := range tracks {
 		if candidate.Default {
 			return candidate
 		}
 	}
 	return tracks[0]
+}
+
+func sameLanguage(a, b string) bool {
+	a, b = strings.ToLower(a), strings.ToLower(b)
+	return a == b || a == "" || b == "" || a == "und" || b == "und"
+}
+
+// standIn is a compatible track that would play in the main track's place: same language, as many
+// channels up to 5.1, not a commentary. audio-compat's stand_in is the same rule; change both.
+func standIn(tracks []track, main track, incompatible map[string]bool) (track, bool) {
+	wanted := main.Channels
+	if wanted == 0 || wanted > targetMaxChannels {
+		wanted = targetMaxChannels
+	}
+	for _, t := range tracks {
+		if t.Index == main.Index || incompatible[t.Codec] || t.Comment || !sameLanguage(t.Language, main.Language) {
+			continue
+		}
+		if t.Channels >= wanted {
+			return t, true
+		}
+	}
+	return track{}, false
 }
 
 func channelWords(channels int) string {
@@ -165,19 +197,24 @@ func (f *fileSeen) decide(incompatible map[string]bool) {
 		f.Reason = "not a file in the films or series library"
 		return
 	}
-	for _, t := range f.Tracks {
-		if !incompatible[t.Codec] {
-			f.ReasonCode, f.ReasonDetail = reasonHasPlayable, describe(t)
-			f.Reason = fmt.Sprintf("it already carries %s, a codec no client has been refused; pick that track in the player", describe(t))
-			return
-		}
-	}
-	f.Actionable = true
 	if len(f.Tracks) == 0 {
+		f.Actionable = true
 		return
 	}
+	source := mainTrack(f.Tracks)
+	if !incompatible[source.Codec] {
+		f.ReasonCode, f.ReasonDetail = reasonMainPlayable, describe(source)
+		f.Reason = fmt.Sprintf("its main track is %s, a codec no client has been refused", describe(source))
+		return
+	}
+	if other, ok := standIn(f.Tracks, source, incompatible); ok {
+		f.ReasonCode, f.ReasonDetail = reasonHasPlayable, describe(other)
+		f.Reason = fmt.Sprintf("it already has %s, which plays in place of the %s track; pick it in the player",
+			describe(other), describe(source))
+		return
+	}
+	f.Actionable = true
 
-	source := defaultTrack(f.Tracks)
 	channels := source.Channels
 	if channels == 0 || channels > targetMaxChannels {
 		channels = targetMaxChannels

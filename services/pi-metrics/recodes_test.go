@@ -142,15 +142,16 @@ func TestSessionsCarryCauseAndFile(t *testing.T) {
 			// What Plex really sends mid-transcode: Media describes the stream, and Part has no file.
 			fmt.Fprint(w, `{"MediaContainer":{"Metadata":[{"ratingKey":"853",
 				"Player":{"title":"TV 2025","product":"Plex for Samsung","platform":"Tizen"},
-				"Media":[{"id":"2214","container":"mp4","audioCodec":"aac","Part":[{"id":"2214","decision":"transcode"}]}],
+				"Media":[{"id":"2214","container":"mp4","audioCodec":"aac","Part":[{"id":"2214","decision":"transcode",
+					"Stream":[{"streamType":2,"index":2,"selected":true,"decision":"transcode"}]}]}],
 				"TranscodeSession":{"key":"/transcode/sessions/abc","videoDecision":"copy","audioDecision":"transcode","sourceAudioCodec":"eac3"}}]}}`)
 		case "/library/metadata/853":
 			fmt.Fprint(w, `{"MediaContainer":{"Metadata":[{"title":"Spider-Man","year":2002,"Media":[
 				{"id":"1111","Part":[{"file":"/data/films/Other/b.mkv"}]},
 				{"id":"2214","duration":7200000,"Part":[{"file":"/data/films/Spider-Man/a.mkv","Stream":[
 					{"streamType":1,"index":0,"codec":"hevc"},
-					{"streamType":2,"index":2,"codec":"eac3","channels":6,"language":"Español"},
-					{"streamType":2,"index":1,"codec":"eac3","channels":8,"default":true,"language":"English","displayTitle":"English (EAC3 7.1)"}]}]}]}]}}`)
+					{"streamType":2,"index":2,"codec":"eac3","channels":6,"language":"Español","languageCode":"spa"},
+					{"streamType":2,"index":1,"codec":"eac3","channels":8,"default":true,"language":"English","languageCode":"eng","displayTitle":"English (EAC3 7.1)"}]}]}]}]}}`)
 		case "/Sessions":
 			fmt.Fprint(w, `[{"DeviceName":"Living room","Client":"Jellyfin Android TV",
 				"NowPlayingItem":{"Path":"/data/series/b.mkv","Name":"Pilot","SeriesName":"Show","ParentIndexNumber":1,"IndexNumber":2,
@@ -168,7 +169,8 @@ func TestSessionsCarryCauseAndFile(t *testing.T) {
 		t.Fatalf("plex: %v %+v", err, plex)
 	}
 	if p := plex[0]; p.title != "Spider-Man (2002)" || p.duration != 7200 || len(p.tracks) != 2 ||
-		p.tracks[0].Index != 1 || !p.tracks[0].Default || p.tracks[0].Title != "English (EAC3 7.1)" || p.tracks[1].Position != 1 {
+		p.tracks[0].Index != 1 || !p.tracks[0].Default || p.tracks[0].Title != "English (EAC3 7.1)" || p.tracks[1].Position != 1 ||
+		p.tracks[0].Played || !p.tracks[1].Played || p.tracks[0].Language != "eng" {
 		t.Fatalf("plex media: %+v", p)
 	}
 	jellyfin, err := jellyfinSessions()
@@ -176,7 +178,7 @@ func TestSessionsCarryCauseAndFile(t *testing.T) {
 		t.Fatalf("jellyfin: %v %+v", err, jellyfin)
 	}
 	if j := jellyfin[0]; j.title != "Show S01E02 Pilot" || j.duration != 3600 || len(j.tracks) != 1 ||
-		j.tracks[0].Channels != 8 || !j.tracks[0].Default || j.tracks[0].Language != "eng" {
+		j.tracks[0].Channels != 8 || !j.tracks[0].Default || j.tracks[0].Language != "eng" || !j.tracks[0].Played {
 		t.Fatalf("jellyfin media: %+v", j)
 	}
 }

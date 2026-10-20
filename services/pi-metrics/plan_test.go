@@ -75,8 +75,8 @@ func TestPlanRefusesWhatATrackCannotFix(t *testing.T) {
 			track{Index: 1, Codec: "eac3", Channels: 6}), "Force Direct Play"},
 		{"direct play off on ac3", withCause(audioOnly("TV", "ac3", "/data/films/c.mkv"), causeNoDirectPlay), "Force Direct Play"},
 		{"already has a playable track", withMedia(audioOnly("TV", "dca", "/data/films/d.mkv"), 60,
-			track{Index: 1, Codec: "dca", Default: true},
-			track{Index: 2, Codec: "aac", Title: "English (AAC Stereo)"}), "English (AAC Stereo)"},
+			track{Index: 1, Codec: "dca", Default: true, Channels: 2},
+			track{Index: 2, Codec: "aac", Channels: 2, Title: "English (AAC Stereo)"}), "English (AAC Stereo)"},
 		{"not a library file", audioOnly("TV", "dca", "/media/elsewhere/e.mkv"), "library"},
 	}
 	for _, c := range cases {
@@ -127,7 +127,7 @@ func TestIgnoredSessionsAreNotListed(t *testing.T) {
 func TestLearningACodecMakesEarlierFilesActionable(t *testing.T) {
 	var l audioLedger
 	l.record([]session{withMedia(audioOnly("TV", "dca", "/data/films/a.mkv"), 60,
-		track{Index: 1, Codec: "dca", Default: true}, track{Index: 2, Codec: "eac3"})}, 100)
+		track{Index: 1, Codec: "dca", Default: true, Channels: 6}, track{Index: 2, Codec: "eac3", Channels: 6})}, 100)
 	if l.Files[0].Actionable {
 		t.Fatalf("eac3 not refused yet, should not be actionable: %+v", l.Files[0])
 	}
@@ -142,5 +142,48 @@ func TestOldLedgerEntriesAreReadAsCodec(t *testing.T) {
 	f.decide(incompatibleCodecs(nil))
 	if f.Cause != causeCodec || !f.Actionable || f.Library != "films/a.mkv" {
 		t.Fatalf("%+v", f)
+	}
+}
+
+func TestFixabilityFollowsTheMainTrack(t *testing.T) {
+	cases := []struct {
+		name       string
+		tracks     []track
+		actionable bool
+		source     int
+	}{
+		{"dts default beside an mp3", []track{
+			{Index: 1, Codec: "dca", Language: "eng", Channels: 8, Default: true, Title: "English (DTS-HD MA 7.1)"},
+			{Index: 2, Codec: "mp3", Language: "eng", Channels: 2}}, true, 1},
+		{"truehd default beside an ac3 stereo commentary", []track{
+			{Index: 1, Codec: "truehd", Language: "eng", Channels: 8, Default: true},
+			{Index: 2, Codec: "ac3", Language: "eng", Channels: 2, Comment: true, Title: "Commentary"},
+			{Index: 3, Codec: "ac3", Language: "eng", Channels: 2, Title: "Descriptive Audio"}}, true, 1},
+		{"dts beside an ac3 5.1 of the same mix", []track{
+			{Index: 1, Codec: "dca", Language: "eng", Channels: 6, Default: true},
+			{Index: 2, Codec: "ac3", Language: "eng", Channels: 6}}, false, 0},
+		{"ac3 default", []track{
+			{Index: 1, Codec: "ac3", Language: "eng", Channels: 6, Default: true},
+			{Index: 2, Codec: "dca", Language: "eng", Channels: 6}}, false, 0},
+		{"an ac3 5.1 dub is no stand-in", []track{
+			{Index: 1, Codec: "dca", Language: "eng", Channels: 6, Default: true},
+			{Index: 2, Codec: "ac3", Language: "spa", Channels: 6}}, true, 1},
+		{"the played track wins over the default", []track{
+			{Index: 1, Codec: "ac3", Language: "spa", Channels: 6, Default: true},
+			{Index: 2, Codec: "dca", Language: "eng", Channels: 6, Played: true}}, true, 2},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			f := onlyFile(t, withMedia(audioOnly("TV", "dca", "/data/films/a.mkv"), 60, c.tracks...))
+			if f.Actionable != c.actionable {
+				t.Fatalf("actionable %v, want %v: %s", f.Actionable, c.actionable, f.Reason)
+			}
+			if c.actionable && f.Plan.Source.Index != c.source {
+				t.Fatalf("source %d, want %d", f.Plan.Source.Index, c.source)
+			}
+			if !c.actionable && f.Reason == "" {
+				t.Fatal("no reason given")
+			}
+		})
 	}
 }

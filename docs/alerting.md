@@ -207,17 +207,19 @@ of the file: which track the AC3 is built from, the extra size, the duration. Th
 [audio-convert.md](audio-convert.md) shows at `audio.platanosverdes.com`, where a file can be
 converted right away instead of waiting for the night; the alert links there.
 
-At 01:30 `audio-compat.py` reads that file. A library file is converted when every audio track it
-has is in a codec recorded there or in its seed (DTS and TrueHD, what it converted before anything
-was measured). The recorded files go first, newest first, so the film that set off the alert is
+At 01:30 `audio-compat.py` reads that file. A library file is converted when its main track (flagged default,
+else the first) is in a codec recorded there or in its seed (DTS and TrueHD, what it converted
+before anything was measured), and no other track would play in its place: one in a playable codec,
+the same language and as many channels up to 5.1, that is not a commentary. The recorded files go first, newest first, so the film that set off the alert is
 the first one fixed. What it does **not** do:
 
 - **Convert on a guess.** A codec no server has refused for a client yet is left alone.
 - **Help a client that cannot play AC3.** AC3 is what it adds, so if AC3 itself is recorded as
   refused it says so in `audio-compat.log` and ignores it; the alert says the same.
 - **Fix a client that turned direct play off.** That is in the client, not the file.
-- **Pick a track for the client.** A file with an EAC3 track and an AAC one already has something
-  playable, so it is skipped, and if the client still chose the EAC3 the log says so the next night.
+- **Pick a track for the client.** A file with a DTS 5.1 and an AC3 5.1 of the same mix already has
+  something playable, so it is skipped, and if the client still chose the DTS the log says so the
+  next night.
 - **Forget.** A codec a client update fixed stays recorded until it is deleted from the JSON by hand,
   followed by `docker restart pi-metrics`: the collector holds the file in memory and would write the
   codec straight back.

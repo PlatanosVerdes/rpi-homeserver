@@ -141,6 +141,7 @@ func plexMedia(ratingKey string, playing []map[string]any) mediaInfo {
 	if len(playing) > 0 {
 		wanted = str(playing[0], "id")
 	}
+	played := playedPlexStream(playing)
 	for _, item := range answer.MediaContainer.Metadata {
 		for _, media := range objs(item, "Media") {
 			if wanted != "" && str(media, "id") != wanted {
@@ -151,6 +152,9 @@ func plexMedia(ratingKey string, playing []map[string]any) mediaInfo {
 				if file == "" {
 					continue
 				}
+				if played < 0 {
+					played = playedPlexStream([]map[string]any{media})
+				}
 				var tracks []track
 				for _, stream := range objs(part, "Stream") {
 					if num(stream, "streamType") != 2 {
@@ -159,9 +163,11 @@ func plexMedia(ratingKey string, playing []map[string]any) mediaInfo {
 					tracks = append(tracks, track{
 						Index:    int(num(stream, "index")),
 						Codec:    str(stream, "codec"),
-						Language: str(stream, "language"),
+						Language: str(stream, "languageCode"),
 						Channels: int(num(stream, "channels")),
 						Default:  truthy(stream, "default"),
+						Comment:  truthy(stream, "comment"),
+						Played:   int(num(stream, "index")) == played,
 						Title:    str(stream, "displayTitle"),
 					})
 				}
@@ -175,6 +181,23 @@ func plexMedia(ratingKey string, playing []map[string]any) mediaInfo {
 		}
 	}
 	return mediaInfo{}
+}
+
+// playedPlexStream is the index of the selected audio stream: in a session that is the one being
+// played, in the library the one chosen for the item. -1 when neither says.
+func playedPlexStream(media []map[string]any) int {
+	for _, m := range media {
+		for _, part := range objs(m, "Part") {
+			for _, stream := range objs(part, "Stream") {
+				if num(stream, "streamType") == 2 && truthy(stream, "selected") {
+					if _, ok := stream["index"].(float64); ok {
+						return int(num(stream, "index"))
+					}
+				}
+			}
+		}
+	}
+	return -1
 }
 
 // episodeTitle is "Show S01E02 Name" for an episode and "Name (year)" for a film.
@@ -214,6 +237,10 @@ func jellyfinSessions() ([]session, error) {
 			// RunTimeTicks are 100 ns.
 			duration: num(playing, "RunTimeTicks") / 1e7,
 		}
+		played := -1
+		if index, ok := state["AudioStreamIndex"].(float64); ok {
+			played = int(index)
+		}
 		for _, stream := range objs(playing, "MediaStreams") {
 			if str(stream, "Type") != "Audio" {
 				continue
@@ -224,6 +251,7 @@ func jellyfinSessions() ([]session, error) {
 				Language: str(stream, "Language"),
 				Channels: int(num(stream, "Channels")),
 				Default:  truthy(stream, "IsDefault"),
+				Played:   played >= 0 && int(num(stream, "Index")) == played,
 				Title:    str(stream, "DisplayTitle"),
 			})
 		}

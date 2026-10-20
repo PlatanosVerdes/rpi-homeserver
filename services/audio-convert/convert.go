@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -24,6 +25,7 @@ type job struct {
 	Library         string `json:"library_path"`
 	Title           string `json:"title"`
 	AllowHardlinked bool   `json:"allow_hardlinked"`
+	Track           *int   `json:"track,omitempty"` // the audio position pi-metrics planned from
 	Added           int64  `json:"added"`
 }
 
@@ -186,6 +188,9 @@ func (s *server) run(j job) (outcome, bool) {
 	args := []string{s.script, "--file", file, "--progress"}
 	if j.AllowHardlinked {
 		args = append(args, "--allow-hardlinked")
+	}
+	if j.Track != nil {
+		args = append(args, "--track", strconv.Itoa(*j.Track))
 	}
 	cmd := exec.Command(s.python, args...)
 	var stderr bytes.Buffer
