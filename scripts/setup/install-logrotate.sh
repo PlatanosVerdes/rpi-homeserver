@@ -10,10 +10,15 @@
 set -euo pipefail
 
 PROJECT_DIR="${PROJECT_DIR:-$HOME/rpi-homeserver}"
-SRC="$PROJECT_DIR/config/logrotate/rpi-homeserver"
+SERVICES_DIR="${SERVICES_DIR:-$HOME/rpi-services}"
+TEMPLATE="$PROJECT_DIR/config/logrotate/rpi-homeserver"
+SRC="$PROJECT_DIR/.logrotate.rendered"
 DST="/etc/logrotate.d/rpi-homeserver"
 
-[[ -f "$SRC" ]] || { echo "no policy at $SRC, skipping"; exit 0; }
+[[ -f "$TEMPLATE" ]] || { echo "no policy at $TEMPLATE, skipping"; exit 0; }
+trap 'rm -f "$SRC"' EXIT
+sed -e "s|@PROJECT_DIR@|$PROJECT_DIR|g" -e "s|@SERVICES_DIR@|$SERVICES_DIR|g" \
+    -e "s|@USER@|$(id -un)|g" -e "s|@GROUP@|$(id -gn)|g" "$TEMPLATE" > "$SRC"
 
 if sudo cmp -s "$SRC" "$DST" 2>/dev/null; then
     echo "logrotate policy already up to date"
