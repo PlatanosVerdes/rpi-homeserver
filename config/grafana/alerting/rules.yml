@@ -594,7 +594,46 @@ groups:
               refId: A
               instant: true
               editorMode: code
-              expr: 'probe_success == bool 0'
+              expr: 'probe_success{job!="blackbox_access"} == bool 0'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+
+      # The public way in to an app behind Cloudflare Access (prometheus.probe.access). It shares the
+      # Cloudflare IPs with every other public URL here, so when Spain's football blocking or a dead
+      # tunnel takes them all down at once that is not this app's fault: it only fires while some
+      # other public probe still gets through. With no other public probe to compare, any failure.
+      - uid: homelab-access-route-broken
+        title: 'Public route behind Access broken'
+        condition: C
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: '{{ $labels.instance }} does not reach the Cloudflare Access login'
+          description: >-
+            From the internet this hostname no longer answers with the redirect to the Access login,
+            while other public URLs on the same Cloudflare path still work. Check its tunnel route,
+            its DNS record and its Access application; a 200 means it answers without a login.
+        noDataState: OK
+        execErrState: KeepLast
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: >-
+                (probe_success{job="blackbox_access"} == bool 0)
+                * on() group_left() (max(probe_success{job="blackbox", instance=~"https://.+"}) or on() vector(1))
           - refId: C
             datasourceUid: __expr__
             model:

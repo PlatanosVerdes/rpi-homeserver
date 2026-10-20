@@ -16,3 +16,18 @@ modules:
       valid_http_versions: [HTTP/1.0, HTTP/1.1, HTTP/2.0]
       follow_redirects: false
       preferred_ip_protocol: ip4
+
+  # A public hostname behind Cloudflare Access (label prometheus.probe.access). Healthy means
+  # Access is in front and sends a stranger to its login: a 302 to the team's cloudflareaccess.com.
+  # A 200 here would be worse than a failure, since it means the app answers without a login.
+  http_behind_access:
+    prober: http
+    timeout: 8s
+    http:
+      valid_status_codes: [302]
+      valid_http_versions: [HTTP/1.1, HTTP/2.0]
+      follow_redirects: false
+      preferred_ip_protocol: ip4
+      fail_if_header_not_matches:
+        - header: Location
+          regexp: '^https://[^/]+\.cloudflareaccess\.com/'

@@ -101,6 +101,14 @@ Give it a URL that a healthy app answers and a dead one does not, on the contain
 `config/blackbox/blackbox.yml` says which). A service on the host network is probed through
 `http://host.docker.internal:<port>/` instead, because it has no name on `media-network`.
 
+A service published through Cloudflare Access can add a second label, `prometheus.probe.access`,
+with its **public** URL (`https://app.example.com/`). That one is probed from the internet's side,
+through public DNS rather than Pi-hole, and is healthy only when Access answers a stranger with the
+redirect to its login, so it catches a broken tunnel route, DNS record or Access application, and a
+route left open without a login. Its alert, "Public route behind Access broken", stays quiet while
+every public URL is failing at once, which is a blocked Cloudflare range or a dead tunnel rather
+than this app.
+
 Leave the label out only when the service serves no HTTP at all — a bot, a cron worker, an
 exporter. Those are covered by their own scrape job or, failing that, by the container being
 alive, which is the "Not probed" table on the same dashboard.
