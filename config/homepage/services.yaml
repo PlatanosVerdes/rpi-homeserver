@@ -101,6 +101,12 @@
         description: Drop a .torrent, cross-seed follows on its own
         server: my-docker
         container: torrent-drop
+    - Audio convert:
+        icon: https://audio.platanosverdes.com/icon.svg
+        href: https://audio.platanosverdes.com
+        description: Files a TV had re-encoded, and the button that fixes them
+        server: my-docker
+        container: audio-convert
     - torre:
         icon: https://torre.platanosverdes.com/icon.svg
         href: https://torre.platanosverdes.com

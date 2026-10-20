@@ -11,7 +11,7 @@ A modular, Docker-based home server for Raspberry Pi. Uses Docker Compose's `inc
 | Module | Purpose | Key Services |
 | :--- | :--- | :--- |
 | **Core** | Entry point & Networking | Caddy, Homepage, Pi-hole, Speedtest-tracker |
-| **Media** | Streaming & Live TV | Plex, Jellyfin, Seerr, Bazarr, Maintainerr, Acestream |
+| **Media** | Streaming & Live TV | Plex, Jellyfin, Seerr, Bazarr, Maintainerr, Acestream, audio-convert |
 | **Arrs** | Automation & Downloads | Radarr, Sonarr, Prowlarr, qBittorrent, FlareSolverr, Unpackerr, cross-seed, torrent-drop |
 | **Monitoring** | System Health | Prometheus, Grafana, Pushgateway, node-exporter, cAdvisor |
 
@@ -442,7 +442,7 @@ Every service belongs to one or more profiles. Set `COMPOSE_PROFILES` in `.env` 
 | `essential` | Caddy, Homepage, Pi-hole, Speedtest-tracker |
 | `moni` | Prometheus, Grafana, Pushgateway, node-exporter, cAdvisor, Pihole-exporter, Speedtest-tracker |
 | `acestream` | Aceserve, gluetun, bifrost, Jellyfin, farnsworth + Grafana/Prometheus/Pushgateway |
-| `media` | Plex, Seerr, Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr, Unpackerr, torrent-drop |
+| `media` | Plex, Seerr, Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr, Unpackerr, torrent-drop, audio-convert |
 | `vpn` | sleipnir, docker-socket-proxy, gluetun-test, huginn |
 | `bots` | muninn, docker-socket-proxy |
 | `bot` | Pol Academy Offers Bot |
@@ -602,6 +602,15 @@ checkbox adds the `keep` tag, which takes the torrent out of every clock and kee
 
 The queue is worth knowing about: `max_active_downloads` is 1, so a torrent added while Radarr is
 downloading sits in `queuedDL` until that one finishes. The page says so rather than looking stuck.
+
+### Audio convert (fixing a re-encoded file)
+`services/audio-convert/` (Go, Dockerized) serves `audio.platanosverdes.com`, tailnet only: every
+file a TV or phone had its audio re-encoded on, with the plan pi-metrics worked out for it (which
+track an AC3 5.1 is built from, the extra space, how long it takes) and a button that converts it
+now instead of at 01:30. The conversion is `scripts/sync/audio-compat.py --file`, the same script
+the nightly pass runs, and the two share a lock so they never convert at once. Re-encodes a new
+track cannot fix, such as a client that turned direct play off, are listed greyed with the reason.
+Full guide: [docs/audio-convert.md](docs/audio-convert.md).
 
 ### Tailscale Metrics
 `services/tailscale-metrics/` is a Dockerized Go exporter with no published port. Prometheus

@@ -42,6 +42,11 @@ type session struct {
 	recodes map[string]string // video/audio -> the source codec being re-encoded
 	cause   string            // why the audio is re-encoded, see cause.go
 	file    string            // as the server sees it, so under its own mount
+
+	// What the server says about that file, for the conversion plan (plan.go).
+	title    string
+	duration float64
+	tracks   []track
 }
 
 func isBrowser(product, platform string) bool {
@@ -108,19 +113,20 @@ func plexSessions() ([]session, error) {
 				current.cause = plexAudioCause(path.Base(str(transcode, "key")))
 			}
 		}
-		if learnable(current) != "" {
-			current.file = plexFile(str(row, "ratingKey"), objs(row, "Media"))
+		if listable(current) != "" {
+			media := plexMedia(str(row, "ratingKey"), objs(row, "Media"))
+			current.file, current.title, current.duration, current.tracks = media.file, media.title, media.duration, media.tracks
 		}
 		out = append(out, current)
 	}
 	return out, nil
 }
 
-// plexFile asks the library, because a session's Media and Part describe the stream being sent:
+// plexMedia asks the library, because a session's Media and Part describe the stream being sent:
 // mid-transcode they say mp4 and aac and carry no file at all.
-func plexFile(ratingKey string, playing []map[string]any) string {
+func plexMedia(ratingKey string, playing []map[string]any) mediaInfo {
 	if ratingKey == "" {
-		return ""
+		return mediaInfo{}
 	}
 	var answer struct {
 		MediaContainer struct {
@@ -129,25 +135,80 @@ func plexFile(ratingKey string, playing []map[string]any) string {
 	}
 	headers := map[string]string{"Accept": "application/json", "X-Plex-Token": plexToken}
 	if err := fetch(plexURL+"/library/metadata/"+ratingKey, headers, &answer); err != nil {
-		return ""
+		return mediaInfo{}
 	}
 	wanted := ""
 	if len(playing) > 0 {
 		wanted = str(playing[0], "id")
 	}
+	played := playedPlexStream(playing)
 	for _, item := range answer.MediaContainer.Metadata {
 		for _, media := range objs(item, "Media") {
 			if wanted != "" && str(media, "id") != wanted {
 				continue
 			}
 			for _, part := range objs(media, "Part") {
-				if file := str(part, "file"); file != "" {
-					return file
+				file := str(part, "file")
+				if file == "" {
+					continue
+				}
+				if played < 0 {
+					played = playedPlexStream([]map[string]any{media})
+				}
+				var tracks []track
+				for _, stream := range objs(part, "Stream") {
+					if num(stream, "streamType") != 2 {
+						continue
+					}
+					tracks = append(tracks, track{
+						Index:    int(num(stream, "index")),
+						Codec:    str(stream, "codec"),
+						Language: str(stream, "languageCode"),
+						Channels: int(num(stream, "channels")),
+						Default:  truthy(stream, "default"),
+						Comment:  truthy(stream, "comment"),
+						Played:   int(num(stream, "index")) == played,
+						Title:    str(stream, "displayTitle"),
+					})
+				}
+				return mediaInfo{
+					file:     file,
+					title:    episodeTitle(str(item, "grandparentTitle"), num(item, "parentIndex"), num(item, "index"), str(item, "title"), str(item, "year")),
+					duration: num(media, "duration") / 1000,
+					tracks:   sortTracks(tracks),
 				}
 			}
 		}
 	}
-	return ""
+	return mediaInfo{}
+}
+
+// playedPlexStream is the index of the selected audio stream: in a session that is the one being
+// played, in the library the one chosen for the item. -1 when neither says.
+func playedPlexStream(media []map[string]any) int {
+	for _, m := range media {
+		for _, part := range objs(m, "Part") {
+			for _, stream := range objs(part, "Stream") {
+				if num(stream, "streamType") == 2 && truthy(stream, "selected") {
+					if _, ok := stream["index"].(float64); ok {
+						return int(num(stream, "index"))
+					}
+				}
+			}
+		}
+	}
+	return -1
+}
+
+// episodeTitle is "Show S01E02 Name" for an episode and "Name (year)" for a film.
+func episodeTitle(show string, season, episode float64, name, year string) string {
+	if show != "" {
+		return fmt.Sprintf("%s S%02dE%02d %s", show, int(season), int(episode), name)
+	}
+	if year != "" {
+		return name + " (" + year + ")"
+	}
+	return name
 }
 
 func jellyfinSessions() ([]session, error) {
@@ -171,7 +232,30 @@ func jellyfinSessions() ([]session, error) {
 			method:  "directplay",
 			recodes: map[string]string{},
 			file:    str(playing, "Path"),
+			title: episodeTitle(str(playing, "SeriesName"), num(playing, "ParentIndexNumber"), num(playing, "IndexNumber"),
+				str(playing, "Name"), str(playing, "ProductionYear")),
+			// RunTimeTicks are 100 ns.
+			duration: num(playing, "RunTimeTicks") / 1e7,
 		}
+		played := -1
+		if index, ok := state["AudioStreamIndex"].(float64); ok {
+			played = int(index)
+		}
+		for _, stream := range objs(playing, "MediaStreams") {
+			if str(stream, "Type") != "Audio" {
+				continue
+			}
+			current.tracks = append(current.tracks, track{
+				Index:    int(num(stream, "Index")),
+				Codec:    str(stream, "Codec"),
+				Language: str(stream, "Language"),
+				Channels: int(num(stream, "Channels")),
+				Default:  truthy(stream, "IsDefault"),
+				Played:   played >= 0 && int(num(stream, "Index")) == played,
+				Title:    str(stream, "DisplayTitle"),
+			})
+		}
+		current.tracks = sortTracks(current.tracks)
 
 		// IsVideoDirect/IsAudioDirect are what separate a remux from a re-encode: TranscodingInfo is
 		// present for both, and both flags true means every stream is being copied.

@@ -21,6 +21,9 @@ import (
 // When the video is re-encoded too, the audio goes along whatever its codec: Jellyfin's Live TV
 // re-encodes aac that way every day, and learning from it would mark the codec every client plays.
 //
+// The file list also keeps sessions whose client turned direct play off. They teach no codec and
+// are marked not actionable, so services/audio-convert can say why converting would not help.
+//
 // Nothing here forgets a codec on its own. One that a client update fixed is removed from the file
 // by hand and the container restarted, since what is in memory is written back on the next change.
 
@@ -36,6 +39,20 @@ type fileSeen struct {
 	App    string `json:"app"`
 	Client string `json:"client"`
 	Seen   int64  `json:"seen"`
+
+	// What services/audio-convert lists: the cause, what the server says about the file, and
+	// whether adding a track can fix it (plan.go). audio-compat reads only the fields above, and
+	// only from entries whose cause is codec.
+	Cause        string  `json:"cause"`
+	Title        string  `json:"title,omitempty"`
+	Duration     float64 `json:"duration,omitempty"`
+	Library      string  `json:"library_path,omitempty"`
+	Tracks       []track `json:"tracks,omitempty"`
+	Actionable   bool    `json:"actionable"`
+	Reason       string  `json:"reason,omitempty"`
+	ReasonCode   string  `json:"reason_code,omitempty"`
+	ReasonDetail string  `json:"reason_detail,omitempty"`
+	Plan         *plan   `json:"plan,omitempty"`
 }
 
 type audioLedger struct {
@@ -67,6 +84,20 @@ func learnable(current session) string {
 	return codec
 }
 
+// listable is the source audio codec of a session whose file belongs in the ledger, or "". That
+// is every learnable session, plus one whose client turned direct play off: the app lists those
+// too, greyed, so the reason is on the page and not only in an alert.
+func listable(current session) string {
+	if codec := learnable(current); codec != "" {
+		return codec
+	}
+	if current.cause != causeNoDirectPlay {
+		return ""
+	}
+	current.cause = causeCodec
+	return learnable(current)
+}
+
 // record folds the sessions into the ledger and says whether anything in it changed.
 func (l *audioLedger) record(sessions []session, now int64) bool {
 	if l.Codecs == nil {
@@ -76,6 +107,9 @@ func (l *audioLedger) record(sessions []session, now int64) bool {
 	for _, current := range sessions {
 		codec := learnable(current)
 		if codec == "" {
+			if l.recordFile(current, listable(current), now) {
+				changed = true
+			}
 			continue
 		}
 		client := current.client + " (" + current.app + ")"
@@ -89,18 +123,39 @@ func (l *audioLedger) record(sessions []session, now int64) bool {
 			seen.Clients = append(seen.Clients, client)
 		}
 		changed = true
-
-		if current.file == "" {
-			continue
-		}
-		l.Files = slices.DeleteFunc(l.Files, func(f fileSeen) bool { return f.Path == current.file })
-		entry := fileSeen{Path: current.file, Codec: codec, App: current.app, Client: current.client, Seen: now}
-		l.Files = append([]fileSeen{entry}, l.Files...)
-		if len(l.Files) > ledgerFileLimit {
-			l.Files = l.Files[:ledgerFileLimit]
+		l.recordFile(current, codec, now)
+	}
+	if changed {
+		incompatible := incompatibleCodecs(l.Codecs)
+		for position := range l.Files {
+			l.Files[position].decide(incompatible)
 		}
 	}
 	return changed
+}
+
+// recordFile puts the session's file at the head of the queue. A codec entry is never replaced by
+// a no_direct_play one: the file still needs the track, whatever another client did with it since.
+func (l *audioLedger) recordFile(current session, codec string, now int64) bool {
+	if codec == "" || current.file == "" {
+		return false
+	}
+	if current.cause != causeCodec && slices.ContainsFunc(l.Files, func(f fileSeen) bool {
+		return f.Path == current.file && f.Cause != causeNoDirectPlay
+	}) {
+		return false
+	}
+	l.Files = slices.DeleteFunc(l.Files, func(f fileSeen) bool { return f.Path == current.file })
+	entry := fileSeen{
+		Path: current.file, Codec: codec, App: current.app, Client: current.client, Seen: now,
+		Cause: current.cause, Title: current.title, Duration: current.duration,
+		Library: libraryPath(current.file), Tracks: current.tracks,
+	}
+	l.Files = append([]fileSeen{entry}, l.Files...)
+	if len(l.Files) > ledgerFileLimit {
+		l.Files = l.Files[:ledgerFileLimit]
+	}
+	return true
 }
 
 func ledgerLoad() {
@@ -112,6 +167,10 @@ func ledgerLoad() {
 	defer ledgerMu.Unlock()
 	if err := json.Unmarshal(raw, &ledger); err != nil {
 		log.Printf("audio ledger: %v", err)
+	}
+	incompatible := incompatibleCodecs(ledger.Codecs)
+	for position := range ledger.Files {
+		ledger.Files[position].decide(incompatible)
 	}
 }
 

@@ -1368,14 +1368,13 @@ groups:
             {{ if eq $labels.cause "no_direct_play" }}The client did not ask for direct play, so the
             server built a stream for it, and that fallback takes only AAC: any other codec is
             re-encoded, an added AC3 track included. Nothing in the file fixes this; what made the
-            client give up direct play does.{{ else if eq $labels.cause "codec" }}{{ if eq $labels.codec "ac3" }}The client
+            client give up direct play does, usually Force Direct Play in the client's settings.{{ else if eq $labels.cause "codec" }}{{ if eq $labels.codec "ac3" }}The client
             refuses AC3, which is the track scripts/sync/audio-compat.py adds, so nothing here fixes
             it.{{ else }}Direct play was allowed and the client's profile
-            refused {{ $labels.codec }}. pi-metrics has recorded the codec and queued this file: at 01:30
-            scripts/sync/audio-compat.py adds an AC3 5.1 track to it first, keeping every original
-            track, then to any other file whose audio is all in codecs recorded this way. It skips
-            the file, and says why in audio-compat.log, if it is still seeding or already has a
-            track in another codec.{{ end }}{{ else if eq $labels.cause "other" }}Jellyfin gave a reason
+            refused {{ $labels.codec }}. Open https://audio.platanosverdes.com: the file is listed there
+            with its plan (which track the AC3 5.1 is built from, the extra space, how long it takes),
+            and Play converts it now. Otherwise scripts/sync/audio-compat.py does it at 01:30, unless it
+            is still seeding or already has a track that plays in its place; the page says which.{{ end }}{{ else if eq $labels.cause "other" }}Jellyfin gave a reason
             other than the audio codec (its TranscodeReasons), so nothing was recorded and no file
             will be changed.{{ else }}Nothing says whether the client asked for direct play (for
             Plex, that is read from its debug log), so nothing was recorded and no file will be

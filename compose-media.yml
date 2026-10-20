@@ -309,6 +309,50 @@ services:
     networks:
       - media-network
 
+  # --- audio-convert: the files a client had its audio re-encoded on, and a button to fix one ---
+  # pi-metrics works out the plan, scripts/sync/audio-compat.py --file does the conversion; this
+  # lists the first and runs the second. Tailnet only, like every page Caddy serves without Access.
+  audio-convert:
+    build:
+      context: ./services/audio-convert
+      args:
+        GO_IMAGE: ${AUDIO_CONVERT_GO_IMAGE}
+        ALPINE_VERSION: ${AUDIO_CONVERT_ALPINE_VERSION}
+        FFMPEG_VERSION: ${AUDIO_CONVERT_FFMPEG_VERSION}
+        PYTHON_VERSION: ${AUDIO_CONVERT_PYTHON_VERSION}
+    container_name: audio-convert
+    labels:
+      prometheus.probe: "http://audio-convert:8088/"
+    restart: unless-stopped
+    # ffmpeg holds a few MB per stream for a remux; the AC3 encode is the only real work.
+    mem_limit: 256m
+    memswap_limit: 256m
+    profiles: [media, all]
+    # The owner of every library file, so a converted file and its .original keep it.
+    user: "${PUID}:${PGID}"
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      - TZ=${TZ}
+      - DATA_ROOT=/mnt/data
+      - AUDIO_RECODES=/ledger/audio-recodes.json
+      - AUDIO_CONVERT_STATE=/state
+    volumes:
+      # Read-write: a conversion writes the new file beside the old one and renames both. Only the
+      # two libraries, so downloads and everything else on the disk stay out of its reach.
+      - ${DATA_ROOT}/films:/mnt/data/films
+      - ${DATA_ROOT}/series:/mnt/data/series
+      # pi-metrics' ledger with each file's plan, read-only.
+      - ${APP_CONFIG_PATH}/pi-metrics:/ledger:ro
+      # The queue, the shared lock and history.jsonl. The host's audio-compat.py uses the same
+      # directory from cron, which is what keeps the night run and this from converting at once.
+      - ${APP_CONFIG_PATH}/audio-convert:/state
+      # The directory and not the file: git replaces the script on a pull, and a single-file bind
+      # mount would keep the old inode. Mounted, not copied, so a script change needs no rebuild.
+      - ./scripts/sync:/scripts:ro
+    networks:
+      - media-network
+
   # --- farnsworth: a page that hands an Acestream channel to VLC ---
   # Named for Philo Farnsworth, who built the first working electronic television.
   farnsworth:
