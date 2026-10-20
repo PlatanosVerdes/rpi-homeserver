@@ -166,6 +166,19 @@ services:
       # Every link in a notification is built from the root URL, and Telegram silently refuses to
       # linkify the default localhost one, which reads as a broken alert rather than a missing setting.
       - GF_SERVER_ROOT_URL=https://grafana.platanosverdes.com
+      # Behind Cloudflare Access, users sign in with whatever Access accepts (Google): Grafana
+      # reads the token Access adds to every request, creates the user on first visit and gives
+      # it Viewer, or GrafanaAdmin to GRAFANA_ADMIN_EMAIL. Without the header (the tailnet, through
+      # Caddy) the login form still works, so admin/password stays the way in when Cloudflare is not.
+      - GF_AUTH_JWT_ENABLED=${GRAFANA_ACCESS_JWT:-false}
+      - GF_AUTH_JWT_HEADER_NAME=Cf-Access-Jwt-Assertion
+      - GF_AUTH_JWT_EMAIL_CLAIM=email
+      - GF_AUTH_JWT_USERNAME_CLAIM=email
+      - GF_AUTH_JWT_JWK_SET_URL=https://${CF_ACCESS_TEAM_DOMAIN:-unset.cloudflareaccess.com}/cdn-cgi/access/certs
+      - 'GF_AUTH_JWT_EXPECT_CLAIMS={"aud":["${GRAFANA_ACCESS_AUD:-unset}"],"iss":"https://${CF_ACCESS_TEAM_DOMAIN:-unset.cloudflareaccess.com}"}'
+      - GF_AUTH_JWT_AUTO_SIGN_UP=true
+      - GF_AUTH_JWT_ALLOW_ASSIGN_GRAFANA_ADMIN=true
+      - "GF_AUTH_JWT_ROLE_ATTRIBUTE_PATH=contains(['${GRAFANA_ADMIN_EMAIL:-}'], email) && 'GrafanaAdmin' || 'Viewer'"
     volumes:
       - ${APP_CONFIG_PATH}/grafana/data:/var/lib/grafana
       - ${CONFIG_ROOT}/grafana/provisioning:/etc/grafana/provisioning:ro
