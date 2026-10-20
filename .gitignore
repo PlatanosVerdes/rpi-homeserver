@@ -88,3 +88,4 @@ services/tailscale-metrics/tailscale-metrics
 services/tracker-control/tracker-control
 services/pi-metrics/pi-metrics
 .logrotate.rendered
+.env.decrypted

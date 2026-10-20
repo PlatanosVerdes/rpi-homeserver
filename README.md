@@ -337,6 +337,9 @@ nano .env
 
 Run `id -u` and `id -g` to get your PUID and PGID values.
 
+Optionally, keep `.env` encrypted in a private repo and let the deploy write it from there:
+[docs/secrets.md](docs/secrets.md).
+
 ### 4. Mount external storage
 
 ```bash

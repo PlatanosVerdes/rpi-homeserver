@@ -7,6 +7,36 @@ DEPLOY_STATE_FILE="$PROJECT_DIR/.deploy_state"
 # The webhook receiver sets this to "webhook"; cron leaves the default
 DEPLOY_TRIGGER="${DEPLOY_TRIGGER:-cron}"
 
+log() { echo "$(date '+%Y-%m-%d %H:%M:%S') - $1"; }
+
+# Secrets kept encrypted in a private repo (SOPS + age, docs/secrets.md), where this node has a
+# checkout of it: each repo's .env is decrypted from <node>/<repo>.env before anything reads it, and
+# only rewritten when it changed. <node> is this machine's Tailscale name. Without the checkout or
+# sops, .env is used as it is.
+SECRETS_DIR="${SECRETS_DIR:-$HOME/homelab-secrets}"
+if [[ -d "$SECRETS_DIR/.git" ]] && command -v sops >/dev/null 2>&1; then
+    git -C "$SECRETS_DIR" pull -q --ff-only 2>/dev/null ||
+        log "[secrets] WARNING: could not pull $SECRETS_DIR, decrypting the copy on disk"
+    node=$(tailscale status --json 2>/dev/null | jq -r '.Self.DNSName // empty' | cut -d. -f1)
+    node=${node:-$(hostname -s)}
+    for pair in "rpi-homeserver:$PROJECT_DIR" "rpi-services:$SERVICES_DIR"; do
+        src="$SECRETS_DIR/$node/${pair%%:*}.env"
+        dst="${pair#*:}/.env"
+        [[ -f "$src" && -d "${pair#*:}" ]] || continue
+        if (umask 077; sops decrypt --input-type dotenv --output-type dotenv "$src" > "$dst.decrypted"); then
+            if cmp -s "$dst.decrypted" "$dst"; then
+                rm -f "$dst.decrypted"
+            else
+                mv "$dst.decrypted" "$dst"
+                log "[secrets] ${pair%%:*}/.env updated from $node/${pair%%:*}.env"
+            fi
+        else
+            rm -f "$dst.decrypted"
+            log "[secrets] WARNING: could not decrypt $node/${pair%%:*}.env, keeping the current .env"
+        fi
+    done
+fi
+
 set -a; source "$PROJECT_DIR/.env"; set +a
 
 # APP_CONFIG_PATH may be relative (e.g. ./appdata); resolve it against the project dir
@@ -18,8 +48,6 @@ if [[ -f "$DEPLOY_STATE_FILE" ]]; then
     source "$DEPLOY_STATE_FILE" || true
 fi
 TOTAL_RUNS=$((TOTAL_RUNS + 1))
-
-log() { echo "$(date '+%Y-%m-%d %H:%M:%S') - $1"; }
 
 # Bounding apply.log is logrotate's job (config/logrotate/rpi-homeserver, installed below).
 
