@@ -22,7 +22,8 @@ A modular Docker-based home server running on a Raspberry Pi. All services run a
 docker-compose.yml          Entry point — uses `include` to load all modules
 versions.env                Single source of truth for all image versions (committed)
 compose-core.yml            Caddy, Homepage, Pi-hole, Speedtest-tracker
-compose-media.yml           Plex, Jellyfin, Overseerr, Acestream, Kubo, Tautulli, watch-next
+compose-media.yml           Plex, Jellyfin, Overseerr, Acestream, Kubo, Tautulli, watch-next,
+                            audio-convert
 compose-arrs.yml            Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr, Unpackerr,
                             cross-seed, autobrr, qbit-manage, torrent-drop
 compose-mon.yml             Prometheus, Grafana, Pushgateway, node-exporter, cAdvisor,
@@ -53,6 +54,8 @@ services/                   Source code for custom services built in this repo
                             Jellyfin is re-encoding right now). Was three crons
   torrent-drop/             Go service: page to add a torrent by hand, and the immediate
                             cross-seed search on every torrent that completes
+  audio-convert/            Go service: page listing the files a client had its audio re-encoded
+                            on, with pi-metrics' plan, and a button running audio-compat.py --file
   tracker-control/          Go service: reads each tracker account and moves the freeleech filter,
                             requiredFlags and the grab rate from its headroom. Was two crons
 
@@ -79,7 +82,8 @@ scripts/                    Operational scripts, grouped by what they do
     plex-prefs.sh           Plex LAN networks and the 95% played threshold
     qbit-config.sh          qBittorrent queue limits, upload cap and BT port
     jellyfin-guide.sh       Jellyfin's XMLTV guide -> the copy bifrost cuts to our channels
-    audio-compat.py         Nightly: an AC3 track for files whose audio codec a client refused
+    audio-compat.py         Nightly: an AC3 track for files whose audio codec a client refused.
+                            --file converts one, and is what audio-convert runs
 
   ci/                       Run by GitHub Actions
     ports.py                Host ports both repos' containers take; fails on a clash
@@ -196,7 +200,7 @@ Controlled via `COMPOSE_PROFILES` in `.env`. No need to touch compose files.
 | `essential` | Caddy, Homepage, Pi-hole, Speedtest-tracker |
 | `moni` | Prometheus, Grafana, Pushgateway, node-exporter, cAdvisor, Pihole-exporter, Speedtest-tracker |
 | `acestream` | Aceserve, gluetun, bifrost, Kubo, Jellyfin, farnsworth + Grafana/Prometheus/Pushgateway |
-| `media` | Plex, Overseerr, Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr, Unpackerr, Bazarr, Maintainerr, Tautulli, watch-next, torrent-drop |
+| `media` | Plex, Overseerr, Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr, Unpackerr, Bazarr, Maintainerr, Tautulli, watch-next, torrent-drop, audio-convert |
 | `bot` | Pol Academy Offers Bot |
 | `vpn` | sleipnir, docker-socket-proxy, gluetun-test, huginn (see docs/sleipnir.md) |
 | `bots` | muninn, docker-socket-proxy |

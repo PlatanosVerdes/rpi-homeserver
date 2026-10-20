@@ -201,6 +201,12 @@ the audio codec, which clients, and the last hundred files it happened on. It al
 to have been copied. When the video is re-encoded too, the audio goes along whatever its codec, and
 Jellyfin's Live TV does that to AAC every day.
 
+The same file lists sessions whose client turned direct play off, marked as not fixable and
+teaching no codec, and each entry carries a conversion plan worked out from the server's description
+of the file: which track the AC3 is built from, the extra size, the duration. That is what
+[audio-convert.md](audio-convert.md) shows at `audio.platanosverdes.com`, where a file can be
+converted right away instead of waiting for the night; the alert links there.
+
 At 01:30 `audio-compat.py` reads that file. A library file is converted when every audio track it
 has is in a codec recorded there or in its seed (DTS and TrueHD, what it converted before anything
 was measured). The recorded files go first, newest first, so the film that set off the alert is
@@ -215,7 +221,9 @@ the first one fixed. What it does **not** do:
 - **Forget.** A codec a client update fixed stays recorded until it is deleted from the JSON by hand,
   followed by `docker restart pi-metrics`: the collector holds the file in memory and would write the
   codec straight back.
-- **Touch a file that is still seeding**, for the hardlink reason in the script's docstring.
+- **Touch a file that is still seeding**, for the hardlink reason in the script's docstring. The
+  page can, after a confirmation; [audio-convert.md](audio-convert.md#a-file-that-is-still-seeding)
+  says what that costs.
 
 Adding a codec can put a lot of the library in the queue at once, and every conversion keeps the
 old file as `.original` beside the new one, so the disk pays for both until those are pruned.

@@ -35,7 +35,6 @@ func TestRecordLearnsOnlyWhatTheClientCouldNotPlay(t *testing.T) {
 		{"video only", session{app: "plex", client: "TV 2025",
 			recodes: map[string]string{streamVideo: "hevc"}, file: "/data/films/d.mkv"}, ""},
 		{"codec unknown", audioOnly("TV 2025", "?", "/data/films/e.mkv"), ""},
-		{"client turned direct play off", withCause(audioOnly("TV 2025", "ac3", "/data/films/g.mkv"), causeNoDirectPlay), ""},
 		{"jellyfin, another reason", withCause(audioOnly("TV", "eac3", "/data/films/h.mkv"), causeOther), ""},
 		{"cause unknown", withCause(audioOnly("TV 2025", "eac3", "/data/films/i.mkv"), causeUnknown), ""},
 		{"direct stream", session{app: "plex", client: "TV 2025", method: "directstream",
@@ -146,12 +145,16 @@ func TestSessionsCarryCauseAndFile(t *testing.T) {
 				"Media":[{"id":"2214","container":"mp4","audioCodec":"aac","Part":[{"id":"2214","decision":"transcode"}]}],
 				"TranscodeSession":{"key":"/transcode/sessions/abc","videoDecision":"copy","audioDecision":"transcode","sourceAudioCodec":"eac3"}}]}}`)
 		case "/library/metadata/853":
-			fmt.Fprint(w, `{"MediaContainer":{"Metadata":[{"Media":[
+			fmt.Fprint(w, `{"MediaContainer":{"Metadata":[{"title":"Spider-Man","year":2002,"Media":[
 				{"id":"1111","Part":[{"file":"/data/films/Other/b.mkv"}]},
-				{"id":"2214","Part":[{"file":"/data/films/Spider-Man/a.mkv"}]}]}]}}`)
+				{"id":"2214","duration":7200000,"Part":[{"file":"/data/films/Spider-Man/a.mkv","Stream":[
+					{"streamType":1,"index":0,"codec":"hevc"},
+					{"streamType":2,"index":2,"codec":"eac3","channels":6,"language":"Español"},
+					{"streamType":2,"index":1,"codec":"eac3","channels":8,"default":true,"language":"English","displayTitle":"English (EAC3 7.1)"}]}]}]}]}}`)
 		case "/Sessions":
 			fmt.Fprint(w, `[{"DeviceName":"Living room","Client":"Jellyfin Android TV",
-				"NowPlayingItem":{"Path":"/data/series/b.mkv","MediaStreams":[{"Type":"Audio","Index":1,"Codec":"truehd"}]},
+				"NowPlayingItem":{"Path":"/data/series/b.mkv","Name":"Pilot","SeriesName":"Show","ParentIndexNumber":1,"IndexNumber":2,
+					"RunTimeTicks":36000000000,"MediaStreams":[{"Type":"Audio","Index":1,"Codec":"truehd","Channels":8,"IsDefault":true,"Language":"eng"}]},
 				"PlayState":{"AudioStreamIndex":1},
 				"TranscodingInfo":{"IsVideoDirect":true,"IsAudioDirect":false,"TranscodeReasons":["AudioCodecNotSupported"]}}]`)
 		}
@@ -164,8 +167,16 @@ func TestSessionsCarryCauseAndFile(t *testing.T) {
 		plex[0].file != "/data/films/Spider-Man/a.mkv" || learnable(plex[0]) != "eac3" {
 		t.Fatalf("plex: %v %+v", err, plex)
 	}
+	if p := plex[0]; p.title != "Spider-Man (2002)" || p.duration != 7200 || len(p.tracks) != 2 ||
+		p.tracks[0].Index != 1 || !p.tracks[0].Default || p.tracks[0].Title != "English (EAC3 7.1)" || p.tracks[1].Position != 1 {
+		t.Fatalf("plex media: %+v", p)
+	}
 	jellyfin, err := jellyfinSessions()
 	if err != nil || len(jellyfin) != 1 || jellyfin[0].file != "/data/series/b.mkv" || learnable(jellyfin[0]) != "truehd" {
 		t.Fatalf("jellyfin: %v %+v", err, jellyfin)
+	}
+	if j := jellyfin[0]; j.title != "Show S01E02 Pilot" || j.duration != 3600 || len(j.tracks) != 1 ||
+		j.tracks[0].Channels != 8 || !j.tracks[0].Default || j.tracks[0].Language != "eng" {
+		t.Fatalf("jellyfin media: %+v", j)
 	}
 }

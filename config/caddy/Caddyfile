@@ -163,6 +163,11 @@ https://drop.platanosverdes.com {
     import cf_tls
     reverse_proxy torrent-drop:8087
 }
+https://audio.platanosverdes.com {
+    log
+    import cf_tls
+    reverse_proxy audio-convert:8088
+}
 https://sleipnir.platanosverdes.com {
     import cf_tls
     reverse_proxy sleipnir:8090
@@ -235,6 +240,10 @@ http://torrent {
 http://drop {
     log
     reverse_proxy torrent-drop:8087
+}
+http://audio {
+    log
+    reverse_proxy audio-convert:8088
 }
 http://autobrr {
     log
