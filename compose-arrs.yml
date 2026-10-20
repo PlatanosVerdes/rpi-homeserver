@@ -11,7 +11,7 @@ services:
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
-      - WEBUI_PORT=${QBIT_WEBUI_PORT}
+      - WEBUI_PORT=${QBIT_WEBUI_PORT:-8080}
       - TZ=${TZ}
     dns:
       - 8.8.8.8
@@ -26,12 +26,12 @@ services:
       - ${APP_CONFIG_PATH}/qbittorrent:/config
       - ${DATA_ROOT}/downloads:/data/downloads
     ports:
-      - "127.0.0.1:${QBIT_WEBUI_PORT}:${QBIT_WEBUI_PORT}"
+      - "127.0.0.1:${QBIT_WEBUI_PORT:-8080}:${QBIT_WEBUI_PORT:-8080}"
       # Not 6881: that range is the obvious one to throttle. In .env so a public repo does not
       # advertise it, and scripts/sync/qbit-config.sh pushes the same number into qBittorrent, or the
       # published port and the one it listens on disagree and no peer ever connects.
-      - "${QBIT_BT_PORT}:${QBIT_BT_PORT}"
-      - "${QBIT_BT_PORT}:${QBIT_BT_PORT}/udp"
+      - "${QBIT_BT_PORT:-6881}:${QBIT_BT_PORT:-6881}"
+      - "${QBIT_BT_PORT:-6881}:${QBIT_BT_PORT:-6881}/udp"
     networks:
       - media-network
 
