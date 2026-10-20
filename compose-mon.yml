@@ -182,6 +182,9 @@ services:
     volumes:
       - ${APP_CONFIG_PATH}/grafana/data:/var/lib/grafana
       - ${CONFIG_ROOT}/grafana/provisioning:/etc/grafana/provisioning:ro
+      # Datasources from a companion repo (EXT_GRAFANA_DATASOURCES in .env, a file), e.g. another
+      # node's Prometheus; without it the empty placeholder is mounted over itself.
+      - ${EXT_GRAFANA_DATASOURCES:-./config/grafana/provisioning/datasources/ext.yml}:/etc/grafana/provisioning/datasources/ext.yml:ro
       # Alerting is rendered by scripts/deploy/apply.sh from config/grafana/alerting/ (the bot token
       # and chat id come from .env), so it is mounted over the empty dir above
       - ${APP_CONFIG_PATH}/grafana-alerting:/etc/grafana/provisioning/alerting:ro

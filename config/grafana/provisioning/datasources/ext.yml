@@ -1,0 +1,2 @@
+# Placeholder for a companion repo's datasources, mounted over it from EXT_GRAFANA_DATASOURCES.
+apiVersion: 1

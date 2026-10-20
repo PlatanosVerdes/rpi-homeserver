@@ -72,11 +72,19 @@
         {
           "expr": "increase(acestream_run_total[24h])",
           "instant": true,
-          "refId": "A"
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
         }
       ],
       "title": "Executions (24h)",
-      "type": "stat"
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "fieldConfig": {
@@ -129,11 +137,19 @@
         {
           "expr": "increase(acestream_updates_with_changes[24h])",
           "instant": true,
-          "refId": "A"
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
         }
       ],
       "title": "Playlist Changes (24h)",
-      "type": "stat"
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "fieldConfig": {
@@ -185,11 +201,19 @@
         {
           "expr": "increase(acestream_update_errors[24h])",
           "instant": true,
-          "refId": "A"
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
         }
       ],
       "title": "Errors (24h)",
-      "type": "stat"
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "fieldConfig": {
@@ -245,11 +269,19 @@
       "targets": [
         {
           "expr": "time() - acestream_last_run_timestamp",
-          "refId": "A"
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
         }
       ],
       "title": "Last Run",
-      "type": "stat"
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "fieldConfig": {
@@ -302,11 +334,19 @@
         {
           "expr": "acestream_unique_channels",
           "instant": true,
-          "refId": "A"
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
         }
       ],
       "title": "Unique Channels",
-      "type": "stat"
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "description": "Time elapsed since the last Jellyfin playlist refresh was triggered.",
@@ -373,11 +413,19 @@
       "targets": [
         {
           "expr": "time() - acestream_jellyfin_last_refresh_timestamp",
-          "refId": "A"
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
         }
       ],
       "title": "Last Jellyfin Refresh",
-      "type": "stat"
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "fieldConfig": {
@@ -474,11 +522,19 @@
         {
           "expr": "acestream_source_http_code",
           "legendFormat": "{{url}}",
-          "refId": "A"
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
         }
       ],
       "title": "Source URLs Status",
-      "type": "timeseries"
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      }
     },
     {
       "id": 5,
@@ -487,7 +543,7 @@
       "description": "Buckets grow with the panel but never drop below five minutes: the updater runs every few minutes, and a shorter window leaves increase() without two samples and empties the panel. Errors keep the right axis, since stacked against a few hundred quiet runs a single one is a pixel.",
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${datasource}"
       },
       "gridPos": {
         "x": 0,
@@ -499,7 +555,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "round(increase(acestream_updates_no_changes[$__rate_interval]))",
@@ -511,7 +567,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "round(increase(acestream_updates_with_changes[$__rate_interval]))",
@@ -523,7 +579,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "round(increase(acestream_update_errors[$__rate_interval]))",
@@ -659,7 +715,7 @@
       "description": "Green = refresh OK (200/204), red = error, grey = not triggered.",
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${datasource}"
       },
       "gridPos": {
         "x": 12,
@@ -671,7 +727,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "acestream_jellyfin_refresh_http_code",
@@ -757,7 +813,26 @@
     "scripts"
   ],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "name": "datasource",
+        "label": "Node",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {
+          "selected": true,
+          "text": "Prometheus",
+          "value": "prometheus"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "options": [],
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false
+      }
+    ]
   },
   "time": {
     "from": "now-6h",
