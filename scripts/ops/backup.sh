@@ -80,7 +80,11 @@ if [ "$tar_rc" -gt 1 ]; then
 fi
 
 SIZE=$(stat -c%s "$ARCHIVE" 2>/dev/null || echo 0)
-APPDATA_SIZE=$(sudo du -scb "$APPDATA" "$SERVICES_APPDATA" 2>/dev/null | tail -1 | cut -f1 || echo 0)
+# Only directories that exist: du still prints a total when one is missing but exits non-zero, and
+# the `|| echo 0` then appended a second number that broke the arithmetic below.
+APPDATA_SIZE=$(sudo du -scb "$APPDATA" $([ -d "$SERVICES_APPDATA" ] && echo "$SERVICES_APPDATA") 2>/dev/null |
+    tail -1 | cut -f1)
+APPDATA_SIZE=${APPDATA_SIZE:-0}
 log "Archive created ($((SIZE / 1024 / 1024)) MiB); appdata on disk: $((APPDATA_SIZE / 1024 / 1024)) MiB"
 
 # Retention: keep the newest $RETENTION archives, delete the rest
