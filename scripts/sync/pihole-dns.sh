@@ -5,8 +5,9 @@
 # drift: this repo's Caddyfile, config/caddy/services/*.caddy, and rpi-services' fragment at
 # EXT_CADDY_PATH when that repo is present.
 #
-# Additive only: a hostname is touched only if it was derived from Caddy, and only when its IP is
-# stale. An entry added by hand for something else is never read as ours and never deleted.
+# Ours is a *.platanosverdes.com entry pointing at TAILSCALE_IP: those follow Caddy, written when a
+# route appears, re-pointed when stale, deleted when the route is gone. Anything else (another IP,
+# another domain) was added by hand and is never touched.
 #
 # PIHOLE_DNS_PUBLIC_HOSTS (space separated) are hosts that must resolve to their public record
 # even on the tailnet, e.g. one behind Cloudflare Access that signs you in there: they are not
@@ -25,6 +26,13 @@ fi
 
 sources=("$PROJECT_DIR/config/caddy/Caddyfile" "$PROJECT_DIR"/config/caddy/services/*.caddy)
 [[ -n "${EXT_CADDY_PATH:-}" ]] && sources+=("$EXT_CADDY_PATH"/*.caddy)
+# A companion repo that is configured but has no routes on disk (not cloned yet, moved) would read
+# as all its hosts gone, so pruning only runs when every configured source is there.
+prune=1
+if [[ -n "${EXT_CADDY_PATH:-}" ]] && ! compgen -G "$EXT_CADDY_PATH/*.caddy" >/dev/null; then
+    echo "sync-pihole-dns: no routes found in EXT_CADDY_PATH ($EXT_CADDY_PATH), not removing anything" >&2
+    prune=0
+fi
 
 wanted=$(grep -ohP '^https://\K[\w.-]+\.platanosverdes\.com(?=\s*\{)' "${sources[@]}" 2>/dev/null | sort -u)
 if [[ -z "$wanted" ]]; then
@@ -79,7 +87,20 @@ while IFS= read -r host; do
     fi
 done <<< "$wanted"
 
+pruned=0
+if (( prune )); then
+    stale=$(printf '%s\n' "$current" |
+        awk -v ip="$TAILSCALE_IP" '$1==ip && $2 ~ /\.platanosverdes\.com$/ {print $2}' | sort -u |
+        comm -23 - <(printf '%s\n' "$wanted" "$public" | awk 'NF' | sort -u))
+    while IFS= read -r host; do
+        [[ -z "$host" ]] && continue
+        value=$(jq -rn --arg v "$TAILSCALE_IP $host" '$v|@uri')
+        curl -s -o /dev/null -X DELETE "$PIHOLE_BASE/config/dns/hosts/$value?sid=$sid"
+        pruned=$((pruned + 1))
+    done <<< "$stale"
+fi
+
 left_alone=$(comm -23 \
     <(printf '%s\n' "$current" | awk 'NF{print $2}' | sort -u) \
     <(printf '%s\n' "$wanted" | sort -u) | grep -c . || true)
-echo "pihole DNS: $added added, $updated re-pointed, $unchanged unchanged, $removed left to public DNS, $left_alone unrelated entries left untouched"
+echo "pihole DNS: $added added, $updated re-pointed, $unchanged unchanged, $pruned removed with their route, $removed left to public DNS, $left_alone unrelated entries left untouched"
