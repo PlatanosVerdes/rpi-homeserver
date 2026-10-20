@@ -111,7 +111,11 @@ docs/                       Setup guides
 
 ## Secrets — current state
 
-Secrets currently live in **`.env`** as plain variables. Copy `.env.example` to `.env` and fill in values.
+Secrets live in **`.env`** as plain variables, which compose and every script read. On the Pis that
+file is written by the deploy from an encrypted copy in the private `homelab-secrets` repo (SOPS +
+age, one directory per node, see [docs/secrets.md](docs/secrets.md)): change a secret there, not in
+the Pi's `.env`, or the next pass puts the old value back. Elsewhere, copy `.env.example` to `.env`
+and fill in values.
 
 ```bash
 docker compose up -d

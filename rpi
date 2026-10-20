@@ -1,0 +1,23 @@
+SECRETS_DIR="${SECRETS_DIR:-$HOME/homelab-secrets}"
+if [[ -d "$SECRETS_DIR/.git" ]] && command -v sops >/dev/null 2>&1; then
+    git -C "$SECRETS_DIR" pull -q --ff-only 2>/dev/null ||
+        log "[secrets] WARNING: could not pull $SECRETS_DIR, decrypting the copy on disk"
+    node=$(tailscale status --json 2>/dev/null | jq -r '.Self.DNSName // empty' | cut -d. -f1)
+    node=${node:-$(hostname -s)}
+    for pair in "rpi-homeserver:$PROJECT_DIR" "rpi-services:$SERVICES_DIR"; do
+        src="$SECRETS_DIR/$node/${pair%%:*}.env"
+        dst="${pair#*:}/.env"
+        [[ -f "$src" && -d "${pair#*:}" ]] || continue
+        if (umask 077; sops decrypt --input-type dotenv --output-type dotenv "$src" > "$dst.decrypted"); then
+            if cmp -s "$dst.decrypted" "$dst"; then
+                rm -f "$dst.decrypted"
+            else
+                mv "$dst.decrypted" "$dst"
+                log "[secrets] ${pair%%:*}/.env updated from $node/${pair%%:*}.env"
+            fi
+        else
+            rm -f "$dst.decrypted"
+            log "[secrets] WARNING: could not decrypt $node/${pair%%:*}.env, keeping the current .env"
+        fi
+    done
+fi
