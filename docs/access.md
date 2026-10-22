@@ -3,7 +3,7 @@
 How anything here is reached, by door rather than by app. Three doors, and every app sits behind
 one or more of them on purpose.
 
-<!-- diagram: two-nodes-three-doors -->
+![Two nodes and the three ways in](diagrams/two-nodes-three-doors.png)
 
 | Door | How you get in | Who decides |
 | :--- | :--- | :--- |

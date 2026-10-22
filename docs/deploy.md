@@ -6,36 +6,7 @@ every node. This page is what it does, why, and how the push-triggered half is s
 
 ## From a push to a running container
 
-<!-- diagram: push-to-container -->
-```
- torre           one-pace-downloader      wallabot     PolFerrerAcademyOffers
-     │                   │                   │                  │
-     └──── push to main ─┴───────────────────┴──────────────────┘
-                              │
-                    auto-tag.yml → tag vYYYY.MM.DD
-                              │
-                              ▼
-              ┌───────────────────────────────────────┐
-              │ rpi-services                          │
-              │ bump-app-versions.yml  (every 30 min) │
-              │ versions.env → commit + push          │
-              └───────────────────────────────────────┘
-                              │
-   your push ─────────────────┤
-                              ▼
-                    GitHub webhook (push event)
-                              │   HMAC-SHA256 signature
-                              ▼
-           Cloudflare edge   deploy.<domain>
-                              │   outbound tunnel, no ports opened
-                              ▼
-                    cloudflared ──► 127.0.0.1:9000
-                              │   deploy-webhook.py verifies the signature
-                              ▼
-                    ╔═════════════════════╗
-                    ║  scripts/deploy/apply.sh  ║ ◄──── cron every 30 min
-                    ╚═════════════════════╝        (self-heal fallback)
-```
+![From a push to a running container](diagrams/push-to-container.png)
 
 | Trigger | Where | Why it exists |
 | :--- | :--- | :--- |
@@ -50,27 +21,7 @@ rpi-services apps do the same in that repo.
 
 ## One pass
 
-<!-- diagram: apply-pass -->
-```
-scripts/deploy/apply.sh
-   │
-   ├─ secrets ................. .env decrypted from homelab-secrets, if this node has the checkout
-   ├─ flock ................... another deploy running? leave .deploy.pending, it runs once more
-   ├─ git pull rpi-homeserver . apply.sh itself changed? start over on the new version
-   ├─ render alerting ......... template (git) + secrets (.env), only where grafana runs
-   │                            └─► appdata/grafana-alerting/
-   ├─ reload/restart .......... caddy reload, Grafana, Homepage, Vector, Prometheus, blackbox,
-   │                              webhook unit: only what the pull touched
-   ├─ docker compose pull ...... the services/ images whose pinned tag is new
-   ├─ docker compose build ..... only a built-here service whose build context changed
-   │                              (all of them if versions.env or a compose file did)
-   ├─ docker compose up -d ..... recreates only what changed (app images pull their new tag here)
-   ├─ git pull rpi-services  ──► docker compose up -d (same rule)
-   ├─ install-crontab, logrotate, udev ...... host state from both repos
-   ├─ sync ..................... arr-config, config-export --check, pihole-dns, arr-links,
-   │                              plex-prefs, qbit-config, jellyfin-guide
-   └─ metrics ──► Pushgateway ──► Prometheus ──► Grafana ──► Telegram
-```
+![One apply.sh pass](diagrams/apply-pass.png)
 
 In order, with the reason where it is not obvious:
 

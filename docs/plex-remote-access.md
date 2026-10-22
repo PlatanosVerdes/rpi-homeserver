@@ -9,13 +9,9 @@ from outside through the VPN, Plex has to be convinced that you are still "at ho
 It does not happen by itself, and the piece of Tailscale that sounds like it should do it (the exit
 node) does not.
 
-<!-- diagram: plex-local-remote -->
-```
-browser ──► 192.168.1.180:32400   Plex says "local"   free
-        └─► 100.x.x.x:32400       Plex says "remote"  Remote Watch Pass prompt
-```
+![How Plex decides local or remote](diagrams/plex-local-remote.png)
 
-Both addresses are the same Raspberry Pi. Plex treats them differently.
+The LAN address and the `100.x` Tailscale address are the same Raspberry Pi. Plex treats them differently.
 
 ## Terminology
 

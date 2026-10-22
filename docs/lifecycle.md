@@ -22,7 +22,6 @@ The rule of record. Everything below is its implementation, and any doubt is set
 
 ## The two ways in
 
-<!-- diagram: torrent-lifecycle -->
 ```mermaid
 flowchart TB
   OV["Seerr<br/><i>somebody asks</i>"] --> ARR
@@ -45,20 +44,7 @@ and 52 MB/s of reads, on the same two USB platters the downloads write to.
 
 ## From download to library
 
-```mermaid
-flowchart TB
-  QB["qBittorrent<br/><i>downloading</i>"] --> DONE{"RAR release?"}
-  DONE -->|yes| UP["unpackerr<br/><i>extracts, new bytes,<br/>link count 1</i>"]
-  DONE -->|no| IMP
-  UP --> IMP["<b>the arr imports</b><br/><i>hardlink: same bytes, two names</i>"]
-  IMP --> LIB["<b>Library · DATA_ROOT</b><br/>films/ · tv/"]
-  IMP --> SEED["the download keeps seeding<br/><i>tagged by tracker</i>"]
-  LIB --> PX["Plex · Jellyfin"]
-  PX --> MT["Maintainerr<br/><i>watched and out of grace</i>"]
-  MT -->|"deletes the library name,<br/>link count back to 1"| LIB
-  SEED --> QM["<b>qbit-manage</b><br/><i>share_limits, per tracker</i>"]
-  QM -->|"limit reached, nothing else<br/>needs the bytes, not tagged keep"| RB["recycle bin<br/><i>emptied after a day</i>"]
-```
+![Life of a torrent](diagrams/torrent-lifecycle.png)
 
 The hardlink count is the signal everything rests on: while the library holds the file, seeding it
 costs no disk. **A film that is still seeding is normally still in Plex, for free**: what qBittorrent

@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "How Plex decides local or remote",
+    "output": ".archify/sequence-plex-local-remote-20261022-144444/plex-local-remote.html",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/PlatanosVerdes/rpi-homeserver.git",
+      "provider": "github",
+      "revision": "02fc921e8a08175127acecece9ea0a908fcb0270"
+    },
+    "legend": { "entries": { "dashed": { "label": "only with Remote Access on (it is off)" } } }
+  },
+  "participants": [
+    { "id": "client", "type": "external", "label": "Plex client", "sublabel": "phone away, TV" },
+    { "id": "caddy", "type": "backend", "label": "Caddy", "sublabel": "plex. route",
+      "sources": [ { "path": "config/caddy/Caddyfile", "line": 54, "end_line": 62, "label": "redir, never reverse_proxy" } ] },
+    { "id": "plextv", "type": "cloud", "label": "plex.tv", "sublabel": "connection list",
+      "sources": [ { "path": "docs/plex-remote-access.md", "line": 30, "end_line": 57 } ] },
+    { "id": "tailscale", "type": "security", "label": "Tailscale", "sublabel": "raspi /32 routes",
+      "sources": [ { "path": "docs/tailscale.md", "line": 62, "end_line": 69 } ] },
+    { "id": "router", "type": "external", "label": "Home router", "sublabel": "public IP",
+      "sources": [ { "path": "docs/plex-remote-access.md", "line": 126, "end_line": 142 } ] },
+    { "id": "plex", "type": "backend", "label": "Plex server", "sublabel": "raspi, host net",
+      "sources": [ { "path": "compose-media.yml", "line": 4, "end_line": 12 } ] },
+    { "id": "deploy", "type": "backend", "label": "plex-prefs.sh", "sublabel": "every deploy",
+      "sources": [
+        { "path": "scripts/sync/plex-prefs.sh", "line": 1, "end_line": 14 },
+        { "path": "scripts/sync/plex-prefs.sh", "line": 50, "end_line": 74, "label": "LanNetworksBandwidth" },
+        { "path": ".env.example", "line": 47, "end_line": 50, "label": "PLEX_LAN_NETWORKS" }
+      ] }
+  ],
+  "segments": [
+    { "from": 150, "to": 268, "label": "1. The server says who is local" },
+    { "from": 278, "to": 590, "label": "2. Away from home, on the tailnet" },
+    { "from": 600, "to": 790, "label": "3. Why Remote Access stays off" }
+  ],
+  "messages": [
+    { "id": "lan", "from": "deploy", "to": "plex", "y": 170, "label": "set LAN Networks", "note": "100.64.0.0/10 and the home /24" },
+    { "id": "publish", "from": "plex", "to": "plextv", "y": 225, "label": "publish addresses", "note": "only RFC1918 ones local=true" },
+    { "id": "open", "from": "client", "to": "caddy", "y": 300, "label": "open plex. name", "variant": "emphasis" },
+    { "id": "redir", "from": "caddy", "to": "client", "y": 330, "label": "302 to LAN IP:32400", "variant": "return", "note": "a proxy would hide the client" },
+    { "id": "list", "from": "client", "to": "plextv", "y": 390, "label": "which connection?" },
+    { "id": "answer", "from": "plextv", "to": "client", "y": 420, "label": "LAN IP, local=true", "variant": "return" },
+    { "id": "dial", "from": "client", "to": "tailscale", "y": 460, "label": "dial LAN IP", "variant": "emphasis", "note": "the raspi's /32 subnet route" },
+    { "id": "forward", "from": "tailscale", "to": "plex", "y": 515, "label": "source 100.x", "variant": "emphasis" },
+    { "id": "free", "from": "plex", "to": "client", "y": 548, "label": "local: plays free", "variant": "return", "note": "100.x is in LAN Networks" },
+    { "id": "pub", "from": "plex", "to": "plextv", "y": 620, "label": "publish public IP", "variant": "dashed", "note": "UPnP, local=false" },
+    { "id": "tv", "from": "client", "to": "router", "y": 675, "label": "TV tries it too", "variant": "dashed", "note": "public one won by 13 ms" },
+    { "id": "hairpin", "from": "router", "to": "plex", "y": 730, "label": "hairpin", "variant": "dashed" },
+    { "id": "paywall", "from": "plex", "to": "client", "y": 760, "label": "remote: Watch Pass", "variant": "return" }
+  ],
+  "activations": [
+    { "participant": "plex", "from": 510, "to": 554 },
+    { "participant": "tailscale", "from": 455, "to": 521 }
+  ],
+  "cards": [
+    { "dot": "emerald", "title": "Two decisions, both must say local", "items": [
+      "The client trusts the local flag plex.tv publishes, and Plex only flags RFC1918 addresses",
+      "The server classifies the source address: tailnet traffic arrives as 100.x, so PLEX_LAN_NETWORKS must include 100.64.0.0/10",
+      "plex-prefs.sh pushes that value and a 95% played threshold on every deploy"
+    ] },
+    { "dot": "rose", "title": "Remote Access off", "items": [
+      "Turned on, Plex publishes the home public IP; with a public IP the router hairpins it",
+      "A TV on the LAN then reaches Plex from the public address and is billed as remote",
+      "It is off in Preferences.xml; nothing in the repo enforces it"
+    ] },
+    { "dot": "slate", "title": "Not in git", "items": [
+      "The /32 routes are a tailscale set flag on the raspi, approved in the admin console",
+      "Use tailscale set, never tailscale up, which resets the other flags"
+    ] }
+  ]
+}

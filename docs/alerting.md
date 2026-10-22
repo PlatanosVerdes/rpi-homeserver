@@ -5,21 +5,7 @@ that does not depend on the Pi being alive. Logs themselves are [logging.md](log
 
 ## How numbers get to Grafana
 
-<!-- diagram: metrics-logs-alerts -->
-```mermaid
-flowchart LR
-  subgraph B["Push"]
-    S2["scripts/ops/backup.sh<br/>scripts/deploy/apply.sh"] -->|POST| PG["Pushgateway"]
-  end
-  subgraph C["Scrape"]
-    EX["node-exporter · cadvisor · blackbox<br/>pihole-exporter · qbittorrent-exporter<br/>speedtest-tracker · cloudflared<br/>tailscale-metrics · muninn<br/><b>pi-metrics</b> · <b>tracker-control</b>"]
-  end
-  PG --> PROM
-  EX --> PROM
-  PROM["Prometheus<br/><i>scrapes every 15s</i>"] --> GR["Grafana"]
-  SH["second node's Prometheus<br/><i>over Tailscale</i>"] --> GR
-  GR -->|alert rules| TG["Telegram"]
-```
+![Metrics, logs and alerts](diagrams/metrics-logs-alerts.png)
 
 Prometheus's own guidance is that the Pushgateway is for **batch jobs**, and its cost is the one that
 matters here: a pushed series is served forever whether or not anything still produces it, and there

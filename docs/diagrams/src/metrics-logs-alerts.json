@@ -1,0 +1,429 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "Metrics, logs and alerts",
+    "output": ".archify/dataflow-metrics-logs-alerts-20261022-144330/metrics-logs-alerts.html",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/PlatanosVerdes/rpi-homeserver.git",
+      "provider": "github",
+      "revision": "02fc921e8a08175127acecece9ea0a908fcb0270"
+    },
+    "legend": {
+      "entries": {
+        "emphasis": {
+          "label": "alert path"
+        },
+        "dashed": {
+          "label": "logs"
+        },
+        "security": {
+          "label": "outside the Pi"
+        }
+      }
+    }
+  },
+  "stages": [
+    {
+      "label": "Sources"
+    },
+    {
+      "label": "Collect"
+    },
+    {
+      "label": "Store"
+    },
+    {
+      "label": "Evaluate"
+    },
+    {
+      "label": "Notify"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "exporters",
+      "type": "backend",
+      "label": "Exporters",
+      "sublabel": "node, cAdvisor, pi-metrics",
+      "stage": 1,
+      "row": 1,
+      "sources": [
+        {
+          "path": "config/prometheus/prometheus.yml",
+          "line": 10,
+          "end_line": 48
+        },
+        {
+          "path": "config/prometheus/prometheus.yml",
+          "line": 50,
+          "end_line": 67,
+          "label": "tracker-control, muninn"
+        },
+        {
+          "path": "compose-mon.yml",
+          "line": 273,
+          "end_line": 327
+        }
+      ]
+    },
+    {
+      "id": "labelled",
+      "type": "backend",
+      "label": "Labelled containers",
+      "sublabel": "prometheus.probe",
+      "stage": 0,
+      "row": 2,
+      "sources": [
+        {
+          "path": "config/prometheus/prometheus.yml",
+          "line": 55,
+          "end_line": 63
+        },
+        {
+          "path": "config/prometheus/prometheus.yml",
+          "line": 69,
+          "end_line": 113,
+          "label": "two docker_sd jobs"
+        }
+      ]
+    },
+    {
+      "id": "jobs",
+      "type": "backend",
+      "label": "One-shot jobs",
+      "sublabel": "apply.sh, backup.sh",
+      "stage": 0,
+      "row": 3,
+      "sources": [
+        {
+          "path": "scripts/deploy/apply.sh",
+          "line": 149,
+          "end_line": 198
+        },
+        {
+          "path": "scripts/ops/backup.sh",
+          "line": 12,
+          "end_line": 18
+        },
+        {
+          "path": "services/deploy-webhook/deploy-webhook.py",
+          "line": 61,
+          "end_line": 92
+        }
+      ]
+    },
+    {
+      "id": "logs",
+      "type": "backend",
+      "label": "Logs",
+      "sublabel": "stdout, repo *.log",
+      "stage": 0,
+      "row": 4,
+      "sources": [
+        {
+          "path": "config/vector/vector.yaml",
+          "line": 8,
+          "end_line": 23
+        },
+        {
+          "path": "compose-mon.yml",
+          "line": 364,
+          "end_line": 369,
+          "label": "both repos' cron logs"
+        }
+      ]
+    },
+    {
+      "id": "blackbox",
+      "type": "security",
+      "label": "blackbox",
+      "sublabel": "alive, behind Access",
+      "stage": 1,
+      "row": 2,
+      "sources": [
+        {
+          "path": "config/blackbox/blackbox.yml",
+          "line": 7,
+          "end_line": 33
+        },
+        {
+          "path": "compose-mon.yml",
+          "line": 199,
+          "end_line": 208
+        }
+      ]
+    },
+    {
+      "id": "pushgw",
+      "type": "messagebus",
+      "label": "Pushgateway",
+      "sublabel": "127.0.0.1:9091",
+      "stage": 1,
+      "row": 3,
+      "sources": [
+        {
+          "path": "compose-mon.yml",
+          "line": 4,
+          "end_line": 22
+        },
+        {
+          "path": "config/prometheus/prometheus.yml",
+          "line": 5,
+          "end_line": 8
+        }
+      ]
+    },
+    {
+      "id": "vector",
+      "type": "messagebus",
+      "label": "Vector",
+      "sublabel": "docker + file sources",
+      "stage": 1,
+      "row": 4,
+      "sources": [
+        {
+          "path": "compose-mon.yml",
+          "line": 350,
+          "end_line": 371
+        },
+        {
+          "path": "config/vector/vector.yaml",
+          "line": 82,
+          "end_line": 97
+        }
+      ]
+    },
+    {
+      "id": "shprom",
+      "type": "database",
+      "label": "streamhalla Prom",
+      "sublabel": ":9090 via Tailscale",
+      "stage": 2,
+      "row": 0,
+      "sources": [
+        {
+          "path": "overrides/secondary-node.yml",
+          "line": 20,
+          "end_line": 28
+        },
+        {
+          "path": "compose-mon.yml",
+          "line": 189,
+          "end_line": 191,
+          "label": "mounted as a datasource"
+        }
+      ]
+    },
+    {
+      "id": "prom",
+      "type": "database",
+      "label": "Prometheus",
+      "sublabel": "raspi, every 15 s",
+      "stage": 2,
+      "row": 2,
+      "sources": [
+        {
+          "path": "compose-mon.yml",
+          "line": 88,
+          "end_line": 108
+        },
+        {
+          "path": "config/prometheus/prometheus.yml",
+          "line": 1,
+          "end_line": 3
+        }
+      ]
+    },
+    {
+      "id": "vlogs",
+      "type": "database",
+      "label": "VictoriaLogs",
+      "sublabel": "30 days, data disk",
+      "stage": 2,
+      "row": 4,
+      "sources": [
+        {
+          "path": "compose-mon.yml",
+          "line": 330,
+          "end_line": 347
+        }
+      ]
+    },
+    {
+      "id": "grafana",
+      "type": "backend",
+      "label": "Grafana",
+      "sublabel": "40 rules, dashboards",
+      "stage": 3,
+      "row": 2,
+      "sources": [
+        {
+          "path": "config/grafana/provisioning/datasources/prometheus.yml",
+          "line": 1,
+          "end_line": 10
+        },
+        {
+          "path": "scripts/deploy/apply.sh",
+          "line": 210,
+          "end_line": 234,
+          "label": "rules + rendered contact point"
+        },
+        {
+          "path": "config/grafana/alerting/policies.yml",
+          "line": 1,
+          "end_line": 26
+        }
+      ]
+    },
+    {
+      "id": "heartbeat",
+      "type": "backend",
+      "label": "heartbeat.sh",
+      "sublabel": "cron, every minute",
+      "stage": 3,
+      "row": 4,
+      "sources": [
+        {
+          "path": "scripts/ops/heartbeat.sh",
+          "line": 36,
+          "end_line": 55
+        },
+        {
+          "path": "scripts/crontab",
+          "line": 34,
+          "end_line": 36
+        }
+      ]
+    },
+    {
+      "id": "telegram",
+      "type": "cloud",
+      "label": "Telegram",
+      "sublabel": "grouped by alertname",
+      "stage": 4,
+      "row": 2,
+      "sources": [
+        {
+          "path": "config/grafana/alerting/contact-points.yml.tmpl",
+          "line": 1,
+          "end_line": 40
+        }
+      ]
+    },
+    {
+      "id": "hc",
+      "type": "cloud",
+      "label": "healthchecks.io",
+      "sublabel": "alerts when pings stop",
+      "stage": 4,
+      "row": 4,
+      "sources": [
+        {
+          "path": ".env.example",
+          "line": 205,
+          "end_line": 207
+        }
+      ]
+    }
+  ],
+  "flows": [
+    {
+      "from": "exporters",
+      "to": "prom",
+      "label": "scrape"
+    },
+    {
+      "from": "labelled",
+      "to": "blackbox",
+      "label": "probed URL"
+    },
+    {
+      "from": "blackbox",
+      "to": "prom",
+      "label": "probe_success"
+    },
+    {
+      "from": "jobs",
+      "to": "pushgw",
+      "label": "push on finish"
+    },
+    {
+      "from": "pushgw",
+      "to": "prom",
+      "label": "scrape"
+    },
+    {
+      "from": "logs",
+      "to": "vector",
+      "label": "tail",
+      "variant": "dashed"
+    },
+    {
+      "from": "vector",
+      "to": "vlogs",
+      "label": "bulk insert",
+      "variant": "dashed"
+    },
+    {
+      "from": "prom",
+      "to": "grafana",
+      "label": "PromQL",
+      "variant": "emphasis"
+    },
+    {
+      "from": "shprom",
+      "to": "grafana",
+      "label": "2nd datasource"
+    },
+    {
+      "from": "vlogs",
+      "to": "grafana",
+      "label": "LogsQL",
+      "variant": "dashed"
+    },
+    {
+      "from": "grafana",
+      "to": "telegram",
+      "label": "alerts",
+      "variant": "emphasis"
+    },
+    {
+      "from": "heartbeat",
+      "to": "hc",
+      "label": "ping or /fail",
+      "variant": "security"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Three ways a number arrives",
+      "items": [
+        "Scraped: exporters, pi-metrics, tracker-control, muninn, cloudflared, tailscale-metrics",
+        "Probed: any container with a prometheus.probe label, found through the Docker socket; prometheus.probe.access checks a public app still demands the Access login",
+        "Pushed: apply.sh, backup.sh and the deploy webhook, whose values outlive the job"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Alerting",
+      "items": [
+        "All 40 rules query Prometheus; logs feed dashboards, not alerts",
+        "apply.sh renders the Telegram contact point from .env, so the token is never committed",
+        "Warnings repeat every 24 h, criticals every 6 h",
+        "tracker-control also posts its own knob changes to Telegram"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "When the Pi itself is down",
+      "items": [
+        "Grafana dies with it, so heartbeat.sh pings healthchecks.io every minute",
+        "It sends /fail when caddy or prometheus is not running, unless a deploy holds the lock"
+      ]
+    }
+  ]
+}

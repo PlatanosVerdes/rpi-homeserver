@@ -1,0 +1,653 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Homelab: two nodes, three doors",
+    "output": ".archify/architecture-two-nodes-three-doors-20261022-143032/two-nodes-three-doors.html",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/PlatanosVerdes/rpi-homeserver.git",
+      "provider": "github",
+      "revision": "02fc921e8a08175127acecece9ea0a908fcb0270"
+    }
+  },
+  "components": [
+    {
+      "id": "internet",
+      "type": "external",
+      "label": "Internet",
+      "sublabel": "you anywhere, GitHub",
+      "pos": [
+        30,
+        60
+      ],
+      "size": [
+        130,
+        60
+      ]
+    },
+    {
+      "id": "edge",
+      "type": "cloud",
+      "label": "Cloudflare edge",
+      "sublabel": "WAF, proxied DNS",
+      "pos": [
+        220,
+        60
+      ],
+      "size": [
+        150,
+        60
+      ]
+    },
+    {
+      "id": "access",
+      "type": "security",
+      "label": "Cloudflare Access",
+      "sublabel": "Google login first",
+      "pos": [
+        480,
+        60
+      ],
+      "size": [
+        150,
+        60
+      ],
+      "sources": [
+        {
+          "path": "config/blackbox/blackbox.yml",
+          "line": 20,
+          "end_line": 33,
+          "label": "probe expects Access login"
+        },
+        {
+          "path": "compose-mon.yml",
+          "line": 173,
+          "end_line": 185,
+          "label": "Grafana trusts Access JWT"
+        }
+      ]
+    },
+    {
+      "id": "cloudflared",
+      "type": "backend",
+      "label": "cloudflared",
+      "sublabel": "tunnel rpi, outbound, host net",
+      "pos": [
+        740,
+        60
+      ],
+      "size": [
+        160,
+        140
+      ],
+      "sources": [
+        {
+          "path": "compose-core.yml",
+          "line": 138,
+          "end_line": 157,
+          "label": "tunnel profile, host network"
+        }
+      ]
+    },
+    {
+      "id": "webhook",
+      "type": "backend",
+      "label": "deploy-webhook",
+      "sublabel": "systemd, 127.0.0.1:9000",
+      "pos": [
+        1010,
+        60
+      ],
+      "size": [
+        230,
+        56
+      ],
+      "sources": [
+        {
+          "path": "services/deploy-webhook/deploy-webhook.py",
+          "line": 1,
+          "end_line": 7
+        },
+        {
+          "path": "services/deploy-webhook/deploy-webhook.py",
+          "line": 95,
+          "end_line": 99,
+          "label": "HMAC-SHA256 check"
+        }
+      ]
+    },
+    {
+      "id": "rpi_services",
+      "type": "backend",
+      "label": "rpi-services apps",
+      "sublabel": "companion repo: torre, fantasy",
+      "pos": [
+        1010,
+        144
+      ],
+      "size": [
+        230,
+        56
+      ],
+      "sources": [
+        {
+          "path": ".env.example",
+          "line": 169,
+          "end_line": 182,
+          "label": "EXT_* hooks for the companion repo"
+        }
+      ]
+    },
+    {
+      "id": "caddy",
+      "type": "backend",
+      "label": "Caddy",
+      "sublabel": ":80/:443, Cloudflare DNS-01 certs",
+      "pos": [
+        740,
+        280
+      ],
+      "size": [
+        160,
+        476
+      ],
+      "sources": [
+        {
+          "path": "compose-core.yml",
+          "line": 4,
+          "end_line": 40
+        },
+        {
+          "path": "config/caddy/Caddyfile",
+          "line": 13,
+          "end_line": 17,
+          "label": "DNS-01 via Cloudflare"
+        },
+        {
+          "path": "config/caddy/Caddyfile",
+          "line": 261,
+          "end_line": 263,
+          "label": "imports companion routes"
+        }
+      ]
+    },
+    {
+      "id": "media",
+      "type": "backend",
+      "label": "Media",
+      "sublabel": "Jellyfin (host net), Seerr, Bazarr",
+      "pos": [
+        1010,
+        280
+      ],
+      "size": [
+        230,
+        56
+      ],
+      "sources": [
+        {
+          "path": "compose-media.yml",
+          "line": 24,
+          "end_line": 41,
+          "label": "jellyfin, host network"
+        },
+        {
+          "path": "compose-media.yml",
+          "line": 56,
+          "end_line": 63
+        },
+        {
+          "path": "compose-media.yml",
+          "line": 213,
+          "end_line": 263,
+          "label": "bazarr, maintainerr, tautulli"
+        }
+      ]
+    },
+    {
+      "id": "downloads",
+      "type": "backend",
+      "label": "Downloads and arrs",
+      "sublabel": "Prowlarr, *arrs, qBittorrent, autobrr",
+      "pos": [
+        1010,
+        364
+      ],
+      "size": [
+        230,
+        56
+      ],
+      "sources": [
+        {
+          "path": "compose-arrs.yml",
+          "line": 4,
+          "end_line": 34,
+          "label": "qBittorrent, BT port published"
+        },
+        {
+          "path": "compose-arrs.yml",
+          "line": 131,
+          "end_line": 192,
+          "label": "qbit-manage, autobrr, tracker-control"
+        }
+      ]
+    },
+    {
+      "id": "acestream",
+      "type": "backend",
+      "label": "AceStream",
+      "sublabel": "aceserve (host net), kubo, bifrost",
+      "pos": [
+        1010,
+        448
+      ],
+      "size": [
+        230,
+        56
+      ],
+      "sources": [
+        {
+          "path": "compose-media.yml",
+          "line": 82,
+          "end_line": 85
+        },
+        {
+          "path": "compose-media.yml",
+          "line": 120,
+          "end_line": 126,
+          "label": "aceserve, host network"
+        },
+        {
+          "path": "compose-media.yml",
+          "line": 176,
+          "end_line": 184
+        }
+      ]
+    },
+    {
+      "id": "vpn_tools",
+      "type": "backend",
+      "label": "VPN tools and bots",
+      "sublabel": "sleipnir, gluetun-test, muninn",
+      "pos": [
+        1010,
+        532
+      ],
+      "size": [
+        230,
+        56
+      ],
+      "sources": [
+        {
+          "path": "compose-media.yml",
+          "line": 385,
+          "end_line": 400,
+          "label": "sleipnir, :8092 on Tailscale"
+        },
+        {
+          "path": "compose-media.yml",
+          "line": 419,
+          "end_line": 427
+        },
+        {
+          "path": "compose-media.yml",
+          "line": 461,
+          "end_line": 501
+        }
+      ]
+    },
+    {
+      "id": "monitoring",
+      "type": "backend",
+      "label": "Monitoring",
+      "sublabel": "Prometheus, Grafana, VictoriaLogs",
+      "pos": [
+        1010,
+        616
+      ],
+      "size": [
+        230,
+        56
+      ],
+      "sources": [
+        {
+          "path": "compose-mon.yml",
+          "line": 88,
+          "end_line": 118
+        },
+        {
+          "path": "compose-mon.yml",
+          "line": 186,
+          "end_line": 191,
+          "label": "second node's datasource"
+        },
+        {
+          "path": "compose-mon.yml",
+          "line": 330,
+          "end_line": 356
+        }
+      ]
+    },
+    {
+      "id": "plex",
+      "type": "backend",
+      "label": "Plex",
+      "sublabel": "host net, LAN IP via /32 route",
+      "pos": [
+        1010,
+        700
+      ],
+      "size": [
+        230,
+        56
+      ],
+      "sources": [
+        {
+          "path": "compose-media.yml",
+          "line": 4,
+          "end_line": 12
+        },
+        {
+          "path": "config/caddy/Caddyfile",
+          "line": 54,
+          "end_line": 62,
+          "label": "redir, never reverse_proxy"
+        }
+      ]
+    },
+    {
+      "id": "sh_stack",
+      "type": "backend",
+      "label": "streamhalla stack",
+      "sublabel": "Jellyfin, aceserve, kubo, bifrost",
+      "pos": [
+        1360,
+        792
+      ],
+      "size": [
+        250,
+        56
+      ],
+      "sources": [
+        {
+          "path": "overrides/secondary-node.yml",
+          "line": 1,
+          "end_line": 18
+        },
+        {
+          "path": "CLAUDE.md",
+          "line": 230,
+          "end_line": 232,
+          "label": "its per-service profile list"
+        }
+      ]
+    },
+    {
+      "id": "sh_prom",
+      "type": "database",
+      "label": "streamhalla Prometheus",
+      "sublabel": ":9090 on its Tailscale IP",
+      "pos": [
+        1360,
+        616
+      ],
+      "size": [
+        250,
+        56
+      ],
+      "sources": [
+        {
+          "path": "overrides/secondary-node.yml",
+          "line": 20,
+          "end_line": 28
+        },
+        {
+          "path": ".env.example",
+          "line": 173,
+          "end_line": 178,
+          "label": "datasource from companion repo"
+        }
+      ]
+    },
+    {
+      "id": "tailnet_user",
+      "type": "external",
+      "label": "You on the tailnet",
+      "sublabel": "Tailscale client",
+      "pos": [
+        30,
+        900
+      ],
+      "size": [
+        130,
+        60
+      ]
+    },
+    {
+      "id": "tailscale",
+      "type": "security",
+      "label": "Tailscale",
+      "sublabel": "WireGuard, /32 subnet routes",
+      "pos": [
+        220,
+        900
+      ],
+      "size": [
+        160,
+        60
+      ],
+      "sources": [
+        {
+          "path": "docs/tailscale.md",
+          "line": 62,
+          "end_line": 69,
+          "label": "exit node + /32 routes"
+        }
+      ]
+    },
+    {
+      "id": "pihole",
+      "type": "security",
+      "label": "Pi-hole",
+      "sublabel": "host net, names to raspi",
+      "pos": [
+        740,
+        900
+      ],
+      "size": [
+        160,
+        60
+      ],
+      "sources": [
+        {
+          "path": "compose-core.yml",
+          "line": 112,
+          "end_line": 136
+        },
+        {
+          "path": "scripts/sync/pihole-dns.sh",
+          "line": 1,
+          "end_line": 14,
+          "label": "records derived from Caddy"
+        }
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Cloudflare",
+      "wraps": [
+        "edge",
+        "access"
+      ],
+      "pad": 18
+    },
+    {
+      "kind": "region",
+      "label": "raspi (COMPOSE_PROFILES=all + tunnel)",
+      "wraps": [
+        "cloudflared",
+        "webhook",
+        "rpi_services",
+        "caddy",
+        "media",
+        "downloads",
+        "acestream",
+        "vpn_tools",
+        "monitoring",
+        "plex",
+        "pihole"
+      ],
+      "pad": 20
+    },
+    {
+      "kind": "region",
+      "label": "streamhalla (service list + override)",
+      "wraps": [
+        "sh_stack",
+        "sh_prom"
+      ],
+      "pad": 20
+    }
+  ],
+  "connections": [
+    {
+      "from": "internet",
+      "to": "edge",
+      "label": "HTTPS",
+      "variant": "emphasis"
+    },
+    {
+      "from": "edge",
+      "to": "access",
+      "label": "Access hosts",
+      "variant": "security"
+    },
+    {
+      "from": "access",
+      "to": "cloudflared",
+      "label": "Google JWT",
+      "variant": "security"
+    },
+    {
+      "from": "edge",
+      "to": "cloudflared",
+      "label": "torre, /hooks/deploy: no login",
+      "variant": "dashed"
+    },
+    {
+      "from": "cloudflared",
+      "to": "webhook",
+      "label": "/hooks/deploy",
+      "variant": "dashed"
+    },
+    {
+      "from": "cloudflared",
+      "to": "rpi_services",
+      "label": "direct ports"
+    },
+    {
+      "from": "cloudflared",
+      "to": "caddy",
+      "label": "localhost:443",
+      "variant": "emphasis"
+    },
+    {
+      "from": "caddy",
+      "to": "media"
+    },
+    {
+      "from": "caddy",
+      "to": "downloads"
+    },
+    {
+      "from": "caddy",
+      "to": "acestream"
+    },
+    {
+      "from": "caddy",
+      "to": "vpn_tools"
+    },
+    {
+      "from": "caddy",
+      "to": "monitoring"
+    },
+    {
+      "from": "caddy",
+      "to": "plex",
+      "label": "302 redir",
+      "variant": "dashed"
+    },
+    {
+      "from": "caddy",
+      "to": "sh_stack",
+      "label": "streamhalla pages over Tailscale",
+      "fromSide": "bottom",
+      "toSide": "left"
+    },
+    {
+      "from": "monitoring",
+      "to": "sh_prom",
+      "label": "Tailscale :9090"
+    },
+    {
+      "from": "tailnet_user",
+      "to": "tailscale",
+      "label": "WireGuard",
+      "variant": "emphasis"
+    },
+    {
+      "from": "tailscale",
+      "to": "pihole",
+      "label": "DNS :53"
+    },
+    {
+      "from": "tailscale",
+      "to": "caddy",
+      "label": "HTTPS by name",
+      "variant": "emphasis"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Door 1: the tailnet",
+      "items": [
+        "Pi-hole answers *.platanosverdes.com with the raspi's Tailscale IP, derived from Caddy's hosts every deploy",
+        "Hosts in PIHOLE_DNS_PUBLIC_HOSTS (Grafana) resolve to Cloudflare instead, so Access signs you in even here",
+        "Plex is never proxied: Caddy redirects to the LAN IP, reached through the Pi's /32 subnet routes"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Door 2: public behind Access",
+      "items": [
+        "Cloudflare edge, then Access asks for Google, then tunnel rpi reaches Caddy or an app port",
+        "Tunnel routes and Access apps live in Cloudflare's dashboard, not in this repo",
+        "A container label prometheus.probe.access checks that a stranger still gets the login"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Door 3: public without login",
+      "items": [
+        "torre (companion repo) and /hooks/deploy only",
+        "The webhook checks GitHub's HMAC-SHA256 signature before anything runs",
+        "It listens on 127.0.0.1:9000 and runs apply.sh only for a push to main",
+        "Outside the doors: the router forwards qBittorrent's QBIT_BT_PORT for peers"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Two nodes, one repo",
+      "items": [
+        "Both run main and their own apply.sh cron; only the raspi has the webhook and the tunnel",
+        "streamhalla lists services in COMPOSE_PROFILES and loads overrides/secondary-node.yml",
+        "streamhalla also runs gluetun, sleipnir (peer :8092), pushgateway, node-exporter, cAdvisor, speedtest-tracker"
+      ]
+    }
+  ]
+}

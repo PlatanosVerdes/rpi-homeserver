@@ -1,0 +1,640 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "One apply.sh pass",
+    "output": ".archify/workflow-apply-pass-20261022-143733/apply-pass.html",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/PlatanosVerdes/rpi-homeserver.git",
+      "provider": "github",
+      "revision": "02fc921e8a08175127acecece9ea0a908fcb0270"
+    },
+    "legend": {
+      "entries": {
+        "backend": {
+          "label": "Step"
+        },
+        "security": {
+          "label": "Gate or decision"
+        },
+        "messagebus": {
+          "label": "Early exit"
+        },
+        "database": {
+          "label": "Pushes metrics"
+        },
+        "external": {
+          "label": "Trigger"
+        }
+      }
+    }
+  },
+  "lanes": [
+    {
+      "id": "start",
+      "label": "Secrets and lock"
+    },
+    {
+      "id": "busy",
+      "label": "Lock busy",
+      "variant": "exception"
+    },
+    {
+      "id": "prepare",
+      "label": "Each repo: pull and prepare"
+    },
+    {
+      "id": "apply",
+      "label": "Each repo: apply"
+    },
+    {
+      "id": "host",
+      "label": "Once, after both repos"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "trigger",
+      "lane": "start",
+      "col": 0,
+      "type": "external",
+      "label": "Trigger",
+      "sublabel": "webhook or */30 cron",
+      "sources": [
+        {
+          "path": "scripts/deploy/apply.sh",
+          "line": 7,
+          "end_line": 8
+        },
+        {
+          "path": "scripts/crontab",
+          "line": 16,
+          "end_line": 18
+        }
+      ]
+    },
+    {
+      "id": "secrets",
+      "lane": "start",
+      "col": 1,
+      "type": "security",
+      "label": "Decrypt .env",
+      "sublabel": "SOPS, homelab-secrets",
+      "sources": [
+        {
+          "path": "scripts/deploy/apply.sh",
+          "line": 12,
+          "end_line": 40,
+          "label": "only rewritten if changed"
+        }
+      ]
+    },
+    {
+      "id": "flock",
+      "lane": "start",
+      "col": 2,
+      "type": "security",
+      "label": "Take the lock",
+      "sublabel": "flock -n",
+      "sources": [
+        {
+          "path": "scripts/deploy/apply.sh",
+          "line": 71,
+          "end_line": 95
+        }
+      ]
+    },
+    {
+      "id": "claim",
+      "lane": "start",
+      "col": 3,
+      "type": "backend",
+      "label": "Claim the pass",
+      "sublabel": "pid in, marker out",
+      "sources": [
+        {
+          "path": "scripts/deploy/apply.sh",
+          "line": 96,
+          "end_line": 115
+        }
+      ]
+    },
+    {
+      "id": "stuck",
+      "lane": "busy",
+      "col": 2,
+      "type": "security",
+      "label": "Holder stuck?",
+      "sublabel": "over 45 min: kill it",
+      "sources": [
+        {
+          "path": "scripts/deploy/apply.sh",
+          "line": 64,
+          "end_line": 89
+        }
+      ]
+    },
+    {
+      "id": "pending",
+      "lane": "busy",
+      "col": 3,
+      "type": "messagebus",
+      "label": "Leave a note",
+      "sublabel": ".deploy.pending, exit 0",
+      "sources": [
+        {
+          "path": "scripts/deploy/apply.sh",
+          "line": 90,
+          "end_line": 94
+        }
+      ]
+    },
+    {
+      "id": "pull",
+      "lane": "prepare",
+      "col": 0,
+      "type": "backend",
+      "label": "git pull main",
+      "sublabel": "fails: up -d anyway",
+      "sources": [
+        {
+          "path": "scripts/deploy/apply.sh",
+          "line": 307,
+          "end_line": 319
+        },
+        {
+          "path": "scripts/deploy/apply.sh",
+          "line": 314,
+          "end_line": 318,
+          "label": "pull failure"
+        }
+      ]
+    },
+    {
+      "id": "selfexec",
+      "lane": "prepare",
+      "col": 1,
+      "type": "security",
+      "label": "apply.sh changed?",
+      "sublabel": "re-exec the new one",
+      "sources": [
+        {
+          "path": "scripts/deploy/apply.sh",
+          "line": 321,
+          "end_line": 333
+        }
+      ]
+    },
+    {
+      "id": "grafana",
+      "lane": "prepare",
+      "col": 2,
+      "type": "backend",
+      "label": "Render alerting",
+      "sublabel": "if runs grafana",
+      "sources": [
+        {
+          "path": "scripts/deploy/apply.sh",
+          "line": 343,
+          "end_line": 344
+        },
+        {
+          "path": "scripts/deploy/apply.sh",
+          "line": 210,
+          "end_line": 234,
+          "label": "Telegram token from .env"
+        }
+      ]
+    },
+    {
+      "id": "owners",
+      "lane": "prepare",
+      "col": 3,
+      "type": "backend",
+      "label": "Fix appdata owners",
+      "sublabel": "PUID bind mounts",
+      "sources": [
+        {
+          "path": "scripts/deploy/apply.sh",
+          "line": 346,
+          "end_line": 373
+        }
+      ]
+    },
+    {
+      "id": "qbm",
+      "lane": "prepare",
+      "col": 4,
+      "type": "backend",
+      "label": "qbit-manage config",
+      "sublabel": "if runs qbit-manage",
+      "sources": [
+        {
+          "path": "scripts/deploy/apply.sh",
+          "line": 375,
+          "end_line": 384
+        }
+      ]
+    },
+    {
+      "id": "unit",
+      "lane": "prepare",
+      "col": 5,
+      "type": "backend",
+      "label": "Webhook unit",
+      "sublabel": "if changed and installed",
+      "sources": [
+        {
+          "path": "scripts/deploy/apply.sh",
+          "line": 386,
+          "end_line": 406
+        }
+      ]
+    },
+    {
+      "id": "reload",
+      "lane": "apply",
+      "col": 0,
+      "type": "backend",
+      "label": "Reload configs",
+      "sublabel": "caddy reload, restarts",
+      "sources": [
+        {
+          "path": "scripts/deploy/apply.sh",
+          "line": 408,
+          "end_line": 432,
+          "label": "Grafana, Caddy"
+        },
+        {
+          "path": "scripts/deploy/apply.sh",
+          "line": 434,
+          "end_line": 479,
+          "label": "homepage, vector, prometheus"
+        }
+      ]
+    },
+    {
+      "id": "moved",
+      "lane": "apply",
+      "col": 1,
+      "type": "security",
+      "label": "HEAD moved?",
+      "sublabel": "or a build retry due",
+      "sources": [
+        {
+          "path": "scripts/deploy/apply.sh",
+          "line": 481,
+          "end_line": 491
+        }
+      ]
+    },
+    {
+      "id": "plan",
+      "lane": "apply",
+      "col": 2,
+      "type": "backend",
+      "label": "Image plan",
+      "sublabel": "pull pins, build changed",
+      "sources": [
+        {
+          "path": "scripts/deploy/apply.sh",
+          "line": 236,
+          "end_line": 287
+        },
+        {
+          "path": "scripts/deploy/apply.sh",
+          "line": 492,
+          "end_line": 548
+        }
+      ]
+    },
+    {
+      "id": "up",
+      "lane": "apply",
+      "col": 3,
+      "type": "backend",
+      "label": "compose up -d",
+      "sublabel": "fails: retry next 5 passes",
+      "sources": [
+        {
+          "path": "scripts/deploy/apply.sh",
+          "line": 549,
+          "end_line": 564
+        },
+        {
+          "path": "scripts/deploy/apply.sh",
+          "line": 139,
+          "end_line": 147
+        },
+        {
+          "path": "scripts/deploy/apply.sh",
+          "line": 59,
+          "end_line": 64,
+          "label": "BUILD_RETRIES"
+        }
+      ]
+    },
+    {
+      "id": "repo_metrics",
+      "lane": "apply",
+      "col": 4,
+      "type": "database",
+      "label": "Repo status",
+      "sublabel": "to Pushgateway",
+      "sources": [
+        {
+          "path": "scripts/deploy/apply.sh",
+          "line": 567,
+          "end_line": 580
+        },
+        {
+          "path": "scripts/deploy/apply.sh",
+          "line": 179,
+          "end_line": 198
+        }
+      ]
+    },
+    {
+      "id": "cron",
+      "lane": "host",
+      "col": 0,
+      "type": "backend",
+      "label": "Install crontab",
+      "sublabel": "@PROJECT_DIR@, # when:",
+      "sources": [
+        {
+          "path": "scripts/deploy/apply.sh",
+          "line": 582,
+          "end_line": 583
+        },
+        {
+          "path": "scripts/setup/install-crontab.sh",
+          "line": 23,
+          "end_line": 39
+        }
+      ]
+    },
+    {
+      "id": "logrotate",
+      "lane": "host",
+      "col": 1,
+      "type": "backend",
+      "label": "logrotate, udev",
+      "sublabel": "root-owned, rendered",
+      "sources": [
+        {
+          "path": "scripts/deploy/apply.sh",
+          "line": 585,
+          "end_line": 589
+        },
+        {
+          "path": "scripts/setup/install-logrotate.sh",
+          "line": 18,
+          "end_line": 35
+        }
+      ]
+    },
+    {
+      "id": "sync",
+      "lane": "host",
+      "col": 2,
+      "type": "backend",
+      "label": "Sync scripts",
+      "sublabel": "seven, in order",
+      "sources": [
+        {
+          "path": "scripts/deploy/apply.sh",
+          "line": 591,
+          "end_line": 622
+        }
+      ]
+    },
+    {
+      "id": "prune",
+      "lane": "host",
+      "col": 3,
+      "type": "backend",
+      "label": "Daily prune",
+      "sublabel": "images, old build cache",
+      "sources": [
+        {
+          "path": "scripts/deploy/apply.sh",
+          "line": 635,
+          "end_line": 647
+        }
+      ]
+    },
+    {
+      "id": "metrics",
+      "lane": "host",
+      "col": 4,
+      "type": "database",
+      "label": "Deploy metrics",
+      "sublabel": "status, trigger",
+      "sources": [
+        {
+          "path": "scripts/deploy/apply.sh",
+          "line": 624,
+          "end_line": 633
+        },
+        {
+          "path": "scripts/deploy/apply.sh",
+          "line": 149,
+          "end_line": 177
+        }
+      ]
+    },
+    {
+      "id": "rerun",
+      "lane": "host",
+      "col": 5,
+      "type": "security",
+      "label": "Note left?",
+      "sublabel": "run again, max 2",
+      "sources": [
+        {
+          "path": "scripts/deploy/apply.sh",
+          "line": 102,
+          "end_line": 115
+        },
+        {
+          "path": "scripts/deploy/apply.sh",
+          "line": 649,
+          "end_line": 653
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "trigger",
+      "to": "secrets",
+      "variant": "emphasis"
+    },
+    {
+      "from": "secrets",
+      "to": "flock",
+      "variant": "emphasis"
+    },
+    {
+      "from": "flock",
+      "to": "claim",
+      "label": "got it",
+      "variant": "emphasis"
+    },
+    {
+      "from": "flock",
+      "to": "stuck",
+      "label": "busy",
+      "variant": "security",
+      "role": "error"
+    },
+    {
+      "from": "stuck",
+      "to": "pending",
+      "label": "no",
+      "variant": "security",
+      "role": "error"
+    },
+    {
+      "from": "stuck",
+      "to": "claim",
+      "label": "yes: take over",
+      "variant": "security",
+      "role": "return"
+    },
+    {
+      "from": "claim",
+      "to": "pull",
+      "variant": "emphasis"
+    },
+    {
+      "from": "pull",
+      "to": "selfexec",
+      "variant": "emphasis"
+    },
+    {
+      "from": "selfexec",
+      "to": "grafana",
+      "label": "no",
+      "variant": "emphasis"
+    },
+    {
+      "from": "grafana",
+      "to": "owners",
+      "variant": "emphasis"
+    },
+    {
+      "from": "owners",
+      "to": "qbm",
+      "variant": "emphasis"
+    },
+    {
+      "from": "qbm",
+      "to": "unit",
+      "variant": "emphasis"
+    },
+    {
+      "from": "unit",
+      "to": "reload",
+      "variant": "emphasis"
+    },
+    {
+      "from": "reload",
+      "to": "moved",
+      "variant": "emphasis"
+    },
+    {
+      "from": "moved",
+      "to": "plan",
+      "label": "yes",
+      "variant": "emphasis"
+    },
+    {
+      "from": "plan",
+      "to": "up",
+      "variant": "emphasis"
+    },
+    {
+      "from": "moved",
+      "to": "up",
+      "label": "no: ensure up",
+      "role": "branch"
+    },
+    {
+      "from": "up",
+      "to": "repo_metrics",
+      "variant": "emphasis"
+    },
+    {
+      "from": "repo_metrics",
+      "to": "cron",
+      "variant": "emphasis"
+    },
+    {
+      "from": "cron",
+      "to": "logrotate",
+      "variant": "emphasis"
+    },
+    {
+      "from": "logrotate",
+      "to": "sync",
+      "variant": "emphasis"
+    },
+    {
+      "from": "sync",
+      "to": "prune",
+      "variant": "emphasis"
+    },
+    {
+      "from": "prune",
+      "to": "metrics",
+      "variant": "emphasis"
+    },
+    {
+      "from": "metrics",
+      "to": "rerun",
+      "variant": "emphasis"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Order of one pass",
+      "items": [
+        "Secrets are decrypted before the lock: .env is read by everything after",
+        "deploy_repo runs for rpi-homeserver, then for rpi-services if it is cloned",
+        "Grafana, appdata owners, qbit-manage and the webhook unit are rpi-homeserver only; caddy reload runs for both repos",
+        "Reloads and restarts run before the image plan, on the files git just changed"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Gates",
+      "items": [
+        "A busy lock leaves .deploy.pending: the holder runs once more on exit, at most twice",
+        "If the pull changed apply.sh, it execs the new file with DEPLOY_SELF_BEFORE and keeps the lock",
+        "runs <service> skips steps for services this node does not run; sync scripts skip themselves"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Image plan",
+      "items": [
+        "GHCR-pinned services are pulled only if the pinned tag is missing; a failed pull builds locally",
+        "Local build contexts are rebuilt only when their files, versions.env or a compose file changed",
+        "up -d never uses --build, so an unchanged container is not recreated"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "After both repos",
+      "items": [
+        "Crontab: scripts/crontab with @PROJECT_DIR@ filled in and # when: jobs dropped where the service or file is absent",
+        "Sync: arr-config, config-export --check (if autobrr or maintainerr), pihole-dns, arr-links, plex-prefs, qbit-config, jellyfin-guide"
+      ]
+    }
+  ]
+}

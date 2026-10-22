@@ -11,7 +11,7 @@ alerts. One `docker-compose.yml` includes four modules, every image version is p
 
 ## Two nodes, three doors
 
-<!-- diagram: two-nodes-three-doors -->
+![Two nodes and the three ways in](docs/diagrams/two-nodes-three-doors.png)
 
 | Node | Runs | Deploys on |
 | :--- | :--- | :--- |
@@ -45,7 +45,6 @@ Pi. bifrost, sleipnir and muninn are apps in their own repos, pinned here.
 
 ## How a change deploys
 
-<!-- diagram: push-to-container -->
 
 1. A push to `main` reaches the Pi through a GitHub webhook and a Cloudflare tunnel; a cron every
    30 minutes on each node catches anything missed.

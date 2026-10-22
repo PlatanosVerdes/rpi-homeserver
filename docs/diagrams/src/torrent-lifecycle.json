@@ -1,0 +1,315 @@
+{
+  "schema_version": 3,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "Life of a torrent",
+    "output": ".archify/lifecycle-torrent-lifecycle-20261022-143938/torrent-lifecycle.html",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/PlatanosVerdes/rpi-homeserver.git",
+      "provider": "github",
+      "revision": "02fc921e8a08175127acecece9ea0a908fcb0270"
+    }
+  },
+  "mainPath": [
+    "grabbed",
+    "downloading",
+    "seeding",
+    "nohl",
+    "recycle",
+    "gone"
+  ],
+  "states": [
+    {
+      "id": "grabbed",
+      "type": "start",
+      "label": "Grabbed",
+      "sublabel": "arr, autobrr, hand",
+      "step": "01",
+      "sources": [
+        {
+          "path": "config/autobrr/filters.json",
+          "line": 1,
+          "end_line": 15,
+          "label": "autobrr tags grabs ratio"
+        },
+        {
+          "path": "services/torrent-drop/main.go",
+          "line": 27,
+          "end_line": 38,
+          "label": "category and tag manual"
+        }
+      ]
+    },
+    {
+      "id": "downloading",
+      "type": "active",
+      "label": "Downloading",
+      "sublabel": "qBittorrent",
+      "step": "02",
+      "sources": [
+        {
+          "path": "compose-arrs.yml",
+          "line": 4,
+          "end_line": 34
+        }
+      ]
+    },
+    {
+      "id": "seeding",
+      "type": "active",
+      "label": "Seeding",
+      "sublabel": "hardlinked, free",
+      "step": "03",
+      "sources": [
+        {
+          "path": "config/qbit-manage/config.yml",
+          "line": 76,
+          "end_line": 87,
+          "label": "tracker AND no longer needed"
+        },
+        {
+          "path": "config/qbit-manage/config.yml",
+          "line": 250,
+          "end_line": 266,
+          "label": "public group, 2 h"
+        }
+      ]
+    },
+    {
+      "id": "nohl",
+      "type": "waiting",
+      "label": "noHL",
+      "sublabel": "library let go",
+      "step": "04",
+      "sources": [
+        {
+          "path": "config/maintainerr/rules.json",
+          "line": 28,
+          "end_line": 48,
+          "label": "watched 95%, 2 days"
+        },
+        {
+          "path": "config/qbit-manage/config.yml",
+          "line": 159,
+          "end_line": 248,
+          "label": "per-tracker groups"
+        }
+      ]
+    },
+    {
+      "id": "recycle",
+      "type": "neutral",
+      "label": "Recycle bin",
+      "sublabel": "kept 1 day",
+      "step": "05",
+      "sources": [
+        {
+          "path": "config/qbit-manage/config.yml",
+          "line": 36,
+          "end_line": 47
+        }
+      ]
+    },
+    {
+      "id": "gone",
+      "type": "success",
+      "label": "Gone",
+      "sublabel": "space returned",
+      "step": "06",
+      "sources": [
+        {
+          "path": "config/qbit-manage/config.yml",
+          "line": 38,
+          "end_line": 40
+        }
+      ]
+    },
+    {
+      "id": "stalled",
+      "type": "failure",
+      "label": "Stalled",
+      "sublabel": "stalledDL",
+      "sources": [
+        {
+          "path": "config/qbit-manage/config.yml",
+          "line": 89,
+          "end_line": 108
+        }
+      ]
+    },
+    {
+      "id": "unpacked",
+      "type": "active",
+      "label": "RAR extracted",
+      "sublabel": "new bytes",
+      "sources": [
+        {
+          "path": "compose-arrs.yml",
+          "line": 278,
+          "end_line": 284
+        }
+      ]
+    },
+    {
+      "id": "ratio",
+      "type": "waiting",
+      "label": "Ratio grab",
+      "sublabel": "tag ratio",
+      "sources": [
+        {
+          "path": "config/qbit-manage/config.yml",
+          "line": 81,
+          "end_line": 83
+        }
+      ]
+    },
+    {
+      "id": "manual",
+      "type": "neutral",
+      "label": "Stopped",
+      "sublabel": "file kept",
+      "sources": [
+        {
+          "path": "config/qbit-manage/config.yml",
+          "line": 138,
+          "end_line": 157
+        }
+      ]
+    },
+    {
+      "id": "crossseed",
+      "type": "external",
+      "label": "Cross-seed",
+      "sublabel": "starts complete",
+      "sources": [
+        {
+          "path": "config/cross-seed/config.js",
+          "line": 31,
+          "end_line": 45
+        },
+        {
+          "path": "config/qbit-manage/config.yml",
+          "line": 110,
+          "end_line": 136,
+          "label": "15 d, no ratio limit"
+        }
+      ]
+    }
+  ],
+  "transitions": [
+    {
+      "from": "grabbed",
+      "to": "downloading",
+      "label": "added"
+    },
+    {
+      "from": "downloading",
+      "to": "seeding",
+      "label": "imported"
+    },
+    {
+      "from": "seeding",
+      "to": "nohl",
+      "label": "watched"
+    },
+    {
+      "from": "nohl",
+      "to": "recycle",
+      "label": "limit",
+      "variant": "emphasis"
+    },
+    {
+      "from": "recycle",
+      "to": "gone",
+      "label": "1 day"
+    },
+    {
+      "from": "seeding",
+      "to": "recycle",
+      "label": "public: 2 h",
+      "variant": "dashed"
+    },
+    {
+      "from": "downloading",
+      "to": "stalled",
+      "label": "no seeder",
+      "variant": "security"
+    },
+    {
+      "from": "stalled",
+      "to": "recycle",
+      "label": "12 h idle",
+      "variant": "security"
+    },
+    {
+      "from": "downloading",
+      "to": "unpacked",
+      "label": "RAR release"
+    },
+    {
+      "from": "unpacked",
+      "to": "nohl",
+      "label": "no hardlink"
+    },
+    {
+      "from": "downloading",
+      "to": "ratio",
+      "label": "autobrr"
+    },
+    {
+      "from": "ratio",
+      "to": "recycle",
+      "label": "limit met"
+    },
+    {
+      "from": "downloading",
+      "to": "manual",
+      "label": "manual"
+    },
+    {
+      "from": "seeding",
+      "to": "crossseed",
+      "label": "other site",
+      "variant": "dashed"
+    },
+    {
+      "from": "crossseed",
+      "to": "recycle",
+      "label": "15 d"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Per-tracker groups (qbit-manage share_limits)",
+      "items": [
+        "1 stalled: removed 12 h after the last byte moved",
+        "2 cross-seed: 15 d, no ratio limit; 3 manual: 15 d, then stopped, file kept",
+        "4 TorrentLeech 15 d or 1.2; 5 retrotoon 120 h, no ratio; 6 c411 150 h or 1.0",
+        "7 DigitalCore 180 h or 1.0; 8 any other private 10 d or 1.0; 9 public 2 h",
+        "Private groups also need noHL, ratio or cross-seed, and 1 day without activity"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Out of the clock",
+      "items": [
+        "keep (a person) and keep-bonus (tracker-control) are excluded by every group",
+        "manual torrents are paused at the limit, never deleted",
+        "A tracker error is only tagged; rem_unregistered removes what the site disowned"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Why the hardlink matters",
+      "items": [
+        "The arr imports by hardlink; Maintainerr deletes the library copy 2 days after a 95% watch",
+        "While the library holds the file, seeding costs no disk",
+        "A RAR release is extracted to new bytes, so its torrent is noHL from the start",
+        "Deleting lands in /data/downloads/.RecycleBin, so space returns a day later"
+      ]
+    }
+  ]
+}
