@@ -21,13 +21,17 @@ A modular Docker-based home server running on a Raspberry Pi. All services run a
 ```
 docker-compose.yml          Entry point — uses `include` to load all modules
 versions.env                Single source of truth for all image versions (committed)
-compose-core.yml            Caddy, Homepage, Pi-hole, Speedtest-tracker
-compose-media.yml           Plex, Jellyfin, Overseerr, Acestream, Kubo, Tautulli, watch-next,
-                            audio-convert
+compose-core.yml            Caddy, Homepage, Pi-hole, Speedtest-tracker, cloudflared
+compose-media.yml           Plex, Jellyfin, Seerr, Bazarr, Maintainerr, Tautulli, watch-next,
+                            subtitle-links, audio-convert; AceStream: gluetun, aceserve, kubo,
+                            bifrost, farnsworth; sleipnir, gluetun-test, huginn, muninn,
+                            docker-socket-proxy
 compose-arrs.yml            Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr, Unpackerr,
-                            cross-seed, autobrr, qbit-manage, torrent-drop
+                            cross-seed, autobrr, qbit-manage, tracker-control, torrent-drop
 compose-mon.yml             Prometheus, Grafana, Pushgateway, node-exporter, cAdvisor,
-                            VictoriaLogs + Vector (container logs, see docs/logging.md)
+                            blackbox-exporter, pi-metrics, qbittorrent-exporter, pihole-exporter,
+                            tailscale-metrics, VictoriaLogs + Vector (see docs/logging.md)
+overrides/secondary-node.yml  Extra settings for a second node, loaded through COMPOSE_FILE
 
 config/                     Static config files committed to git
   caddy/Caddyfile           Reverse proxy rules (HTTPS + HTTP short names)
@@ -41,6 +45,13 @@ config/                     Static config files committed to git
   vector/vector.yaml        What Vector collects and where it ships it
   arr/radarr, arr/sonarr    Custom formats + quality profiles, pushed into each app on deploy
                             (scripts/sync/arr-config.sh) — otherwise they only exist in appdata
+  qbit-manage/config.yml    Tags and share-limit groups: the seed goal per tracker. Copied into
+                            appdata by the deploy
+  qbittorrent/              preferences.json, pushed by scripts/sync/qbit-config.sh
+  trackers/                 Each private tracker's rules and tiers, read by tracker-control
+  autobrr/, maintainerr/    Exported by scripts/ops/config-export.py; the deploy only checks drift
+  cross-seed/, blackbox/    cross-seed's config.js; blackbox probe modules
+  logrotate/, udev/         Host files installed by scripts/setup/ on every deploy
 
 services/                   Source code for custom services built in this repo. CI builds each
                             one compose builds and publishes it to GHCR; the Pi pulls it
@@ -60,6 +71,7 @@ services/                   Source code for custom services built in this repo. 
                             on, with pi-metrics' plan, and a button running audio-compat.py --file
   tracker-control/          Go service: reads each tracker account and moves the freeleech filter,
                             requiredFlags and the grab rate from its headroom. Was two crons
+  farnsworth/               Go service: page that hands an AceStream channel to VLC
 
 scripts/                    Operational scripts, grouped by what they do
   crontab                   This repo's cron fragment, merged with the other repo's on deploy
@@ -78,7 +90,7 @@ scripts/                    Operational scripts, grouped by what they do
 
   sync/                     Config that lives only in an app's appdata, pushed from git each deploy
     arr-config.sh           Custom formats and quality profiles -> Radarr/Sonarr
-    arr-links.sh            Wires Overseerr and Bazarr to Radarr/Sonarr
+    arr-links.sh            Wires Seerr and Bazarr to Radarr/Sonarr
     bazarr-prune-subs.py    Drops Bazarr's subtitle rows left behind by a replaced file
     pihole-dns.sh           Caddy's *.platanosverdes.com hosts -> Pi-hole custom DNS
     plex-prefs.sh           Plex LAN networks and the 95% played threshold
@@ -95,7 +107,8 @@ scripts/                    Operational scripts, grouped by what they do
   ops/                      Everything else on a schedule
     backup.sh               Daily appdata backup, pushes metrics to Grafana
     heartbeat.sh            Dead man's switch ping to an external check, every minute
-    cutoff-search.sh        Nightly *arr search for missing and below-cutoff items
+    cutoff-search.sh        *arr search for missing and below-cutoff items. Out of the cron
+                            since 2026-08-24, being retired (PENDING.md)
     oci-hunt.py             Keeps asking Oracle for the two free instances until capacity exists
     indexer-retry.py        Clears Prowlarr's backoff once a blocked indexer's site answers again
     config-export.py        Pulls autobrr's filters and Maintainerr's rules into git; --check on deploy
@@ -121,15 +134,17 @@ and fill in values.
 docker compose up -d
 ```
 
-> **Bitwarden Secrets Manager was evaluated and dropped.** It did not fit the workflow, so
-> secrets stay in `.env` (gitignored, never committed). `scripts/deploy/apply.sh` uses plain `docker compose`.
-> See PENDING.md for why, and do not reintroduce it without reading that first.
+> **Bitwarden Secrets Manager was evaluated and dropped**; SOPS + age is what is used. See
+> PENDING.md for why, and do not reintroduce it without reading that first.
 
 ---
 
 ## How auto-deploy works
 
 `scripts/deploy/apply.sh` runs on every GitHub push (webhook) and every 30 minutes via cron:
+0. If `~/homelab-secrets` is a git checkout and `sops` is installed, pulls it and decrypts
+   `<node>/rpi-homeserver.env` and `<node>/rpi-services.env` over each repo's `.env`, only when the
+   result differs (docs/secrets.md). Then it takes the lock (below).
 1. `git pull origin main`. If the pull changed `apply.sh` itself, it `exec`s the new version (bash
    reads the file as it runs, so the old code would carry on otherwise), passing the pre-pull
    commit along so the new run still sees what changed
@@ -156,25 +171,35 @@ docker compose up -d
    are applied by `caddy reload`, never a rebuild. `DEPLOY_BUILD_LOCAL=1` builds the published
    services from source on this pass instead, for when CI or GHCR is down.
 4. If no change → `docker compose up -d --remove-orphans` (ensures containers are running)
-5. Installs the merged host crontab (`scripts/setup/install-crontab.sh`)
-6. Converges Radarr/Sonarr's custom formats and quality profiles (`scripts/sync/arr-config.sh`),
-   Pi-hole's `*.platanosverdes.com` DNS records (`scripts/sync/pihole-dns.sh`) and Plex's LAN Networks
-   (`scripts/sync/plex-prefs.sh`) to what is committed — the apps must already be up, hence running
-   after compose rather than before
-7. Pushes metrics to Pushgateway (visible in Grafana "Deploy Monitor" dashboard)
+5. Installs the merged host crontab (`scripts/setup/install-crontab.sh`), the logrotate policy and
+   the udev rules (`install-logrotate.sh`, `install-udev.sh`)
+6. Runs the sync scripts, which need the apps up, hence after compose: `arr-config.sh` (Radarr/Sonarr
+   formats and profiles), `config-export.py --check` (autobrr/Maintainerr drift, logged only),
+   `pihole-dns.sh` (Pi-hole records from the Caddyfile), `arr-links.sh` (Seerr/Bazarr), `plex-prefs.sh`
+   (LAN Networks, 95% played), `qbit-config.sh` (qBittorrent limits and BT port), `jellyfin-guide.sh`
+7. Prunes images and build cache once a day, then pushes metrics to Pushgateway (visible in Grafana
+   "Deploy Monitor" dashboard)
+
+Steps that belong to one service are gated with `runs <service>` (is it in this node's
+`COMPOSE_PROFILES`?), so a node running a subset does not fail or install things for services it
+does not have.
 
 Order matters: the render sits after the pull (or it would use a stale template) and before
 compose (or Grafana would start reading the previous file).
 
-It takes an `flock` on `.deploy.lock`, so a burst of pushes cannot start two deploys at once.
+It takes an `flock` on `.deploy.lock`, so a burst of pushes cannot start two deploys at once. A run
+that cannot get the lock leaves `.deploy.pending` and exits; the holder runs once more on its way
+out (coalescing, not a queue).
 
 **Push-triggered deploy:** GitHub webhook → Cloudflare tunnel → `services/deploy-webhook`
 (systemd, HMAC-verified) → this script. Setup in [docs/deploy-webhook.md](docs/deploy-webhook.md).
 The cron stays as the self-heal net.
 
-**Cron entry on the host:**
+**Cron entry**, from `scripts/crontab`. `install-crontab.sh` replaces `@PROJECT_DIR@` with this
+machine's checkout and drops a job whose `# when: <service>` line names a service this node does not
+run:
 ```
-*/30 * * * * /home/raspi/rpi-homeserver/scripts/deploy/apply.sh >> /home/raspi/rpi-homeserver/apply.log 2>&1
+*/30 * * * * @PROJECT_DIR@/scripts/deploy/apply.sh >> @PROJECT_DIR@/apply.log 2>&1
 ```
 
 ---
@@ -183,7 +208,8 @@ The cron stays as the self-heal net.
 
 - **Local LAN:** Caddy listens for HTTP short names (`http://jellyfin`, `http://grafana`, etc.). Clients need an entry in `/etc/hosts` pointing `STATIC_IP` to those names.
 - **Remote (Tailscale):** All HTTPS subdomains (`*.platanosverdes.com`) resolve to the Pi's Tailscale IP (`TAILSCALE_IP`). Certificates issued automatically via Cloudflare DNS challenge.
-- **Pi-hole:** DNS for the whole tailnet. All `*.platanosverdes.com` subdomains point to `TAILSCALE_IP` in Pi-hole's custom DNS.
+- **Pi-hole:** DNS for the whole tailnet. Every `*.platanosverdes.com` host in the Caddyfile points to `TAILSCALE_IP` in Pi-hole's custom DNS (written by `scripts/sync/pihole-dns.sh`), except those in `PIHOLE_DNS_PUBLIC_HOSTS` (Grafana), which resolve to Cloudflare Access even on the tailnet.
+- **Public side:** Cloudflare Tunnel `rpi` (`cloudflared`, profile `tunnel`) carries the deploy webhook and the apps published behind Cloudflare Access. Nothing on the router is forwarded for it.
 - **Docker network:** All services share `media-network` (bridge).
 - **Plex is never proxied.** Remote playback is paid since April 2025 and the client decides remote
   vs local from the per-connection `local` flag Plex publishes to plex.tv, which only RFC1918
@@ -218,13 +244,12 @@ Controlled via `COMPOSE_PROFILES` in `.env`. No need to touch compose files.
 | Profile | Services |
 | :--- | :--- |
 | `essential` | Caddy, Homepage, Pi-hole, Speedtest-tracker |
-| `moni` | Prometheus, Grafana, Pushgateway, node-exporter, cAdvisor, Pihole-exporter, Speedtest-tracker |
+| `moni` | Prometheus, Grafana, Pushgateway, node-exporter, cAdvisor, blackbox-exporter, pi-metrics, qbittorrent-exporter, pihole-exporter, tailscale-metrics, VictoriaLogs, Vector, Speedtest-tracker |
 | `acestream` | Aceserve, gluetun, bifrost, Kubo, Jellyfin, farnsworth + Grafana/Prometheus/Pushgateway |
-| `media` | Plex, Overseerr, Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr, Unpackerr, Bazarr, Maintainerr, Tautulli, watch-next, torrent-drop, audio-convert |
-| `bot` | Pol Academy Offers Bot |
+| `media` | Plex, Seerr, Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr, Unpackerr, Bazarr, Maintainerr, Tautulli, watch-next, subtitle-links, torrent-drop, audio-convert, qbit-manage, autobrr, tracker-control, cross-seed |
 | `vpn` | sleipnir, docker-socket-proxy, gluetun-test, huginn (see docs/sleipnir.md) |
 | `bots` | muninn, docker-socket-proxy |
-| `tunnel` | Cloudflared (publishes only the GitHub deploy webhook — see docs/deploy-webhook.md) |
+| `tunnel` | Cloudflared: the deploy webhook and the apps behind Cloudflare Access (docs/deploy-webhook.md) |
 | `all` | Everything except `tunnel` (it needs a token, so it is opt-in) |
 
 Every service also has a profile named after itself, so a node that runs a subset lists exactly
@@ -232,7 +257,9 @@ what it runs instead of taking a whole group: e.g. streamhalla runs
 `COMPOSE_PROFILES=jellyfin,gluetun,aceserve,kubo,bifrost,sleipnir,docker-socket-proxy,speedtest-tracker,prometheus,pushgateway,node-exporter,cadvisor`.
 Profiles are not part of a container's config hash, so adding one recreates nothing.
 
-Main Pi: `COMPOSE_PROFILES=all`. Secondary Pi: a group (`essential,moni`) or a list of services.
+Main Pi: `COMPOSE_PROFILES=all` plus `tunnel`. streamhalla: the list above, with
+`COMPOSE_FILE=docker-compose.yml:overrides/secondary-node.yml`. Both run `main` and deploy themselves
+from their own cron; only the main Pi has the webhook.
 
 ---
 
@@ -244,7 +271,7 @@ See [docs/add-service.md](docs/add-service.md) for the step-by-step guide. Short
    if the service serves no HTTP). No `ports:` unless something on the host needs it, and then on
    `127.0.0.1`; on the host network, a `host.ports` label instead (CI checks both repos for clashes)
 2. Add HTTPS route to `config/caddy/Caddyfile`
-3. Add DNS record in Pi-hole pointing to `TAILSCALE_IP`
+3. Pi-hole DNS is automatic: `scripts/sync/pihole-dns.sh` adds the record from the Caddyfile route
 4. Add to Homepage `config/homepage/services.yaml` (optional)
 5. Built from `services/`? Give it an `image: ghcr.io/platanosverdes/rpi-homeserver-<name>:${<NAME>_IMAGE_TAG}`
    line beside `build:` and `<NAME>_IMAGE_TAG=unbuilt` in `versions.env`, and CI builds and pins it

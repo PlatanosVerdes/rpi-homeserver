@@ -10,10 +10,14 @@ A modular, Docker-based home server for Raspberry Pi. Uses Docker Compose's `inc
 
 | Module | Purpose | Key Services |
 | :--- | :--- | :--- |
-| **Core** | Entry point & Networking | Caddy, Homepage, Pi-hole, Speedtest-tracker |
-| **Media** | Streaming & Live TV | Plex, Jellyfin, Seerr, Bazarr, Maintainerr, Acestream, audio-convert |
-| **Arrs** | Automation & Downloads | Radarr, Sonarr, Prowlarr, qBittorrent, FlareSolverr, Unpackerr, cross-seed, torrent-drop |
-| **Monitoring** | System Health | Prometheus, Grafana, Pushgateway, node-exporter, cAdvisor |
+| **Core** | Entry point & Networking | Caddy, Homepage, Pi-hole, Speedtest-tracker, cloudflared (opt-in) |
+| **Media** | Streaming & Live TV | Plex, Jellyfin, Seerr, Bazarr, Maintainerr, Tautulli, watch-next, subtitle-links, audio-convert; AceStream: aceserve, gluetun, kubo, bifrost, farnsworth; sleipnir, muninn |
+| **Arrs** | Automation & Downloads | Radarr, Sonarr, Prowlarr, qBittorrent, FlareSolverr, Unpackerr, autobrr, qbit-manage, tracker-control, cross-seed, torrent-drop |
+| **Monitoring** | System Health | Prometheus, Grafana, Pushgateway, node-exporter, cAdvisor, blackbox-exporter, pi-metrics, qBittorrent/Pi-hole exporters, tailscale-metrics, VictoriaLogs + Vector |
+
+Two machines run this repo from `main`: the main Pi runs everything (`COMPOSE_PROFILES=all`), and a
+second node runs only the AceStream + Jellyfin subset with `overrides/secondary-node.yml`. Each has
+its own cron and deploys itself.
 
 ---
 
@@ -52,25 +56,28 @@ Nothing is deployed by hand. A push is the only trigger, and the repo is the sou
 ```
 
 The cron is not redundant: it restarts containers that died on their own and picks up pushes that
-landed while the Pi or the tunnel was down.
+landed while the Pi or the tunnel was down. Every node runs it; only the main Pi has the webhook, so
+a second node deploys on its cron alone.
 
 ### What a deploy actually does
 
 ```
 scripts/deploy/apply.sh
    │
-   ├─ flock ................... another deploy already running? exit
-   ├─ git pull rpi-homeserver
-   ├─ render alerting ......... template (git) + secrets (.env)
+   ├─ secrets ................. .env decrypted from homelab-secrets, if this node has the checkout
+   ├─ flock ................... another deploy running? leave .deploy.pending, it runs once more
+   ├─ git pull rpi-homeserver . apply.sh itself changed? start over on the new version
+   ├─ render alerting ......... template (git) + secrets (.env), only where grafana runs
    │                            └─► appdata/grafana-alerting/
    ├─ docker compose pull ...... the services/ images whose pinned tag is new
    │                              (built by CI: docs/service-images.md)
    ├─ docker compose build ..... only a built-here service whose build context changed
    │                              (all of them if versions.env or a compose file did)
-   ├─ docker compose up -d ..... recreates only what changed
+   ├─ docker compose up -d ..... recreates only what changed; Caddy routes: caddy reload
    ├─ git pull rpi-services  ──► docker compose up -d (same rule)
-   ├─ scripts/setup/install-crontab.sh ...... homeserver fragment + services fragment
-   │                            └─► host crontab (and undoes any manual drift)
+   ├─ install-crontab, logrotate, udev ...... host state from both repos
+   ├─ sync ..................... arr-config, config-export --check, pihole-dns, arr-links,
+   │                              plex-prefs, qbit-config, jellyfin-guide
    └─ metrics ──► Pushgateway
                         │
                         ▼
@@ -154,55 +161,30 @@ Plex runs on the Pi, which is weak at video transcoding, so files should
 - **qbit-manage** finishes that job on the torrent side, hourly, with a share-limit group per
   tracker ([docs/lifecycle.md](docs/lifecycle.md)). Radarr imports by hardlink, so
   every download has two names: the one qBittorrent seeds and the one Plex plays. Maintainerr removes
-  the second, and this removes the first once the tracker is paid:
+  the second, and qbit-manage removes the first once the tracker is paid:
 
   | State | Tracker | What happens |
   | :--- | :--- | :--- |
   | library shares the file | private | nothing, it keeps seeding: it costs no extra disk |
-  | library shares the file | public | torrent and its download-side name removed as soon as the library has it |
-  | library has its own copy | goal met | download copy removed, film untouched, duplicate reclaimed |
-  | library has its own copy | goal pending | keeps seeding until the debt is paid, then as above |
-  | film gone from the library | public | torrent and data removed on the next pass |
-  | film gone from the library | private, owes its hit & run | keeps seeding, tagged `waiting-seed`, rechecked hourly |
-  | film gone from the library | private, hit & run paid, **still uploading** | keeps seeding: it is producing the ratio the account needs |
-  | film gone from the library | private, hit & run paid and **gone quiet** | torrent and data removed on the next pass |
+  | any | public | torrent removed 2 h after it finished, whether or not the library shares the file |
+  | library let go (`noHL`), or grabbed for ratio (`ratio`) | private, seed time not reached | keeps seeding |
+  | library let go, or grabbed for ratio | private, seed time reached but **still uploading** | keeps seeding until a full day passes with no activity |
+  | library let go, or grabbed for ratio | private, seed time reached and **gone quiet** | moved to the recycle bin, emptied a day later |
 
-  Whether the library still holds a film is asked of the hard link count first and of the *arr second.
-  The second question exists because of RAR releases: a hardlink needs the same bytes at both ends,
-  and the `.mkv` unpackerr extracts out of 96 `.rNN` archives is a new file, so it shares nothing with
-  what qBittorrent seeds. That is also why such an import is dropped as soon as its tracker is paid:
-  the film sits on disk twice, and one of the two copies is only there to honour the tracker.
+  The seed time and ratio per tracker live in `config/qbit-manage/config.yml` (`share_limits`), and
+  [docs/lifecycle.md](docs/lifecycle.md) has the table with the reason for each number. A RAR release
+  never shares an inode with the `.mkv` unpackerr extracts from it, so it is `noHL` from the start and
+  goes as soon as its tracker is paid.
 
-  Seeding a public torrent forever costs no disk, which is why it used to be kept, but it buys
-  nothing either: there is no account and no ratio requirement on a public tracker, so the only thing
-  it produces is this address sitting in a public swarm for weeks. `drop_when_imported` turns that
-  off: the download-side name goes as soon as the library has the file, and since the decision is
-  taken on a link count above one, the library copy is untouched and nothing is freed but the
-  seeding. Private trackers are unaffected, which is where seeding is the currency.
-
-  **`keep` is the manual override**: tag a torrent `keep` in qBittorrent and this never touches it,
+  **`keep` is the manual override**: tag a torrent `keep` in qBittorrent and no group touches it,
   whatever the goals say. No deploy, no config edit, effective on the next pass. `keep-bonus` is the
   same brake applied automatically by the tracker-control service, for a tracker that pays for holding data.
   It is implemented and deliberately **not** configured: measured on DigitalCore, it bought 18% of
   leech bonus for 179 GB of disk on an account already at ratio 4.21, while the free 9% that comes
   from library hardlinks costs nothing. See [docs/private-trackers.md](docs/private-trackers.md).
 
-  **What decides is the upload rate, not the goal.** Measured on 2026-08-22: torrents that had been
-  seeding 40 to 157 hours had uploaded exactly 0.00 GB, while ones a few hours old were doing 0.13 to
-  0.82 GB an hour. Upload only happens while somebody still wants the file, so a rule of "remove once
-  ratio 1.2 is reached" was deleting the best earner in the client (0.82 GB/h, due in 0.8 days) and
-  keeping the worst (0.13 GB/h, due in 12.7). Now each tracker's own hit & run rule decides when a
-  torrent *may* go and its upload over the last day decides whether it *should*: still paying means it
-  stays, past the goal or not, and quiet means it goes as soon as nothing is owed, freeing the disk
-  for a release somebody actually wants. The floor is `min_upload_gb_per_day` per tracker, and a
-  torrent with less than 12 hours of history is never judged on it.
-
-  Goals live in `config/qbittorrent/seed-rules.json` (240 h seeding or ratio 1.0 for private, nothing
-  for public). Whether a tracker is private comes from qBittorrent, so there is no list to maintain.
-  qBittorrent's own share limits stay **off on purpose**: they cannot see the library, so they would
-  delete torrents for films you have not watched yet. One deleter, one policy. `DRY_RUN=1` prints
-  what it would remove and touches nothing; the "Seed cleanup" row of the Disk usage dashboard shows
-  the queue.
+  qBittorrent's own share limits are not set by hand: qbit-manage writes them per torrent from its
+  groups. It runs with `share_limits` on, so its own `--dry-run` is not read-only either.
 - **the tracker-control service** keeps the account on the right side of the tracker's ratio rule
   without anyone watching it. Every half hour it logs into TorrentLeech, reads what the site says
   (ratio, uploaded, downloaded, points, any active warning) and acts in the same pass on one derived
@@ -227,11 +209,12 @@ Plex runs on the Pi, which is weak at video transcoding, so files should
   not freeleech takes the ratio from 0.52 to 0.397, and 0.4 is the line TorrentLeech disables
   accounts under. The grabber also pauses below a free-space floor whatever the ratio says, because
   a grab cannot be deleted until its hit & run window closes. Thresholds live in
-  `config/trackers/rules.json`; `DRY_RUN=1` on the service prints what it would change and writes nothing.
+  `config/trackers/rules.json`; `DRY_RUN=1` in the container's environment logs what it would change
+  and writes nothing.
 - **Private tracker rules, per site, and what got an account disabled once**:
   [docs/private-trackers.md](docs/private-trackers.md).
-- **Why the ratio on private trackers is near zero, and the three ways out** (gluetun on a VPN that
-  forwards a port, a seedbox, or a forward at home), with the measurements behind it:
+- **Why the ratio on private trackers was near zero** (no inbound connections; the line was behind
+  CGNAT until October 2026 and has a public IPv4 now), and how to check inbound:
   [docs/seeding-and-ratio.md](docs/seeding-and-ratio.md).
 - **Unpackerr** unrars scene releases. Radarr and Sonarr cannot read a `.rar` set, so those
   releases sit in the queue as `importPending` forever and the disk fills up with parts that
@@ -248,17 +231,13 @@ The rule of record. Everything above is its implementation, and any doubt is set
    delay leaves room to rewatch it, for someone else in the house to see it, or to notice that Plex
    marked something watched by accident. The delete is not reversible.
 3. **The torrent is a separate debt and the tracker decides when it is paid.** A public tracker asks
-   for nothing, so its torrent goes as soon as the film does. A private one keeps seeding until it
-   has given back 240 hours or ratio 1.0, whichever arrives first, because leaving early is how an
-   account gets banned. Disk pressure is never a reason to pay less.
+   for nothing, so its torrent goes two hours after it finished. A private one keeps seeding until it
+   has met that tracker's own hit & run rule plus a margin (per-tracker numbers in
+   [docs/lifecycle.md](docs/lifecycle.md)), because leaving early is how an account gets banned. Disk
+   pressure is never a reason to pay less.
 
 The whole path, from the indexer that announces a release to the recycle bin, with what each
 tracker asks for and what is configured against it, is in [docs/lifecycle.md](docs/lifecycle.md).
-
-**Until roughly 2026-08-31 this is mid-handover**: qbit-manage does the deleting and the script that
-used to do it sits commented out in the crontab, waiting for a week of clean deletions before it is
-removed for good. What moved, what is being watched and how to go back is in
-[docs/migration.md](docs/migration.md), which gets deleted along with the script.
 
 Two consequences that read like bugs and are not:
 
@@ -338,7 +317,8 @@ nano .env
 Run `id -u` and `id -g` to get your PUID and PGID values.
 
 Optionally, keep `.env` encrypted in a private repo and let the deploy write it from there:
-[docs/secrets.md](docs/secrets.md).
+[docs/secrets.md](docs/secrets.md). Both nodes here do that, so on them `.env` is rewritten from
+the encrypted copy on every pass: change a secret there, not on the Pi.
 
 ### 4. Mount external storage
 
@@ -373,6 +353,7 @@ sudo systemctl restart docker
 ### 6. Start services
 
 ```bash
+export COMPOSE_ENV_FILES=versions.env,.env    # image versions live in versions.env
 docker compose up -d
 ```
 
@@ -401,16 +382,12 @@ That merges this repo's `scripts/crontab` with a companion repo's fragment if th
 For push-triggered deploys instead of waiting for the 30-minute cron, see
 [docs/deploy-webhook.md](docs/deploy-webhook.md).
 
-### 9. Configure Pi-hole DNS records
+### 9. Pi-hole DNS records (automatic)
 
-For each HTTPS subdomain, add a DNS record in Pi-hole → Local DNS → DNS Records:
-
-| Domain | IP |
-| :--- | :--- |
-| `raspi.platanosverdes.com` | `<TAILSCALE_IP>` |
-| `jellyfin.platanosverdes.com` | `<TAILSCALE_IP>` |
-| `grafana.platanosverdes.com` | `<TAILSCALE_IP>` |
-| *(all other subdomains)* | `<TAILSCALE_IP>` |
+Nothing to add by hand: every deploy runs `scripts/sync/pihole-dns.sh`, which points each
+`*.platanosverdes.com` host in the Caddyfile at `TAILSCALE_IP` in Pi-hole's local DNS, and removes
+the record when its route goes. Hosts listed in `PIHOLE_DNS_PUBLIC_HOSTS` (Grafana) are left out, so
+they resolve to Cloudflare Access even on the tailnet.
 
 ### 10. Add entries to `/etc/hosts` on client devices
 
@@ -432,8 +409,8 @@ bash scripts/recovery/recovery-status.sh
 
 The deploy converges everything derivable from `.env`: Radarr and Sonarr's custom formats and
 quality profiles, Pi-hole's DNS records, qBittorrent's limits, the Seerr and Bazarr links. A
-few things it cannot, because each is a one-time interactive step with an outside provider — a Plex
-claim token, a setup wizard, an Apple 2FA code.
+few things it cannot, because each is a one-time interactive step: the Plex claim, Jellyfin's setup
+wizard, and checking that a fresh Grafana database came up in WAL mode.
 
 This prints which of those are still outstanding, so they get found now rather than the evening
 something does not work.
@@ -447,23 +424,24 @@ Every service belongs to one or more profiles. Set `COMPOSE_PROFILES` in `.env` 
 | Profile | Services |
 | :--- | :--- |
 | `essential` | Caddy, Homepage, Pi-hole, Speedtest-tracker |
-| `moni` | Prometheus, Grafana, Pushgateway, node-exporter, cAdvisor, Pihole-exporter, Speedtest-tracker |
-| `acestream` | Aceserve, gluetun, bifrost, Jellyfin, farnsworth + Grafana/Prometheus/Pushgateway |
-| `media` | Plex, Seerr, Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr, Unpackerr, torrent-drop, audio-convert |
+| `moni` | Prometheus, Grafana, Pushgateway, node-exporter, cAdvisor, blackbox-exporter, pi-metrics, qbittorrent-exporter, pihole-exporter, tailscale-metrics, VictoriaLogs, Vector, Speedtest-tracker |
+| `acestream` | Aceserve, gluetun, kubo, bifrost, Jellyfin, farnsworth + Grafana/Prometheus/Pushgateway |
+| `media` | Plex, Seerr, Bazarr, Maintainerr, Tautulli, watch-next, subtitle-links, audio-convert, Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr, Unpackerr, qbit-manage, autobrr, tracker-control, cross-seed, torrent-drop |
 | `vpn` | sleipnir, docker-socket-proxy, gluetun-test, huginn |
 | `bots` | muninn, docker-socket-proxy |
-| `bot` | Pol Academy Offers Bot |
-| `all` | Everything |
+| `tunnel` | cloudflared |
+| `all` | Everything except cloudflared, which needs a token and is opt-in through `tunnel` |
+
+Every service is also a profile of its own name, so a node that runs a subset lists services
+instead of groups.
 
 ```bash
-# .env — main Pi (everything)
-COMPOSE_PROFILES=all
+# .env — main Pi (everything, plus the tunnel)
+COMPOSE_PROFILES=all,tunnel
 
-# .env — secondary Pi (only essentials + monitoring)
-COMPOSE_PROFILES=essential,moni
-
-# .env — secondary Pi (essentials + acestream only)
-COMPOSE_PROFILES=essential,acestream
+# .env — second node: the AceStream + Jellyfin subset, service by service
+COMPOSE_PROFILES=jellyfin,gluetun,aceserve,kubo,bifrost,sleipnir,docker-socket-proxy,speedtest-tracker,prometheus,pushgateway,node-exporter,cadvisor
+COMPOSE_FILE=docker-compose.yml:overrides/secondary-node.yml
 ```
 
 ---
@@ -527,14 +505,10 @@ Caddy uses a custom Docker image that includes the Cloudflare DNS plugin (see `s
 
 **Extending Caddy from a companion repo (e.g. rpi-services):**
 
-Caddy auto-imports `*.caddy` files from two directories: `config/caddy/services/` (this repo) and `/etc/caddy/ext-services/` (mounted via override). To add routes from `rpi-services` without touching this repo, create a `docker-compose.override.yml` (gitignored) on the Pi:
+Caddy auto-imports `*.caddy` files from two directories: `config/caddy/services/` (this repo) and `/etc/caddy/ext-services/`, a bind mount of whatever `EXT_CADDY_PATH` in `.env` points at (an empty directory when unset):
 
-```yaml
-# ~/rpi-homeserver/docker-compose.override.yml  (not committed to git)
-services:
-  caddy:
-    volumes:
-      - /home/raspi/rpi-services/config/caddy:/etc/caddy/ext-services:ro
+```bash
+EXT_CADDY_PATH=/home/raspi/rpi-services/config/caddy
 ```
 
 Then in `rpi-services`, add a file like `config/caddy/myservice.caddy`:
@@ -546,7 +520,8 @@ https://myservice.yourdomain.com {
 }
 ```
 
-Caddy picks it up on next restart — no changes needed in this repo.
+The deploy runs `caddy reload` when a push changes `config/caddy/` in either repo — no changes
+needed in this repo.
 
 → See [docs/architecture.md](docs/architecture.md) for what talks to what, and what may overwrite which app's config
 → See [docs/add-service.md](docs/add-service.md) to add a new service with HTTPS
@@ -629,25 +604,29 @@ peers are approved exit nodes. Nothing to build by hand: CI builds and publishes
 other service in `services/`, and the deploy pulls it.
 
 ### Auto-Deployment (`scripts/deploy/apply.sh`)
-Pulls latest git changes every 15 minutes and pulls or rebuilds only the images that changed
-(the ones from `services/` are built by CI, see [docs/service-images.md](docs/service-images.md)).
+Runs on every push (webhook) and every 30 minutes (cron), and pulls or rebuilds only the images
+that changed (the ones from `services/` are built by CI, see
+[docs/service-images.md](docs/service-images.md)).
 
 ```bash
-# Cron entry (set up during install)
-*/15 * * * * /home/raspi/rpi-homeserver/scripts/deploy/apply.sh >> /home/raspi/rpi-homeserver/apply.log 2>&1
+# Cron entry, from scripts/crontab; install-crontab.sh replaces @PROJECT_DIR@ with this checkout
+*/30 * * * * @PROJECT_DIR@/scripts/deploy/apply.sh >> @PROJECT_DIR@/apply.log 2>&1
 ```
 
 Metrics are pushed to Pushgateway and visible in the **Deploy Monitor** dashboard in Grafana.
 
 ### Monitoring (Prometheus & Grafana)
-- **Grafana:** `https://grafana.<domain>`, through Caddy — default credentials: `admin / admin`
+- **Grafana:** `https://grafana.<domain>`, signed in through Cloudflare Access when
+  `GRAFANA_ACCESS_JWT` is set (that hostname then resolves to Cloudflare even on the tailnet).
+  `https://grafana-tailnet.<domain>` keeps the login form: user `admin`, password `GRAFANA_PASSWORD`
+  from `.env` (read only when Grafana creates its database).
 - **Auto-provisioned dashboards** (in `config/grafana/dashboards_json/`):
   - Container Health — host stats (CPU temp, load, RAM, disk), per-container CPU/mem/network, and a Storage section (usage-by-folder pie, folder filter, largest-files table)
   - Service probes — which service the Home dashboard's "Services down" number is about: per-service status, availability history and probe times. Every stat on Home is clickable and lands on the dashboard that answers it.
   - Lifecycle — what happens to one torrent from here on: when each one goes and what is holding it, the films in grace and the date they leave, the hours still owed to each tracker, what qbit-manage deleted, and the disk sitting in the recycle bin
   - Deploy Monitor — deploy runs, changes, errors, per-repo status
   - Backup Monitor — last backup status/age/size and appdata growth over time
-  - Acestream Monitor — channel sync, changes, errors, source URL status, per-channel health
+  - Acestream Monitor — bifrost's channels, what is playing and each one's swarm health, with a node selector
   - One Pace Downloader / One Pace Arc Status — episode/arc KPIs and per-arc breakdown
 - **Import community dashboards** (Grafana → Dashboards → Import):
   - `1860` — Node Exporter Full (CPU, RAM, disk, network)
@@ -689,13 +668,14 @@ same figures from `muninn:8095/metrics`, never with names.
 archive and pushes health metrics to the **Backup Monitor** Grafana dashboard. Full guide:
 [docs/backups.md](docs/backups.md).
 
-- **In git (survives a disk loss):** all config in this repo, plus point-in-time exports of
-  the Radarr/Sonarr custom formats + quality profiles under
-  [config/arr-exports/](config/arr-exports/) — the scoring rules that are painful to rebuild.
+- **In git (survives a disk loss):** all config in this repo, including the Radarr/Sonarr custom
+  formats + quality profiles under `config/arr/`, which `scripts/sync/arr-config.sh` pushes into
+  both apps on every deploy.
 - **In the backup archive:** the full app state under `appdata/` (databases, indexers, Plex
   library, etc.).
 - **Offsite:** local archives live on the data disk, so a disk failure would lose them too.
-  Set `BACKUP_RCLONE_REMOTE` (and install rclone) for an automatic offsite copy.
+  Set `BACKUP_RCLONE_REMOTE` (and install rclone) for an automatic offsite copy; the remote is pruned
+  to the same `BACKUP_RETENTION`. The second node uses this to send its archives to the main Pi.
 
 ---
 

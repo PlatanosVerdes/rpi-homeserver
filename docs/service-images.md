@@ -154,5 +154,5 @@ github.com/PlatanosVerdes?tab=packages, set it to public once, and re-run the fa
 - **It builds `linux/arm64` only**, the Pi's architecture.
 - **It does not build `services/deploy-webhook/`**: that is a systemd service on the host, which
   `apply.sh` reinstalls on its own when the directory changes.
-- **It does not touch rpi-services** (its apps publish from their own repos) **or the `streamhalla`
-  branch**, which pins its images inline and is deployed by hand.
+- **It does not touch rpi-services**: its apps publish from their own repos. Both nodes run `main`,
+  so the second node pulls the same pinned images for the services it runs.

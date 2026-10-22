@@ -61,12 +61,12 @@ request looks like Jellyfin's container. That makes "who watched what" answerabl
 | :--- | :--- | :--- |
 | `LISTEN_ADDR` | `:8086` | Not published on the host; Caddy reaches it over `media-network` |
 | `STREAM_BASE` | `http://192.168.1.180:6878` | Built from `STATIC_IP` in `compose-media.yml` |
-| `PLAYLIST_PATH` | `/playlists/channels_ace.m3u` | Reread whenever the updater rewrites it, no restart needed |
+| `BIFROST_URL` | `http://bifrost:6879` | Where the channel list comes from: `/api/channels`, fetched at most once a minute |
 
 ## If something looks wrong
 
-- **The list is empty.** The playlist is missing or unreadable. Check the count on the startup line
-  in `docker logs farnsworth`, and that the mount points at `appdata/jellyfin/acestream`.
+- **The list is empty.** bifrost did not answer. Check `docker logs farnsworth` and that
+  `docker exec farnsworth wget -qO- http://bifrost:6879/api/channels` returns channels.
 - **The VLC button does nothing.** The `vlc-x-callback://` scheme needs VLC installed on that device.
   The `.m3u` link underneath works everywhere and is the fallback.
 - **VLC opens and sits there.** That channel has no one sharing it right now. Try the other entry

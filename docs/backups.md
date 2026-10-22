@@ -20,7 +20,7 @@ Everything under `appdata/` **except** regenerable or huge data:
 | `*/log/`, `*/logs/`, `*.log` | Logs |
 
 So the important state (Pi-hole, Grafana, *arr* databases, qBittorrent, Seerr,
-speedtest-tracker, vaultwarden, the Telegram bot DB) is all included.
+speedtest-tracker, the Telegram bot DB) is all included.
 
 ## Configuration (`.env`)
 
@@ -36,8 +36,10 @@ Already scheduled, nothing to install. The entry lives in `scripts/crontab`, whi
 cron fragment, and `scripts/setup/install-crontab.sh` writes it into the host crontab on every deploy:
 
 ```
-0 4 * * * /home/raspi/rpi-homeserver/scripts/ops/backup.sh >> /home/raspi/rpi-homeserver/backup.log 2>&1
+0 4 * * * @PROJECT_DIR@/scripts/ops/backup.sh >> @PROJECT_DIR@/backup.log 2>&1
 ```
+
+`install-crontab.sh` replaces `@PROJECT_DIR@` with the checkout on each node, so every node runs it.
 
 Change the time there rather than with `crontab -e`, or the next deploy overwrites it.
 
@@ -71,4 +73,8 @@ sign is the staleness alert 36 hours later.
 
 Local backups protect against corruption/fat-fingers, not disk failure. For true safety,
 set `BACKUP_RCLONE_REMOTE` and install `rclone` with a remote (Backblaze B2, another Pi, etc.).
-The script copies each new archive to the remote automatically.
+The script copies each new archive to the remote, then deletes remote archives older than
+`BACKUP_RETENTION` days (`rclone copy` alone never deletes, so the remote would keep everything).
+
+A second node whose `appdata` lives on an SD card points `BACKUP_RCLONE_REMOTE` at the main Pi, so
+its archive ends up on a different device.

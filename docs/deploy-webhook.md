@@ -43,11 +43,13 @@ ranges do change, so this needs occasional review.
 1. Zero Trust → Networks → Tunnels → **Create a tunnel** → Cloudflared → name it `rpi`.
 2. Copy the token it shows (the long string after `--token`) into `.env`:
    `CLOUDFLARED_TUNNEL_TOKEN=...`
-3. In **Public Hostnames**, add exactly one:
+3. In **Public Hostnames**, add the webhook:
    - Subdomain `deploy`, your domain, path `hooks/deploy`
    - Service: `HTTP` → `127.0.0.1:9000`
 
-   Only what you list here becomes public. Do not add a catch-all hostname.
+   Only what you list here becomes public. Do not add a catch-all hostname. The same tunnel can carry
+   other public hostnames; anything that is not this webhook goes behind a Cloudflare Access
+   application first.
 
 ### 2. Secret and receiver (on the Pi)
 
@@ -61,7 +63,8 @@ systemctl status deploy-webhook            # should say "listening on 127.0.0.1:
 
 ### 3. Start the tunnel
 
-Add `tunnel` to `COMPOSE_PROFILES` in `.env` (or use `all`), then:
+Add `tunnel` (or `cloudflared`) to `COMPOSE_PROFILES` in `.env`. `all` does not include it: with
+an empty token it would crash-loop, so it is opt-in. Then:
 
 ```bash
 export COMPOSE_ENV_FILES=versions.env,.env
@@ -111,5 +114,6 @@ tail -f ~/rpi-homeserver/apply.log      # the deploy itself
   Restart the service after changing `.env`.
 - Deliveries time out: tunnel down, or the public hostname points somewhere other than
   `127.0.0.1:9000`.
-- `Another deploy is already running, skipping`: expected when several pushes land together.
-  The lock is `.deploy.lock` in the project dir.
+- `Another deploy is already running; left a note for it to run again.`: expected when several
+  pushes land together. The running deploy sees `.deploy.pending` and takes one more pass on its way
+  out. The lock is `.deploy.lock` in the project dir.

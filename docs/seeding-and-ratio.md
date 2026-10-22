@@ -5,7 +5,11 @@ are, and which one people actually pick.
 
 **The policy that decides what gets deleted and when, and the per-tracker rules and configuration,
 live in [private-trackers.md](private-trackers.md).** This page is the diagnosis underneath it: the
-measurements, why a port forward was impossible on this line, and what changed.
+measurements, why a port forward was impossible on this line until October 2026, and what changed.
+
+**Current state:** the line has had a public IPv4 since October 2026 (the ISP's paid add-on), so it
+is no longer behind CGNAT and a forward on the home router reaches the Pi. The measurements below
+are from August 2026, when it was.
 
 ## The measurement that explains everything
 
@@ -64,12 +68,12 @@ home router is pointless, because peers look for the VPN's address and port, not
 | :--- | :--- | :--- | :--- |
 | **qBittorrent inside gluetun**, on a VPN that forwards a port | ratio **and** the ISP seeing torrent traffic, with no hole in the home router | a subscription, and one evening of setup | most of the homelab world; it is the default recipe |
 | **Seedbox** | ratio, completely: a datacentre uplink seeds every new release for you, and home never appears in a swarm | more per month | anyone serious about private trackers |
-| ~~**Port forward at home**~~ | **nothing on this line**, see CGNAT below | free | not available here |
+| **Port forward at home** | ratio, with the home address in every swarm | free, once the line has a public IPv4 | possible here since October 2026; impossible behind CGNAT, see below |
 
 The mixed setup is what people with years in this do: **public over the VPN, private on a seedbox.**
 More moving parts, best of both.
 
-### This line is behind CGNAT, so no port forward can ever work
+### Until October 2026 this line was behind CGNAT, so no port forward could work
 
 Measured on 2026-08-20, after configuring the forward correctly on the router (rule enabled, source
 filter open, `57429` to `192.168.1.154` on TCP and UDP) and getting nothing:
@@ -97,10 +101,11 @@ configured correctly and simply cannot receive anything. There is no IPv6 escape
 only ULA and Tailscale addresses, no global `2000::/3` and no default IPv6 route, so Digi is not
 delivering usable IPv6 on this line.
 
-That leaves three ways to inbound, and the free one is a phone call:
+That left three ways to inbound:
 
-1. **Ask Digi for a public IPv4.** They hand one out on request. The forward already configured then
-   starts working with nothing else to change.
+1. **Ask Digi for a public IPv4.** This is what was done, in October 2026. Check the router's WAN
+   address still equals the public one (the UPnP query above) before relying on a forward: the ISP
+   could revert it.
 2. **A VPN that forwards a port** (Proton or PIA through gluetun). This is the only option that does
    not depend on the ISP at all: the listening port lives at the provider, so CGNAT stops mattering.
 3. **A seedbox**, which sidesteps the house entirely.
@@ -130,22 +135,15 @@ and the *arrs have to talk to `gluetun:8080` rather than `qbittorrent:8080`.
 
 ## The risk that is actually present
 
-Verified from outside the network on 2026-08-20: the service domains do **not** resolve publicly and
-443 is closed. Nothing is exposed to the internet, and admin access goes through Tailscale. That is
-already the right posture, and an open BitTorrent port would not change it: the peer protocol has no
-login, no shell and no file access.
+Port 443 on the home address is closed and most service domains do not resolve publicly: admin
+access goes through Tailscale. What is public goes through the outbound Cloudflare tunnel instead,
+the deploy webhook and a few apps behind Cloudflare Access (see CLAUDE.md, "Networking"). An open
+BitTorrent port does not change that posture: the peer protocol has no login, no shell and no file
+access.
 
 The real exposure is the other one: **397 GB seeded across 37 public torrents from the home IP**,
 visible to everyone in those swarms, including the firms that log them. That, not an open port, is
 the argument for routing torrent traffic through a VPN.
-
-## Kept on purpose
-
-The 16 TorrentLeech torrents (365 GB) stay. If the account comes back, seeding exactly those is how
-the ratio gets repaired, so deleting them would throw away the only asset available for that. They
-announce `unregistered torrent pass` in the meantime, which means the tracker counts nothing:
-qbit-manage's `torrentleech` group will still retire them after its 15d of **local** seeding time, so
-while this lasts the seeding rule protects nothing on that tracker.
 
 ## Unrelated but adjacent: the advertised routes
 

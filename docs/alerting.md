@@ -18,7 +18,9 @@ this repo is the source of truth.
 | :--- | :--- |
 | `contact-points.yml.tmpl` | The Telegram bot Grafana sends to (rendered, see Credentials) |
 | `policies.yml` | Route everything to that bot, group by alert, repeat every 6h |
-| `rules.yml` | The rules themselves |
+| `rules.yml` | The rules themselves, and `deleteRules` for the ones taken out |
+
+`rules.yml` is the full list. A sample of what it covers:
 
 | Rule | Fires when | For |
 | :--- | :--- | :--- |
@@ -29,8 +31,7 @@ this repo is the source of truth.
 | Deploy failing | last deploy ended in error | 5m |
 | Prometheus target down | any scrape target unreachable | 5m |
 | Pi running hot | SoC above 75 C | 10m |
-| Seed cleanup failed | `seed_cleanup_last_status != 0` | 5m |
-| Seed cleanup not running | no pass in more than 3h | 15m |
+| qbit-manage has stopped running | no run reported to pi-metrics in four of its intervals | 15m |
 | Download nothing can import | a queue item the *arr cannot import without a human | 4h |
 | Data in downloads that nothing owns | unclaimed bytes the library does not share either | 1h |
 | Video is being re-encoded | any client, any server | 5m |
@@ -38,6 +39,10 @@ this repo is the source of truth.
 
 Every expression uses PromQL's `bool` modifier so it returns 1 when it fires, which keeps all the
 rules on the same `threshold > 0` condition instead of seven different reduce/threshold shapes.
+
+Taking a rule out of `groups` does not remove it: Grafana keeps evaluating a provisioned rule it no
+longer finds in the file. Removing one is two edits, out of `groups` and its uid under
+`deleteRules`.
 
 ## Credentials
 
@@ -255,15 +260,14 @@ Not enabled: On Grab and On Download. Every single import would be a message.
 ### Seeing upgrades without being told about them
 
 Alerts are for things that need doing. "This movie is now Bluray-2160p" is just news, so it goes on
-a dashboard instead: `scripts/arr-history-metrics.py` pairs each *upgrade* history event (old file
-deleted with reason `Upgrade`) with the import that replaced it and pushes one series per upgrade,
-titles and qualities as labels, to Pushgateway. The **Media Pipeline** dashboard renders them as a
-table, next to the qBittorrent state.
+a dashboard instead: `services/pi-metrics/media.go` pairs each *upgrade* history event (old file
+deleted with reason `Upgrade`) with the import that replaced it and exports one series per upgrade
+(`arr_quality_change_*`), titles and qualities as labels, scraped by Prometheus. The **Media
+Pipeline** dashboard renders them as a table, next to the qBittorrent state.
 
 Labels as an event log is not what Prometheus is for. The alternative was the Infinity datasource
 querying the *arr APIs live, which means a Grafana plugin plus each app's API key stored in Grafana.
-The set here is capped at the last 25 upgrades and pushed with PUT, so it replaces itself instead of
-growing.
+The set here is capped at the last 25 upgrades, so it replaces itself instead of growing.
 
 ## The dead man's switch
 
@@ -271,7 +275,7 @@ Every rule above dies with the Pi. A power cut, a dead SD card or an ISP outage 
 and silence looks exactly like "everything is fine". So the logic is inverted: the Pi says "still
 alive" on a schedule, and an **external** service alerts when those pings stop.
 
-`scripts/ops/heartbeat.sh` runs from cron every 5 minutes. It does not ping blindly: if Caddy or
+`scripts/ops/heartbeat.sh` runs from cron every minute. It does not ping blindly: if Caddy or
 Prometheus are not running it reports a failure instead, so a Pi that is powered on but broken
 cannot keep sending a reassuring heartbeat.
 
@@ -291,6 +295,6 @@ just uncovered. To turn it on:
 
 Cost of running it every minute, measured on the Pi: **~0.2s of CPU** per heartbeat (0.12s user +
 0.09s sys, so roughly 0.3% of one core) and no disk writes. The wall time is ~1s but almost all of
-it is waiting on the network. For comparison, `tailscale-metrics` already runs every minute.
+it is waiting on the network.
 
 That is the only alert in this whole setup that does not depend on the Pi being alive.

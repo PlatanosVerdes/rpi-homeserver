@@ -3,7 +3,8 @@
 ## ❌ Bitwarden Secrets Manager — dropped
 
 Tried moving `.env` secrets to [Bitwarden Secrets Manager](https://bitwarden.com/products/secrets-manager/)
-but it did not fit the workflow, so it was abandoned. Secrets stay in `.env` (gitignored).
+but it did not fit the workflow, so it was abandoned. `.env` is now written by the deploy from an
+encrypted copy in a private repo (SOPS + age, [docs/secrets.md](docs/secrets.md)).
 
 The wrapper script and its setup guide were deleted on 2026-08-22: they were wired into
 nothing and read as live documentation. Recover them from git history if this is revisited.
@@ -99,18 +100,6 @@ Grafana bug is understood.
 
 ---
 
-## ✅ Plex casting to a TV while at home — SOLVED (2026-08-06, confirmed working)
-
-Casting (Chromecast) and Plex Companion remote control both rely on local mDNS/SSDP discovery,
-which does not survive Tailscale routing everything through an exit node — with one active, local
-discovery traffic gets swallowed by the tunnel same as any other traffic. Fix: when casting from a
-phone that's on the same wifi as the TV, make sure Tailscale has **no exit node selected** (iOS:
-Tailscale app → exit node picker at top → "None"). Without an exit node, local traffic bypasses the
-tunnel by default and casting works normally. Android has a more granular option too (Tailscale
-v1.70+, avatar → App-based split tunneling → exclude the Plex app specifically; Chromecast's own
-app is excluded by Tailscale automatically already), useful if an always-on exit node is wanted for
-other reasons.
-
 ## Cast/control the home TV from outside the house (not implemented)
 
 **Goal:** trigger playback on the home TV from a phone that is away from home (mobile data, another
@@ -183,10 +172,10 @@ does not need.
 ### What it would buy
 
 No root daemon, if run rootless. That is the real argument for Podman and it matters on a machine
-exposed to the internet. This one is not: there is no port forwarding, the only inbound path is the
-Cloudflare tunnel to the deploy webhook, and 30 days of logs show zero unsolicited connection
-attempts. The gain is close to theoretical here, and running rootful to dodge the UID problem would
-remove even that.
+exposed to the internet. This one barely is: what is public goes through an outbound Cloudflare
+tunnel (the deploy webhook and a few apps behind Cloudflare Access), and what reaches the home
+address directly is BitTorrent's port and what aceserve maps over UPnP. The gain is close to theoretical here, and
+running rootful to dodge the UID problem would remove even that.
 
 ### When to revisit
 
@@ -225,427 +214,6 @@ efficiently is a worse answer than not transcoding.
 
 ---
 
-## The retention policy does not cover series (not implemented)
-
-Films have the full cycle: Maintainerr deletes the library copy two days after you watch one, and
-qbit-manage's share-limit groups drop the torrent once its tracker is paid. Series have neither half.
-
-Maintainerr's only collection is `type: movie` on library `1` (Películas), so **nothing ever deletes
-a watched episode**. And the cleanup only ever acts once the library has let go of a file, which for
-an episode never happens, so those torrents stay hardlinked forever. `series/` grows without a
-ceiling: 144 GB today against 972 GB of films, slow rather than harmless.
-
-**What it needs:** a second Maintainerr collection over the Series library, same rule shape ("last
-viewed more than N days ago"), `arrAction=1` (`UNMONITOR_DELETE_ALL`) and `sonarrSettingsId` pointing
-at the Sonarr instance — the movie collection had `radarrSettingsId` unset and silently deleted
-through Plex instead, which is what caused the Cars 3 re-download loop (see SYSTEM_NOTES.md). The
-cleanup script needs no changes: it already asks Sonarr as well as Radarr what a download produced.
-
-**The decision that is actually open** is `N`, and it is not the same question as for films. A series
-watched week to week is "finished" only after the last episode, and deleting episode 3 while you are
-on episode 5 loses the option of rewatching a season. Two days, the film threshold, is clearly wrong
-here. Worth considering instead: keep whole seasons until the season is fully watched, which
-Maintainerr can express, and give it a longer threshold than a film gets.
-
----
-
-## Private trackers: know the rules, encode them, and stop maintaining bespoke code
-
-Opened on 2026-08-20, the day a TorrentLeech account was disabled and reinstated with **14 days to
-fix the ratio (until 2026-09-03)**, and revised on 2026-08-21 once the ratio was over the line
-again. Background in [docs/private-trackers.md](docs/private-trackers.md) and
-[docs/seeding-and-ratio.md](docs/seeding-and-ratio.md).
-
-### 1. Learn how each private tracker actually works, one at a time
-
-The order agreed on 2026-08-21: **one site per sitting**, and each one leaves the guide in
-[docs/private-trackers.md](docs/private-trackers.md) a little longer. TorrentLeech is the worked
-example, and its section is the shape the others should end up with: rules first, then the
-configuration applied here, then why, then its links. The checklist for a new one is at the end of
-that page.
-
-Two things the C411 diagnosis added to the method, both worth doing before assuming the worst:
-
-- **A failing indexer is not necessarily a disabled account.** Ask Prowlarr what it actually saw:
-  `POST /api/v1/indexer/test` with the indexer's own body returns the real error, and
-  `GET /api/v1/health` says how long it has been failing. C411's answer was a broken SOCKS proxy.
-- **Check whether the site is reachable at all before touching credentials**, because a dead proxy,
-  a dead definition (Frozen Layer has no definition file at all) and a dead account look identical
-  from the outside.
-
-
-
-**Read on 2026-08-21: DigitalCore, retrotoon.world, BTSCHOOL and C411**, all four written up in
-[docs/private-trackers.md](docs/private-trackers.md) with their rules, what is configured for them
-and why. Their rules of record are in `config/trackers/rules.json`, and the tracker-control service now
-measures the hit & run clock for every tracker in that file, not only the one it can log into.
-
-What each one still owes:
-
-| Tracker | Known | Missing |
-| :--- | :--- | :--- |
-| TorrentLeech | everything, from staff | nothing |
-| DigitalCore | **everything**, rules and FAQ both: ratio 0.5, H&R at 5 days or 1:1 from 10% downloaded, leech bonus, banned clients, 90-day inactivity | nothing about the rules. An autobrr filter is available, since they support it by name |
-| retrotoon.world | 72 h per torrent within 10 days, no ratio rule, site-wide freeleech for 40 days | its **announce host**, unknown until the first torrent arrives |
-| C411 | ratio 0.8 to leech, 50 GB signup credit, H&R disabled for now (72 h when it returns), cross-seeding allowed | a way to read the account. Its definition authenticates by API key, so there is no login for `stats.py` to reuse, and it exposes no freeleech facet either |
-
-### DigitalCore's leech bonus is the cheapest ratio on this box
-
-Their FAQ, read 2026-08-21: **10 GB actively seeded buys 1% off what every download costs against
-ratio**, averaged over seven days, and **1 TB seeded is 100%, a site-wide freeleech**. The account
-is at 12% with about 272 GB seeded.
-
-Two rules shape the play, and both point away from what TorrentLeech rewards:
-
-- **only 50 GiB per torrent counts**, so many medium torrents beat a few enormous ones;
-- the bonus is scaled by `1 + (1 / seeders)`, so **being the only seeder of something scarce pays
-  double**.
-
-Add their automatic freeleech on anything 15 GB or larger and every new torrent's first 24 hours, and
-the cheapest path to unlimited downloading on this box runs through DigitalCore rather than
-TorrentLeech.
-
-**Tried and rejected the same day.** Holding that tracker's torrents to grow the bonus was
-implemented, measured and turned off: of a 27% bonus, 9% comes free from torrents that share inodes
-with the library and 18% was bought with 179 GB of separate copies, on an account already at ratio
-4.21 with 86 GB of headroom. That disk is worth more to the TorrentLeech grabber. The bonus grows
-through hardlinks only, which is what cross-seed produces anyway. The mechanism stays in
-the tracker-control service, unconfigured, for the day the arithmetic reverses.
-
-**Done on 2026-08-21**: autobrr now watches their `#announce` channel with the nick
-`PlatanosVerdes` and bot mode on, filtering freeleech between 15 and 30 GB at one a day. The passkey
-and IRC key came from the site's own Settings page. Details and the four API traps are in
-[docs/private-trackers.md](docs/private-trackers.md).
-
-autobrr also ships a `retrotoonworld` definition and its passkey is already known from the announce
-URL, so that one is a decision rather than a blocker: the site is cartoons only, and its 40-day
-site-wide freeleech is the reason to bother.
-
-### C411 has 2 GB of headroom and nobody was watching it
-
-The site shows ratio **0.83** against a minimum of **0.8** to download anything, which is
-`(52.2 - 0.8 x 63.3) / 0.8 = 1.95 GB` of paid downloads left. One ordinary film blocks leeching
-there.
-
-Worse, the ratio is propped up by a **50 GB signup upload credit** counted into it: only 2.3 GB were
-really uploaded. The credit is a one-off and does not grow back.
-
-Nothing automatic can help until the account can be read, and the reason is not a forgotten
-password: the site's definition authenticates with an **API key**, so there is no username and
-password field on its Prowlarr entry, and the tracker-control service reads a site by logging into it. So
-what is left to decide is whether to store a real login for the site alongside the API key, which is
-a question about where credentials live rather than a code change. Search itself is fixed, see below.
-Until the account can be read the rule is manual: **on C411, freeleech only.**
-
-### BTSCHOOL failed its probation, and the account was let go
-
-The assessment ran out on 2026-08-24 at 09:40 with zero of the 50 GB uploaded, 50 GB downloaded and
-6000 bonus points it asked for, which was the expected outcome: 50 GB of upload in three days is not
-something seeding produces on demand, and the only other way through was a donation. The indexer and
-every trace of it in configuration are gone, and the reasoning is kept in
-[docs/private-trackers.md](docs/private-trackers.md) so the site is not tried again the same way.
-
-Per site, the six answers that matter: minimum ratio, what triggers a hit & run and how it clears,
-any minimum seed time per torrent, how many download slots the current class allows, whether
-freeleech exists and how it is flagged, and what the bonus-point shop sells.
-
-**C411's search is fixed, it was never a ban, and it searches direct.** The `nordvpn` tag came off on
-2026-08-21 because the Socks5 credentials at `nl.socks.nordhold.net:1080` had expired, which is what
-`Failed to authenticate with the SOCKS server` meant, and it stays off. Those credentials do
-authenticate again, which is not a reason to go back: a proxy whose service credentials lapse in
-silence produces a failure indistinguishable from a banned account, and it already cost one
-diagnosis. Direct, a search returns about a hundred results.
-
-The accepted cost is the ISP's match-night interception, which is what took the indexer down on
-2026-08-22. It is now an outage of the length of the window rather than of a day, because
-`scripts/ops/indexer-retry.py` clears Prowlarr's backoff within 15 minutes of the site answering
-again.
-
-The `Socks5` proxy entry itself is still configured in Prowlarr with no indexer tagged to it. Worth
-deleting the next time that screen is open, or it is a trap for whoever tags something with
-`nordvpn` next.
-
-Still open on this site: a way to read the account, which needs a stored site login rather than the
-API key the definition uses, and the freeleech-only filter, which its definition does not expose at
-all.
-
-**Frozen Layer is gone, on 2026-08-24.** It reported `Indexers have no definition and will not work`
-because its definition had been deleted upstream: nothing named `frozen` is left in
-`Prowlarr/Indexers`, and what kept it searching was a local copy in `/config/Definitions` last
-touched on 1 April, pinning a certificate fingerprint that expired in February.
-
-What decided it was not the definition but the noise: Prowlarr's Telegram connection has
-`onHealthIssue` on, this was error level rather than a warning, and Prowlarr restarts on every
-deploy that rebuilds it. So it sent a message about an unfixable thing on a schedule, and an alert
-you learn to ignore costs more than a public indexer that Nyaa.si already covers. Health is clean
-now, no warnings at all. The definition file is still on disk if it is ever wanted back.
-
-### Maintainerr's rule and autobrr's filters are in git now, one way only
-
-Both were in `appdata` alone, so the nightly archive was the only copy of them: three autobrr
-filters that decide what gets grabbed, and the Maintainerr rule that deletes a film two days after
-it is watched. `scripts/ops/config-export.py` pulls both into `config/`, and a deploy runs it with
-`--check` and logs `[config-drift]` when the live config and the committed copy differ.
-
-It does not push, and that is deliberate rather than unfinished. `scripts/sync/arr-config.sh` can
-push because a wrong quality profile downloads the wrong file; a wrong Maintainerr rule deletes the
-library. If pushing is ever wanted, autobrr is the safe half to start with, since its API takes a
-whole filter on `PUT /api/filters/{id}` and the worst case is a grab nobody asked for.
-
-Still `appdata` only, with no way around it: Prowlarr, because every indexer it holds carries a
-passkey or an API key and this repo is public.
-
-### 2. Put the right setup on each tracker
-
-The rules from (1) belong in configuration, not in anyone's memory. Where things stand:
-
-| Tracker | Grab rule | Seed goal |
-| :--- | :--- | :--- |
-| TorrentLeech | **done, and automated**: the tier in `config/trackers/rules.json` drives Prowlarr's own freeleech filter, which every app inherits, plus `requiredFlags` in Radarr as a backstop | **done**: 360 h / ratio 1.2 in `seed-rules.json` |
-| DigitalCore | open: its Cardigann definition carries its own `freeleech` toggle | open, on the generic 240 h / 1.0 |
-| C411 | open | open |
-| retrotoon.world (Generic Torznab) | open | open |
-
-**The freeleech-only flag was never a decision, it was a control loop, and it is one now.**
-the tracker-control service moves it, the Sonarr indexer and the autobrr grab rate from a single number, the
-headroom (`buffer / min_ratio`, the GB of non-freeleech downloads that still fit above the line).
-Tiers live in `config/trackers/rules.json`; see the section in
-[docs/private-trackers.md](docs/private-trackers.md).
-
-Two things that turned up while building it and are worth not forgetting:
-
-- **Sonarr has no `requiredFlags` field**, so the "freeleech only, in Radarr and Sonarr" line above
-  was never true in Sonarr. Taking the indexer away from Sonarr was the first fix and it was the
-  wrong one: TorrentLeech has series, and Prowlarr full-syncs indexers back to the *arrs anyway. The
-  filter belongs in Prowlarr, whose Cardigann definition carries a `Search freeleech only` checkbox
-  that every app inherits.
-- **The grab rate is a disk budget, not a preference**, because a grab cannot be deleted until its
-  hit & run window closes. The loop therefore also honours a free-space floor, which overrides the
-  ratio in both directions.
-
-What is still open here is only the other four sites: each needs its own entry in
-`config/trackers/rules.json`, which needs (1) first, and needs checking whether its profile page can
-be read the same way.
-
-Still open per tracker: what each one actually demands, before its seed goal can be set honestly
-rather than guessed.
-
-**The trap to remember when editing any of this:** `scripts/sync/arr-config.sh` reports success and applies
-nothing when Radarr holds a custom format the repo does not list. Measured on 2026-08-21 with 13
-formats live against 12 in the repo: the profile PUT returned 202 and changed neither the scores nor
-`cutoffFormatScore`. Deleting the stray format made the same sync work. Worth hardening so the
-script sends every format Radarr knows (score 0 for the unlisted) and reports failures instead of
-counting processed profiles.
-
-### 3. Alerts and a Grafana row for the tracker numbers
-
-**Done for TorrentLeech on 2026-08-21**, by the tracker-control service: `tracker_ratio`,
-`tracker_buffer_bytes`, `tracker_headroom_bytes`, `tracker_points`, `tracker_warning_seconds`,
-`tracker_hnr_pending`, `tracker_hnr_at_risk` and a per-torrent `tracker_hnr_torrent_hours_left`,
-with four alerts on top (headroom under 10 GB, ratio below the line, an obligation whose clock is
-stopped, and no reading in two hours).
-
-**The credential blocker turned out not to be one.** There is still no API, but the site logs in from
-a plain form POST and Prowlarr already holds the username and password for the same site, so nothing
-new had to be stored: read the credentials from Prowlarr's own API, keep the session cookie on disk,
-and re-login only when it stops working. DigitalCore's API key still returns 403 on every user
-endpoint (`/api/v1/user`, `/users/current`, `/account`, `/user/stats`, `/me`), which is why this is
-per-site work rather than one generic exporter.
-
-**The other three followed on 2026-08-25**, and none of them could reuse a Prowlarr login, so their
-credentials are variables in `.env` instead. What each one needed was found without ever holding a
-password, by reading what the sites answer to a stranger:
-
-- **DigitalCore** rejects an API key by name, not by accident: `This action (GET:user) is not allowed
-  for API key access`, identically for `X-API-KEY`, `Authorization: Bearer` and `?apikey=`. A passkey
-  is refused too. But the same 401 names a login cookie as valid, and `/api/v1/auth/login` answers
-  `Bad credentials.` to an empty body, so a session works and the answer is JSON.
-- **C411** puts its API keys behind scopes that cover Torznab, torrent upload and upload drafts and
-  nothing else, and every `/api/**` path answers 401 before it routes. Its login is a form POST to
-  `/login` with a csrf token published in a `<meta name="csrf-token">`, and the figures sit in the
-  header of every page behind it, value above label, in French units.
-- **retrotoon** is a classic PHP tracker: `login.php` holds `user` and `pass`, `takelogin.php`
-  answers, `my.php` redirects until there is a session. Its submit calls a JS function served from a
-  CDN that refuses a plain fetch, so whether that JS hashes the password first is the one thing that
-  could not be checked in advance.
-
-**The first run with real passwords, the same day, said what each site really wants.** All three
-failed, each with its own reason, and the messages were the point of writing them that way:
-
-- **DigitalCore** accepts the password and still refuses the session: `/api/v1/auth/login` answers
-  `{"twoFactorRequired": true, "id": ...}` and sets a PHPSESSID that `users/current` rejects. The
-  account has an authenticator on it, and a code cannot come from a config file. The way in is to log
-  in from a browser once and drop that session into `appdata/tracker-stats/digitalcore-cookies.json`,
-  which is read before any login is attempted. When it expires the site says `tracker_up 0` and the
-  cookie is seeded again.
-- **C411** was being asked in the wrong place. The form POST to `/login` sets no cookie and returns
-  the page again, a login that fails while looking like one that worked. The real endpoint is
-  `/api/auth/login`, JSON, with the csrf token from the page's meta tag as a header: a stranger gets
-  a bare 401 from every `/api/**` path, which reads like the route is absent, but with the token and
-  a real body it answers about the credentials themselves. It now says
-  `Nom d'utilisateur ou mot de passe invalide`, so the mechanism is right and the password is not.
-- **retrotoon cannot be automated at all.** Its submit posts to `ajax_takelogin.php`, which returns
-  `1;0` on success, `0;message` on failure and `2;2FA_REQUIRED` for a code, and it answers
-  `0;Please complete the security check.` Its login page loads Cloudflare Turnstile, which exists to
-  stop exactly this. That account stays hand-read, and its reader was deleted rather than left to
-  fail every half hour.
-
-What is left: a Grafana row for these series (the alerts exist, the panels do not), and the same
-treatment for the other four sites, each of which needs its login form and profile shape checked
-once. The parsing in the tracker-control service is deliberately dumb about markup (strip the tags, read the
-value on the line after its label) precisely so a second site is a config entry rather than a
-selector hunt.
-
-### 4. Adopt the standard tools and retire the bespoke script
-
-Decided on 2026-08-21, and it reverses an earlier position: keeping `scripts/trackers/seed-cleanup.py` was defended
-on the grounds that it works and is understood, but the day produced two silent failures in
-home-made scripts (the arr-config sync above, and the client-versus-tracker clock gap that was three
-hours from deleting a torrent that still owed 88 hours). Bespoke code **is** the mess when nobody
-wants to maintain it. So, in this order:
-
-1. **cross-seed first.** Free ratio and not one extra byte: it finds the same content on other
-   trackers and seeds the same files there via hardlinks. Talks to Prowlarr (one Torznab URL per
-   indexer, with the API key) and injects directly into qBittorrent. Nothing here has to change to
-   make room for it, and `scripts/trackers/seed-cleanup.py` already refuses to touch a path shared by more than one
-   torrent, so cross-seeds are protected from day one.
-2. **qbit_manage, in evaluation since 2026-08-21.** Running hourly and writing **tags only**:
-   `tag_update`, `tag_tracker_error`, `tag_nohardlinks`. Everything that deletes is off
-   (`rem_unregistered`, `share_limits`, `rem_orphaned`, `cat_update`). Config in
-   `appdata/qbit-manage/config.yml`, which the tool rewrites itself, so it is not in git.
-
-   **Approved on 2026-08-21, and done on 2026-08-24: qbit_manage owns deletion now.** The plan was to
-   compare for a week, then enable `rem_unregistered`, then `share_limits`, then park the script, one
-   step a week into September. It went in one step instead, for two reasons that only turned up when
-   the numbers were looked at:
-
-   - **The deletion is reversible.** `share_limits` cleanup routes through `tor_delete_recycle`, so
-     what it removes lands in `/data/downloads/.RecycleBin` and stays there for two days
-     (`empty_after_x_days`: 7 when this was written, cut to 2 on 2026-08-25 because the bin sits
-     on the same disk as the downloads). A wrong group costs a restore, not a re-download.
-   - **Nothing was at risk on the first pass.** Computed against the live client before flipping the
-     flag: zero torrents past their limits, 23 with no group at all because the library still shares
-     their bytes, 15 active in the last day and 7 under their limits. The switch freed 0 GB on day
-     one and every group's limit sits above its site's obligation (360 h against TorrentLeech's 240,
-     240 against the 120, 96 and 72 of the rest), so no torrent can be deleted while still owing.
-
-   What changed, all of it revertible by uncommenting one cron line:
-
-   1. `share_limits: true` in commands, `cleanup: true` in all four groups.
-   2. `scripts/trackers/seed-cleanup.py` commented out of `scripts/crontab`, left in place rather
-      than deleted.
-   3. Its two alert rules, `homelab-seed-cleanup-failed` and `homelab-seed-cleanup-stale`, paused
-      with `isPaused: true`. The stale one fires after three hours, so parking the script without
-      this means an alert the same evening saying exactly what was intended.
-
-   **What is still owed, and this is the part to come back to:**
-
-   - **The reporting went dark and nothing replaced it.** The script fed 18 panels across the
-     Retention and Disk Usage dashboards, and `DRY_RUN=1` deliberately does not push metrics, so
-     there is no way to keep them alive while it is parked. The panels that protect the accounts
-     (`tracker_hnr_*`, obligations and stopped clocks) come from the tracker-control service and are
-     unaffected.
-   - **`rem_unregistered` is still off.** It is the feature the tool was adopted for and the safest
-     deletion there is: it only removes what the tracker itself has disowned. Turn it on next.
-   - **Deletion is now slower than it was**, which is the opposite of the usual worry. The groups
-     mirror the generic 240 h rather than each site's own number, so `The.Furious.2025` on
-     DigitalCore at 168 h would have gone today under the script and now waits until 240 h. If disk
-     matters more than margin, DigitalCore wants its own group at its real 5 days plus margin.
-   - **Anything added by hand is invisible.** No category means it can never be tagged `noHL`, and
-     without autobrr it has no `ratio` tag either, so no group matches it and nothing will ever
-     reclaim it. `Obsession (2026)`, added 2026-08-09, was exactly that and was tagged `ratio` by
-     hand on 2026-08-24. A check for torrents carrying no `~share_limit_*` tag after a run would
-     catch the next one.
-   - **The three cross-seeds stay forever.** `cross-seed-link` is not in `nohardlinks`, correctly,
-     since a cross-seed shares its bytes by definition. It does mean the second torrent outlives the
-     film, which is the trade already recorded below.
-   - **The docs still describe the script as the thing that deletes**, in `README.md`,
-     `docs/private-trackers.md`, `docs/architecture.md` and `docs/seeding-and-ratio.md`. They are
-     left alone on purpose while this is reversible. When the script is deleted for good, so are
-     its two alert rules, its 18 panels and those paragraphs.
-
-   One thing to fix while evaluating: the `nohardlinks` list names `tv-sonarr`, and qbit_manage
-   reports no torrents in that category, so series are currently outside the check.
-
-   **Measured on 2026-08-24, and the three gaps found are closed in `config/qbit-manage/config.yml`.**
-   All three were config, no code:
-
-   1. **20 of the 46 torrents could never be tagged `noHL`**, because `tag_nohardlinks` only inspects
-      the categories in the `nohardlinks` list and 17 carry no category at all. Those 17 are
-      autobrr's ratio grabs, every one on a private tracker, 538.7 GB that
-      `scripts/trackers/seed-cleanup.py` was the only thing judging. The fix is not a category: autobrr
-      already tags everything it grabs `ratio`, so the groups now ask for
-      `include_any_tags: [noHL, ratio]`, which reads as "the library let go of it, or it was never in
-      the library". One torrent from 2026-08-09 predates autobrr and carries neither tag, so it stays
-      outside until it is tagged by hand.
-   2. **retrotoon fell into the `private` group, which clears at ratio 1.0**, on a site whose rules
-      page states no ratio rule at all. It now has its own group at priority 2 with `max_ratio: -1`,
-      so only its 72 h of seeding clears anything there.
-   3. **"Still paying" had no equivalent**, so a freeleech grab still uploading would have been
-      deleted on time alone, which is the one thing that must not happen to a torrent whose whole
-      purpose is ratio. Every private group now carries `min_last_active: 1d`. It is coarser than the
-      0.2 GB/day floor the script uses, since any activity resets it.
-
-   Verified with the tool itself, on a copy of the config with `share_limits: true`: the groups pick
-   up 14 torrentleech, 2 retrotoon, 6 private and 0 public, and `min_last_active` holds most of them
-   back with `Min inactive time not met`.
-
-   **`-dr` is not read-only.** That dry run wrote real per-torrent share limits (4 at ratio 1.2 and
-   15 days, 3 at 1.0 and 10 days, 15 explicitly unlimited) plus its own `~share_limit_*` and
-   `LastActiveLimitNotReached` tags. Nothing was ever near a limit and the global action is Pause,
-   not Remove, so nothing was at risk, and all 46 torrents were put back to `(-2, -2, -2)`. Two
-   things to remember: preview the cutover from the tool's log rather than by enabling
-   `share_limits`, and resetting a limit on qBittorrent 5.2 needs all four of `ratioLimit`,
-   `seedingTimeLimit`, `inactiveSeedingTimeLimit` and `shareLimitAction` or the API answers 400.
-
-   And one that cross-seed introduced: its injected torrents land in a `cross-seed-link` category
-   that no list here mentions, so they are outside `nohardlinks` too. That is correct for now (they
-   are hardlinks by definition), but the category has to be accounted for before `share_limits` is
-   allowed to delete anything.
-
-3. **What cross-seed changes about deletion**, now that it runs: a cross-seeded file has a link
-   count above one for as long as the second torrent exists, and `scripts/trackers/seed-cleanup.py` reads that as
-   "the library still holds it" and keeps both forever. Nothing is lost and nothing is over-deleted,
-   but bytes that used to be reclaimed after watching now stay until the cross-seed goes. That is
-   the trade for free ratio, and it is another reason the deleting side belongs in qbit_manage,
-   which understands cross-seeds explicitly.
-4. **autobrr**, planned last but **done first, on 2026-08-21**, because the ratio was the thing
-   under a deadline and this is what fixes it: it reacts to a tracker's IRC announce in seconds
-   rather than the minutes an RSS poll costs, which is the difference between being an early seeder
-   and arriving to a swarm that already has thirty. Concurrency is capped at one download by the
-   client rule, not by the filter. Full configuration and the two API traps are in
-   `docs/private-trackers.md`. What is left is one filter per remaining tracker, which waits on
-   knowing each one's rules.
-
-The one thing `scripts/trackers/seed-cleanup.py` does that qbit_manage cannot is ask Radarr and Sonarr what a
-download actually produced, which mattered for RAR releases. That reason disappeared on 2026-08-21
-when RAR packs became a hard reject.
-
-And Jackett is deliberately **not** part of this: it is Prowlarr's predecessor, Prowlarr is already
-here, and both cross-seed and autobrr integrate with Prowlarr directly.
-
----
-
-## ✅ The recycle bin, the `keep` tag and the `public` group — FIXED 2026-08-24
-
-Three things that were config rather than code, all found by diffing `config/qbit-manage/config.yml`
-against the schema the installed v4.12.0 actually reads:
-
-1. No `recyclebin` section, so `empty_after_x_days` was unset and nothing would ever empty
-   `/data/downloads/.RecycleBin`. The 7 days in the file belonged to `orphaned`. Set here too, at 7
-   days then and 2 since 2026-08-25.
-2. No group carried `exclude_any_tags`, so the documented `keep` override did nothing, and neither
-   did the `keep-bonus` tag tracker-control writes to hold DigitalCore's bonus. Both are
-   excluded in all six groups now.
-3. `settings.public_tag` and `settings.ignoreTags_OnUpdate` are not keys this version reads: it only
-   ever writes `private_tag`, and it no longer strips foreign tags on re-tag, which is why the second
-   one disappeared upstream. Unknown keys are ignored silently, which is why neither was noticed. The
-   consequence was real: the `public` group selected on a tag nothing writes, so it matched nothing
-   and no public torrent ever got a limit. It now selects as "not tagged private".
-
-Verified with the tool's own `--dry-run` against the new file before committing: same six groups,
-same 15/3/0/6/0/0 assignment, so nothing changes for what is in the client today.
-
 ## ops/cutoff-search.sh is being retired
 
 Commented out of the crontab on 2026-08-24 at Jorge's call, script kept. What still needs writing
@@ -653,63 +221,27 @@ down is the reason and what covers the gap: the nightly search existed for relea
 out of the RSS window, so if nothing replaces it, that case stops being covered. Decide, write it
 here, and then delete the script and its cron line together.
 
-## ✅ pi-metrics — DONE 2026-08-24. The tracker pair is next
+---
 
-The question was whether the cron scripts under `scripts/metrics` and `scripts/trackers` want to be
-services. Read on 2026-08-24 with that in mind, and the answer differed per script.
+## Smaller open items
 
-**Done: `metrics/media.py`, `metrics/zram.sh` and `metrics/disk-usage.sh` are now `pi-metrics`.**
-Written in Go like every other long-lived service here, after a first pass in Python that was kept
-only long enough to diff against. Prometheus's own guidance is that the Pushgateway is for batch jobs, and its named cost is that you
-lose `up` and that a pushed series outlives whatever pushed it: a broken `media.py` left every panel
-looking normal and showing anteayer's numbers. The two shell scripts went in with it rather than
-staying on node-exporter's textfile collector, which is the canonical place for host cron metrics,
-because a file cannot say the thing that writes it has died either, and one container answering all
-three is cheaper than a container plus two crons.
+- **The orphan `Socks5` proxy in Prowlarr.** It points at `nl.socks.nordhold.net:1080` (tag
+  `nordvpn`) and no indexer is tagged to it since C411 went direct on 2026-08-21. Delete it the next
+  time that screen is open, or it is a trap for whoever tags something with `nordvpn` next.
+- **C411's own figures.** `/api/auth/me` returns `uploadCredit` and `minRatioForDownload`, and
+  tracker-control reads neither: the 0.8 in `config/trackers/rules.json` is typed in by hand.
+- **A DHCP reservation for the Pi's eth0.** The two `/32` routes Tailscale advertises are typed in
+  by hand; the wifi address is reserved, the cable one is a plain lease. If it changes, Plex remote
+  breaks silently.
+- **`config/qbittorrent/seed-rules.json` is read by nothing** since the script that used it was
+  deleted; seed goals live in `config/qbit-manage/config.yml`. Delete it, and the notes in
+  `config/trackers/rules.json` that still quote its 360 h / 240 h.
+- **`config/arr-exports/` is a July snapshot** that differs from `config/arr/`, which is what
+  `scripts/sync/arr-config.sh` pushes. Delete it.
+- **The "Acestream updater not running" alert** reads `acestream_last_run_timestamp`, from the
+  updater that bifrost replaced. Check whether anything still writes it, then fix or delete the rule.
 
-What that took, for the next time: the collectors were left alone and only `push()` changed, from a
-PUT to appending to a buffer. The three things that tied them to the host were the `localhost:PORT`
-URLs (now container names on media-network), the two `docker exec` calls (now direct HTTP, which
-means qBittorrent needs a login because its AuthSubnetWhitelist does not cover the Docker bridge),
-and the API keys read from `appdata/<app>/config.xml` (now three read-only mounts, so no secret is
-duplicated into `.env`).
-
-**Still to do: tracker-control + tracker-control want to be one process.** They already
-talk through a `state.json` on disk, so what the split costs is the `MAX_READING_AGE` guard and the
-cron choreography (`:00/:30` then `:05/:35`), both of which exist only because they are two
-processes. The reason to be careful is that `control.py` writes to Prowlarr, Radarr, autobrr and
-qBittorrent: keep `DRY_RUN`, keep the Telegram announcements, and export a last-successful-loop
-timestamp so a wedged loop is visible the way a wedged cron never was.
-
-**Not converting**: `ops/heartbeat.sh` (a container cannot report that Docker is down, which is its
-whole job), `ops/backup.sh` (a daily batch job, the sanctioned Pushgateway case), `ops/oci-hunt.py`
-(temporary, exits for good once it wins) and `ops/config-export.py` (a deploy step, not a schedule).
-
-## Nothing watches whether qbit-manage still runs
-
-Noticed on 2026-08-26, when the stalled-download alert was replaced by one that only watches what
-the library asked for. Nothing now would notice that the retention side had stopped working: the old
-alert did it indirectly and by accident, because a stalled torrent still sitting there means nothing
-removed it.
-
-The right version of that is one alert about the tool rather than about one of its symptoms, because
-today nothing would say a word if qbit-manage stopped running: no share limits written, no tags, no
-deletions, and every panel showing the last state it left behind. It runs hourly in its own
-container, so the shape is a freshness metric like the two services have
-(`pi_metrics_last_success_timestamp_seconds`, `tracker_control_loop_timestamp_seconds`) rather than
-another rule reading torrent state. Its own log is the only place its runs are visible now.
-
-## The Retention policy dashboard is gone; bringing it back needs a new UID
-
-Deleted on 2026-08-26. Of its 16 panels, 14 read every `seed_cleanup_*` metric there was, and those
-have not existed since `trackers/seed-cleanup.py` was parked on the 24th: the Pushgateway group is
-gone and Prometheus holds zero series for them. The two that still had data, the Maintainerr grace
-ones, are answered by the Lifecycle dashboard's "Films in grace, and the date".
-
-If seed-cleanup.py is ever revived and its dashboard wanted back, take it from git history **and
-change its uid**. Re-provisioning a UID that existed before and was deleted silently does nothing on
-Grafana v13, which is written up further down this file: the file is read, the log says it finished,
-and no dashboard appears.
+---
 
 ## Removing a provisioned alert rule needs `deleteRules`, and the dashboard trap is its twin
 

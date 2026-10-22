@@ -16,7 +16,7 @@ seeding before the torrent may go.
 flowchart TB
   OV["Seerr<br/><i>somebody asks</i>"] --> ARR
   WN["watch-next<br/><i>an episode was watched,<br/>search the next ones</i>"] --> ARR
-  CO["ops/cutoff-search.sh<br/><i>05:00, what is still missing</i>"] --> ARR
+  CO["ops/cutoff-search.sh<br/><i>what is still missing; out of the cron since 2026-08-24</i>"] -.-> ARR
   ARR["<b>Radarr · Sonarr</b><br/>decide what qualifies<br/><i>profile + custom formats</i>"] -->|"search"| PW
   PW["<b>Prowlarr</b><br/>eight public sites, four private,<br/>one freeleech switch"] --> QB
   BRR["<b>autobrr</b><br/><i>IRC announce, seconds after upload</i><br/>tags every grab `ratio`"] --> QB
@@ -29,15 +29,16 @@ which watches the tracker's IRC channel and grabs within seconds of an upload; n
 library ever wanted those, they exist to build ratio, and they carry the `ratio` tag for the rest
 of their life.
 
-The arrs also search on their own: RSS every few minutes catches anything new, so
-`ops/cutoff-search.sh` exists only for releases that scrolled out of the feed. It runs at 05:00
-because Plex's own nightly maintenance holds 02:00 to 05:00 by default and costs 0.4 cores and
-52 MB/s of reads: downloads are the opposite shape, sustained writes, and both land on the same two
-USB platters. One job at a time beats seeking between two.
+The arrs also search on their own: RSS every few minutes catches anything new.
+`ops/cutoff-search.sh` covered releases that scrolled out of the feed, and has been out of the cron
+since 2026-08-24 while it is decided whether anything replaces it (PENDING.md). It ran at 05:00, and
+anything heavy scheduled at night still avoids 02:00 to 05:00: Plex's own maintenance holds that
+window by default and costs 0.4 cores and 52 MB/s of reads, while downloads are the opposite shape,
+sustained writes, on the same two USB platters. One job at a time beats seeking between two.
 
 Which of the two gates makes Radarr call a film unfinished is in
 [architecture.md](architecture.md#how-radarr-decides-a-film-is-finished). Gate 1, quality, is what
-drives that nightly search.
+drove that nightly search.
 
 ---
 
@@ -65,9 +66,10 @@ handled:
 - **RAR releases.** unpackerr writes new bytes, so the extracted file has one link from the moment
   it lands even though the film is in the library. Roughly a quarter of releases arrive that way.
 - **Cross-seeds.** A second torrent on the same files keeps the count above 1, so bytes that would
-  have been reclaimed after watching stay until the cross-seed goes. No share-limit group can reach
-  them either: they sit in the `cross-seed-link` category, and the hardlink check only inspects
-  `radarr` and `tv-sonarr`, so they never get `noHL` and no group's `include_any_tags` matches.
+  have been reclaimed after watching stay until the cross-seed goes. They sit in the
+  `cross-seed-link` category, which the hardlink check never inspects, so they never get `noHL`;
+  instead they carry the `cross-seed` tag, and the `cross-seed` group (priority 2, 15 days, no ratio
+  limit) releases them.
 
 An episode follows the same path with one addition: watch-next reacts to Tautulli or Jellyfin
 reporting an episode watched and asks Sonarr to search the next `WATCH_NEXT_MARGIN` ones, so a
@@ -161,7 +163,7 @@ which is why headroom and not ratio decides whether the arrs may take a paid tor
 
 The tracker-control service reads it from the site every 30 minutes and acts on it in the same pass,
 and the tier table it applies is in
-[architecture.md](architecture.md#trackerscontrolpy). The switch lives in Prowlarr, not in the arrs:
+[architecture.md](architecture.md#tracker-control). The switch lives in Prowlarr, not in the arrs:
 `requiredFlags` exists on Radarr's Torznab indexer and not on Sonarr's, so filtering there would
 leave series unprotected, and one 20 GB season pack that is not freeleech is the difference between
 a working account and a disabled one.
