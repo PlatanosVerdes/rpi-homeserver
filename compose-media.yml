@@ -175,6 +175,9 @@ services:
   # per channel. It never opens a channel on its own: this Pi plays one at a time.
   bifrost:
     image: ghcr.io/platanosverdes/bifrost:${BIFROST_VERSION}
+    user: "${PUID}:${PGID}"
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
     container_name: bifrost
     labels:
       prometheus.probe: "http://bifrost:6879/healthz"

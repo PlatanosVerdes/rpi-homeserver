@@ -361,13 +361,19 @@ for svc in (doc.get("services") or {}).values():
     for vol in svc.get("volumes") or []:
         src = vol.get("source") or ""
         if "/appdata/" in src:
-            print(src)
+            print(src, "ro" if vol.get("read_only") else "rw", sep="\t")
 ' | sort -u) || appdata_dirs=""
-        while IFS= read -r dir; do
+        while IFS=$'\t' read -r dir mode; do
             [[ -n "$dir" ]] || continue
             if [[ ! -d "$dir" ]] || [[ "$(stat -c %u "$dir")" != "$(id -u)" ]]; then
                 sudo mkdir -p "$dir" && sudo chown "$(id -u):$(id -g)" "$dir" &&
                     log "[$label] fixed ownership of ${dir#"$PROJECT_DIR/"}"
+            fi
+            # Files a service wrote while it still ran as root lock it out once it no longer does; a
+            # read-only mount is shared with a writer that may legitimately be root.
+            if [[ "$mode" == rw && -n "$(sudo find "$dir" -xdev ! -user "$(id -u)" -print -quit)" ]]; then
+                sudo find "$dir" -xdev ! -user "$(id -u)" -exec chown -h "$(id -u):$(id -g)" {} + &&
+                    log "[$label] fixed ownership of files in ${dir#"$PROJECT_DIR/"}"
             fi
         done <<< "$appdata_dirs"
     fi
