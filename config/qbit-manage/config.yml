@@ -16,7 +16,7 @@ commands:
   tag_tracker_error: true  # tags what a tracker no longer recognises, rather than removing it
   rem_unregistered: true   # on since 2026-08-24: it only removes what the tracker itself disowned
   tag_nohardlinks: true    # tags what the library no longer holds
-  share_limits: true       # owns deletion since 2026-08-24, see PENDING.md
+  share_limits: true       # owns deletion since 2026-08-24, see docs/lifecycle.md
   rem_orphaned: false      # arr_orphan_* already watches this, and deleting is its own decision
   recheck: false
   skip_cleanup: false

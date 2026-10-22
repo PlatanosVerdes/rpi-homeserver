@@ -6,8 +6,8 @@ the LAN) with what it would take to stop it happening: which track an AC3 5.1 wo
 how much bigger the file gets, and how long it takes. **Convert** runs the conversion there and
 then, with a progress bar and the time left; otherwise the nightly pass at 01:30 gets to it.
 
-The page is reachable from the tailnet only, like `drop` and `subs`: Caddy serves it on the
-Tailscale address, it is not behind Cloudflare Access, and nothing publishes it.
+The page is reachable from the tailnet only: Caddy serves it on the Tailscale address, it is not
+behind Cloudflare Access, and nothing publishes it.
 
 ## Who does what
 

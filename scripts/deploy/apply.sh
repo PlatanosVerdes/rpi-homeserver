@@ -632,7 +632,7 @@ else
     DEPLOY_STATUS=0
 fi
 
-# Prune unused images at most once per day (avoids SD-card wear on every 15-min run)
+# Prune unused images at most once per day (avoids SD-card wear on every pass)
 PRUNE_MARKER="$PROJECT_DIR/.last_prune"
 if [[ ! -f "$PRUNE_MARKER" ]] || find "$PRUNE_MARKER" -mmin +1380 -print 2>/dev/null | grep -q .; then
     log "Cleaning up unused Docker images (daily)..."
@@ -649,7 +649,4 @@ fi
 push_metrics $DEPLOY_STATUS
 log "Done."
 # The trap fires here: if a push landed while this was building, apply it now rather than
-# leaving it for the cron sweep.
-
-# crontab -e
-# */15 * * * * /home/raspi/rpi-homeserver/scripts/deploy/apply.sh >> /home/raspi/rpi-homeserver/apply.log 2>&1
+# leaving it for the cron sweep. The cron line is in scripts/crontab.

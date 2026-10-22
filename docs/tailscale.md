@@ -179,6 +179,16 @@ owner's own rule above that keeps it working.
 
 ---
 
+## Casting at home with an exit node on
+
+Chromecast and Plex Companion find the TV with mDNS/SSDP, which does not go through the tunnel. With
+an exit node selected, a phone on the home wifi sends that discovery into the tunnel too, and the TV
+never shows up. Pick **no exit node** while casting at home (iOS: the exit node picker at the top of
+the Tailscale app). On Android, Tailscale's app-based split tunneling can exclude the Plex app
+instead.
+
+---
+
 ## Further Reading
 
 - [Tailscale docs: Block ads on all devices using Raspberry Pi](https://tailscale.com/docs/solutions/block-ads-all-devices-anywhere-using-raspberry-pi)

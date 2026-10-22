@@ -102,32 +102,33 @@ sudo sysctl -p /etc/sysctl.d/99-tailscale.conf
 
 ## 4. node_exporter Textfile Collector
 
-Required for `tailscale-metrics` to push custom `.prom` files.
+Nothing writes `.prom` files any more: `tailscale-metrics` and `pi-metrics` are scraped exporters.
+The `node-exporter` container in `compose-mon.yml` still mounts the directory, so create it to keep
+that mount from being created as root:
 
 ```bash
 sudo mkdir -p /var/lib/node_exporter/textfile_collector
 sudo chown -R $USER:$USER /var/lib/node_exporter
 ```
 
-The `node-exporter` container in `compose-mon.yml` mounts this directory. `tailscale-metrics` writes to it via the host cron.
-
 ---
 
 ## 5. Cron Jobs
 
+Not edited by hand. `scripts/crontab` is the source, and `scripts/setup/install-crontab.sh` installs
+it (merged with the companion repo's fragment) on every deploy, so `crontab -e` changes are
+overwritten. Run it once by hand on a fresh install:
+
 ```bash
-crontab -e
+bash ~/rpi-homeserver/scripts/setup/install-crontab.sh
 ```
 
-Active cron entries:
+It replaces `@PROJECT_DIR@` with this checkout and drops jobs whose `# when:` line names a service
+this node does not run. The deploy line it installs:
 
 ```
-# Auto-deploy: pull git + docker compose up every 15 min
-*/15 * * * * /home/raspi/rpi-homeserver/scripts/deploy/apply.sh >> /home/raspi/rpi-homeserver/apply.log 2>&1
+*/30 * * * * @PROJECT_DIR@/scripts/deploy/apply.sh >> @PROJECT_DIR@/apply.log 2>&1
 ```
-
-> Tailscale metrics used to be a third cron entry here, a hand-compiled binary writing a `.prom`
-> file. It is a Dockerized exporter now, scraped by Prometheus; see CLAUDE.md.
 
 ---
 
@@ -175,7 +176,9 @@ id -u   # → PUID
 id -g   # → PGID
 ```
 
-Ensure the user owns all `appdata/` and `config/` directories:
+The deploy pre-creates and chowns the `appdata/` bind-mount directories of every service that runs
+as `1000:1000`, so a missing one is not left root-owned. After restoring or copying `appdata` by
+hand, fix ownership once:
 
 ```bash
 sudo chown -R $USER:$USER ~/rpi-homeserver/appdata ~/rpi-homeserver/config
@@ -228,7 +231,7 @@ Three places have to agree on that number, and nothing warns when they do not:
 | :--- | :--- |
 | qBittorrent's own setting | pushed by `scripts/sync/qbit-config.sh` from `.env` |
 | the published container port | `compose-arrs.yml`, `${QBIT_BT_PORT}` tcp **and** udp |
-| the router forward | by hand, to the Pi's static IP, tcp and udp. **Pointless while this line is behind CGNAT**, see [docs/seeding-and-ratio.md](docs/seeding-and-ratio.md) |
+| the router forward | by hand, to the Pi's static IP, tcp and udp. It works since the line got a public IPv4 in October 2026 (it was behind CGNAT before, see [docs/seeding-and-ratio.md](docs/seeding-and-ratio.md)) |
 
 **The failure this is written for.** The port was moved off the default in qBittorrent, but
 `compose-arrs.yml` kept publishing 6881, so inbound traffic arrived at a port nothing listened on
@@ -254,16 +257,16 @@ router forward is the end of it that git cannot fix.
 
 ## qBittorrent queue limits
 
-`MaxActiveTorrents` and `MaxActiveUploads` raised from 18/15 to **40/40** on 2026-08-05, applied
-live through the WebUI API (`/api/v2/app/setPreferences`).
+`max_active_torrents` and `max_active_uploads` are **100/100** (`config/qbittorrent/preferences.json`).
+They were 18/15 until 2026-08-05, then 40/40.
 
 Why: with 36 torrents and 18 active slots, half of them sat in `queuedUP`, which is **not seeding**.
 Since seeding time only accumulates while active, the 5-day share limit set on each torrent took
 roughly twice as long to reach, so torrents took twice as long to retire themselves. Right after the
 change the queue went from 18 waiting to 0.
 
-The limit is 40 rather than unlimited so a much larger library cannot open hundreds of connections on
-a Pi.
+The limit is 100 rather than unlimited so a much larger library cannot open hundreds of connections
+on a Pi.
 
 > Everything in this section and the next now lives in `config/qbittorrent/preferences.json` and is
 > reapplied on every deploy by `scripts/sync/qbit-config.sh`. It used to be appdata-only, which is
@@ -300,9 +303,10 @@ the run queue under 4 while still clearing a 50 GB release in about 85 minutes. 
 nowhere near the limiting factor, buying speed above this point costs responsiveness and saves
 nothing that matters.
 
-The knob is the rate, not the concurrency. `max_active_downloads` stays at 3: with a global cap in
-force, three torrents share the same 10 MiB/s that one would have had, so lowering it changes how
-scattered the writes are but not how many bytes get written.
+The knob is the rate, not the concurrency. `max_active_downloads` is 1, but for a different reason:
+TorrentLeech's entry class grants one download slot and a partial download holds it (see
+[docs/private-trackers.md](docs/private-trackers.md)). With a global cap in force, the number of
+active downloads changes how scattered the writes are, not how many bytes get written.
 
 `async_io_threads` lowered from 10 to **4** at the same time. It is how many disk requests libtorrent
 keeps in flight. Ten is a sensible default for an SSD, which has no moving parts and gets faster the
@@ -329,9 +333,10 @@ definition no longer ships with Prowlarr **and** their site failed the connectio
 | MoviesDVDR | definition dropped upstream, server unreachable |
 | RoTorrent (API) | definition dropped upstream, API returns 404 |
 
-A missing definition on its own is *not* a reason to delete: Frozen Layer has none either and still
-works, because Prowlarr keeps running a definition it already loaded. What it does mean is that the
-indexer cannot be re-added if it is ever deleted.
+A missing definition on its own is *not* a reason to delete, because Prowlarr keeps running a
+definition it already loaded. What it does mean is that the indexer cannot be re-added if it is ever
+deleted. (Frozen Layer ran that way until 2026-08-24, and was removed for the error-level health
+alert it raised on every Prowlarr start.)
 
 There is no drop-in replacement for the two Spanish trackers. Of the Spanish definitions Prowlarr
 still ships, every one that carries films or series is private, so adding one needs an account first.
@@ -365,7 +370,8 @@ collection from it, visible on the Plex home, holding whatever is queued for del
     have none (`max_ratio=-1, max_seeding_time=-1` on all of them), so the fallback *is* the rule,
     and 0.5 with two hours of seeding is a hit-and-run on TorrentLeech.
 
-  qbit-manage's share-limit groups own torrent deletion instead, per tracker. See the README.
+  qbit-manage's share-limit groups own torrent deletion instead, per tracker. See
+  [docs/lifecycle.md](docs/lifecycle.md).
 - **Fixed a double grace period on the collection.** The rule means "last viewed more than N days
   ago" (an unwatched title has no `lastViewedAt`, so it never matches). The collection
   used to wait a *second* 7 days after the item entered it before deleting, doubling the real delay.

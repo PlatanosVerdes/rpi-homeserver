@@ -34,7 +34,7 @@ FILEBROWSER_VERSION=v2.32.0
     image: filebrowser/filebrowser:${FILEBROWSER_VERSION}
     container_name: filebrowser
     restart: unless-stopped
-    profiles: [all]
+    profiles: [filebrowser, media, all]   # its own name, its group, and all
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
@@ -77,6 +77,11 @@ Leave the `image:` line out and the workflow only checks that it builds; the Pi 
 itself on every change, as everything here used to. Add a `.dockerignore` that lets through only
 what the Dockerfile copies. The whole mechanism, and what it does not do:
 [service-images.md](service-images.md).
+
+Every service gets a profile named after itself plus its group and `all`: a node that runs a subset
+lists services by name in `COMPOSE_PROFILES`, and steps or cron jobs for a service it does not run
+are skipped (`runs <service>` in `apply.sh`, `# when: <service>` in `scripts/crontab`). A cron job
+for the new service needs that `# when:` line.
 
 > Do NOT add `ports:` for services that go through Caddy — Caddy reaches them by container name over `media-network`. Only add `ports:` if you need direct host access.
 
@@ -191,9 +196,15 @@ docker exec caddy caddy reload --config /etc/caddy/Caddyfile
 
 ## Step 6 — Add secrets if needed
 
-1. Add the variable to `.env` in the relevant repo
+1. Add the variable to the node's encrypted `.env` in the private secrets repo (`sops
+   <node>/rpi-homeserver.env`, see [secrets.md](secrets.md)); the next deploy writes it to `.env`.
+   Editing `.env` on the Pi directly is undone by that pass. On a clone without the secrets repo,
+   edit `.env`.
 2. Add it to `.env.example` with a placeholder and a comment
 3. Reference it in the compose file as `${MY_SECRET}`
+
+If the service should be reachable from the internet, it goes behind a Cloudflare Access application
+first, then a tunnel route; see the `prometheus.probe.access` label in step 1.
 
 ---
 
@@ -206,6 +217,7 @@ docker exec caddy caddy reload --config /etc/caddy/Caddyfile
 - [ ] Version pinned in `versions.env`, image referenced as `${SERVICE_VERSION}`
 - [ ] Built from `services/`: `image: ghcr.io/platanosverdes/rpi-homeserver-<name>:${<NAME>_IMAGE_TAG}`
       beside `build:`, `<NAME>_IMAGE_TAG=unbuilt` in `versions.env`, a `.dockerignore`
-- [ ] Secrets added to `.env` and `.env.example`
+- [ ] Own-name profile plus group and `all`; any cron job for it has `# when: <service>`
+- [ ] Secrets added to the secrets repo (or `.env`) and `.env.example`
 - [ ] Homepage entry added (optional)
 - [ ] Deployed and tested

@@ -5,7 +5,8 @@ What talks to what, and which component is allowed to overwrite which app's conf
 Diagrams are Mermaid, which GitHub renders inline. They are the first thing in this repo to use
 it: an ASCII box drawing is fine for four boxes, and this file has more than forty.
 
-Everything measured here was measured on 2026-08-22. Counts drift; the shapes do not.
+Counts drift; the shapes do not. This describes the main Pi; a second node runs a subset (see the
+profiles in the README).
 
 ---
 
@@ -14,7 +15,7 @@ Everything measured here was measured on 2026-08-22. Counts drift; the shapes do
 ```mermaid
 flowchart TB
   subgraph OUT["1 · What arrives from outside"]
-    NET["Internet<br/><i>one inbound port: QBIT_BT_PORT</i>"]
+    NET["Internet<br/><i>inbound: QBIT_BT_PORT, aceserve's UPnP ports,<br/>and the tunnel's public hostnames</i>"]
     TS["Tailnet<br/><i>the Pi is exit node and subnet router</i>"]
     LAN["LAN<br/><i>the Pi is the DNS</i>"]
     IRC["Tracker IRC<br/><i>announces, consumed by autobrr</i>"]
@@ -36,7 +37,7 @@ flowchart TB
   end
 
   subgraph OBS["4 · What watches it"]
-    PROM["prometheus :9090<br/><i>30 alert rules</i>"]
+    PROM["prometheus :9090<br/><i>alert rules in Grafana</i>"]
     GRAF["grafana :3000"]
     PUSH["pushgateway :9091"]
     LOGS["vector → victorialogs"]
@@ -49,7 +50,7 @@ flowchart TB
   end
 
   NET --> CADDY
-  NET -->|github push| CFD
+  NET -->|github push, apps behind Access| CFD
   TS --> CADDY
   LAN --> PIHOLE
   IRC --> DECIDE
@@ -66,9 +67,10 @@ flowchart TB
   GRAF ~~~ APPLY
 ```
 
-41 containers plus one ephemeral at 03:00. All on `media-network` except Plex and Pi-hole, which
-use the host network: Plex because it decides "local vs remote" from the source IP, Pi-hole
-because it is the LAN's resolver.
+All on `media-network` except the ones on the host network: Plex, because it decides "local vs
+remote" from the source IP; Jellyfin, so a TV gets a live stream URL it can reach; Pi-hole, because
+it is the LAN's resolver; aceserve, so its P2P uses the home line; node-exporter, to see the host;
+and cloudflared. `huginn` lives in `gluetun-test`'s network namespace.
 
 ---
 
@@ -115,9 +117,9 @@ during an ARM Go build cost exactly one extra pass.
 | `scripts/setup/install-crontab.sh` | every deploy | host crontab | both repos' `scripts/crontab` |
 | `scripts/setup/install-logrotate.sh` | every deploy | `/etc/logrotate.d` | `config/logrotate/rpi-homeserver` |
 | `scripts/setup/install-udev.sh` | every deploy | `/etc/udev/rules.d` | `config/udev/*.rules` |
-| the tracker-control service | :05 and :35 | Prowlarr, Radarr, autobrr | the measured ratio headroom |
+| the tracker-control service | its own loop, every 30 min | Prowlarr, Radarr, autobrr | the measured ratio headroom |
 | qbit-manage | hourly | tags, share limits, deletes into the recycle bin | `config/qbit-manage/config.yml` |
-| `scripts/ops/cutoff-search.sh` | 05:00 | nothing, triggers a search | Radarr's own Wanted list |
+| `scripts/ops/cutoff-search.sh` | not scheduled since 2026-08-24 | nothing, triggers a search | Radarr's own Wanted list |
 
 **A profile changed through an app's UI and not committed is reverted within 30 minutes.** That is
 the design, not a bug: configuration lives in git, not in `appdata`. Two consequences worth
@@ -134,7 +136,7 @@ how bad a dead SD card is: what each tool keeps that no file in this repo descri
 | :--- | :--- | :--- |
 | qbit-manage | **everything.** `config/qbit-manage/config.yml`, copied into `appdata` by every deploy | nothing |
 | cross-seed | **everything.** `config/cross-seed/config.js`, secrets from the environment | nothing |
-| Tracker economy | **everything.** `config/trackers/*.json`, `config/qbittorrent/seed-rules.json` | nothing |
+| Tracker economy | **everything.** `config/trackers/*.json`, seed goals in `config/qbit-manage/config.yml` | the session cookies in `appdata/tracker-stats/` |
 | Grafana | dashboards and alerting, provisioned from `config/grafana/` | starred dashboards, users, silences |
 | Radarr, Sonarr | custom formats and quality profiles, pushed by `scripts/sync/arr-config.sh` | indexers, root folders, the library index, history, and the API key everything else authenticates with |
 | qBittorrent | preferences and BT port, pushed by `scripts/sync/qbit-config.sh` | categories, tags, and **`BT_backup`, which is every torrent it holds**. Losing that is re-adding 45 torrents by hand and starting every seed clock at zero |
@@ -186,7 +188,7 @@ flowchart LR
   F["File in the library"] --> G1 & G2
   G1{"Gate 1 · quality<br/>reaches the profile cutoff?"}
   G2{"Gate 2 · score<br/>reaches cutoffFormatScore?"}
-  G1 -->|no| S1["appears in Cutoff Unmet<br/><b>this is what scripts/ops/cutoff-search.sh drives</b>"]
+  G1 -->|no| S1["appears in Cutoff Unmet<br/><b>what scripts/ops/cutoff-search.sh drove, out of the cron since 2026-08-24</b>"]
   G2 -->|no| S2["RSS keeps looking for an upgrade<br/><i>paid for in disk: each upgrade leaves<br/>the previous release seeding its debt</i>"]
 ```
 
@@ -252,8 +254,8 @@ Per tracker: what the site asks, what is configured against it and why the diffe
 agree before anything is deleted, and the second one is the interesting half: a tracker group only
 matches a torrent the library has let go of (`noHL`) or that was never in it (`ratio`).
 
-Deletion moves the data to the recycle bin rather than removing it, and nothing empties that
-directory today.
+Deletion moves the data to the recycle bin rather than removing it, and
+`recyclebin.empty_after_x_days: 1` empties it a day later.
 
 ---
 
@@ -267,22 +269,22 @@ flowchart LR
     S1["nothing left here<br/><i>zram and disk moved to pi-metrics</i>"] -->|.prom| NE["node-exporter<br/><i>textfile collector</i>"]
   end
   subgraph B["Route B · push"]
-    S2["tracker-control<br/>tracker-control<br/>scripts/ops/backup.sh"] -->|POST| PG["Pushgateway"]
+    S2["scripts/ops/backup.sh<br/>scripts/deploy/apply.sh"] -->|POST| PG["Pushgateway"]
   end
   subgraph C["Route C · scrape"]
-    EX["node-exporter · cadvisor · blackbox<br/>pihole-exporter · qbittorrent-exporter<br/>speedtest-tracker · cloudflared<br/>tailscale-metrics · <b>pi-metrics</b>"]
+    EX["node-exporter · cadvisor · blackbox<br/>pihole-exporter · qbittorrent-exporter<br/>speedtest-tracker · cloudflared<br/>tailscale-metrics · muninn<br/><b>pi-metrics</b> · <b>tracker-control</b>"]
   end
   NE --> PROM
   PG --> PROM
   EX --> PROM
-  PROM["Prometheus<br/><i>scrapes every 15s</i>"] --> GR["Grafana<br/><i>17 dashboards</i>"]
+  PROM["Prometheus<br/><i>scrapes every 15s</i>"] --> GR["Grafana"]
 ```
 
 Prometheus's own guidance is that the Pushgateway is for **batch jobs**: something that starts,
 computes and exits. Its named cost is exactly the one that matters here, that you lose `up` and that
 a pushed series is served forever whether or not anything is still producing it. So route B keeps
-only what is genuinely a batch job, the daily backup and the tracker pair, and everything that runs
-on a schedule forever has moved to route C.
+only what is genuinely a batch job, the daily backup and the deploy itself, and everything that runs
+on a schedule forever has moved to route C, tracker-control included.
 
 `pi-metrics` is that move: the media, zram and disk numbers, collected in the background and served
 from a snapshot because one media pass takes ~7s against five APIs and a 15s scrape cannot wait for
@@ -333,22 +335,13 @@ nobody's request: no dashboard and no alert reads it.
 
 ## The scripts
 
-Twenty-one files under `scripts/`, grouped by what they do rather than by a prefix in the filename.
-Measured by lines of code, branches and external calls, three of them earn a drawing and the rest
-earn a sentence. `deploy/apply.sh` is sixth by complexity, not first.
-
-| Script | Code | Functions | Branches | Deletes |
-| :--- | ---: | ---: | ---: | :--- |
-| `services/pi-metrics/media.go` | 610 | 10 | 140 | |
-| `services/tracker-control` | 1090 | 41 | 190 | config |
-| `ops/oci-hunt.py` | 284 | 16 | 61 | |
-| `deploy/apply.sh` | 291 | 7 | 75 | |
-| the other fifteen | <135 | <6 | <13 | |
+Grouped under `scripts/` by what they do rather than by a prefix in the filename. Two of them, and
+one service, earn a drawing; the rest earn a sentence.
 
 ### deploy/apply.sh
 
-Fifth by complexity, and the part that is not obvious is not the flow, which is the convergence
-diagram above. It is the concurrency.
+The part that is not obvious is not the flow, which is the convergence diagram above. It is the
+concurrency.
 
 ```mermaid
 flowchart LR
@@ -400,7 +393,7 @@ the action are the same pass, so there is nothing old to act on.
 | `setup/install-crontab.sh` | Merges both repos' cron fragments, installs only if it differs, prints the diff |
 | `setup/install-logrotate.sh` | Installs the rotation policy root-owned 0644, because logrotate silently ignores anything else |
 | `recovery/rebuild-service.sh` | Rebuilds one compose service from scratch, by hand. For one CI publishes, this is the build-from-source fallback ([service-images.md](service-images.md)) |
-| `recovery/recovery-status.sh` | After a rebuild, the three steps no API can do: Plex claim, Jellyfin wizard, Apple 2FA |
+| `recovery/recovery-status.sh` | After a rebuild, what no API can do: the Plex claim and Jellyfin's wizard, plus a check that Grafana's database is in WAL mode |
 | `sync/arr-config.sh` | Custom formats then quality profiles, in that order: profiles score formats by name and the id only exists once the format does |
 | `sync/arr-links.sh` | Seerr and Bazarr's connection to the arrs. Bazarr publishes no port, so its call is proxied through the network |
 | `sync/bazarr-prune-subs.py` | Bazarr keeps the embedded tracks of a file Radarr already replaced, so it stops searching for a language the new release does not have. Deletes only rows the file disproves |
@@ -413,6 +406,6 @@ the action are the same pass, so there is nothing old to act on.
 | tracker-control | Reads each site with a stored cookie. The complexity is parsing, deliberately dumb about markup so a second site is config, not a selector hunt |
 | `ops/backup.sh` | Compresses appdata, keeps 7, excludes what regenerates (Prometheus TSDB, Plex caches) |
 | `ops/heartbeat.sh` | Tells an outside check the Pi is alive, and deliberately fails when the essentials are not running |
-| `ops/cutoff-search.sh` | Asks Radarr to search for what it already says is missing. Decides nothing |
+| `ops/cutoff-search.sh` | Asks Radarr to search for what it already says is missing. Decides nothing. Out of the cron, being retired |
 | `ops/oci-hunt.py` | Asks Oracle for one of the two free instances every minute, which is its measured rate limit, signing by hand. Counts the runs and logs one summary an hour rather than a line each, and exits for good once both exist |
 | `ops/indexer-retry.py` | Probes a backed-off indexer's site and clears Prowlarr's 24 h backoff when it answers, so an hour of blocking does not cost a day |

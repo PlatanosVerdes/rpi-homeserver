@@ -27,7 +27,7 @@ once the handover had run clean; it is in git history if the decision tree is ev
 | Public, watched | film deleted | Maintainerr, two days after watching |
 | Private, still in the library | keeps seeding: the library shares the same bytes, so it costs no disk | nothing to do |
 | Private, watched, goal met | torrent and data moved to the recycle bin on the next hourly pass | qbit-manage, the tracker's group |
-| Private, watched, goal pending | kept and tagged `waiting-seed`, rechecked hourly, deleted the hour it clears | qbit-manage, the tracker's group |
+| Private, watched, goal pending | kept, rechecked hourly, deleted on the first pass after it clears and has been quiet for a day | qbit-manage, the tracker's group |
 | Private, owing a hit & run | never deleted, whatever else is true | the margin in every group's `max_seeding_time` |
 
 Why the split: seeding a public torrent buys nothing. There is no account and no ratio requirement,
@@ -106,15 +106,22 @@ survives the Prowlarr sync. **Sonarr has no such field** (it exists only on Rada
 indexer), which is precisely why step 1 is the real control and this one is only a backstop. The API
 rejects the save with a 400 while the indexer is unreachable; `?forceSave=true` gets around it.
 
-**3. Seed goals, per tracker host, in `config/qbittorrent/seed-rules.json`.** The goal is met by
-hours **or** ratio, whichever arrives first. Set the hours above the site's own requirement: its
-clock runs behind the client's, and a goal set exactly at the requirement came three hours from
-deleting a torrent that still owed 88 hours.
+**3. Seed goals, per tracker, as a `share_limits` group in `config/qbit-manage/config.yml`**, plus
+its announce host under `tracker:` so torrents get the tag the group selects on. The goal is met by
+seeding time **or** ratio, whichever arrives first (`max_ratio: -1` where the site has no ratio
+rule). Set the time above the site's own requirement: its clock runs behind the client's, and a goal
+set exactly at the requirement came three hours from deleting a torrent that still owed 88 hours.
 
-```json
-"trackers": {
-  "tracker.torrentleech.org": { "min_seed_hours": 360, "min_ratio": 1.2 }
-}
+```yaml
+torrentleech:
+  priority: 4
+  include_all_tags: [torrentleech]
+  include_any_tags: [noHL, ratio, cross-seed]
+  exclude_any_tags: [keep, keep-bonus]
+  max_seeding_time: 15d     # 240 h asked, 120 h of margin
+  max_ratio: 1.2
+  min_last_active: 1d
+  cleanup: true
 ```
 
 **4. `config/trackers/rules.json`**, which is what the automation reads: the site's minimum ratio,
@@ -154,8 +161,11 @@ curl -s -H "X-Api-Key: $KEY" \
     print(len(d), sum(1 for r in d if r.get("indexerFlags")))'
 
 # what the site says about the account, and what the automation decided
-tracker-control && cat appdata/tracker-stats/state.json
-DRY_RUN=1 tracker-control
+docker logs --since 1h tracker-control
+docker exec tracker-control wget -qO- localhost:9111/metrics | grep '^tracker_'
+
+# what it would change, writing nothing (a second copy; stop it with Ctrl-C after the first pass)
+COMPOSE_ENV_FILES=versions.env,.env docker compose run --rm -e DRY_RUN=1 tracker-control
 ```
 
 `scripts/sync/arr-config.sh` used to report success while applying nothing; it is fixed, but the habit of
@@ -164,8 +174,9 @@ reading the value back rather than trusting the exit code is the reason it was f
 ## The control loop
 
 Since 2026-08-21 none of this depends on remembering to check a site: the tracker-control service
-reads the account every 30 minutes and acts on it in the same pass, and the tier comes from the
-headroom:
+reads the accounts every 30 minutes and acts in the same pass. Only TorrentLeech has tiers and a
+free-space floor in `config/trackers/rules.json`; DigitalCore, C411 and retrotoon are read and
+alerted on, never steered. The tier comes from the headroom:
 
 | Headroom | Prowlarr | Radarr | autobrr |
 | :--- | :--- | :--- | :--- |
@@ -173,8 +184,9 @@ headroom:
 | 25 to 100 GB | freeleech results only | `requiredFlags = [1]` | 2 grabs a day |
 | over 100 GB | all results | `requiredFlags = []` | 1 grab a day |
 
-Nothing is written when the value already matches, so this is silent except at a crossing, and it
-refuses to act on a reading over three hours old. Every change goes to Telegram.
+Nothing is written when the value already matches, so this is silent except at a crossing. The
+reading and the action are the same pass, so there is no stale reading to act on. Every change goes
+to Telegram.
 
 Two properties worth knowing:
 
@@ -182,9 +194,12 @@ Two properties worth knowing:
   window closes, so the disk cost is the rate times the retention: 2 a day at ~20 GB over a 15-day
   goal holds ~600 GB. Below `min_free_gb` the grabber is disabled outright whatever the ratio says,
   with 50 GB of hysteresis so it does not flap while qbit-manage frees torrents.
-- **Credentials are not duplicated.** They are read from Prowlarr, which already holds them for the
-  same site, and the session cookie is kept in `appdata/tracker-stats/` so the site sees about one
-  login a day instead of 48.
+- **Credentials are not duplicated where they exist already.** TorrentLeech's login is read from
+  Prowlarr, which holds it for the same site. DigitalCore and C411 are API-key indexers with no
+  login to reuse, so theirs come from `DIGITALCORE_USER`/`C411_USER` and the passwords in `.env`
+  (DigitalCore's 2FA means its session cookie is seeded by hand, see below). retrotoon's login is
+  behind Cloudflare Turnstile, so it stays hand-read in `config/trackers/readings.json`. Session
+  cookies are kept in `appdata/tracker-stats/` so a site sees about one login a day instead of 48.
 
 Exported: `tracker_ratio`, `tracker_min_ratio`, `tracker_uploaded_bytes`,
 `tracker_downloaded_bytes`, `tracker_buffer_bytes`, `tracker_headroom_bytes`, `tracker_points`,
@@ -217,7 +232,7 @@ Straight from staff in `#tlhelp`, 2026-08-20:
 | Prowlarr | `Search freeleech only` driven by the tier | one switch every app inherits, and it survives the sync |
 | Radarr | `requiredFlags = [1]` | second belt, and the only *arr that has the field |
 | Sonarr | indexer left **on** at every tier | the site has series, and Prowlarr is already filtering |
-| Seed goal | 360 h or ratio 1.2 | above the 240 h obligation, because their clock lags the client's |
+| Seed goal | 15 d (360 h) or ratio 1.2, qbit-manage group `torrentleech` | above the 240 h obligation, because their clock lags the client's |
 | autobrr | `TL freeleech ratio builder`: freeleech, 5 to 40 GB, 2 to 3 a day, no category, tag `ratio` | early seeding is where upload comes from |
 | Free-space floor | 400 GB | each grab is locked for its H&R window |
 
@@ -311,7 +326,7 @@ anything at all.
 | Piece | Value | Why |
 | :--- | :--- | :--- |
 | Prowlarr | API key, FlareSolverr, no freeleech switch | the definition is an API one, so there is no `freeleech` checkbox to flip |
-| Seed goal | **168 h / ratio 1.0**, keyed on both announce hosts | a week, 40% above their 5 days, because the site counts only what it saw announced. It was 240 h while their rule was unknown |
+| Seed goal | **180 h / ratio 1.0**, qbit-manage group `digitalcore` | 60 h above their 5 days, because the site counts only what it saw announced and its clock ran 9 to 23 h behind the client's |
 | H&R measurement | 120 h / 1.0, their real rule | 8 obligations open right now, worst 115 h to go. None with the clock stopped |
 | cross-seed | **included**, and the first two matches came from here | the site says cross-seeding is fine, and it is free ratio |
 | Spare disk | **up to 700 GB held for the leech bonus**, floor 600 GB free | see below: here, not deleting is the correct policy |
@@ -364,14 +379,14 @@ Running since 2026-08-21, on their own announce channel:
 | Action | qBittorrent, no category, tag `ratio` | same as TorrentLeech: these belong to no *arr |
 
 **Why 1 a day and 15 to 30 GB.** Their hit & run window is 5 days rather than TorrentLeech's ten, so
-a grab here is locked for less than half as long, and the seed goal of 168 h is what actually holds
-it: `1 x ~22 GB x 7 days = ~150 GB` of steady-state disk. The floor of 15 GB is not a preference
+a grab here is locked for less than half as long, and the seed goal of 180 h is what actually holds
+it: `1 x ~22 GB x 7.5 days = ~165 GB` of steady-state disk. The floor of 15 GB is not a preference
 either: **anything 15 GB or larger is automatically freeleech here**, so it is the size at which a
 grab is guaranteed to cost nothing against ratio. The ceiling keeps one release from eating a week of
 the budget, and it also sits under the 50 GiB the leech bonus counts per torrent.
 
 Worth saying plainly: this account does not need the ratio. It sits at 4.21 with 86 GB of headroom,
-so the grabber here buys upload and bonus points rather than solving a problem, and it costs ~150 GB
+so the grabber here buys upload and bonus points rather than solving a problem, and it costs ~165 GB
 of disk that TorrentLeech's grabber could use. At 1 a day that trade is cheap enough to be worth it;
 if disk gets tight, this is the first thing to turn off, not the last.
 
@@ -388,8 +403,8 @@ was disabled and its announces were being rejected, so it is a worst case rather
 
 The exception is a cross-seed: `Marty.Supreme` showed 2 days credited against 163 hours in the
 client, because their clock starts when they first see an announce and the data came from another
-tracker. Those live in the `cross-seed-link` category, which no share-limits group matches, so the
-number above cannot touch them.
+tracker. Cross-seeds have their own qbit-manage group (15 days, no ratio limit), above this one, so
+the number above does not apply to them.
 
 #### Four API traps, if this is ever rebuilt
 
@@ -399,11 +414,12 @@ number above cannot touch them.
 - A channel created that way arrives **disabled**, and a disabled channel is never joined.
 - The network is updated at `PUT /api/irc/network/{id}`, not `/api/irc/{id}`, which answers 404.
 
-### Still open
+### Reading the account
 
-Nothing about the rules or the tooling. The account still cannot be read automatically, because a
-normal API key reaches only the torrent endpoints and not profile data, so its ratio and bonus have
-to be read by eye.
+tracker-control reads it with `fetchDigitalCore`. An API key reaches only the torrent endpoints and
+not profile data, and the account has 2FA, so the reader uses a session: log in from a browser once
+and drop that session into `appdata/tracker-stats/digitalcore-cookies.json`. When it expires the
+site reads `tracker_up 0` and the cookie is seeded again.
 
 ## retrotoon.world
 
@@ -424,13 +440,13 @@ Rules read 2026-08-21. Nothing downloaded yet: 0 up, 0 down, 273 bonus points.
 | Piece | Value | Why |
 | :--- | :--- | :--- |
 | Prowlarr | `Generic Torznab`, working | it is the generic definition, so there is no site-specific switch |
-| Seed goal | **96 h / ratio 1.0**, keyed on `ann.retrotoon.world` | a third above their 72 h, which is margin for their clock without holding the disk for ten days |
+| Seed goal | **120 h, no ratio limit**, qbit-manage group `retrotoon` | 48 h above their 72 h, which is margin for their clock without holding the disk for ten days. No ratio limit, because the site has no ratio rule: only time clears an obligation |
+| Account reading | by hand, in `config/trackers/readings.json` | its login sits behind Cloudflare Turnstile, so it cannot be automated |
 | cross-seed | included | free ratio, same as everywhere |
 
 Its announce host is **`ann.retrotoon.world`**, read out of a real `.torrent` fetched through
-Prowlarr rather than guessed, so the seed goal is now theirs and not the generic default: **96 h**, a
-third more than the 72 h they ask for, which covers a lagging tracker clock and still frees the disk
-two and a half times sooner than 240 h did.
+Prowlarr rather than guessed, so the seed goal is theirs and not the generic default: **120 h**,
+48 h more than the 72 h they ask for.
 
 **autobrr is wired up and switched off.** The indexer, its passkey and the IRC connection to
 `irc.retrotoon.world:6697` (`#announce`, nick `PlatanoVerde`, bot mode on) are all in place, and the
@@ -551,7 +567,7 @@ lived before any of this.
 | Piece | Value | Why |
 | :--- | :--- | :--- |
 | Prowlarr | id 9, API key set, **no proxy**, direct like every other indexer | the `nordvpn` tag came off on 2026-08-21 and stays off. A SOCKS proxy whose service credentials expire without warning answers `Failed to authenticate with the SOCKS server`, which is indistinguishable from a ban until someone tests it, and that is exactly the diagnosis it cost that day. The credentials in Prowlarr do authenticate today, which is not the point: the failure mode is that nobody notices when they stop. The price of going direct is the match-night blocking below, and that now recovers on its own |
-| Seed goal | the generic 240 h / ratio 1.0 | more than three times their 72 h, so nothing can trip their H&R even after it comes back |
+| Seed goal | 150 h / ratio 1.0, qbit-manage group `c411` | their 72 h plus a 24 h grace is 96 h owed; 54 h of margin on top, so nothing can trip their H&R even after it comes back |
 | H&R measurement | on, as if their system were enabled | it is documented as returning, and measuring early costs nothing |
 | cross-seed | included | |
 
@@ -581,20 +597,13 @@ mistake on this site is deleting a torrent, not losing a search for an evening.
 | Sanctions | progressive: warning, then temporary suspension, then permanent ban. Not the instant disable TorrentLeech uses |
 | New members | get a grace period, which is what the 50 GB credit is |
 
-### What to do about it
+### What is still manual
 
-Nothing automatic can help here yet, because the account cannot be read. The reason is not a
-forgotten password: the site's Cardigann definition authenticates with an **API key**, so the
-Prowlarr entry has no username and password field to fill in, and the tracker-control service reads a
-site by logging in with a stored cookie. Giving it a way in means storing a real login for the site
-next to the API key, which is a decision about where the credentials live and not a code change.
-
-The same definition is why the freeleech-only filter cannot be turned on here: it exposes
-`multilang`, `multilanguage` and `vostfr`, and no freeleech facet. Both of the levers that protect a
-thin ratio elsewhere are therefore missing on the one account that needs them most.
-
-Until that changes the rule is manual and simple: **on C411, freeleech only.** Everything else there
-is two gigabytes from blocking the account's downloads.
+The account is read automatically (`fetchC411`, above), so its ratio and headroom are on the Trackers
+dashboard and in the tracker alerts. What tracker-control cannot do here is act: the site's
+definition exposes `multilang`, `multilanguage` and `vostfr`, and no freeleech facet, so there is no
+freeleech-only filter to switch. The tier has no lever on this site, and the rule stays manual:
+**on C411, freeleech only.**
 
 ## Adding a new private tracker
 
@@ -634,14 +643,16 @@ then the configuration applied, then why.
    copy in `appdata`.
 3. **Look for the freeleech switch** in its Cardigann definition and turn it on if the ratio is
    thin, since Prowlarr is the only place that covers every app.
-4. **Add its hostname and rules to `config/trackers/rules.json`**, and its seed goal to
-   `config/qbittorrent/seed-rules.json`, with the hours set above what the site asks for.
+4. **Add its hostname and rules to `config/trackers/rules.json`**, and its seed goal as a
+   `share_limits` group in `config/qbit-manage/config.yml` (plus its announce host under `tracker:`),
+   with the time set above what the site asks for.
 5. **If it has an announce channel**, add it to autobrr with Mechanism `None`, and size the grab
    rate as a disk budget rather than a preference.
 6. **Add it to cross-seed** (`config/cross-seed/config.js`), because a tracker that has the release
    you already seed is free ratio.
-7. **Verify, do not assume**: the tracker-control service must come back with the site's own numbers, and
-   `DRY_RUN=1 tracker-control` must pick the tier you expect.
+7. **Verify, do not assume**: the tracker-control service must come back with the site's own numbers
+   (`docker logs tracker-control`), and a `DRY_RUN=1` run (step 6 of the setup above) must pick the
+   tier you expect.
 
 ## cross-seed, the free ratio
 
@@ -666,9 +677,9 @@ handles it. And `excludeOlder` takes vercel `ms` strings, so `180d` works and `6
 
 The consequence for deletion is real and deliberate: a cross-seeded file has a link count above one
 while the second torrent exists, so the hardlink check reads it as "still in the library" and keeps
-both. Bytes that used to be reclaimed after watching now wait for the cross-seed to finish paying its
-own tracker. That is the price of free ratio, and it is one more reason the deleting side belongs in
-qbit_manage, which understands cross-seeds explicitly.
+both. Bytes that used to be reclaimed after watching now wait for the cross-seed to finish its own
+term: the `cross-seed` group in qbit-manage, 15 days and no ratio limit, since a cross-seed
+downloaded nothing and any ratio limit would fire on its first served byte.
 
 ## Where upload actually comes from
 
@@ -692,8 +703,8 @@ Seeding needs inbound connections and downloading does not, which is why a broke
 until the ratio collapses. A private torrent carries the `private` flag, which disables DHT, PEX and
 LSD, so the tracker's peer list is the only source and an unreachable client uploads to nobody.
 Measured here, same client and week: public trackers 397.6 GB up against 210.5 GB down (ratio 1.889),
-private trackers 3.6 GB up against 573.1 GB down (0.006). The CGNAT diagnosis behind that is in
-[seeding-and-ratio.md](seeding-and-ratio.md).
+private trackers 3.6 GB up against 573.1 GB down (0.006). The line was behind CGNAT then; it has a
+public IPv4 since October 2026. The diagnosis is in [seeding-and-ratio.md](seeding-and-ratio.md).
 
 ```bash
 # the port, from outside the network entirely
