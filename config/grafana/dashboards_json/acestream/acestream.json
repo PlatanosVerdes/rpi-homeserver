@@ -540,7 +540,7 @@
       "id": 5,
       "type": "timeseries",
       "title": "Activity Timeline (runs by outcome)",
-      "description": "Buckets grow with the panel but never drop below five minutes: the updater runs every few minutes, and a shorter window leaves increase() without two samples and empties the panel. Errors keep the right axis, since stacked against a few hundred quiet runs a single one is a pixel.",
+      "description": "Buckets grow with the panel but never drop below five minutes: bifrost reads the list every few minutes, and a shorter window leaves increase() without two samples and empties the panel. Errors keep the right axis, since stacked against a few hundred quiet runs a single one is a pixel.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"

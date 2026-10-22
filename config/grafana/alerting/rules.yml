@@ -410,15 +410,15 @@ groups:
               conditions:
                 - evaluator: { type: gt, params: [0] }
       - uid: homelab-acestream-stale
-        title: 'Acestream updater not running'
+        title: 'bifrost not reading the channel list'
         condition: C
         for: 10m
         labels:
           severity: warning
         annotations:
-          summary: 'The Acestream updater has not run in over an hour'
+          summary: 'bifrost has not read the channel list in over an hour'
           description: >-
-            The source URLs can still answer 200 while the updater is stuck, so this is the rule that catches a frozen container: without it the channel list silently goes stale.
+            The source URLs can still answer 200 while bifrost's list loop is stuck, so this is the rule that catches a frozen loop: without it the channel list silently goes stale.
         noDataState: OK
         execErrState: KeepLast
         data:
@@ -448,7 +448,7 @@ groups:
         annotations:
           summary: 'The Acestream channel list has not changed in over 24 hours'
           description: >-
-            Measures the age of the last Jellyfin refresh, which only fires when the list really changes, so this is the rule that catches the source going quiet while the updater and every gateway stay green. The guard on the timestamp stops a fresh state file, where it is 0, from firing this on the first run.
+            Measures the age of the last Jellyfin refresh, which only fires when the list really changes, so this is the rule that catches the source going quiet while bifrost's list loop and every gateway stay green. The guard on the timestamp stops a fresh state file, where it is 0, from firing this on the first run.
         noDataState: OK
         execErrState: KeepLast
         data:

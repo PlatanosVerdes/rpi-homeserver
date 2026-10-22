@@ -52,13 +52,5 @@ commented cron line together.
   reads neither, and the 0.8 in `config/trackers/rules.json` is typed in by hand.
 - **A DHCP reservation for the Pi's eth0.** The `/32` routes Tailscale advertises are typed in by
   hand; wifi is reserved, cable is a plain lease. If it moves, Plex remote breaks silently.
-- **`config/qbittorrent/seed-rules.json` is read by nothing**; seed goals are in
-  `config/qbit-manage/config.yml`. Delete it, and the notes in `config/trackers/rules.json` that
-  still quote its 360 h / 240 h.
-- **`config/arr-exports/` is a July snapshot** that differs from `config/arr/`, which is what
-  `scripts/sync/arr-config.sh` pushes. Delete the directory.
-- **The "Acestream updater not running" alert** reads `acestream_last_run_timestamp`, from the
-  updater bifrost replaced. Check whether anything still writes it; fix or delete the rule.
-- **Stale comments in code**: the commented `*/15` cron example at the end of `apply.sh` (and its
-  "15-min run" prune comment), and the Apple 2FA step in `recovery-status.sh`'s header, which the
-  script does not check.
+- **Stale comment in code**: the Apple 2FA step in `recovery-status.sh`'s header, which the script
+  does not check.
