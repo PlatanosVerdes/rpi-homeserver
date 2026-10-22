@@ -69,11 +69,13 @@ scripts/deploy/apply.sh
    ├─ git pull rpi-homeserver . apply.sh itself changed? start over on the new version
    ├─ render alerting ......... template (git) + secrets (.env), only where grafana runs
    │                            └─► appdata/grafana-alerting/
+   ├─ reload/restart .......... caddy reload, Grafana, Homepage, Vector, Prometheus, blackbox,
+   │                              webhook unit: only what the pull touched
    ├─ docker compose pull ...... the services/ images whose pinned tag is new
    │                              (built by CI: docs/service-images.md)
    ├─ docker compose build ..... only a built-here service whose build context changed
    │                              (all of them if versions.env or a compose file did)
-   ├─ docker compose up -d ..... recreates only what changed; Caddy routes: caddy reload
+   ├─ docker compose up -d ..... recreates only what changed (app images pull their new tag here)
    ├─ git pull rpi-services  ──► docker compose up -d (same rule)
    ├─ install-crontab, logrotate, udev ...... host state from both repos
    ├─ sync ..................... arr-config, config-export --check, pihole-dns, arr-links,

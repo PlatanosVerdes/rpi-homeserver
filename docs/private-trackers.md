@@ -174,8 +174,9 @@ reading the value back rather than trusting the exit code is the reason it was f
 ## The control loop
 
 Since 2026-08-21 none of this depends on remembering to check a site: the tracker-control service
-reads the account every 30 minutes and acts on it in the same pass, and the tier comes from the
-headroom:
+reads the accounts every 30 minutes and acts in the same pass. Only TorrentLeech has tiers and a
+free-space floor in `config/trackers/rules.json`; DigitalCore, C411 and retrotoon are read and
+alerted on, never steered. The tier comes from the headroom:
 
 | Headroom | Prowlarr | Radarr | autobrr |
 | :--- | :--- | :--- | :--- |

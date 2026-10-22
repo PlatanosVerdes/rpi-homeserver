@@ -137,7 +137,9 @@ the TV in the living room asked for a Remote Watch Pass.
 
 Nothing here needs it: away from home the tailnet reaches the RFC1918 addresses of step 1, which
 are the ones Plex calls local. So it stays off (`PublishServerOnPlexOnlineKey="0"` in
-`Preferences.xml`), which also closes the port it had opened on the router. With it off, the
+`Preferences.xml`), which also closes the port it had opened on the router. It is a manual
+setting: `plex-prefs.sh` only pushes LAN Networks and the played threshold, so a rebuilt Plex must
+have it turned off by hand. With it off, the
 connection list from the curl above has the `192.168.1.x` entries as `local=true` and no public
 address at all.
 

@@ -66,8 +66,9 @@ handled:
 - **RAR releases.** unpackerr writes new bytes, so the extracted file has one link from the moment
   it lands even though the film is in the library. Roughly a quarter of releases arrive that way.
 - **Cross-seeds.** A second torrent on the same files keeps the count above 1, so bytes that would
-  have been reclaimed after watching stay until the cross-seed goes. They sit in the
-  `cross-seed-link` category, which the hardlink check never inspects, so they never get `noHL`;
+  have been reclaimed after watching stay until the cross-seed goes. cross-seed injects them as
+  `<category>.cross-seed` (e.g. `radarr.cross-seed`), which the hardlink check never inspects, so
+  they never get `noHL`;
   instead they carry the `cross-seed` tag, and the `cross-seed` group (priority 2, 15 days, no ratio
   limit) releases them.
 

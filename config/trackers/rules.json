@@ -31,7 +31,7 @@
     ],
     "min_free_gb": 400,
     "_rules_read": "2026-08-21, from the site's own rules pages and its staff",
-    "_hit_and_run_note": "240 h of seeding or ratio 1:1 per torrent clears it, and their clock is the only one that counts: measured on 2026-08-21 the client was ahead of the tracker by 26 to 118 hours across the 14 torrents on its H&R list, which is why the seed goal in seed-rules.json is 360 h and not 240."
+    "_hit_and_run_note": "240 h of seeding or ratio 1:1 per torrent clears it, and their clock is the only one that counts: measured on 2026-08-21 the client was ahead of the tracker by 26 to 118 hours across the 14 torrents on its H&R list, which is why the torrentleech share_limits group in config/qbit-manage/config.yml seeds 15 d (360 h) and not 240 h."
   },
   "digitalcore": {
     "site": "https://digitalcore.club",
@@ -115,7 +115,7 @@
       "min_seed_hours": 72,
       "min_ratio": null
     },
-    "_hit_and_run_note": "72 h of seeding, reached within the first 10 days after the download, and the site calls it its strictest rule with no exceptions. min_ratio is null because the site states no ratio rule at all: here time is the only thing that clears an obligation, and the 1.0 that used to sit here would have cleared a torrent the site still counted as owing hours. The generic 240 h goal in seed-rules.json already exceeds the 72 h, so nothing is at risk while no override exists.",
+    "_hit_and_run_note": "72 h of seeding, reached within the first 10 days after the download, and the site calls it its strictest rule with no exceptions. min_ratio is null because the site states no ratio rule at all: here time is the only thing that clears an obligation, and the 1.0 that used to sit here would have cleared a torrent the site still counted as owing hours. The retrotoon share_limits group in config/qbit-manage/config.yml (120 h, no ratio limit) exceeds the 72 h, so nothing is at risk.",
     "tracker_hosts": [
       "ann.retrotoon.world"
     ],

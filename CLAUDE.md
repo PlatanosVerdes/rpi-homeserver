@@ -180,9 +180,12 @@ docker compose up -d
 7. Prunes images and build cache once a day, then pushes metrics to Pushgateway (visible in Grafana
    "Deploy Monitor" dashboard)
 
-Steps that belong to one service are gated with `runs <service>` (is it in this node's
-`COMPOSE_PROFILES`?), so a node running a subset does not fail or install things for services it
-does not have.
+Three steps are gated with `runs <service>` (is it in this node's `COMPOSE_PROFILES`?): the
+Grafana render, the qbit-manage config copy and `config-export.py --check`. The other sync scripts
+skip themselves when their app is absent. The Grafana, appdata-ownership, qbit-manage and webhook
+steps run for rpi-homeserver only; `caddy reload` runs for both repos. The restarts for config read
+once (webhook unit, Grafana, Caddy reload, Homepage, Vector, Prometheus, blackbox) happen before the
+image step, and a failed pull still runs `up -d`.
 
 Order matters: the render sits after the pull (or it would use a stale template) and before
 compose (or Grafana would start reading the previous file).

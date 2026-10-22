@@ -135,7 +135,7 @@ services:
       - ${APP_CONFIG_PATH}/dnsmasq.d:/etc/dnsmasq.d
     network_mode: host
 
-  # --- CLOUDFLARED (tunnel — publishes ONLY the GitHub deploy webhook) ---
+  # --- CLOUDFLARED (tunnel — the GitHub deploy webhook and the apps behind Cloudflare Access) ---
   # Host network to reach the webhook receiver on 127.0.0.1:9000 (systemd unit in
   # services/deploy-webhook/). What is public is the tunnel's hostname config in Cloudflare's
   # dashboard, not this. See docs/deploy-webhook.md.
