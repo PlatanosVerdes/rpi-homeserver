@@ -114,6 +114,12 @@ route left open without a login. Its alert, "Public route behind Access broken",
 every public URL is failing at once, which is a blocked Cloudflare range or a dead tunnel rather
 than this app.
 
+A service with its own Prometheus metrics adds `prometheus.scrape` with the whole URL of its
+metrics (`http://myapp:8000/metrics`); the `docker_metrics` job scrapes it and labels it `service`.
+If it calls an outside API that can rate-limit the home IP, export `upstream_paused{upstream}` (1
+while paused after a 429) and `upstream_rate_limited_total{upstream}`: the "Upstream throttling
+us" alert then covers it with no rule of its own.
+
 Leave the label out only when the service serves no HTTP at all — a bot, a cron worker, an
 exporter. Those are covered by their own scrape job or, failing that, by the container being
 alive, which is the "Not probed" table on the same dashboard.
