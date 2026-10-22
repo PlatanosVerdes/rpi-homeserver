@@ -208,6 +208,12 @@ services:
       - JELLYFIN_URL=http://host.docker.internal:8096
       - JELLYFIN_API_KEY=${JELLYFIN_API_KEY}
       - BIFROST_NAME=Raspberry
+      # Sharing from the page (docs/access.md); off while any of the four is empty.
+      - ACCESS_TEAM_DOMAIN=${ACCESS_TEAM_DOMAIN:-}
+      - ACCESS_AUD=${BIFROST_ACCESS_AUD:-}
+      - CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID:-}
+      - CLOUDFLARE_API_TOKEN=${BIFROST_CLOUDFLARE_API_TOKEN:-}
+      - BIFROST_ADMINS=${BIFROST_ADMINS:-}
 
   # --- BAZARR (auto-download subtitles; Spanish, for the whole library) ---
   bazarr:
