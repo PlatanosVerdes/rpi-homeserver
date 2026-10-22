@@ -1,47 +1,22 @@
 # Logging
 
-## What this is for
+Prometheus stores numbers: whether something is up, how much disk is left. This stores **text**,
+what each container printed, for 30 days, searchable from one place, so the lines that explain a
+3 a.m. failure still exist the next morning. Docker's own `json-file` logs are capped at 3 x 10 MB
+per container and stay as they are.
 
-Every container on this server writes text as it works: what it did, what it failed to do, what it
-is waiting for. That text is called a **log**. Docker keeps a bit of it and throws the rest away,
-which is fine until the day something breaks and the evidence is already gone.
-
-This adds two pieces so that text is kept for 30 days and can be searched from one place.
-
-It is not the same job as Prometheus, which is already on this server and is easy to confuse with
-this:
-
-| | Prometheus | VictoriaLogs |
-| :--- | :--- | :--- |
-| Stores | **Numbers** over time: CPU 42%, disk 35%, "is it alive: yes" | **Text**: `connection refused`, `attest failed` |
-| Answers | *how much*, *is it up* | *what did it say, and why* |
-| Good for | Dashboards and alerts | Working out what happened after the fact |
-
-Prometheus reports that the disk filled at 3am. VictoriaLogs holds the lines showing what was
-writing to it.
-
-## How it fits together
-
-```
-each container prints text
-        │
-        ▼
-   vector          reads the text as it appears and forwards it
-        │
-        ▼
-  victorialogs     stores it for 30 days and answers searches
-        │
-        ▼
-    Grafana        where you read it
-```
+`vector` follows every container's output (and the repos' cron `*.log` files) and ships it to
+`victorialogs`, which Grafana queries. Where it sits among the metrics and alerts:
+[alerting.md](alerting.md#how-numbers-get-to-grafana). Only the main Pi runs it; the second node
+keeps Docker's own logs only, since a log store on its SD card would wear it out.
 
 | Piece | Its one job | Footprint |
 | :--- | :--- | :--- |
 | `vector` | Watches every container and forwards whatever they print | ~52 MB RAM |
 | `victorialogs` | Keeps 30 days of it, answers queries | ~25 MB RAM |
 
-Use VictoriaLogs rather than the better-known Grafana Loki. On a Raspberry Pi, Loki is the
-component you notice; what it adds (multi-tenancy, object storage) is worth nothing on one box.
+VictoriaLogs rather than the better-known Grafana Loki: on a Raspberry Pi, Loki is the component you
+notice, and what it adds (multi-tenancy, object storage) is worth nothing on one box.
 
 ## Reading the logs
 

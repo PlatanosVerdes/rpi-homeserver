@@ -1,53 +1,119 @@
-# Alerting
+# Monitoring and alerting
 
-Grafana has beautiful dashboards, but a dashboard only helps when you are looking at it. These
-alerts are provisioned from git so they are reproducible and reviewable in a diff.
+How numbers and logs reach Grafana, which alerts exist, how they reach Telegram, and the one alert
+that does not depend on the Pi being alive. Logs themselves are [logging.md](logging.md).
 
+## How numbers get to Grafana
+
+<!-- diagram: metrics-logs-alerts -->
+```mermaid
+flowchart LR
+  subgraph B["Push"]
+    S2["scripts/ops/backup.sh<br/>scripts/deploy/apply.sh"] -->|POST| PG["Pushgateway"]
+  end
+  subgraph C["Scrape"]
+    EX["node-exporter · cadvisor · blackbox<br/>pihole-exporter · qbittorrent-exporter<br/>speedtest-tracker · cloudflared<br/>tailscale-metrics · muninn<br/><b>pi-metrics</b> · <b>tracker-control</b>"]
+  end
+  PG --> PROM
+  EX --> PROM
+  PROM["Prometheus<br/><i>scrapes every 15s</i>"] --> GR["Grafana"]
+  SH["second node's Prometheus<br/><i>over Tailscale</i>"] --> GR
+  GR -->|alert rules| TG["Telegram"]
 ```
-Prometheus ──► Grafana alert rules ──► Telegram bot (Raspi-Alerts)
-                                              ▲
-external dead man's switch ───────────────────┘  (covers the Pi being dead)
-```
 
-## What is provisioned
+Prometheus's own guidance is that the Pushgateway is for **batch jobs**, and its cost is the one that
+matters here: a pushed series is served forever whether or not anything still produces it, and there
+is no `up`. So only the daily backup and the deploy push; everything that runs forever is scraped,
+where death shows as `up == 0`. That is why `tailscale-metrics`, `pi-metrics` and `tracker-control`
+became services instead of cron scripts. Nothing writes node-exporter textfiles any more.
+
+- **pi-metrics** serves the numbers no exporter provides (media, upgrades, torrents, orphans,
+  indexer usage, where the disk went, zram, playback) from a snapshot refreshed in the background,
+  since one media pass takes ~7 s and a scrape cannot wait. `up` says the process lives,
+  `pi_metrics_last_success_timestamp_seconds` says the data is fresh: two failures, two alerts. Its
+  `playback` collector runs every 60 s, so a re-encode is seen while it is happening.
+- **blackbox-exporter** probes every container with a `prometheus.probe` label from the inside, and
+  every `prometheus.probe.access` label from the internet's side ([access.md](access.md)). No scrape
+  job to edit for a new service ([add-service.md](add-service.md)).
+- **The second node's Prometheus** is a second Grafana datasource, chosen by the Node selector on the
+  dashboards that have one ([nodes.md](nodes.md)).
+
+Scrape jobs are in `config/prometheus/prometheus.yml`.
+
+### Is an indexer being used, or just up
+
+`prowlarr_indexer_up` answers "does it answer". `prowlarr_indexer_activity`, from
+`/api/v1/indexerstats`, answers "is anything asked of it", as counters for `increase()`:
+
+| Metric | Answers |
+| :--- | :--- |
+| `prowlarr_indexer_queries_total` | is anything searching it |
+| `prowlarr_indexer_grabs_total` | does searching it ever produce a download |
+| `prowlarr_indexer_failed_queries_total` | is it answering but failing |
+| `prowlarr_indexer_response_ms` | is it the one slowing every search down |
+
+Three alerts sit on top: every indexer down, **any enabled indexer** down for 14 h, and any indexer
+failing searches for 30 m. "Any enabled" and not "any with grabs": a private tracker inside its
+newbie window has zero grabs and is exactly the one whose failure needs saying.
+
+## Dashboards
+
+Provisioned from `config/grafana/dashboards_json/`, one folder per subject, every one linked from
+Home. Changes are made in Grafana, exported and committed; the provisioned copy is read-only.
+
+| Folder | Dashboards |
+| :--- | :--- |
+| infrastructure | Container Health (host and per-container, Storage section), Service probes (what Home's "Services down" is about), Deploy Monitor, Backup Monitor, Tailscale, Webhook & Tunnel |
+| media | Lifecycle (when each torrent goes, films in grace, the recycle bin), Private trackers, Indexers, Disk usage, Media Pipeline, Audio languages |
+| acestream | Acestream Monitor: bifrost's channels, what is playing and its swarm health, per node |
+| network, services | Pi-hole; One Pace, Watch-next |
+
+Community dashboards imported by hand: `1860` (Node Exporter Full) and `193` (cAdvisor).
+
+## What is provisioned for alerting
 
 Everything lives in `config/grafana/alerting/` and is **read-only in the Grafana UI on purpose**:
-this repo is the source of truth.
 
 | File | What it does |
 | :--- | :--- |
 | `contact-points.yml.tmpl` | The Telegram bot Grafana sends to (rendered, see Credentials) |
 | `policies.yml` | Route everything to that bot, group by alert, repeat every 6h |
-| `rules.yml` | The rules themselves, and `deleteRules` for the ones taken out |
+| `rules.yml` | The rules, and `deleteRules` for the ones taken out. It is the full list |
 
-`rules.yml` is the full list. A sample of what it covers:
+What the rules cover, by group:
 
-| Rule | Fires when | For |
-| :--- | :--- | :--- |
-| System disk almost full | less than 15% free on `/` | 10m |
-| Data disk almost full | less than 10% free on the data disk | 10m |
-| Backup failed | `backup_last_status != 0` | 5m |
-| No recent backup | no successful backup in 36h | 15m |
-| Deploy failing | last deploy ended in error | 5m |
-| Prometheus target down | any scrape target unreachable | 5m |
-| Pi running hot | SoC above 75 C | 10m |
-| qbit-manage has stopped running | no run reported to pi-metrics in four of its intervals | 15m |
-| Download nothing can import | a queue item the *arr cannot import without a human | 4h |
-| Data in downloads that nothing owns | unclaimed bytes the library does not share either | 1h |
-| Video is being re-encoded | any client, any server | 5m |
-| Audio is being re-encoded | a client that is not a browser | 5m |
+| Group | Rules |
+| :--- | :--- |
+| Host | system and data disk almost full, Pi running hot, memory almost exhausted, container restart loop |
+| Deploy and backup | deploy failing, backup failed, no recent backup, backup archive grew sharply |
+| Services | Prometheus target down, service not answering, public route behind Access broken, pi-metrics / tracker-control / qbit-manage overdue |
+| Torrents | a requested download stalled, torrents in error, seeding to nobody, a tracker warning about to be re-checked, a torrent nothing will clean up, download nothing can import, data nothing owns |
+| Trackers | almost no paid downloads left, ratio under the line, hit & run with the clock stopped, tracker numbers not being read |
+| Indexers | every indexer down, an indexer down, an indexer failing its searches |
+| Media | video re-encoded, audio re-encoded; AceStream source URLs failing, channel list frozen |
+| Companion repo | One Pace downloads failing, the Wallapop session and pass |
 
-Every expression uses PromQL's `bool` modifier so it returns 1 when it fires, which keeps all the
-rules on the same `threshold > 0` condition instead of seven different reduce/threshold shapes.
+Every expression uses PromQL's `bool` modifier so it returns 1 when it fires, which keeps every rule
+on the same `threshold > 0` condition.
 
-Taking a rule out of `groups` does not remove it: Grafana keeps evaluating a provisioned rule it no
-longer finds in the file. Removing one is two edits, out of `groups` and its uid under
-`deleteRules`.
+## Provisioning traps
+
+Anything provisioned from a file here needs an explicit instruction to disappear:
+
+- **Removing a rule is two edits**: out of `groups`, and its uid under `deleteRules`. Grafana keeps
+  evaluating a provisioned rule it no longer finds in the file (one deleted rule fired six days
+  later). The `deleteRules` entry can stay; re-applying it costs nothing.
+- **A dashboard UID that existed and was deleted cannot be provisioned again** on Grafana v13: the
+  file is read, the log says it finished, nothing appears. Give a revived dashboard a new UID.
+- **A failed alerting provisioning takes Grafana's whole startup down**, not just the alert. So does a
+  policy pointing at a missing contact point, which is why the render step leaves the directory empty
+  when `.env` has no Telegram credentials.
+- **Grafana's own `$VAR` interpolation is not used**: it re-infers the type, so an all-digits chat id
+  becomes a number and the Telegram integration rejects it.
 
 ## Credentials
 
-`TELEGRAM_ALERT_BOT_TOKEN` and `TELEGRAM_ALERT_CHAT_ID` live in `.env` and are **never
-committed**. Since this repo is public, neither value can sit in a provisioning file, so:
+`TELEGRAM_ALERT_BOT_TOKEN` and `TELEGRAM_ALERT_CHAT_ID` live in `.env` and are never committed:
 
 ```
 config/grafana/alerting/          in git: rules, policies, contact-point TEMPLATE
@@ -59,14 +125,8 @@ appdata/grafana-alerting/         gitignored, what Grafana actually reads
 Grafana
 ```
 
-Grafana's own `$VAR` interpolation cannot do this job: it re-infers the type of the substituted
-value, so an all-digits chat id comes back as a number while the Telegram integration demands a
-string. Provisioning then fails, and a failed alerting provisioning **takes Grafana's whole
-startup down**, not just the alert.
-
-If `.env` has no Telegram credentials, the render step leaves the directory empty and Grafana
-simply starts with no alerting. It never starts with a half-configured one, because a policy
-pointing at a missing contact point is also fatal.
+The deploy restarts Grafana when a pull changes `config/grafana/alerting/`: dashboards reload on
+their own, alert rules do not.
 
 ## What a message looks like
 
@@ -113,10 +173,10 @@ The bot only sends, so there is nothing to poll. To check the whole chain:
 
 ## Adding a rule
 
-Copy an existing block in `config/grafana/alerting/rules.yml`, give it a fresh `uid`, and write the expression so it
-returns 1 when it should fire (`<something> > bool <threshold>`). Commit, and the deploy applies
-it. A malformed rule is rejected at startup, so check `docker logs grafana | grep provision`
-after deploying.
+Copy an existing block in `config/grafana/alerting/rules.yml`, give it a fresh `uid`, and write the
+expression so it returns 1 when it should fire (`<something> > bool <threshold>`). Commit, and the
+deploy applies it. A malformed rule is rejected at startup, so check
+`docker logs grafana | grep provision` after deploying.
 
 ## An indexer down on a match night is the line, not the tracker
 
@@ -178,63 +238,8 @@ transcode" would have been right about the facts and useless twice out of three 
 Both rules wait `for: 5m`, so a re-encode that lasts a few frames while a client picks its stream, or
 one seek, is not a message.
 
-### Which audio codecs get converted is learned
-
-`audio-compat.py` used to carry a list of codecs "the TV decodes without help". A list kept by hand
-is wrong the day a client disagrees with it, so there is no list. But "a client had this codec
-re-encoded" is not proof the client cannot play it either, and the difference is the `cause` label
-on `media_transcode_sessions`:
-
-| `cause` | Meaning | Can a file change fix it |
-| :--- | :--- | :--- |
-| `codec` | Direct play was allowed and the client's profile refused this audio codec | Yes, an added track in another codec |
-| `no_direct_play` | Plex: the client did not ask for direct play | No |
-| `other` | Jellyfin: its `TranscodeReasons` name something other than the audio codec | No |
-| `unknown` | Nothing says which | Not known, so nothing is done |
-
-`no_direct_play` is the trap. The Plex app on a Samsung TV turns direct play off itself for some 4K
-files, and Plex then builds a DASH stream (video and audio cut into short segments over HTTP) whose
-profile takes only AAC. EAC3 is re-encoded; once an AC3 track is added, the AC3 is re-encoded just
-the same. Plex's session API does not say whether direct play was requested, only the decision
-request in its log does (`directPlay=0` or `1`, keyed by the transcode session's id), so pi-metrics
-mounts Plex's `Logs` directory read-only. Those requests are logged at debug level, Plex's default;
-with debug logging off, every Plex session reads `unknown`. Jellyfin reports its own reasons, and
-`AudioCodecNotSupported` is the one that means `codec`.
-
-The `playback` collector writes `appdata/pi-metrics/audio-recodes.json` from `codec` sessions only:
-the audio codec, which clients, and the last hundred files it happened on. It also requires the video
-to have been copied. When the video is re-encoded too, the audio goes along whatever its codec, and
-Jellyfin's Live TV does that to AAC every day.
-
-The same file lists sessions whose client turned direct play off, marked as not fixable and
-teaching no codec, and each entry carries a conversion plan worked out from the server's description
-of the file: which track the AC3 is built from, the extra size, the duration. That is what
-[audio-convert.md](audio-convert.md) shows at `audio.platanosverdes.com`, where a file can be
-converted right away instead of waiting for the night; the alert links there.
-
-At 01:30 `audio-compat.py` reads that file. A library file is converted when its main track (flagged default,
-else the first) is in a codec recorded there or in its seed (DTS and TrueHD, what it converted
-before anything was measured), and no other track would play in its place: one in a playable codec,
-the same language and as many channels up to 5.1, that is not a commentary. The recorded files go first, newest first, so the film that set off the alert is
-the first one fixed. What it does **not** do:
-
-- **Convert on a guess.** A codec no server has refused for a client yet is left alone.
-- **Help a client that cannot play AC3.** AC3 is what it adds, so if AC3 itself is recorded as
-  refused it says so in `audio-compat.log` and ignores it; the alert says the same.
-- **Fix a client that turned direct play off.** That is in the client, not the file.
-- **Pick a track for the client.** A file with a DTS 5.1 and an AC3 5.1 of the same mix already has
-  something playable, so it is skipped, and if the client still chose the DTS the log says so the
-  next night.
-- **Forget.** A codec a client update fixed stays recorded until it is deleted from the JSON by hand,
-  followed by `docker restart pi-metrics`: the collector holds the file in memory and would write the
-  codec straight back.
-- **Touch a file that is still seeding**, for the hardlink reason in the script's docstring. The
-  page can, after a confirmation; [audio-convert.md](audio-convert.md#a-file-that-is-still-seeding)
-  says what that costs.
-
-Adding a codec can put a lot of the library in the queue at once, and every conversion keeps the
-old file as `.original` beside the new one, so the disk pays for both until those are pruned.
-`MAX_PER_RUN` (two a night) is what spreads that out.
+Which audio codecs get converted, and why `cause` decides it, is in
+[audio-convert.md](audio-convert.md#which-codecs-get-converted-is-learned).
 
 ## The *arrs notify on their own
 

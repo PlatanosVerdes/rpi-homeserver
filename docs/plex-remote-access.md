@@ -9,6 +9,7 @@ from outside through the VPN, Plex has to be convinced that you are still "at ho
 It does not happen by itself, and the piece of Tailscale that sounds like it should do it (the exit
 node) does not.
 
+<!-- diagram: plex-local-remote -->
 ```
 browser ──► 192.168.1.180:32400   Plex says "local"   free
         └─► 100.x.x.x:32400       Plex says "remote"  Remote Watch Pass prompt
@@ -18,14 +19,13 @@ Both addresses are the same Raspberry Pi. Plex treats them differently.
 
 ## Terminology
 
-Four terms used throughout this page.
-
 | Term | What it means here |
 | :--- | :--- |
-| **RFC1918 address** | The address ranges reserved for private networks: `192.168.x.x`, `10.x.x.x`, `172.16–31.x.x`. If an address starts like that, it is "inside somebody's house or office" |
-| **CGNAT range** | `100.64.0.0/10`, a range reserved for carriers. Tailscale hands out its addresses from here, so a Tailscale address is **not** RFC1918, and software that only recognises RFC1918 will not treat it as local |
-| **Tailnet** | Your private Tailscale network: every device you have installed it on, able to reach each other from anywhere |
-| **Exit node vs subnet router** | Two different jobs. An **exit node** sends your *internet* traffic out through that machine. A **subnet router** makes the *other devices on that machine's local network* reachable through the tunnel. Wanting the second and enabling the first is the classic mistake |
+| **RFC1918 address** | The ranges reserved for private networks: `192.168.x.x`, `10.x.x.x`, `172.16–31.x.x`. "Inside somebody's house or office" |
+| **CGNAT range** | `100.64.0.0/10`, reserved for carriers. Tailscale hands out its addresses from here, so a Tailscale address is **not** RFC1918, and software that only recognises RFC1918 will not treat it as local |
+
+Tailnet, exit node and subnet router are defined in [tailscale.md](tailscale.md); wanting a subnet
+router and enabling an exit node is the classic mistake.
 
 ## How Plex decides local vs remote
 
@@ -154,7 +154,7 @@ triggers the paywall. Sharing the machine gets them a Plex they have to pay for.
 | Option | Cost | What to watch out for |
 | :--- | :--- | :--- |
 | **Plex Pass on the server owner's account** | One subscription | Nothing. It covers the owner and everyone they share with, from anywhere, with no network work at all |
-| **Invite them into the tailnet** as an external user | Free | Write the access policy **before** inviting, or they reach every machine in the house: step 7 of [tailscale.md](tailscale.md) has it. Only works on devices that can run Tailscale, so not on a TV or a Chromecast. And counting as "local" means per-user bandwidth limits no longer apply to them |
+| **Invite them into the tailnet** as an external user | Free | Write the access policy **before** inviting, or they reach every machine in the house: [tailscale.md](tailscale.md#step-5--giving-someone-else-access) has it. Only works on devices that can run Tailscale, so not on a TV or a Chromecast. And counting as "local" means per-user bandwidth limits no longer apply to them |
 | **They buy their own Remote Watch Pass** | One subscription per person | Covers only their account and nobody else's |
 
 For more than a person or two, buy the Plex Pass. Plex documents none of this `local` flag

@@ -1,686 +1,110 @@
 # RPi HomeServer
 
-A modular, Docker-based home server for Raspberry Pi. Uses Docker Compose's `include` feature to keep each concern in a separate, maintainable file.
+A Docker Compose home server for Raspberry Pi: media (Plex, Jellyfin, the *arrs, qBittorrent with
+private-tracker automation), live TV over AceStream, DNS and ad-blocking, monitoring, logs and
+alerts. One `docker-compose.yml` includes four modules, every image version is pinned in
+`versions.env`, and a push to `main` is the only way anything is deployed.
 
-> **Companion repo:** Personal and custom services live in [rpi-services](https://github.com/PlatanosVerdes/rpi-services) — bots, integrations, and anything too personal or domain-specific to be generic. Both repos share the same Docker network and Caddy instance.
+> **Companion repo:** personal services (Telegram bots, the Fantasy panel, a public flight board)
+> live in [rpi-services](https://github.com/PlatanosVerdes/rpi-services). This repo stays generic
+> enough to clone. Both share `media-network` and one Caddy, and are deployed by the same script.
 
----
+## Two nodes, three doors
 
-## Infrastructure Overview
+<!-- diagram: two-nodes-three-doors -->
 
-| Module | Purpose | Key Services |
+| Node | Runs | Deploys on |
 | :--- | :--- | :--- |
-| **Core** | Entry point & Networking | Caddy, Homepage, Pi-hole, Speedtest-tracker, cloudflared (opt-in) |
-| **Media** | Streaming & Live TV | Plex, Jellyfin, Seerr, Bazarr, Maintainerr, Tautulli, watch-next, subtitle-links, audio-convert; AceStream: aceserve, gluetun, kubo, bifrost, farnsworth; sleipnir, muninn |
-| **Arrs** | Automation & Downloads | Radarr, Sonarr, Prowlarr, qBittorrent, FlareSolverr, Unpackerr, autobrr, qbit-manage, tracker-control, cross-seed, torrent-drop |
-| **Monitoring** | System Health | Prometheus, Grafana, Pushgateway, node-exporter, cAdvisor, blackbox-exporter, pi-metrics, qBittorrent/Pi-hole exporters, tailscale-metrics, VictoriaLogs + Vector |
+| raspi (main) | everything: `COMPOSE_PROFILES=all` plus the tunnel | the GitHub webhook and a 30-minute cron |
+| streamhalla | the AceStream + Jellyfin subset and its own metrics, with `overrides/secondary-node.yml` | its own 30-minute cron |
 
-Two machines run this repo from `main`: the main Pi runs everything (`COMPOSE_PROFILES=all`), and a
-second node runs only the AceStream + Jellyfin subset with `overrides/secondary-node.yml`. Each has
-its own cron and deploys itself.
+Both run `main`. Differences live in each node's `.env`, which the deploy decrypts from a private
+repo. Details: [docs/nodes.md](docs/nodes.md).
 
----
-
-## How a change reaches the Pi
-
-Nothing is deployed by hand. A push is the only trigger, and the repo is the source of truth.
-
-```
- torre           one-pace-downloader      wallabot     PolFerrerAcademyOffers
-     │                   │                   │                  │
-     └──── push to main ─┴───────────────────┴──────────────────┘
-                              │
-                    auto-tag.yml → tag vYYYY.MM.DD
-                              │
-                              ▼
-              ┌───────────────────────────────────────┐
-              │ rpi-services                          │
-              │ bump-app-versions.yml  (every 30 min) │
-              │ versions.env → commit + push          │
-              └───────────────────────────────────────┘
-                              │
-   your push ─────────────────┤
-                              ▼
-                    GitHub webhook (push event)
-                              │   HMAC-SHA256 signature
-                              ▼
-           Cloudflare edge   deploy.<domain>
-                              │   outbound tunnel, no ports opened
-                              ▼
-                    cloudflared ──► 127.0.0.1:9000
-                              │   deploy-webhook.py verifies the signature
-                              ▼
-                    ╔═════════════════════╗
-                    ║  scripts/deploy/apply.sh  ║ ◄──── cron every 30 min
-                    ╚═════════════════════╝        (self-heal fallback)
-```
-
-The cron is not redundant: it restarts containers that died on their own and picks up pushes that
-landed while the Pi or the tunnel was down. Every node runs it; only the main Pi has the webhook, so
-a second node deploys on its cron alone.
-
-### What a deploy actually does
-
-```
-scripts/deploy/apply.sh
-   │
-   ├─ secrets ................. .env decrypted from homelab-secrets, if this node has the checkout
-   ├─ flock ................... another deploy running? leave .deploy.pending, it runs once more
-   ├─ git pull rpi-homeserver . apply.sh itself changed? start over on the new version
-   ├─ render alerting ......... template (git) + secrets (.env), only where grafana runs
-   │                            └─► appdata/grafana-alerting/
-   ├─ reload/restart .......... caddy reload, Grafana, Homepage, Vector, Prometheus, blackbox,
-   │                              webhook unit: only what the pull touched
-   ├─ docker compose pull ...... the services/ images whose pinned tag is new
-   │                              (built by CI: docs/service-images.md)
-   ├─ docker compose build ..... only a built-here service whose build context changed
-   │                              (all of them if versions.env or a compose file did)
-   ├─ docker compose up -d ..... recreates only what changed (app images pull their new tag here)
-   ├─ git pull rpi-services  ──► docker compose up -d (same rule)
-   ├─ install-crontab, logrotate, udev ...... host state from both repos
-   ├─ sync ..................... arr-config, config-export --check, pihole-dns, arr-links,
-   │                              plex-prefs, qbit-config, jellyfin-guide
-   └─ metrics ──► Pushgateway
-                        │
-                        ▼
-                   Prometheus ──► Grafana ──► alert rules ──► Telegram
-```
-
-Details: [docs/deploy-webhook.md](docs/deploy-webhook.md) for the webhook and tunnel,
-[docs/alerting.md](docs/alerting.md) for the alert rules and the dead man's switch,
-[docs/service-images.md](docs/service-images.md) for the images built from `services/`: GitHub
-Actions builds and publishes them, and its "Deploy <service> <tag>" commit is what the Pi pulls.
-
----
-
-## Media & Download Policy
-
-The library is deliberately tuned for how it is actually watched, not for maximum
-file fidelity. This documents the rules and the reasoning, so the choices below are
-not mistaken for misconfiguration.
-
-**Playback targets (use case):**
-- **Samsung QLED TV (Tizen) on the LAN** — the primary screen, watched in high resolution.
-- **iPad** — secondary, on the go.
-
-Plex runs on the Pi, which is weak at video transcoding, so files should
-**direct-play** (little or no transcoding) on these devices.
-
-**What the TV can and cannot play** (verified from Plex logs):
-- **Direct-plays:** H.264, HEVC (H.265), 4K, HDR10, EAC3/AC3 audio.
-- **Fails** (the TV cannot decode it and the Pi cannot transcode it in time, "Not enough CPU"): **AV1** and **VC-1**.
-- **DTS / TrueHD:** trigger an audio-only transcode, which the Pi handles fine.
-
-**Download rules (Radarr / Sonarr custom formats + quality profiles):**
-- **Reject AV1** (unplayable here).
-- **Prefer x264/H.264 1080p encodes:** excellent quality, small size, universal playback.
-- **Quality priority: Bluray-1080p is preferred over Remux-1080p**, with Remux kept as a
-  fallback so a title is never left un-downloaded. This is a deliberate inversion of the
-  tools' default (which prefers Remux for maximum fidelity): a Remux is a lossless 30-80 GB
-  copy of the disc, but that extra quality is imperceptible on a 55-inch TV or an iPad and
-  only wastes disk, whereas a Bluray-1080p encode is roughly 99% of the quality at 5-15 GB.
-- **Penalize** Remux and heavy lossless audio (DTS-HD): quality the devices cannot benefit from.
-- **Reject RAR packs outright** (`RAR pack (reject)`, **-20000**). A packed release is seeded as
-  its `.rNN` archives while Plex plays the `.mkv` unpackerr extracts, so the film sits on disk
-  twice until the tracker is paid, and no hardlink can ever fix that: the extracted file is new
-  bytes. There is nothing in a release title that says "this is packed", so the format matches the
-  groups that actually did it here (GAZPROM, CEBRAY, GAZER) and the list grows as more turn up.
-
-  It used to be -300, a nudge rather than a veto, and the nudge lost. Measured on 2026-08-21,
-  **Project Hail Mary was occupying 197 GB in 182 files with no shared inode**: two packed
-  releases of the same film, 81.7 GB and 57.8 GB of archives, plus the 57.5 GB `.mkv` extracted
-  from one of them. That is 7% of the data disk on one title.
-
-  The score is -20000 rather than -6000 for a reason worth knowing: `minFormatScore` is -6000 and a
-  release is only rejected when its **total** falls below it, so positives offset the penalty. The
-  release that caused the 197 GB was Spanish-audio (+3000 or more), which a -6000 penalty would
-  have let through at -3000. -20000 cannot be offset by anything this profile awards.
-
-  **The trade-off, stated plainly:** a film available only as a packed release will now not be
-  downloaded at all. Project Hail Mary is exactly that case, and this repo is choosing the empty
-  shelf over 197 GB.
-- **Language preference:** Castilian Spanish > VOSE (original audio with Spanish subtitles) > English > Latin-American Spanish (avoided).
-- **A film is considered finished at `cutoffFormatScore` 2200**, which is Spanish audio plus x264.
-  This is the setting that decides when Radarr stops hunting for a better release, and it used to
-  be **10000, a score nothing can reach**: the positive formats here add up to at most +6700 and
-  several of them are mutually exclusive, so a realistic good release scores about +3200. The
-  consequence was that no film was ever "done" and every one of them stayed in permanent upgrade
-  search. Each upgrade then replaces the library file and leaves the previous release seeding its
-  tracker debt, so the churn was paid for in disk.
-
-  It is a threshold to reach, not a penalty, which is what makes it easy to confuse with
-  `minFormatScore`: that one is a floor (reject below it), this one is a target (stop when reached).
-
-  The remaining churn is deliberate: a film that exists only with English audio scores 700 and keeps
-  being searched, because Castilian audio is worth +2000 here and is worth waiting for. Dropping
-  this to 700 would stop that too, at the cost of never upgrading to a Spanish release.
-- **Rule of thumb for smooth playback:** 1080p, x264/H.264, AAC or EAC3/AC3, text subtitles (SRT / mov_text).
-
-**Supporting automation:**
-- **Bazarr** auto-downloads Spanish subtitles for the whole library.
-- **Maintainerr** auto-cleans watched movies (movies library only) to keep the data pool from filling
-  up: two days after you watch one it unmonitors it in Radarr and deletes the library copy.
-- **qbit-manage** finishes that job on the torrent side, hourly, with a share-limit group per
-  tracker ([docs/lifecycle.md](docs/lifecycle.md)). Radarr imports by hardlink, so
-  every download has two names: the one qBittorrent seeds and the one Plex plays. Maintainerr removes
-  the second, and qbit-manage removes the first once the tracker is paid:
-
-  | State | Tracker | What happens |
-  | :--- | :--- | :--- |
-  | library shares the file | private | nothing, it keeps seeding: it costs no extra disk |
-  | any | public | torrent removed 2 h after it finished, whether or not the library shares the file |
-  | library let go (`noHL`), or grabbed for ratio (`ratio`) | private, seed time not reached | keeps seeding |
-  | library let go, or grabbed for ratio | private, seed time reached but **still uploading** | keeps seeding until a full day passes with no activity |
-  | library let go, or grabbed for ratio | private, seed time reached and **gone quiet** | moved to the recycle bin, emptied a day later |
-
-  The seed time and ratio per tracker live in `config/qbit-manage/config.yml` (`share_limits`), and
-  [docs/lifecycle.md](docs/lifecycle.md) has the table with the reason for each number. A RAR release
-  never shares an inode with the `.mkv` unpackerr extracts from it, so it is `noHL` from the start and
-  goes as soon as its tracker is paid.
-
-  **`keep` is the manual override**: tag a torrent `keep` in qBittorrent and no group touches it,
-  whatever the goals say. No deploy, no config edit, effective on the next pass. `keep-bonus` is the
-  same brake applied automatically by the tracker-control service, for a tracker that pays for holding data.
-  It is implemented and deliberately **not** configured: measured on DigitalCore, it bought 18% of
-  leech bonus for 179 GB of disk on an account already at ratio 4.21, while the free 9% that comes
-  from library hardlinks costs nothing. See [docs/private-trackers.md](docs/private-trackers.md).
-
-  qBittorrent's own share limits are not set by hand: qbit-manage writes them per torrent from its
-  groups. It runs with `share_limits` on, so its own `--dry-run` is not read-only either.
-- **the tracker-control service** keeps the account on the right side of the tracker's ratio rule
-  without anyone watching it. Every half hour it logs into TorrentLeech, reads what the site says
-  (ratio, uploaded, downloaded, points, any active warning) and acts in the same pass on one derived
-  number:
-
-  ```
-  buffer   = uploaded - min_ratio x downloaded
-  headroom = buffer / min_ratio      <- GB of non-freeleech downloads that still fit
-  ```
-
-  | Headroom | Prowlarr | Radarr | autobrr |
-  | :--- | :--- | :--- | :--- |
-  | under 25 GB | freeleech results only | `requiredFlags = [1]` | 3 grabs a day |
-  | 25 to 100 GB | freeleech results only | `requiredFlags = [1]` | 2 grabs a day |
-  | over 100 GB | all results | `requiredFlags = []` | 1 grab a day |
-
-  **The filter lives in Prowlarr because that is the only place that covers everything.**
-  `requiredFlags` exists on Radarr's Torznab indexer and not on Sonarr's, and Prowlarr full-syncs
-  its indexers to both, so anything switched in an *arr is overwritten on the next sync. The
-  tracker's own freeleech facet, applied in Prowlarr, filters every app that searches through it,
-  Sonarr included, and nobody loses an indexer. With 18 GB of headroom one 20 GB season pack that is
-  not freeleech takes the ratio from 0.52 to 0.397, and 0.4 is the line TorrentLeech disables
-  accounts under. The grabber also pauses below a free-space floor whatever the ratio says, because
-  a grab cannot be deleted until its hit & run window closes. Thresholds live in
-  `config/trackers/rules.json`; `DRY_RUN=1` in the container's environment logs what it would change
-  and writes nothing.
-- **Private tracker rules, per site, and what got an account disabled once**:
-  [docs/private-trackers.md](docs/private-trackers.md).
-- **Why the ratio on private trackers was near zero** (no inbound connections; the line was behind
-  CGNAT until October 2026 and has a public IPv4 now), and how to check inbound:
-  [docs/seeding-and-ratio.md](docs/seeding-and-ratio.md).
-- **Unpackerr** unrars scene releases. Radarr and Sonarr cannot read a `.rar` set, so those
-  releases sit in the queue as `importPending` forever and the disk fills up with parts that
-  never become a movie. The original archives are left alone so the torrent keeps seeding;
-  only the extracted copy is removed once the *arr has imported it.
-
-### Deletion policy
-
-The rule of record. Everything above is its implementation, and any doubt is settled here:
-
-1. **Nothing is deleted before it has been watched.** Watched is Plex's verdict, at 95% of the
-   runtime, so a film abandoned in the credits does not count.
-2. **A watched film is deleted two days later**, library copy gone and unmonitored in Radarr. The
-   delay leaves room to rewatch it, for someone else in the house to see it, or to notice that Plex
-   marked something watched by accident. The delete is not reversible.
-3. **The torrent is a separate debt and the tracker decides when it is paid.** A public tracker asks
-   for nothing, so its torrent goes two hours after it finished. A private one keeps seeding until it
-   has met that tracker's own hit & run rule plus a margin (per-tracker numbers in
-   [docs/lifecycle.md](docs/lifecycle.md)), because leaving early is how an account gets banned. Disk
-   pressure is never a reason to pay less.
-
-The whole path, from the indexer that announces a release to the recycle bin, with what each
-tracker asks for and what is configured against it, is in [docs/lifecycle.md](docs/lifecycle.md).
-
-Two consequences that read like bugs and are not:
-
-- **A film that is still seeding is normally still in Plex, and costs nothing extra for it.** Radarr
-  imports by hardlink, so what qBittorrent seeds and what Plex plays are the same bytes under two
-  names. Measured on 2026-08-20: 55 of 64 torrents were exactly that. Of the other nine, one was
-  still downloading, four were films the policy had already deleted and whose torrent was only
-  paying its seed debt (gone from Plex on purpose), three were RAR releases whose extracted `.mkv`
-  shares nothing with the archives, and one was an orphan.
-- **A film deleted from the *arr while its download is in flight becomes an orphan.** The download
-  finishes with nothing to import into, so it stays in the queue as `importBlocked` with
-  `Movie title mismatch, automatic import is not possible`, and Radarr re-sends its
-  `onManualInteractionRequired` Telegram alert **on every restart**: one deletion on 2026-08-09 was
-  still raising alerts eleven days later, after a reboot. That file never reaches Plex. Its torrent
-  still owes the tracker, so it stays until the goal is met. Deleting the queue entry does not stick:
-  the *arr rebuilds its queue from the download client, so the item is back on the next refresh
-  (measured, not assumed). What clears it is **taking the torrent out of the *arr's category** in
-  qBittorrent, which is safe while `auto_tmm` is off (it is: nothing moves on disk), stops the *arr
-  from ever seeing it again, and leaves qbit-manage finishing the job, because it asks
-  about hard links and trackers and never about categories. Both this and data a removed torrent left
-  behind are exported by the `pi-metrics` service as `arr_orphan_*` every five minutes, and alerted on
-  ("Download nothing can import", "Data in downloads that nothing owns"), because the *arr's own
-  notification only fires when it restarts and is easy to lose among the reboot alerts.
-
-### Indexers / trackers
-
-Current: eight public (**1337x, The Pirate Bay, YTS, LimeTorrents, Knaben, NoNaMe Club,
-BigFANGroup**, and **Nyaa.si** for anime), plus four private sites: **TorrentLeech**,
-**DigitalCore**, **C411** and **retrotoon.world**. Their rules, seed goals and wiring live in
-[docs/private-trackers.md](docs/private-trackers.md), which is the source of truth for anything
-tracker-shaped; nothing about a private tracker belongs only here.
-
-Elitetorrent, MoviesDVDR and Frozen Layer were here and are not any more. The last of them went on
-2026-08-24: its Cardigann definition had been deleted upstream, so Prowlarr reported
-`Indexers have no definition and will not work` on every start, and that is an error-level health
-issue, which its Telegram connection forwards. A permanent alert about something unfixable is worse
-than a missing indexer, and Nyaa.si covers the same ground.
-
-**Next tier**, pending to evaluate:
-- General / joinable now: **IPTorrents**, **FileList**.
-- Cinephile / top-tier (invite-only): **PassThePopcorn** (movies), **HDBits** (quality), **AnimeBytes**
-  (anime & Japanese cinema), **BroadcastTheNet** (TV).
-- Modern UNIT3D (clean API, some open signups): **Blutopia**, **Aither**, **ReelFliX**, **LST**, **Fearnopeer**.
-- Watch `r/OpenSignups` for when good trackers open registration.
-
----
-
-## Fresh Install (from scratch)
-
-### 1. Prerequisites
-
-```bash
-# Install Docker
-curl -fsSL https://get.docker.com | sh
-sudo usermod -aG docker $USER
-# Log out and back in
-
-# Install Tailscale
-curl -fsSL https://tailscale.com/install.sh | sh
-```
-
-### 2. Clone the repo
-
-```bash
-git clone <your-repo-url> ~/rpi-homeserver
-cd ~/rpi-homeserver
-```
-
-### 3. Configure environment
-
-```bash
-cp .env.example .env
-# Edit .env — fill in STATIC_IP, TAILSCALE_IP, PUID/PGID, DATA_ROOT, API keys, etc.
-nano .env
-```
-
-Run `id -u` and `id -g` to get your PUID and PGID values.
-
-Optionally, keep `.env` encrypted in a private repo and let the deploy write it from there:
-[docs/secrets.md](docs/secrets.md). Both nodes here do that, so on them `.env` is rewritten from
-the encrypted copy on every pass: change a secret there, not on the Pi.
-
-### 4. Mount external storage
-
-```bash
-lsblk -f                          # find UUID and fstype of your disk
-sudo mkdir -p /mnt/data
-# Add to /etc/fstab:
-UUID=your-uuid  /mnt/data  ext4  defaults,noatime,nofail  0  2
-sudo mount -a
-```
-
-Set `DATA_ROOT=/mnt/data` (and `DATA_DB_ROOT=/mnt/data/db`) in `.env`.
-
-### 5. Configure Docker log limits
-
-Prevents the SD card from filling up. Create/edit `/etc/docker/daemon.json`:
-
-```json
-{
-  "log-driver": "json-file",
-  "log-opts": {
-    "max-size": "10m",
-    "max-file": "3"
-  }
-}
-```
-
-```bash
-sudo systemctl restart docker
-```
-
-### 6. Start services
-
-```bash
-export COMPOSE_ENV_FILES=versions.env,.env    # image versions live in versions.env
-docker compose up -d
-```
-
-### 7. Set up Tailscale
-
-```bash
-sudo tailscale up --accept-dns=false
-sudo tailscale set --advertise-exit-node --advertise-routes=192.168.1.180/32,192.168.1.154/32 --accept-dns=false
-```
-
-Then approve the exit node and both routes in the Tailscale admin console, and set Pi-hole as the
-DNS server.
-→ See [docs/tailscale.md](docs/tailscale.md)
-
-### 8. Configure auto-deployment
-
-Install the crontab from the repo (never with `crontab -e`, the deploy overwrites the live one):
-
-```bash
-bash ~/rpi-homeserver/scripts/setup/install-crontab.sh
-```
-
-That merges this repo's `scripts/crontab` with a companion repo's fragment if there is one, and
-`scripts/deploy/apply.sh` re-runs it on every deploy, so committed cron changes apply themselves.
-
-For push-triggered deploys instead of waiting for the 30-minute cron, see
-[docs/deploy-webhook.md](docs/deploy-webhook.md).
-
-### 9. Pi-hole DNS records (automatic)
-
-Nothing to add by hand: every deploy runs `scripts/sync/pihole-dns.sh`, which points each
-`*.platanosverdes.com` host in the Caddyfile at `TAILSCALE_IP` in Pi-hole's local DNS, and removes
-the record when its route goes. Hosts listed in `PIHOLE_DNS_PUBLIC_HOSTS` (Grafana) are left out, so
-they resolve to Cloudflare Access even on the tailnet.
-
-### 10. Add entries to `/etc/hosts` on client devices
-
-For HTTP short names to work on your laptop/desktop:
-
-```
-# LAN access
-<STATIC_IP>    raspi homepage jellyfin seerr plex grafana prometheus push prowlarr radarr sonarr flare torrent speedtest pihole
-
-# Tailscale access (add same names pointing to Tailscale IP if not using Pi-hole DNS)
-<TAILSCALE_IP> raspi homepage jellyfin seerr plex grafana prometheus push prowlarr radarr sonarr flare torrent speedtest pihole
-```
-
-### 11. Check what still needs a human
-
-```bash
-bash scripts/recovery/recovery-status.sh
-```
-
-The deploy converges everything derivable from `.env`: Radarr and Sonarr's custom formats and
-quality profiles, Pi-hole's DNS records, qBittorrent's limits, the Seerr and Bazarr links. A
-few things it cannot, because each is a one-time interactive step: the Plex claim, Jellyfin's setup
-wizard, and checking that a fresh Grafana database came up in WAL mode.
-
-This prints which of those are still outstanding, so they get found now rather than the evening
-something does not work.
-
----
-
-## Profiles — selecting which services to run
-
-Every service belongs to one or more profiles. Set `COMPOSE_PROFILES` in `.env` to control what starts — no need to touch the compose files.
-
-| Profile | Services |
+| Door | Who gets in |
 | :--- | :--- |
-| `essential` | Caddy, Homepage, Pi-hole, Speedtest-tracker |
-| `moni` | Prometheus, Grafana, Pushgateway, node-exporter, cAdvisor, blackbox-exporter, pi-metrics, qbittorrent-exporter, pihole-exporter, tailscale-metrics, VictoriaLogs, Vector, Speedtest-tracker |
-| `acestream` | Aceserve, gluetun, kubo, bifrost, Jellyfin, farnsworth + Grafana/Prometheus/Pushgateway |
-| `media` | Plex, Seerr, Bazarr, Maintainerr, Tautulli, watch-next, subtitle-links, audio-convert, Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr, Unpackerr, qbit-manage, autobrr, tracker-control, cross-seed, torrent-drop |
-| `vpn` | sleipnir, docker-socket-proxy, gluetun-test, huginn |
-| `bots` | muninn, docker-socket-proxy |
-| `tunnel` | cloudflared |
-| `all` | Everything except cloudflared, which needs a token and is opt-in through `tunnel` |
+| Tailnet (Tailscale + Pi-hole + Caddy) | your devices; most apps ask nothing more |
+| Public, behind Cloudflare Access | anyone who passes Access's login, through an outbound tunnel |
+| Public, no login | only the deploy webhook (HMAC-signed) and apps public by design |
 
-Every service is also a profile of its own name, so a node that runs a subset lists services
-instead of groups.
+Plex is never proxied: it is reached on its LAN address, over Tailscale subnet routes from outside.
+Details: [docs/access.md](docs/access.md).
 
-```bash
-# .env — main Pi (everything, plus the tunnel)
-COMPOSE_PROFILES=all,tunnel
+## What runs
 
-# .env — second node: the AceStream + Jellyfin subset, service by service
-COMPOSE_PROFILES=jellyfin,gluetun,aceserve,kubo,bifrost,sleipnir,docker-socket-proxy,speedtest-tracker,prometheus,pushgateway,node-exporter,cadvisor
-COMPOSE_FILE=docker-compose.yml:overrides/secondary-node.yml
-```
+| Module | Services |
+| :--- | :--- |
+| `compose-core.yml` | Caddy, Homepage, Pi-hole, Speedtest-tracker, cloudflared (opt-in) |
+| `compose-media.yml` | Plex, Jellyfin, Seerr, Bazarr, Maintainerr, Tautulli, watch-next, subtitle-links, audio-convert; AceStream: gluetun, aceserve, kubo, bifrost, farnsworth; sleipnir, muninn |
+| `compose-arrs.yml` | Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr, Unpackerr, autobrr, qbit-manage, tracker-control, cross-seed, torrent-drop |
+| `compose-mon.yml` | Prometheus, Grafana, Pushgateway, node-exporter, cAdvisor, blackbox-exporter, pi-metrics, qBittorrent and Pi-hole exporters, tailscale-metrics, VictoriaLogs, Vector |
 
----
+Every service has a profile of its own name plus a group, so a node picks exactly what it runs.
+Images for the services in `services/` are built by GitHub Actions and pulled, not compiled on the
+Pi. bifrost, sleipnir and muninn are apps in their own repos, pinned here.
 
-## Project Structure
+## How a change deploys
 
-```
-config/      Static config files (Caddyfile, Prometheus, Grafana dashboards, Homepage)
-services/    Custom services source, one Docker image each, built by CI and pulled from GHCR
-scripts/     Operational scripts, grouped by what they do:
-  deploy/      apply.sh, the orchestrator the webhook and the cron call
-  setup/       host state apply.sh converges on each pass: cron, log rotation, udev
-  recovery/    run by hand after something broke: rebuild a service, see what a human still owes
-  sync/        pushes config that lives only in an app's appdata, every deploy
-  ops/         everything else on a schedule (backup, heartbeat, searches)
-appdata/     Persistent container data (databases, app state) — not in git
-docs/        Setup guides: architecture.md for what talks to what, lifecycle.md for what
-             happens to one torrent from the indexer to the recycle bin
-```
+<!-- diagram: push-to-container -->
 
----
+1. A push to `main` reaches the Pi through a GitHub webhook and a Cloudflare tunnel; a cron every
+   30 minutes on each node catches anything missed.
+2. `scripts/deploy/apply.sh` decrypts `.env`, pulls both repos, recreates only the containers whose
+   image changed, and pushes the config that lives in apps' databases back into them.
+3. A change to a `services/` image deploys when CI commits its new pin, minutes after the source push.
 
-## Module Guides
+Details: [docs/deploy.md](docs/deploy.md).
 
-### Networking (Tailscale + Pi-hole)
-Tailscale provides secure remote access. Pi-hole handles DNS and ad-blocking for all Tailscale devices.
+## What gets deleted
 
-**Access pattern:**
-- **At home (LAN):** use the Pi's local IP (`STATIC_IP`) or HTTP short names (`http://jellyfin`, `http://grafana`…)
-- **Outside (remote):** activate Tailscale on your device → use the Pi's Tailscale IP (`TAILSCALE_IP`) or HTTPS subdomains (`https://jellyfin.platanosverdes.com`)
+Nothing is deleted before it is watched. A watched film goes two days later; its torrent goes when
+its tracker is paid, never before. [docs/lifecycle.md](docs/lifecycle.md) has the rules and every
+number.
 
-**Start Tailscale on the Pi:**
+## Documentation
 
-`tailscale up` is for the first login only. Everything after that is `tailscale set`, which changes
-only the flags it is given; `up` resets the ones it is not told to keep and takes Plex and the
-house's DNS down with it.
+| | Doc | What it covers |
+| :--- | :--- | :--- |
+| **Run it** | [host-setup.md](docs/host-setup.md) | A fresh Pi to the first deploy: disks, Docker, journald, cron |
+| | [nodes.md](docs/nodes.md) | The two nodes, profiles, the override file, what one node reads from the other |
+| | [deploy.md](docs/deploy.md) | The deploy pass, concurrency and retries, the webhook and tunnel |
+| | [secrets.md](docs/secrets.md) | `.env` encrypted per node with SOPS + age |
+| | [backups.md](docs/backups.md) | Nightly appdata archive, restore, offsite |
+| **Reach it** | [access.md](docs/access.md) | The three doors, adding a public app |
+| | [tailscale.md](docs/tailscale.md) | Exit node, subnet routes, Pi-hole as tailnet DNS, guests |
+| | [plex-remote-access.md](docs/plex-remote-access.md) | Why Plex counts as local from outside, and how to keep it so |
+| **Watch it** | [alerting.md](docs/alerting.md) | Metrics, dashboards, alert rules, Telegram, the dead man's switch |
+| | [logging.md](docs/logging.md) | VictoriaLogs and Vector, LogsQL |
+| **Media** | [media-policy.md](docs/media-policy.md) | Playback targets, formats, scores, qBittorrent limits |
+| | [lifecycle.md](docs/lifecycle.md) | One torrent from indexer to recycle bin, Maintainerr, orphans |
+| | [private-trackers.md](docs/private-trackers.md) | Per-site rules, the ratio loop, cross-seed, inbound, indexers |
+| | [audio-convert.md](docs/audio-convert.md) | Adding an AC3 track to files a client re-encodes |
+| | [watch-next.md](docs/watch-next.md) | Fetching the next episodes as you watch |
+| **Services** | [farnsworth.md](docs/farnsworth.md) | AceStream live TV, and handing a channel to VLC |
+| | [sleipnir.md](docs/sleipnir.md) | The VPN tunnel panel |
+| | [service-images.md](docs/service-images.md) | How `services/` images are built, pinned and pulled |
+| | [add-service.md](docs/add-service.md) | Checklist for a new service |
+| **Background** | [architecture.md](docs/architecture.md) | What talks to what, who may overwrite which app's config |
+| | [decisions.md](docs/decisions.md) | Ideas tried or weighed and turned down |
 
-```bash
-sudo tailscale set --advertise-exit-node --advertise-routes=192.168.1.180/32,192.168.1.154/32 --accept-dns=false
-```
+Open work: [PENDING.md](PENDING.md). Conventions for changes: [CLAUDE.md](CLAUDE.md).
 
-- `--advertise-exit-node` — lets Tailscale devices route internet traffic through the Pi
-- `--advertise-routes=192.168.1.180/32,192.168.1.154/32` — the Pi's own wlan0 and eth0 addresses, and nothing else on the LAN. This is what makes Plex count as local from outside ([docs/plex-remote-access.md](docs/plex-remote-access.md)). `--advertise-routes` replaces the whole route list, so `--advertise-exit-node` has to travel with it
-- `--accept-dns=false` — critical: prevents Tailscale from overwriting `/etc/resolv.conf` and breaking Pi-hole + Docker DNS
+## Quick start
 
-Then in the [Tailscale admin console](https://login.tailscale.com/admin):
-1. **Machines → your Pi → Edit route settings** — enable "Use as exit node" and approve both `/32` routes
-2. **DNS tab** → Global Nameservers → Add custom nameserver → enter your `TAILSCALE_IP` → enable "Override local DNS"
+Follow [docs/host-setup.md](docs/host-setup.md): Docker, the data disk, `.env` from `.env.example`,
+then `docker compose up -d` with `COMPOSE_ENV_FILES=versions.env,.env`. From there the cron (and,
+once set up, the webhook) keeps the Pi in step with `main`.
 
-Step 2 makes Pi-hole the DNS server for every device in your tailnet, so `*.platanosverdes.com` resolves correctly from anywhere.
-
-Reference: [Tailscale — Block ads on all devices using Raspberry Pi](https://tailscale.com/docs/solutions/block-ads-all-devices-anywhere-using-raspberry-pi)
-→ See [docs/tailscale.md](docs/tailscale.md) for the full setup guide
-→ See [docs/plex-remote-access.md](docs/plex-remote-access.md) for why Plex needs subnet routes on
-top of the exit node, and why it must never be put behind the reverse proxy
-
-### Reverse Proxy (Caddy)
-Caddy provides short HTTP names on LAN (`http://jellyfin`, `http://raspi`, etc.) and HTTPS via Cloudflare DNS challenge for remote access (`https://*.platanosverdes.com`).
-
-Caddy uses a custom Docker image that includes the Cloudflare DNS plugin (see `services/caddy/Dockerfile`). Certificates are issued automatically on first request and renewed by Caddy.
-
-**Extending Caddy from a companion repo (e.g. rpi-services):**
-
-Caddy auto-imports `*.caddy` files from two directories: `config/caddy/services/` (this repo) and `/etc/caddy/ext-services/`, a bind mount of whatever `EXT_CADDY_PATH` in `.env` points at (an empty directory when unset):
+## Everyday commands
 
 ```bash
-EXT_CADDY_PATH=/home/raspi/rpi-services/config/caddy
+bash scripts/deploy/apply.sh                         # deploy now, instead of waiting
+tail -f ~/rpi-homeserver/apply.log                   # what the last deploys did
+docker logs -f <container>                           # one service's output
+bash scripts/recovery/rebuild-service.sh <service>   # rebuild one service from scratch
+bash scripts/recovery/recovery-status.sh             # after a rebuild: what still needs a human
+bash scripts/ops/backup.sh                           # a backup now
 ```
 
-Then in `rpi-services`, add a file like `config/caddy/myservice.caddy`:
-
-```caddy
-https://myservice.yourdomain.com {
-    import cf_tls
-    reverse_proxy myservice:8080
-}
-```
-
-The deploy runs `caddy reload` when a push changes `config/caddy/` in either repo — no changes
-needed in this repo.
-
-→ See [docs/architecture.md](docs/architecture.md) for what talks to what, and what may overwrite which app's config
-→ See [docs/add-service.md](docs/add-service.md) to add a new service with HTTPS
-
-### Media Automation (The *arrs Suite)
-- **Prowlarr → FlareSolverr:** Settings → Indexers → Add Proxy → `http://flaresolverr:8191`
-- **Prowlarr → Radarr/Sonarr:** Settings → Apps → add each with their API keys
-- **Download client:** In Radarr/Sonarr → Settings → Download Clients → qBittorrent → host `qbittorrent`, port `8080`
-
-### Acestream Live TV
-[bifrost](https://github.com/PlatanosVerdes/bifrost) (an image, pinned as `BIFROST_VERSION`) reads
-the channel list from IPFS through `kubo`, writes Jellyfin's M3U with one stable URL per channel and
-an XMLTV guide cut down to those channels, and is the proxy Jellyfin plays from: it picks a live
-source per channel and shares one engine connection among everyone watching. It never opens a
-channel on its own, because this Pi plays one at a time.
-
-The engine (`aceserve`) stays on the host network so its P2P uses the home line. Only its HTTPS goes
-through `gluetun` (NordVPN, `https_proxy`), because Spanish ISPs intercept the AceStream API during
-matches.
-
-Jellyfin setup: Live TV → tuner (M3U) `/config/acestream/channels_ace.m3u`; the XMLTV provider is
-pointed at `/config/acestream/guide.xml` by the deploy (`scripts/sync/jellyfin-guide.sh`).
-
-**State right now** (list, last Jellyfin refresh, what is playing, recent opens, and whether Jellyfin copies or re-encodes):
-```bash
-docker exec bifrost wget -qO- http://127.0.0.1:6879/api/status
-```
-
-**View live logs:**
-```bash
-docker logs -f bifrost
-```
-
-### Watch-next (auto-fetch on watch)
-`services/watch-next/` (Go, Dockerized) monitors and searches the next episode(s) in Sonarr when
-Tautulli (Plex) or Jellyfin reports one watched, so a season fills in progressively instead of all
-at once. See [docs/watch-next.md](docs/watch-next.md) for the full setup (Tautulli/Jellyfin
-webhook configuration).
-
-### Torrent drop (adding a torrent by hand)
-`services/torrent-drop/` (Go, Dockerized) serves one page at `drop.platanosverdes.com`: drop a
-`.torrent`, paste a magnet, an https link or a bare infohash, and it goes into qBittorrent with the
-`manual` category and tag. qBittorrent's own WebUI accepts a dropped file too; what this adds is not
-having to log into it, and the two things below.
-
-**Every torrent gets a cross-seed search the moment it completes.** The daemon's own `searchCadence`
-is one day, so this is the difference between free ratio now and free ratio tomorrow: a 30-second
-poll asks cross-seed's `/api/webhook` about anything that has just finished and writes an `xseed`
-tag so it is asked once. The ask carries `ignoreExcludeOlder` and `ignoreExcludeRecentSearch`,
-without which a release over 180 days old is skipped in silence. On its first pass it marks what is
-already complete *without* searching: at startup that is every torrent on the disk, and searching
-them all at once is hundreds of queries at four private trackers for releases the daily sweep has
-covered for months. Anything that finishes later is asked about within 30 seconds.
-
-**A manual download is never deleted.** It is the one case where the file matters more than the
-disk, since no *arr requested it and nothing would fetch it again. Its own `share_limits` group
-carries `cleanup: false`, so the tracker's term is served, qBittorrent stops the torrent, and the
-file stays. Full reasoning in [docs/lifecycle.md](docs/lifecycle.md). The page's "seguir sembrando"
-checkbox adds the `keep` tag, which takes the torrent out of every clock and keeps it seeding.
-
-The queue is worth knowing about: `max_active_downloads` is 1, so a torrent added while Radarr is
-downloading sits in `queuedDL` until that one finishes. The page says so rather than looking stuck.
-
-### Audio convert (fixing a re-encoded file)
-`services/audio-convert/` (Go, Dockerized) serves `audio.platanosverdes.com`, tailnet only: every
-file a TV or phone had its audio re-encoded on, with the plan pi-metrics worked out for it (which
-track an AC3 5.1 is built from, the extra space, how long it takes) and a button that converts it
-now instead of at 01:30. The conversion is `scripts/sync/audio-compat.py --file`, the same script
-the nightly pass runs, and the two share a lock so they never convert at once. Re-encodes a new
-track cannot fix, such as a client that turned direct play off, are listed greyed with the reason.
-Full guide: [docs/audio-convert.md](docs/audio-convert.md).
-
-### Tailscale Metrics
-`services/tailscale-metrics/` is a Dockerized Go exporter with no published port. Prometheus
-scrapes it at `tailscale-metrics:9736/metrics` over `media-network`.
-
-It mounts `/var/run/tailscale/tailscaled.sock` read-only to read peer status from tailscaled's
-LocalAPI, and optionally calls the Tailscale control API with `TAILSCALE_API_KEY` to mark which
-peers are approved exit nodes. Nothing to build by hand: CI builds and publishes it like every
-other service in `services/`, and the deploy pulls it.
-
-### Auto-Deployment (`scripts/deploy/apply.sh`)
-Runs on every push (webhook) and every 30 minutes (cron), and pulls or rebuilds only the images
-that changed (the ones from `services/` are built by CI, see
-[docs/service-images.md](docs/service-images.md)).
-
-```bash
-# Cron entry, from scripts/crontab; install-crontab.sh replaces @PROJECT_DIR@ with this checkout
-*/30 * * * * @PROJECT_DIR@/scripts/deploy/apply.sh >> @PROJECT_DIR@/apply.log 2>&1
-```
-
-Metrics are pushed to Pushgateway and visible in the **Deploy Monitor** dashboard in Grafana.
-
-### Monitoring (Prometheus & Grafana)
-- **Grafana:** `https://grafana.<domain>`, signed in through Cloudflare Access when
-  `GRAFANA_ACCESS_JWT` is set (that hostname then resolves to Cloudflare even on the tailnet).
-  `https://grafana-tailnet.<domain>` keeps the login form: user `admin`, password `GRAFANA_PASSWORD`
-  from `.env` (read only when Grafana creates its database).
-- **Auto-provisioned dashboards** (in `config/grafana/dashboards_json/`):
-  - Container Health — host stats (CPU temp, load, RAM, disk), per-container CPU/mem/network, and a Storage section (usage-by-folder pie, folder filter, largest-files table)
-  - Service probes — which service the Home dashboard's "Services down" number is about: per-service status, availability history and probe times. Every stat on Home is clickable and lands on the dashboard that answers it.
-  - Lifecycle — what happens to one torrent from here on: when each one goes and what is holding it, the films in grace and the date they leave, the hours still owed to each tracker, what qbit-manage deleted, and the disk sitting in the recycle bin
-  - Deploy Monitor — deploy runs, changes, errors, per-repo status
-  - Backup Monitor — last backup status/age/size and appdata growth over time
-  - Acestream Monitor — bifrost's channels, what is playing and each one's swarm health, with a node selector
-  - One Pace Downloader / One Pace Arc Status — episode/arc KPIs and per-arc breakdown
-- **Import community dashboards** (Grafana → Dashboards → Import):
-  - `1860` — Node Exporter Full (CPU, RAM, disk, network)
-  - `193` — cAdvisor (per-container resource usage)
-- **No data on a dashboard?** Trigger a run manually:
-  ```bash
-  docker compose -f compose-media.yml restart bifrost
-  bash /home/raspi/rpi-homeserver/scripts/deploy/apply.sh
-  ```
-
-### Logs (VictoriaLogs)
-Prometheus stores numbers, not text. `vector` forwards what every container prints into
-`victorialogs`, which keeps 30 days of it on the data disk and answers queries from Grafana
-(Explore → VictoriaLogs) or its own UI at `https://logs.platanosverdes.com/select/vmui/`.
-Full guide, including what is deliberately not collected: [docs/logging.md](docs/logging.md).
-
-### Acestream in VLC (Farnsworth)
-Browsers cannot play the MPEG-TS these channels arrive as, and the Pi cannot re-encode 20 Mbps of
-1080p in real time (measured at 0.32x). Farnsworth lists the channels and hands one to VLC, which
-plays them natively. Full guide: [docs/farnsworth.md](docs/farnsworth.md).
-
-### VPN tunnels (sleipnir)
-[sleipnir](https://github.com/PlatanosVerdes/sleipnir) (an image, pinned as `SLEIPNIR_VERSION`) at
-`https://sleipnir.platanosverdes.com` lists every gluetun tunnel on the machine, found by the
-`sleipnir.enable` label, and moves its exit country or server in place; whatever uses the tunnel
-carries on. `gluetun-test` and `huginn` are there to try it. Needs `GLUETUN_API_KEY` in `.env`.
-Full guide: [docs/sleipnir.md](docs/sleipnir.md).
-
-### Bots (muninn)
-[muninn](https://github.com/PlatanosVerdes/muninn) (an image, pinned as `MUNINN_VERSION`) at
-`https://muninn.platanosverdes.com` shows who uses each bot, its messages per minute and what it
-turned away. A bot opts in with a `muninn.stats` label holding the URL of its `/bot-stats`
-document, served on a port that is never published since it holds names, and joins the internal
-`muninn` network, which only muninn and the bots it watches share. Prometheus scrapes the
-same figures from `muninn:8095/metrics`, never with names.
-
-### Backups & Recovery
-`scripts/ops/backup.sh` (daily cron at 04:00) snapshots `appdata/` to a compressed, rotated
-archive and pushes health metrics to the **Backup Monitor** Grafana dashboard. Full guide:
-[docs/backups.md](docs/backups.md).
-
-- **In git (survives a disk loss):** all config in this repo, including the Radarr/Sonarr custom
-  formats + quality profiles under `config/arr/`, which `scripts/sync/arr-config.sh` pushes into
-  both apps on every deploy.
-- **In the backup archive:** the full app state under `appdata/` (databases, indexers, Plex
-  library, etc.).
-- **Offsite:** local archives live on the data disk, so a disk failure would lose them too.
-  Set `BACKUP_RCLONE_REMOTE` (and install rclone) for an automatic offsite copy; the remote is pruned
-  to the same `BACKUP_RETENTION`. The second node uses this to send its archives to the main Pi.
-
----
-
-## Host-Level Configuration
-
-See [SYSTEM_NOTES.md](SYSTEM_NOTES.md) for all OS-level settings (Docker log limits, cron jobs, sysctl, etc.).
+Run compose by hand with `export COMPOSE_ENV_FILES=versions.env,.env` first, or image versions do
+not resolve.

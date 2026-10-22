@@ -1,17 +1,12 @@
 # Architecture
 
-What talks to what, and which component is allowed to overwrite which app's configuration.
-
-Diagrams are Mermaid, which GitHub renders inline. They are the first thing in this repo to use
-it: an ASCII box drawing is fine for four boxes, and this file has more than forty.
-
-Counts drift; the shapes do not. This describes the main Pi; a second node runs a subset (see the
-profiles in the README).
-
----
+What talks to what, and which component is allowed to overwrite which app's configuration. This
+describes the main Pi; the second node runs a subset ([nodes.md](nodes.md)). How a request gets in
+is [access.md](access.md); what a deploy does is [deploy.md](deploy.md).
 
 ## The five bands
 
+<!-- diagram: two-nodes-three-doors -->
 ```mermaid
 flowchart TB
   subgraph OUT["1 · What arrives from outside"]
@@ -44,7 +39,7 @@ flowchart TB
   end
 
   subgraph HOST["5 · The host, what is not a container"]
-    APPLY["scripts/deploy/apply.sh<br/>scripts/sync/*.sh · scripts/setup/*.sh<br/><i>writes config into the bands above, see The convergence loop</i>"]
+    APPLY["scripts/deploy/apply.sh<br/>scripts/sync/*.sh · scripts/setup/*.sh<br/><i>writes config into the bands above</i>"]
     CRON["scripts/crontab<br/><i>merged with the personal repo's fragment</i>"]
     FS["mergerfs → DATA_ROOT<br/><i>two USB disks, one tree</i>"]
   end
@@ -72,39 +67,29 @@ remote" from the source IP; Jellyfin, so a TV gets a live stream URL it can reac
 it is the LAN's resolver; aceserve, so its P2P uses the home line; node-exporter, to see the host;
 and cloudflared. `huginn` lives in `gluetun-test`'s network namespace.
 
----
+## The network
 
-## The convergence loop
+All containers share the `media-network` bridge, and reach each other by name, except those on the
+host network:
 
-Every 30 minutes, and on every push, `scripts/deploy/apply.sh` pulls both repos and pushes configuration into
-each app. Every one of these arrows exists because that setting lives **only inside its app's
-own `appdata`**: no compose file and no `.env` captures it, so without this a lost disk silently
-loses hours of tuning.
+| On the host network | Why |
+| :--- | :--- |
+| Plex | it decides "local vs remote" from the connection it sees ([plex-remote-access.md](plex-remote-access.md)) |
+| Jellyfin | so a TV gets a live stream URL it can reach |
+| Pi-hole | it is the LAN's and the tailnet's resolver |
+| aceserve | so its P2P uses the home line, not the VPN |
+| node-exporter | to see the host |
+| cloudflared | the tunnel; Prometheus scrapes it through `host.docker.internal` |
 
-```mermaid
-flowchart LR
-  GIT1["rpi-homeserver<br/>git"] --> APPLY
-  GIT2["rpi-services<br/>git"] --> APPLY
-  HOOK["GitHub webhook<br/><i>on push</i>"] -.-> APPLY
-  CRON["cron<br/><i>every 30 min, safety net</i>"] -.-> APPLY
+`huginn` lives in `gluetun-test`'s network namespace. A host-network service publishes nothing, so it
+declares what it binds in a `host.ports` label, and CI checks both repos for port clashes. Bots reach
+muninn on an internal `muninn` network, and sleipnir and muninn share docker-socket-proxy on
+`docker-api`.
 
-  APPLY["<b>scripts/deploy/apply.sh</b><br/>git pull<br/>docker compose up<br/>7 sync scripts<br/><i>one lock, coalescing</i>"]
+## What can overwrite what
 
-  APPLY ==>|custom formats + quality profiles| ARR["Radarr · Sonarr"]
-  APPLY ==>|local DNS derived from Caddy| PH["Pi-hole"]
-  APPLY ==>|their link to the arrs| OV["Seerr · Bazarr"]
-  APPLY ==>|LAN networks, 95% played threshold| PLEX["Plex"]
-  APPLY ==>|queue limits, upload cap, BT port| QB["qBittorrent"]
-  APPLY ==>|merged fragments| CT["host crontab"]
-  APPLY ==>|retention policy| LR["/etc/logrotate.d"]
-  APPLY -->|compose, versions.env| DK["containers"]
-```
-
-The cron path is dotted because it is not the normal one: it is the net that catches pushes that
-arrived while the Pi or the tunnel was down. The lock coalesces rather than queues, so ten pushes
-during an ARM Go build cost exactly one extra pass.
-
-### What can overwrite what
+Every one of these exists because the setting lives **only inside the app's own `appdata`**: no
+compose file and no `.env` captures it, so without this a lost disk silently loses the tuning.
 
 | Script | When | Writes into | Source of truth |
 | :--- | :--- | :--- | :--- |
@@ -121,13 +106,12 @@ during an ARM Go build cost exactly one extra pass.
 | qbit-manage | hourly | tags, share limits, deletes into the recycle bin | `config/qbit-manage/config.yml` |
 | `scripts/ops/cutoff-search.sh` | not scheduled since 2026-08-24 | nothing, triggers a search | Radarr's own Wanted list |
 
-**A profile changed through an app's UI and not committed is reverted within 30 minutes.** That is
-the design, not a bug: configuration lives in git, not in `appdata`. Two consequences worth
-knowing: profiles are matched **by name**, so renaming one creates a second profile rather than
-updating the first; and the sync logs the same "N applied" line whether or not anything changed,
-so a revert is invisible in `apply.log`.
+**A setting changed through an app's UI and not committed is reverted within 30 minutes.** That is
+the design: configuration lives in git, not in `appdata`. Profiles are matched **by name**, so
+renaming one creates a second, and the sync logs the same "N applied" line whether or not anything
+changed, so a revert is invisible in `apply.log`.
 
-### What git does not have
+## What git does not have
 
 The table above is what git pushes into the apps. This is the other half, and the one that decides
 how bad a dead SD card is: what each tool keeps that no file in this repo describes.
@@ -157,239 +141,18 @@ pushing a deletion rule from a file deletes films. So a deploy runs it with `--c
 which one is right. autobrr redacts its own indexer keys in its API (`"rsskey": "<redacted>"`), so
 what is committed is the shape of the setup and not the way in.
 
-**The backup is a hot copy, and that is the part to know before trusting it.**
-`scripts/ops/backup.sh` tars `appdata` nightly at 04:00 while every container is running, keeps
-seven, and pushes `backup_last_status` so a failure alerts. Verified on the 2026-08-24 archive: it
-contains `prowlarr.db`, `autobrr.db`, `maintainerr.sqlite`, `radarr.db`, `sonarr.db`,
-`qbit-manage/config.yml`, `qBittorrent.conf` and `grafana.db`. Every one of those is SQLite being
-written to as tar reads it, and the `-wal` and `-shm` files come along, so a restore usually
-recovers cleanly rather than certainly. Nothing here stops the containers first, and that is a
-deliberate trade for a backup that never needs a maintenance window.
-
-After a restore, `scripts/recovery/recovery-status.sh` reports what no archive can put back: Plex's
-claim token and Jellyfin's setup wizard.
-
----
-
-## A film, end to end
-
-Moved to [lifecycle.md](lifecycle.md), which follows one file from the indexer that announces it to
-the recycle bin, for a film and for an episode, and carries the per-tracker seeding table. What was
-here said an hourly script does the deleting, and that has been qbit-manage's job since 2026-08-24.
-
----
-
-## How Radarr decides a film is finished
-
-Two independent gates. They are easy to confuse because the UI calls both of them a cutoff.
-
-```mermaid
-flowchart LR
-  F["File in the library"] --> G1 & G2
-  G1{"Gate 1 · quality<br/>reaches the profile cutoff?"}
-  G2{"Gate 2 · score<br/>reaches cutoffFormatScore?"}
-  G1 -->|no| S1["appears in Cutoff Unmet<br/><b>what scripts/ops/cutoff-search.sh drove, out of the cron since 2026-08-24</b>"]
-  G2 -->|no| S2["RSS keeps looking for an upgrade<br/><i>paid for in disk: each upgrade leaves<br/>the previous release seeding its debt</i>"]
-```
-
-Verified on six films, the pattern held for all six:
-
-| Film | Profile | On disk | Score | In Cutoff Unmet |
-| :--- | :--- | :--- | ---: | :--- |
-| Inception | Ultra-HD | Bluray-2160p | 400 | no |
-| Dune: Part Two | Ultra-HD | Bluray-2160p | 3400 | no |
-| Fight Club | HD-1080p | Bluray-1080p | 400 | no |
-| The Handmaiden | Ultra-HD | WEBDL-2160p | 0 | yes |
-| Society of the Snow | HD + UHD | WEBDL-2160p | 3400 | yes |
-| The Odyssey | HD + UHD | WEBDL-1080p | 500 | yes |
-
-The two rows that break the intuition: Society of the Snow scores 3400, well over the 2200 cutoff
-score, and is still listed because WEBDL is below the Bluray cutoff. Inception scores 400, under
-2200, and is not listed because Bluray-2160p meets the quality cutoff. **Gate 1 decides the list.**
-
-8 of 69 films are in it. Live values: cutoff `Bluray-1080p` on HD-1080p and `Bluray-2160p` on the
-other two, `cutoffFormatScore` 2200 on all three.
-
-Setting `cutoffFormatScore` above anything a release can actually score leaves gate 2 permanently
-open and the whole library in continuous upgrade search. That is what 10000 did before #42.
-
----
-
-## The ratio loop: what gets in
-
-```mermaid
-flowchart LR
-  SITE["tracker website<br/><i>stored session cookie</i>"] -->|one page fetch| TS["<b>tracker-control</b><br/><i>reads, every 30 min</i><br/>computes headroom"]
-  TS -->|"GB of headroom, in memory"| TC["<b>the same pass</b><br/><i>acts on what it just read</i>"]
-  TC ==>|freeleech-only filter| PR["Prowlarr"]
-  TC ==>|requiredFlags| RA["Radarr"]
-  TC ==>|grabs per day| BR["autobrr"]
-  BR -.->|what is grabbed moves the ratio| SITE
-```
-
-The filter belongs in Prowlarr and not in the arrs because `requiredFlags` exists on Radarr's
-Torznab indexer and not on Sonarr's: filtering there would leave series unprotected.
-
-TorrentLeech today: ratio 0.821, headroom 67.7 GB, against a threshold of 0.4. Of the private
-indexers, only TorrentLeech currently has the freeleech-only filter on. DigitalCore has it off, and
-C411 does not expose the field at all, which is why its "freeleech only" rule is a habit rather than
-a setting.
-
----
-
-## Retention policy: what gets out
-
-The ratio loop governs the intake. This governs the release. Different mechanism, different files.
-
-```mermaid
-flowchart LR
-  QM["config/qbit-manage/<br/>config.yml<br/><i>policy, in git</i>"] --> QB
-  QB["<b>qbit-manage</b><br/><i>owns deletion since 2026-08-24</i>"] --> Q1 & Q2
-  Q1{"WHOSE rules?<br/><i>the tracker tag picks<br/>the share-limit group</i>"}
-  Q2{"MAY it go?<br/><i>noHL or ratio tag, and<br/>a day with no activity</i>"}
-```
-
-Per tracker: what the site asks, what is configured against it and why the difference, in
-[lifecycle.md](lifecycle.md#what-each-tracker-asks-and-what-is-configured). Two conditions have to
-agree before anything is deleted, and the second one is the interesting half: a tracker group only
-matches a torrent the library has let go of (`noHL`) or that was never in it (`ratio`).
-
-Deletion moves the data to the recycle bin rather than removing it, and
-`recyclebin.empty_after_x_days: 1` empties it a day later.
-
----
-
-## Three routes to Grafana
-
-Only one of them notices that the producer has died, which is why things keep moving towards it.
-
-```mermaid
-flowchart LR
-  subgraph A["Route A · file"]
-    S1["nothing left here<br/><i>zram and disk moved to pi-metrics</i>"] -->|.prom| NE["node-exporter<br/><i>textfile collector</i>"]
-  end
-  subgraph B["Route B · push"]
-    S2["scripts/ops/backup.sh<br/>scripts/deploy/apply.sh"] -->|POST| PG["Pushgateway"]
-  end
-  subgraph C["Route C · scrape"]
-    EX["node-exporter · cadvisor · blackbox<br/>pihole-exporter · qbittorrent-exporter<br/>speedtest-tracker · cloudflared<br/>tailscale-metrics · muninn<br/><b>pi-metrics</b> · <b>tracker-control</b>"]
-  end
-  NE --> PROM
-  PG --> PROM
-  EX --> PROM
-  PROM["Prometheus<br/><i>scrapes every 15s</i>"] --> GR["Grafana"]
-```
-
-Prometheus's own guidance is that the Pushgateway is for **batch jobs**: something that starts,
-computes and exits. Its named cost is exactly the one that matters here, that you lose `up` and that
-a pushed series is served forever whether or not anything is still producing it. So route B keeps
-only what is genuinely a batch job, the daily backup and the deploy itself, and everything that runs
-on a schedule forever has moved to route C, tracker-control included.
-
-`pi-metrics` is that move: the media, zram and disk numbers, collected in the background and served
-from a snapshot because one media pass takes ~7s against five APIs and a 15s scrape cannot wait for
-it. `up` says the process lives and `pi_metrics_last_success_timestamp_seconds` says the data is
-fresh, which are two different failures and now two different alerts.
-
-Its `playback` collector runs on a much shorter interval than the rest, 60s against Plex's
-`/status/sessions` and Jellyfin's `/Sessions`, because a session being re-encoded has to be seen
-while it is still happening. What it publishes is deliberately split into video, audio and the kind
-of client, since those are three different problems and only two have a fix:
-[alerting.md](alerting.md#not-every-transcode-is-worth-a-message).
-
-### Is an indexer being used, or just up
-
-`prowlarr_indexer_up` answers "does it answer". It does not answer "is anything being asked of
-it", which is the question that matters for a private tracker: an indexer that is up, has been
-queried 997 times and has never returned a grab is a different problem from one that is down, and
-the availability timeline draws them identically.
-
-`prowlarr_indexer_activity` closes that, from `/api/v1/indexerstats`, as counters so `increase()`
-gives the rate over whatever window the panel asks for:
-
-| Metric | Answers |
-| :--- | :--- |
-| `prowlarr_indexer_queries_total` | is anything searching it |
-| `prowlarr_indexer_grabs_total` | does searching it ever produce a download |
-| `prowlarr_indexer_failed_queries_total` | is it answering but failing |
-| `prowlarr_indexer_response_ms` | is it the one slowing every search down |
-
-Three alerts sit on top, all to Telegram: every indexer down, **any enabled indexer** down for 6h,
-and any indexer failing searches for 30m. The middle one used to watch only indexers with 3+ grabs
-in 90 days, which was right while every indexer was public and interchangeable and wrong as soon as
-private ones arrived: a tracker still inside its newbie window has zero grabs by definition and is
-exactly the one whose failure needs saying out loud.
-
-Routes A and B both keep serving a stale value after the producer dies: node-exporter goes on
-publishing the `.prom` file, and Pushgateway expires nothing. Two `cutoff_search{app="sonarr"}`
-series from 2026-08-04 are still in Pushgateway from a single manual run. Route C is the only one
-where death shows up, as `up == 0`.
-
-That is the reason `tailscale-metrics` moved from a cron binary writing a `.prom` file to a
-scraped exporter: not tidiness, an alert that did not exist before.
-
-Scrape jobs are in `config/prometheus/prometheus.yml`. `cutoff_search` is currently pushed by
-nobody's request: no dashboard and no alert reads it.
-
----
+What a restore from backup can and cannot put back is in [backups.md](backups.md).
 
 ## The scripts
 
-Grouped under `scripts/` by what they do rather than by a prefix in the filename. Two of them, and
-one service, earn a drawing; the rest earn a sentence.
-
-### deploy/apply.sh
-
-The part that is not obvious is not the flow, which is the convergence diagram above. It is the
-concurrency.
-
-```mermaid
-flowchart LR
-  H["webhook, on push"] --> L
-  C["cron, every 30 min"] --> L
-  L{"flock"} -->|got it| RUN["Runs the deploy"]
-  L -->|busy| M["Leaves .deploy.pending<br/>and exits, does not wait"]
-  RUN --> CHK{"pending marker<br/>on the way out?"}
-  CHK -->|yes| RUN
-  CHK -->|no| DIFF["Restarts only what the diff touched:<br/>caddy, grafana, vector, the webhook unit"]
-  M -.-> CHK
-```
-
-Coalescing, not a queue: ten pushes during an ARM Go build cost exactly one extra pass, not ten.
-The marker exists because dropping the skipped run lost real deploys, a tag in one repo and its
-version bump in the other arriving inside the same window.
-
-The second thing that is not obvious: **a build that fails is owed a retry**. By the next pass the
-commit that caused it has already been pulled, so the diff is empty, the no-change branch runs, and
-nothing is ever built again. On 2026-08-31 that left a five-day-old image serving for two hours
-across four passes, and the log did not even say so: `cmd | while read; do log; done` reports the
-while loop's status and not the command's, so `if !` saw a zero and the metric said the deploy had
-applied changes. Every pipeline whose success is checked now goes through `stream_logged`, and a
-failed build leaves `.deploy.build-failed.<repo>` holding a count of consecutive failures. Later
-passes retry it five times, which is what a transient failure needs, and then stop and leave it to
-`deploy_repo_last_status=2` and the alert on it: five minutes of ARM CPU every half hour on a build
-that is not going to work is worse than an alert nobody has closed.
-
-### tracker-control
-
-Its complexity is a lookup table, not a flow, so it reads better as one. Headroom is how many GB of
-*paid* download still fit before the account crosses the ratio the site disables it at.
-
-| Headroom | Grabs per day | Prowlarr filter |
-| :--- | ---: | :--- |
-| below 25 GB | 3 | freeleech only |
-| below 100 GB | 2 | freeleech only |
-| above | 1 | no filter |
-
-More grabs the less headroom is left, which is the opposite of the intuition: with little headroom
-the account needs to *build* ratio, and freeleech raises the dividend without touching the divisor.
-Below `min_free_gb` the grabber stops entirely. There is no staleness guard any more: the reading and
-the action are the same pass, so there is nothing old to act on.
-
-### The rest, one line each
+Grouped under `scripts/` by what they do: `deploy/` (the pass), `setup/` (host state), `recovery/`
+(by hand, after something broke), `sync/` (config pushed into apps), `ops/` (everything else on a
+schedule), `ci/` (GitHub Actions). The cron lines are in `scripts/crontab`.
 
 | Script | What it does |
 | :--- | :--- |
+| `deploy/apply.sh` | The deploy pass, on push and every 30 minutes. One lock, coalescing rather than queueing, with retries for a failed build: [deploy.md](deploy.md) |
+| tracker-control (service) | Reads each tracker account and moves Prowlarr's freeleech filter, Radarr's `requiredFlags` and autobrr's grab rate from the headroom: [private-trackers.md](private-trackers.md#the-control-loop). One reader per site; the parsing is deliberately dumb about markup |
 | `setup/install-crontab.sh` | Merges both repos' cron fragments, installs only if it differs, prints the diff |
 | `setup/install-logrotate.sh` | Installs the rotation policy root-owned 0644, because logrotate silently ignores anything else |
 | `recovery/rebuild-service.sh` | Rebuilds one compose service from scratch, by hand. For one CI publishes, this is the build-from-source fallback ([service-images.md](service-images.md)) |
@@ -403,9 +166,10 @@ the action are the same pass, so there is nothing old to act on.
 | `services/pi-metrics/media.go` | The largest, but wide rather than deep: ten collectors of the same shape, fetch, count, emit. Answers "which", not "how many" |
 | `services/pi-metrics/host.go` | Where the disk went and what zram costs. One walk answers both the largest files and the per-folder totals, counting a hardlinked inode once |
 | `services/pi-metrics/main.go` | Serves both from a snapshot refreshed in the background, and exports when each collector last succeeded |
-| tracker-control | Reads each site with a stored cookie. The complexity is parsing, deliberately dumb about markup so a second site is config, not a selector hunt |
 | `ops/backup.sh` | Compresses appdata, keeps 7, excludes what regenerates (Prometheus TSDB, Plex caches) |
 | `ops/heartbeat.sh` | Tells an outside check the Pi is alive, and deliberately fails when the essentials are not running |
 | `ops/cutoff-search.sh` | Asks Radarr to search for what it already says is missing. Decides nothing. Out of the cron, being retired |
 | `ops/oci-hunt.py` | Asks Oracle for one of the two free instances every minute, which is its measured rate limit, signing by hand. Counts the runs and logs one summary an hour rather than a line each, and exits for good once both exist |
 | `ops/indexer-retry.py` | Probes a backed-off indexer's site and clears Prowlarr's 24 h backoff when it answers, so an hour of blocking does not cost a day |
+| `ops/config-export.py` | Pulls autobrr's filters and Maintainerr's rules into `config/`; the deploy runs `--check` |
+| `ci/ports.py`, `ci/service-images.py` | Host-port clashes across both repos; which `services/` images are due ([service-images.md](service-images.md)) |

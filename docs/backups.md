@@ -50,10 +50,22 @@ Change the time there rather than with `crontab -e`, or the next deploy overwrit
 ls -1t /mnt/data/backups/appdata/
 
 # Stop the stack, restore, start again
+export COMPOSE_ENV_FILES=versions.env,.env
 docker compose down
 sudo tar -xzf /mnt/data/backups/appdata/appdata-YYYYMMDD-HHMMSS.tar.gz -C /home/raspi/rpi-homeserver/
 docker compose up -d
+bash scripts/recovery/recovery-status.sh    # what no archive can put back
 ```
+
+**The archive is a hot copy.** It is taken at 04:00 while every container runs: `prowlarr.db`,
+`radarr.db`, `sonarr.db`, `autobrr.db`, `maintainerr.sqlite`, `grafana.db` and the rest are SQLite
+files being written as tar reads them (their `-wal` and `-shm` files come along). A restore usually
+recovers cleanly rather than certainly. Nothing stops the containers first, on purpose: the trade is
+a backup that never needs a maintenance window.
+
+What git already holds, and what only this archive has (Prowlarr's indexers, qBittorrent's
+`BT_backup`, Plex's libraries and history), is in
+[architecture.md](architecture.md#what-git-does-not-have).
 
 ## Monitoring
 

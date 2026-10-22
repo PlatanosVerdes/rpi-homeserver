@@ -2,7 +2,7 @@
 """GitHub push webhook receiver: verifies the HMAC signature, then runs scripts/deploy/apply.sh.
 
 Listens on 127.0.0.1 only. The public entrypoint is the Cloudflare tunnel (see
-compose-core.yml `cloudflared` and docs/deploy-webhook.md). The endpoint is reachable
+compose-core.yml `cloudflared` and docs/deploy.md). The endpoint is reachable
 by anyone on the internet, so an unsigned request must never reach the deploy script.
 """
 

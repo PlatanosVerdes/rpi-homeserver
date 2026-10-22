@@ -532,7 +532,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Inbound on eth0 right now. qBittorrent is capped at 10 MiB/s, so this should not go far\npast that; see SYSTEM_NOTES.md for why the cap exists.",
+      "description": "Inbound on eth0 right now. qBittorrent is capped at 10 MiB/s, so this should not go far\npast that; see docs/media-policy.md for why the cap exists.",
       "gridPos": {
         "h": 5,
         "w": 3,

@@ -2,13 +2,11 @@
 
 ## What this is for
 
-The Raspberry Pi sits at home behind a router, and the internet cannot reach it. Tailscale solves
-that by building a small private network of your own devices, called a **tailnet**: your laptop,
-your phone and the Pi all get a permanent address in the `100.x.x.x` range and can talk to each
-other from anywhere, encrypted, without opening a single port on the router.
+Tailscale builds a private network of your own devices, a **tailnet**: each gets a permanent
+address in `100.64.0.0/10` and they reach each other from anywhere, encrypted, without opening a
+port on the router. It is the main way into this server ([access.md](access.md)).
 
-This guide sets the Pi up as three things. They are related but separate, and mixing them up is the
-usual source of confusion:
+This sets the Pi up as three things, related but separate:
 
 | Role | What it does | What it does **not** do |
 | :--- | :--- | :--- |
@@ -20,20 +18,15 @@ That last distinction is the one that catches people out: "I turned on the exit 
 reach my NAS at 192.168.1.50?" Because that is the subnet router's job, and it is configured
 separately.
 
-Pi-hole is then set as the DNS server for the whole tailnet, so ad-blocking applies on every device
-and the `*.platanosverdes.com` names resolve from anywhere.
+Pi-hole is then the DNS server for the whole tailnet, so ad-blocking applies on every device and the
+`*.platanosverdes.com` names resolve from anywhere.
+
+The Pi needs a static LAN address first, reserved in the router against its MAC for wifi and cable
+([host-setup.md](host-setup.md#6-ip-forwarding-static-ip-tailscale)): the routes below name it.
 
 ---
 
-## Step 1 — Assign a Static IP
-
-Give the Pi an address on the home network that never changes, by reserving it in the router's DHCP
-settings against the Pi's MAC address. Everything else here points at that address, so it moving
-would quietly break the lot. Put it in `STATIC_IP` in `.env`.
-
----
-
-## Step 2 — Enable IP Forwarding
+## Step 1 — Enable IP Forwarding
 
 By default Linux only accepts traffic addressed to itself and drops anything meant to pass through.
 Both the exit node and the subnet router are exactly that: passing traffic through. This turns it
@@ -47,7 +40,7 @@ sudo sysctl -p /etc/sysctl.d/99-tailscale.conf
 
 ---
 
-## Step 3 — Start Tailscale
+## Step 2 — Start Tailscale
 
 `up` is for the first login and nothing else, and it is the last time it should be used on this
 machine:
@@ -77,14 +70,15 @@ sudo tailscale set --advertise-exit-node --advertise-routes=192.168.1.180/32,192
 > everything you did not name on the command line, and this flag is the one that hurts.
 
 The routes show up in the admin console only after the `set` command has run, and they carry no
-traffic until they are approved there (step 4).
+traffic until they are approved there (step 3).
 
 ---
 
-## Step 4 — Tailscale Admin Console
+## Step 3 — Tailscale Admin Console
 
 1. Go to [login.tailscale.com/admin](https://login.tailscale.com/admin)
-2. **Enable Exit Node:** Machines → your Pi → Edit route settings → enable "Use as exit node"
+2. **Exit node and routes:** Machines → your Pi → Edit route settings → enable "Use as exit node"
+   and approve both `/32` routes
 3. **Set Pi-hole as DNS:**
    - DNS tab → Global Nameservers → Add nameserver → Custom
    - Enter your Pi's Tailscale IP (`100.x.x.x`)
@@ -92,7 +86,7 @@ traffic until they are approved there (step 4).
 
 ---
 
-## Step 5 — Pi-hole: Allow Tailscale Subnet
+## Step 4 — Pi-hole: Allow Tailscale Subnet
 
 Tailscale requests come from `100.x.x.x` — Pi-hole must allow them:
 
@@ -100,18 +94,7 @@ Tailscale requests come from `100.x.x.x` — Pi-hole must allow them:
 
 ---
 
-## Step 6 — Plex over the Tailnet
-
-Plex charges for remote playback, and a tailnet connection does not count as local on its own: the
-exit node does not reach the Pi's LAN, so the Pi advertises `192.168.1.180/32,192.168.1.154/32` as
-subnet routes for it.
-
-→ See [plex-remote-access.md](plex-remote-access.md) for the whole picture, including why
-`tailscale up` must never be used to change this and what breaks if it is.
-
----
-
-## Step 7 — Giving Someone Else Access
+## Step 5 — Giving Someone Else Access
 
 Before inviting anyone, understand what the tailnet grants by default: **everything**. With no
 policy of its own a tailnet is allow-all, so an invited person reaches every device on every port,

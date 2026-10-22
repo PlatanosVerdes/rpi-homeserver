@@ -138,7 +138,7 @@ services:
   # --- CLOUDFLARED (tunnel — the GitHub deploy webhook and the apps behind Cloudflare Access) ---
   # Host network to reach the webhook receiver on 127.0.0.1:9000 (systemd unit in
   # services/deploy-webhook/). What is public is the tunnel's hostname config in Cloudflare's
-  # dashboard, not this. See docs/deploy-webhook.md.
+  # dashboard, not this. See docs/deploy.md and docs/access.md.
   cloudflared:
     image: cloudflare/cloudflared:${CLOUDFLARED_VERSION}
     container_name: cloudflared

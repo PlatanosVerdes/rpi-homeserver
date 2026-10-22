@@ -21,12 +21,8 @@ excluded in Maintainerr and is never deleted.
 
 ## Security
 
-Unlike `deploy-webhook` (public internet, fronted by a Cloudflare Tunnel), `watch-next` is never
-published: it has no `ports:` entry, so it's reachable only from other containers on
-`media-network` via Docker's own DNS, never from the LAN or the internet. The shared
-`?token=` check is defense-in-depth against another container on the same network, not the only
-thing standing between it and anything external: there isn't anything external to worry about
-here.
+`watch-next` is never published: no `ports:`, so only containers on `media-network` reach it. The
+`?token=` check guards against another container on that network.
 
 ## Setup
 
