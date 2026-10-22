@@ -189,6 +189,7 @@ groups:
 
       # Any service exporting upstream_* (see docs/add-service.md): an outside API pausing us after a
       # 429 is the first sign of a block, and a block on the home IP takes every service with it.
+      # `or`, not `+`: a sum drops a service that exports only one of the two series.
       - uid: homelab-upstream-throttling
         title: Upstream throttling us
         condition: C
@@ -210,7 +211,7 @@ groups:
               refId: A
               instant: true
               editorMode: code
-              expr: '(max by (service, upstream) (upstream_paused) + max by (service, upstream) (increase(upstream_rate_limited_total[15m]))) > bool 0'
+              expr: '(max by (service, upstream) (upstream_paused > 0) or max by (service, upstream) (increase(upstream_rate_limited_total[15m]) > 0)) > bool 0'
           - refId: C
             datasourceUid: __expr__
             model:
