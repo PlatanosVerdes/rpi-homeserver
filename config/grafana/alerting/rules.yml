@@ -187,6 +187,40 @@ groups:
               conditions:
                 - evaluator: { type: gt, params: [0] }
 
+      # Any service exporting upstream_* (see docs/add-service.md): an outside API pausing us after a
+      # 429 is the first sign of a block, and a block on the home IP takes every service with it.
+      - uid: homelab-upstream-throttling
+        title: Upstream throttling us
+        condition: C
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: '{{ $labels.service }}: {{ $labels.upstream }} nos está frenando'
+          description: >-
+            It answered 429 in the last 15 minutes or has us paused. Background refreshes stop on
+            their own and user actions go on, spaced; check /healthz of the service for the pause.
+        noDataState: OK
+        execErrState: KeepLast
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: '(max by (service, upstream) (upstream_paused) + max by (service, upstream) (increase(upstream_rate_limited_total[15m]))) > bool 0'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+
       - uid: homelab-target-down
         title: Prometheus target down
         condition: C
