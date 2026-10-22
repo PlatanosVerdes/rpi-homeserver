@@ -1,0 +1,371 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "From a push to a running container",
+    "output": ".archify/sequence-push-to-container-20261022-143508/push-to-container.html",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/PlatanosVerdes/rpi-homeserver.git",
+      "provider": "github",
+      "revision": "02fc921e8a08175127acecece9ea0a908fcb0270"
+    },
+    "legend": {
+      "entries": {
+        "dashed": {
+          "label": "async trigger"
+        }
+      }
+    }
+  },
+  "participants": [
+    {
+      "id": "dev",
+      "type": "external",
+      "label": "Developer",
+      "sublabel": "or an app repo",
+      "sources": [
+        {
+          "path": ".github/workflows/bump-app-versions.yml",
+          "line": 1,
+          "end_line": 14,
+          "label": "dispatched with app + tag"
+        }
+      ]
+    },
+    {
+      "id": "github",
+      "type": "cloud",
+      "label": "GitHub main",
+      "sublabel": "rpi-homeserver",
+      "sources": [
+        {
+          "path": ".github/workflows/service-images.yml",
+          "line": 7,
+          "end_line": 20
+        }
+      ]
+    },
+    {
+      "id": "actions",
+      "type": "backend",
+      "label": "Actions",
+      "sublabel": "CI workflows",
+      "sources": [
+        {
+          "path": ".github/workflows/service-images.yml",
+          "line": 22,
+          "end_line": 48,
+          "label": "plan"
+        },
+        {
+          "path": ".github/workflows/service-images.yml",
+          "line": 103,
+          "end_line": 143,
+          "label": "pin + commit"
+        },
+        {
+          "path": ".github/workflows/bump-app-versions.yml",
+          "line": 32,
+          "end_line": 57,
+          "label": "Deploy app pin"
+        }
+      ]
+    },
+    {
+      "id": "ghcr",
+      "type": "database",
+      "label": "GHCR",
+      "sublabel": "immutable tags",
+      "sources": [
+        {
+          "path": ".github/workflows/service-images.yml",
+          "line": 75,
+          "end_line": 101,
+          "label": "skip if tag exists, arm64 push"
+        }
+      ]
+    },
+    {
+      "id": "webhook",
+      "type": "security",
+      "label": "webhook",
+      "sublabel": "raspi, HMAC",
+      "sources": [
+        {
+          "path": "services/deploy-webhook/deploy-webhook.py",
+          "line": 95,
+          "end_line": 111,
+          "label": "HMAC, fire and forget"
+        },
+        {
+          "path": "services/deploy-webhook/deploy-webhook.py",
+          "line": 131,
+          "end_line": 176,
+          "label": "push to main only"
+        }
+      ]
+    },
+    {
+      "id": "apply_raspi",
+      "type": "backend",
+      "label": "raspi",
+      "sublabel": "apply.sh",
+      "sources": [
+        {
+          "path": "scripts/deploy/apply.sh",
+          "line": 236,
+          "end_line": 287,
+          "label": "image_plan"
+        },
+        {
+          "path": "scripts/deploy/apply.sh",
+          "line": 491,
+          "end_line": 559,
+          "label": "pull, build, up"
+        }
+      ]
+    },
+    {
+      "id": "cron",
+      "type": "external",
+      "label": "host cron",
+      "sublabel": "each node, */30",
+      "sources": [
+        {
+          "path": "scripts/crontab",
+          "line": 16,
+          "end_line": 18
+        },
+        {
+          "path": "scripts/setup/install-crontab.sh",
+          "line": 23,
+          "end_line": 39
+        }
+      ]
+    },
+    {
+      "id": "apply_sh",
+      "type": "backend",
+      "label": "streamhalla",
+      "sublabel": "apply.sh, cron",
+      "sources": [
+        {
+          "path": "scripts/deploy/apply.sh",
+          "line": 386,
+          "end_line": 391,
+          "label": "webhook only where installed"
+        },
+        {
+          "path": "overrides/secondary-node.yml",
+          "line": 1,
+          "end_line": 5
+        }
+      ]
+    }
+  ],
+  "segments": [
+    {
+      "from": 150,
+      "to": 335,
+      "label": "1. A source push"
+    },
+    {
+      "from": 345,
+      "to": 465,
+      "label": "2. CI builds and pins"
+    },
+    {
+      "from": 475,
+      "to": 680,
+      "label": "3. The pin deploys"
+    },
+    {
+      "from": 690,
+      "to": 835,
+      "label": "4. Cron sweep, every node"
+    },
+    {
+      "from": 845,
+      "to": 960,
+      "label": "5. An app release"
+    }
+  ],
+  "messages": [
+    {
+      "id": "push",
+      "from": "dev",
+      "to": "github",
+      "y": 170,
+      "label": "push to main",
+      "variant": "emphasis"
+    },
+    {
+      "id": "hook1",
+      "from": "github",
+      "to": "webhook",
+      "y": 205,
+      "label": "push event",
+      "variant": "security",
+      "note": "signed push to main only"
+    },
+    {
+      "id": "run1",
+      "from": "webhook",
+      "to": "apply_raspi",
+      "y": 262,
+      "label": "202, run apply.sh",
+      "note": "pin unchanged: nothing recreated"
+    },
+    {
+      "id": "ci",
+      "from": "github",
+      "to": "actions",
+      "y": 315,
+      "label": "on: push main"
+    },
+    {
+      "id": "build",
+      "from": "actions",
+      "to": "ghcr",
+      "y": 365,
+      "label": "build arm64, push",
+      "variant": "emphasis",
+      "note": "services changed since their pin"
+    },
+    {
+      "id": "pin",
+      "from": "actions",
+      "to": "github",
+      "y": 425,
+      "label": "commit Deploy <svc> <tag>",
+      "variant": "emphasis",
+      "note": "versions.env pin"
+    },
+    {
+      "id": "hook2",
+      "from": "github",
+      "to": "webhook",
+      "y": 495,
+      "label": "push event",
+      "variant": "security"
+    },
+    {
+      "id": "run2",
+      "from": "webhook",
+      "to": "apply_raspi",
+      "y": 525,
+      "label": "run apply.sh"
+    },
+    {
+      "id": "pull",
+      "from": "apply_raspi",
+      "to": "ghcr",
+      "y": 560,
+      "label": "compose pull <svc>",
+      "note": "new pin; build here if pull fails"
+    },
+    {
+      "id": "image",
+      "from": "ghcr",
+      "to": "apply_raspi",
+      "y": 620,
+      "label": "image",
+      "variant": "return",
+      "note": "up -d: only that container"
+    },
+    {
+      "id": "sweep_sh",
+      "from": "cron",
+      "to": "apply_sh",
+      "y": 710,
+      "label": "apply.sh",
+      "note": "git pull, same plan"
+    },
+    {
+      "id": "pull_sh",
+      "from": "apply_sh",
+      "to": "ghcr",
+      "y": 770,
+      "label": "pull pinned tags"
+    },
+    {
+      "id": "sweep_raspi",
+      "from": "cron",
+      "to": "apply_raspi",
+      "y": 805,
+      "label": "apply.sh",
+      "variant": "dashed",
+      "note": "catches missed pushes"
+    },
+    {
+      "id": "dispatch",
+      "from": "dev",
+      "to": "actions",
+      "y": 865,
+      "label": "release: Deploy app",
+      "variant": "dashed",
+      "note": "tag must be on GHCR"
+    },
+    {
+      "id": "pin_app",
+      "from": "actions",
+      "to": "github",
+      "y": 920,
+      "label": "commit Deploy <app> <tag>",
+      "variant": "emphasis",
+      "note": "then step 3"
+    }
+  ],
+  "activations": [
+    {
+      "participant": "webhook",
+      "from": 200,
+      "to": 268
+    },
+    {
+      "participant": "actions",
+      "from": 310,
+      "to": 431
+    },
+    {
+      "participant": "apply_raspi",
+      "from": 520,
+      "to": 626
+    },
+    {
+      "participant": "apply_sh",
+      "from": 705,
+      "to": 776
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "The pin is the deploy",
+      "items": [
+        "A source push changes nothing on the Pi until CI commits the new tag to versions.env",
+        "Tags are never rebuilt: a tag already on GHCR is skipped",
+        "Comparing against the pinned tag's commit lets a failed run catch up on the next one"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Two triggers, one script",
+      "items": [
+        "raspi: webhook on every push, cron every 30 min as the self-heal net",
+        "streamhalla: cron only, same repo, same main branch",
+        "Both workflows that commit to versions.env share one concurrency group"
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "App images",
+      "items": [
+        "bifrost, sleipnir and muninn are built in their own repos",
+        "Their release dispatches Deploy app with the tag; compose up pulls it on the next pass"
+      ]
+    }
+  ]
+}

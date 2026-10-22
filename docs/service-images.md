@@ -13,21 +13,7 @@ The workflow is `.github/workflows/service-images.yml`; the decisions it makes l
 
 ## The path of a change
 
-<!-- diagram: push-to-container -->
-```
-push to main touching services/caddy/
-   │
-   ├─ webhook ──► apply.sh on the Pi: nothing to do yet, Caddy keeps its pinned image
-   │
-   └─ Service images workflow
-        plan ........ which services are due, and their build args from versions.env
-        build ....... one job per service, native arm64 runner, push to GHCR
-        pin ......... CADDY_IMAGE_TAG=v2026.10.20-1a2b3c4 in versions.env
-                      commit "Deploy caddy v2026.10.20-1a2b3c4"
-                            │
-                            ▼
-                      webhook ──► apply.sh: pulls the new tag, recreates caddy and nothing else
-```
+![From a push to a running container](diagrams/push-to-container.png)
 
 The pushed source does not deploy that service by itself. The commit that changes the pin does, a
 few minutes later, which is the same model "Deploy app" (`bump-app-versions.yml`) uses for the

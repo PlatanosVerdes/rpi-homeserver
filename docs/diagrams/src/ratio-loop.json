@@ -1,0 +1,448 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "The ratio control loop",
+    "output": ".archify/dataflow-ratio-loop-20261022-144144/ratio-loop.html",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/PlatanosVerdes/rpi-homeserver.git",
+      "provider": "github",
+      "revision": "02fc921e8a08175127acecece9ea0a908fcb0270"
+    },
+    "legend": {
+      "entries": {
+        "security": {
+          "label": "disk gate"
+        },
+        "dashed": {
+          "label": "by hand or notification"
+        },
+        "emphasis": {
+          "label": "the control path"
+        }
+      }
+    }
+  },
+  "stages": [
+    {
+      "label": "Sources"
+    },
+    {
+      "label": "Read, every 30 min"
+    },
+    {
+      "label": "Decide"
+    },
+    {
+      "label": "Act"
+    },
+    {
+      "label": "Tell"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "tl",
+      "type": "external",
+      "label": "TorrentLeech",
+      "sublabel": "Prowlarr's login",
+      "stage": 0,
+      "row": 0,
+      "sources": [
+        {
+          "path": "services/tracker-control/sites.go",
+          "line": 26,
+          "end_line": 45,
+          "label": "credentials from Prowlarr"
+        },
+        {
+          "path": "services/tracker-control/stats.go",
+          "line": 189,
+          "end_line": 200
+        }
+      ]
+    },
+    {
+      "id": "dc",
+      "type": "external",
+      "label": "DigitalCore",
+      "sublabel": "seeded cookie",
+      "stage": 0,
+      "row": 1,
+      "sources": [
+        {
+          "path": "services/tracker-control/sites.go",
+          "line": 59,
+          "end_line": 71
+        }
+      ]
+    },
+    {
+      "id": "c411",
+      "type": "external",
+      "label": "C411",
+      "sublabel": "/api/auth/me",
+      "stage": 0,
+      "row": 2,
+      "sources": [
+        {
+          "path": "services/tracker-control/sites.go",
+          "line": 184,
+          "end_line": 191
+        }
+      ]
+    },
+    {
+      "id": "byhand",
+      "type": "database",
+      "label": "readings.json",
+      "sublabel": "retrotoon, by hand",
+      "stage": 0,
+      "row": 3,
+      "sources": [
+        {
+          "path": ".env.example",
+          "line": 99,
+          "end_line": 109
+        },
+        {
+          "path": "services/tracker-control/stats.go",
+          "line": 595,
+          "end_line": 600
+        }
+      ]
+    },
+    {
+      "id": "qbit",
+      "type": "backend",
+      "label": "qBittorrent",
+      "sublabel": "seed clocks",
+      "stage": 0,
+      "row": 4,
+      "sources": [
+        {
+          "path": "services/tracker-control/stats.go",
+          "line": 277,
+          "end_line": 290,
+          "label": "hit and run from the client"
+        }
+      ]
+    },
+    {
+      "id": "reader",
+      "type": "backend",
+      "label": "tracker-control",
+      "sublabel": "buffer, headroom",
+      "stage": 1,
+      "row": 2,
+      "sources": [
+        {
+          "path": "services/tracker-control/stats.go",
+          "line": 19,
+          "end_line": 33,
+          "label": "headroom = buffer / min_ratio"
+        },
+        {
+          "path": "services/tracker-control/main.go",
+          "line": 66,
+          "end_line": 80,
+          "label": "read then act, one pass"
+        },
+        {
+          "path": "services/tracker-control/main.go",
+          "line": 126,
+          "end_line": 133,
+          "label": "every 30 minutes"
+        }
+      ]
+    },
+    {
+      "id": "rules",
+      "type": "database",
+      "label": "rules.json",
+      "sublabel": "tiers, min_free_gb",
+      "stage": 2,
+      "row": 0,
+      "sources": [
+        {
+          "path": "config/trackers/rules.json",
+          "line": 2,
+          "end_line": 32,
+          "label": "TorrentLeech: the only tiers"
+        }
+      ]
+    },
+    {
+      "id": "tier",
+      "type": "security",
+      "label": "Pick a tier",
+      "sublabel": "TorrentLeech only",
+      "stage": 2,
+      "row": 1,
+      "sources": [
+        {
+          "path": "services/tracker-control/control.go",
+          "line": 50,
+          "end_line": 58
+        },
+        {
+          "path": "services/tracker-control/control.go",
+          "line": 409,
+          "end_line": 428,
+          "label": "no tiers: not steered"
+        }
+      ]
+    },
+    {
+      "id": "floor",
+      "type": "security",
+      "label": "Free-space floor",
+      "sublabel": "400 GB, +50 to resume",
+      "stage": 2,
+      "row": 3,
+      "sources": [
+        {
+          "path": "services/tracker-control/control.go",
+          "line": 430,
+          "end_line": 451
+        },
+        {
+          "path": "services/tracker-control/control.go",
+          "line": 366,
+          "end_line": 372
+        }
+      ]
+    },
+    {
+      "id": "prom",
+      "type": "database",
+      "label": "Prometheus",
+      "sublabel": "scrapes :9111",
+      "stage": 2,
+      "row": 4,
+      "sources": [
+        {
+          "path": "config/prometheus/prometheus.yml",
+          "line": 50,
+          "end_line": 53
+        }
+      ]
+    },
+    {
+      "id": "prowlarr",
+      "type": "backend",
+      "label": "Prowlarr",
+      "sublabel": "freeleech only on/off",
+      "stage": 3,
+      "row": 0,
+      "sources": [
+        {
+          "path": "services/tracker-control/control.go",
+          "line": 114,
+          "end_line": 162
+        }
+      ]
+    },
+    {
+      "id": "radarr",
+      "type": "backend",
+      "label": "Radarr",
+      "sublabel": "requiredFlags",
+      "stage": 3,
+      "row": 1,
+      "sources": [
+        {
+          "path": "services/tracker-control/control.go",
+          "line": 77,
+          "end_line": 112
+        }
+      ]
+    },
+    {
+      "id": "autobrr",
+      "type": "backend",
+      "label": "autobrr",
+      "sublabel": "TL ratio builder",
+      "stage": 3,
+      "row": 2,
+      "sources": [
+        {
+          "path": "services/tracker-control/control.go",
+          "line": 305,
+          "end_line": 351
+        }
+      ]
+    },
+    {
+      "id": "grafana",
+      "type": "backend",
+      "label": "Grafana rules",
+      "sublabel": "4 tracker alerts",
+      "stage": 3,
+      "row": 4,
+      "sources": [
+        {
+          "path": "config/grafana/alerting/rules.yml",
+          "line": 1075,
+          "end_line": 1220
+        }
+      ]
+    },
+    {
+      "id": "grabs",
+      "type": "external",
+      "label": "New grabs",
+      "sublabel": "move the ratio",
+      "stage": 4,
+      "row": 1
+    },
+    {
+      "id": "telegram",
+      "type": "cloud",
+      "label": "Telegram",
+      "sublabel": "changes and alerts",
+      "stage": 4,
+      "row": 3,
+      "sources": [
+        {
+          "path": "services/tracker-control/control.go",
+          "line": 484,
+          "end_line": 499,
+          "label": "announces each change"
+        }
+      ]
+    }
+  ],
+  "flows": [
+    {
+      "from": "tl",
+      "to": "reader",
+      "label": "account page",
+      "variant": "emphasis"
+    },
+    {
+      "from": "dc",
+      "to": "reader",
+      "label": "users API"
+    },
+    {
+      "from": "c411",
+      "to": "reader",
+      "label": "user JSON"
+    },
+    {
+      "from": "byhand",
+      "to": "reader",
+      "label": "typed figures",
+      "variant": "dashed"
+    },
+    {
+      "from": "qbit",
+      "to": "reader",
+      "label": "torrents/info"
+    },
+    {
+      "from": "reader",
+      "to": "tier",
+      "label": "headroom GB",
+      "variant": "emphasis"
+    },
+    {
+      "from": "rules",
+      "to": "tier",
+      "label": "tiers"
+    },
+    {
+      "from": "reader",
+      "to": "floor",
+      "label": "data disk free"
+    },
+    {
+      "from": "reader",
+      "to": "prom",
+      "label": "tracker_* metrics"
+    },
+    {
+      "from": "tier",
+      "to": "prowlarr",
+      "label": "freeleech flag",
+      "variant": "emphasis"
+    },
+    {
+      "from": "tier",
+      "to": "radarr",
+      "label": "requiredFlags",
+      "variant": "emphasis"
+    },
+    {
+      "from": "tier",
+      "to": "autobrr",
+      "label": "grabs per day",
+      "variant": "emphasis"
+    },
+    {
+      "from": "floor",
+      "to": "autobrr",
+      "label": "pause if low",
+      "variant": "security"
+    },
+    {
+      "from": "prom",
+      "to": "grafana",
+      "label": "queries"
+    },
+    {
+      "from": "grafana",
+      "to": "telegram",
+      "label": "alerts"
+    },
+    {
+      "from": "tier",
+      "to": "telegram",
+      "label": "knob changes",
+      "variant": "dashed"
+    },
+    {
+      "from": "radarr",
+      "to": "grabs",
+      "label": "searches"
+    },
+    {
+      "from": "autobrr",
+      "to": "grabs",
+      "label": "IRC grabs"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "The tiers (TorrentLeech)",
+      "items": [
+        "Headroom under 25 GB: freeleech only, 3 grabs a day",
+        "25 to 100 GB: freeleech only, 2 grabs a day",
+        "Over 100 GB: all results, 1 grab a day",
+        "headroom = (uploaded - min_ratio x downloaded) / min_ratio; freeleech never moves downloaded"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Read, not steered",
+      "items": [
+        "DigitalCore, C411 and retrotoon have no tiers: their numbers are only exported and alerted on",
+        "Hit and run clocks come from qBittorrent, so they exist even when a login fails",
+        "Sonarr keeps the indexer at every tier: the filter lives in Prowlarr because Sonarr has no requiredFlags"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Alerts on the loop",
+      "items": [
+        "Almost no paid downloads left; ratio under the line; an obligation with the clock stopped; numbers not being read",
+        "tracker-control posts each knob change to Telegram itself; Grafana sends the alerts",
+        "Nothing is written when a value already matches, so it is silent except at a crossing"
+      ]
+    }
+  ]
+}

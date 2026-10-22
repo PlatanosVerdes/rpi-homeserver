@@ -123,7 +123,7 @@ success while applying nothing was found.
 
 ## The control loop
 
-<!-- diagram: ratio-loop -->
+![Ratio control loop](diagrams/ratio-loop.png)
 
 tracker-control reads every account each 30 minutes and acts in the same pass. **Only TorrentLeech
 is steered**: it is the only site with tiers and a free-space floor in `config/trackers/rules.json`.

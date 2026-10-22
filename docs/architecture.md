@@ -6,7 +6,6 @@ is [access.md](access.md); what a deploy does is [deploy.md](deploy.md).
 
 ## The five bands
 
-<!-- diagram: two-nodes-three-doors -->
 ```mermaid
 flowchart TB
   subgraph OUT["1 · What arrives from outside"]
