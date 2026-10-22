@@ -1,258 +1,64 @@
 # Pending tasks
 
-## ❌ Bitwarden Secrets Manager — dropped
+Open work only. Ideas turned down, with the reason, are in [docs/decisions.md](docs/decisions.md).
 
-Tried moving `.env` secrets to [Bitwarden Secrets Manager](https://bitwarden.com/products/secrets-manager/)
-but it did not fit the workflow, so it was abandoned. `.env` is now written by the deploy from an
-encrypted copy in a private repo (SOPS + age, [docs/secrets.md](docs/secrets.md)).
+## Alert when a pinned version has a safe update
 
-The wrapper script and its setup guide were deleted on 2026-08-22: they were wired into
-nothing and read as live documentation. Recover them from git history if this is revisited.
+**Goal:** a Grafana alert that fires only when a `versions.env` pin is behind upstream **and** no
+release in between mentions a breaking change, so it never nags about the ones that need reading.
 
----
+**Why not done:** "safe" takes several sources to get right:
+- LinuxServer images: use `https://api.linuxserver.io/api/v1/images` (field `version`); their raw
+  tag lists sort wrong (`linuxserver/radarr` has an ancient tag `5.14`). `lscr.io` authenticates
+  through `ghcr.io`'s token realm.
+- GHCR's `tags/list` paginates; ask with `?n=2000` and do not trust one unpaginated call.
+- Anything with GitHub releases: `gh api repos/<owner>/<repo>/releases`, the only place with
+  changelog text to grep for "breaking". `gh` is installed and authenticated on the Pi.
+- Images pinned by digest (aceserve, qbittorrent-exporter, pihole6_exporter) have no version to
+  compare.
 
-## Update alert: notify when a service has a newer, non-breaking version (not implemented)
+**Next step:** a daily script that walks every release between pin and latest, pushes
+`service_update_available{name,current,latest,breaking}` to Pushgateway, and one rule on
+`breaking="false"`. Read every note in a multi-version jump, not only the latest; Grafana 12→13 and
+Caddy v2.11.4 were real cases that needed a human.
 
-**Goal:** a Grafana alert that fires only when a `versions.env` pin is behind upstream **and**
-the versions in between carry no documented breaking change, so it never nags about the ones
-that need a manual look.
+## "Docker monitoring" lives only in Grafana's database
 
-**2026-08-05/06: all 13 pending bumps (12 safe ones plus Grafana, whose 12->13 jump was read
-against its own breaking-changes guide first) were applied by hand, one at a time, each verified
-on the Pi before moving to the next.** See `versions.env`'s git history for what changed and why.
-The alert itself is still not built — everything below is the design for it.
+Imported by hand with corrected queries (`container_cpu_usage_seconds_total`,
+`container_memory_working_set_bytes`), because file-provisioning it failed: its UID had existed
+before, and Grafana v13 silently ignores a provisioned dashboard whose UID was deleted
+([alerting.md](docs/alerting.md#provisioning-traps)). If it is lost, re-import it and fix the same two
+metrics; provisioning it needs a fresh UID and the cause understood.
 
-"Safe" means: read every release note between the pinned tag and upstream latest (not just the
-latest one — a multi-version jump can hide a breaking change in the middle) and found no mention
-of "breaking". **Caddy is the one exception worth reading before bumping**: v2.11.4's security
-patches "may be breaking if your application relies on the buggy behaviors" (Windows-backslash
-path normalization, stripHTML, underscore-header handling) — unlikely to matter for this
-Caddyfile's plain reverse-proxy blocks, but it is the one case that is not an unconditional yes.
+## Cast to the home TV from outside the house
 
-**Grafana 12→13 is a real breaking change**, confirmed on Grafana's own docs, not just a version
-number: numeric datasource-id API endpoints disabled by default, `grafana-cli` removed, the Image
-Renderer plugin removed, tightened RBAC enforcement, React 18→19. None of these obviously hit this
-repo's setup (single org, provisioned dashboards/alerting, no custom RBAC roles), but "obviously"
-is not "confirmed", so this one needs a human to actually read the upgrade guide before bumping,
-not an alert telling them it is safe.
+**Goal:** start playback on the TV from a phone away from home. **Blocker:** discovery. Chromecast
+and Plex Companion use mDNS, and Tailscale carries no multicast, so a wider subnet route alone does
+not help. **Next step, if wanted:** a hub on the LAN that does its own discovery and is commanded over
+the tailnet, e.g. Home Assistant's Google Cast integration (`media_player.play_media`). Nothing of
+it exists yet.
 
-**Why it is not built yet:** determining "safe" is the hard part and cannot be reduced to a single
-API call — this snapshot took multiple registries/APIs to get right:
-- `lscr.io` (LinuxServer's registry) authenticates through `ghcr.io`'s token realm, not its own.
-- LinuxServer publishes their own current-stable-version API,
-  `https://api.linuxserver.io/api/v1/images` (field `version`), which is a better source than
-  sorting a raw tag list — LinuxServer images carry many legacy/multi-arch tags that sort wrong
-  numerically (e.g. `linuxserver/radarr` has an ancient tag literally named `5.14`, which
-  outranks `6.3.0.10514-ls313` under naive version sort). Overseerr specifically is not tracked
-  in that API (deprecated from their catalog) and needed its raw tag list instead.
-- GHCR's `tags/list` paginates; the default page is not the full list, and recent tags are not
-  guaranteed to sort last. `curl ... /tags/list?n=2000` was enough for every repo checked here,
-  but do not trust a single unpaginated call in general.
-- Everything else (Caddy, Homepage, Jellyfin, Maintainerr, the Prometheus family, Grafana, the
-  *arr apps, qBittorrent, FlareSolverr, speedtest-tracker) has real GitHub releases, which is a
-  more reliable "latest version" source than any registry AND the only place with real changelog
-  text to grep for "breaking" — prefer `gh api repos/<owner>/<repo>/releases` over registry tags
-  wherever a GitHub repo exists.
-- Three images are pinned by digest specifically because they publish no version tag at all
-  (`aceserve`, `qbittorrent-exporter`, `pihole6_exporter`); there is no version number to compare,
-  so "is there an update" can only mean "has the `:latest` digest changed", which says nothing
-  about whether it is safe.
+## Retire `scripts/ops/cutoff-search.sh`
 
-**Approach when implemented:**
-1. A script (bash+jq, matching `scripts/sync/arr-config.sh`) that, for each `versions.env` entry with a
-   known GitHub repo, walks every release between the pinned tag and latest via
-   `gh api repos/<repo>/releases` (or plain `curl` if `gh` is not available on the Pi — check),
-   greps each body for "breaking", and pushes
-   `service_update_available{name,current,latest,breaking="true|false"}` to Pushgateway.
-2. A Grafana alert rule filtering `breaking="false"` only, so `grafana` (or anything else that
-   turns up breaking) never fires it — reviewing those stays a manual, deliberate act.
-3. Daily cron is plenty; nothing here needs to be fresher than that.
-4. `gh` is installed and authenticated on the Pi as `PlatanosVerdes` (confirmed 2026-08-05),
-   so use `gh api` rather than token-less `curl` — 5000 req/h authenticated vs. 60/h anonymous,
-   comfortable headroom for walking every release of ~17 repos daily.
+Out of the crontab since 2026-08-24, script kept. It covered releases that scrolled out of the RSS
+window. Decide whether anything replaces it, write the reason here, then delete the script and its
+commented cron line together.
 
----
+## Smaller items
 
-## Grafana v13: file-provisioning a dashboard whose UID previously existed silently no-ops
-
-**Found 2026-08-06** while bringing the manually-imported "Docker monitoring" dashboard under
-provisioning. Confirmed with a control test: a brand-new UID provisions fine (creates rows in the
-new `resource`/`resource_history` unified-storage tables — the actual source of truth in v13, the
-legacy `dashboard` SQL table is no longer written for new creates, only kept for old migrated
-rows). But re-provisioning a UID that existed before and was deleted (even after fully removing it
-from `dashboard`, `dashboard_tag`, `dashboard_version`, `resource`, and `resource_history`) just
-silently does nothing — no error in the logs, the file is read, "finished to provision dashboards"
-logs normally, nothing gets created. Disabling the `provisioning` feature toggle
-(`GF_FEATURE_TOGGLES_provisioning=false`) did not help either, so there is some other piece of
-state (not yet found) still tombstoning that UID.
-
-**Workaround used:** picked a fresh UID (`docker-monitoring`) and even that only saved successfully
-through the normal **Import** UI flow, not through file provisioning — a second, related bug: even
-a brand-new UID's file got `"failed to save dashboard" ... error="Dashboard not found"` on save.
-Gave up chasing the exact cause; not worth more time on a single dashboard.
-
-**Current state:** "Docker monitoring" is NOT provisioned from git — it lives only in Grafana's own
-DB, imported by hand with the corrected queries (`container_cpu_usage_seconds_total`,
-`container_memory_working_set_bytes`, matching Container Health). Same category as the other
-manually-imported community dashboards. If this dashboard is ever lost, re-import it by hand and
-fix those same two metric names again; don't bother trying to provision it from a file until this
-Grafana bug is understood.
-
----
-
-## Cast/control the home TV from outside the house (not implemented)
-
-**Goal:** trigger playback on the home TV from a phone that is away from home (mobile data, another
-network), not just watch on the phone itself.
-
-**Why it's not a simple config toggle (but is NOT flatly impossible either):**
-- The actual cast protocol, once a target's IP is known, is ordinary routable TCP/UDP (ports
-  8008/8009 control, 8443 for Google Home, a wide UDP range for the media stream itself) — nothing
-  about the protocol itself requires same-network. The Pi is already a **subnet router**, and
-  widening what it advertises from its own two `/32`s to `192.168.1.0/24` would make the home LAN's
-  IPs reachable from a remote tailnet device (see `docs/tailscale.md` for why it does not do that
-  today).
-- The actual blocker is **discovery**: Chromecast/Plex Companion find each other via mDNS
-  (multicast), and Tailscale is a Layer-3 overlay that does not carry multicast/broadcast traffic
-  at all, by design — confirmed on Tailscale's own OSI-model docs, and there are still-open feature
-  requests asking for this. A subnet router does not fix that; multicast just doesn't traverse the
-  tunnel regardless of routes.
-- Bridging mDNS across that gap for real is possible but genuinely fragile: converting multicast
-  announcements into targeted unicast for a specific tailnet peer (custom reflector trickery), or
-  running VXLAN over Tailscale on Linux to fake a real L2 segment. Neither is a quick win, and
-  consumer apps (Google Home, Plex mobile) don't offer "enter the Chromecast's IP manually" as a
-  fallback, so even a working subnet route doesn't help without solving discovery first.
-
-**Approach when implemented:** given the above, the practical path is still to sidestep the mDNS
-problem entirely rather than solve it: a local hub that already sits on the LAN (so it does its own
-normal local discovery) and that you command *remotely* over Tailscale as an ordinary HTTPS call —
-i.e. Home Assistant running on the Pi, using its Google Cast integration
-(`media_player.play_media` service call to a cast entity), exposed to the tailnet the same way
-every other `*.platanosverdes.com` service is. Not started: no Home Assistant instance exists in
-this repo yet — would need its own compose service, Caddy route, and a first pass at the Cast
-integration to see how reliably it discovers cast targets before promising this actually works
-end to end.
-
----
-
-## Acestream channel health metric — abandoned: probing a channel is opening it
-
-The idea was a per-channel `acestream_channel_health` metric from a background sweep that opened
-each channel briefly. It is dropped for good, not postponed. Probing an acestream channel is not an
-HTTP HEAD: the engine resolves the content and joins its swarm, which is the same as playing it, and
-this Pi plays one channel at a time. A sweep competes with whoever is watching and, on the channel
-being watched, takes the engine away from them (in October 2026 one such extra connection made
-Jellyfin's codec probe fail and the TV fall back to a software re-encode the Pi could not sustain).
-Channels in this list also change hash several times an hour, so a health value goes stale before
-the next sweep.
-
-What exists instead is passive: bifrost's `/api/status` reports how every real open went (which
-source, how long it took to start, or that no source produced video), and tries the next source by
-itself when one is dead. See [PlatanosVerdes/bifrost](https://github.com/PlatanosVerdes/bifrost).
-
----
-
-## Podman instead of Docker — considered, not worth it
-
-**Verdict: no.** The migration touches most of the repo and the thing it buys is one this server
-does not need.
-
-### What it would touch
-
-| Piece | Why it is not a drop-in |
-| :--- | :--- |
-| `docker-compose.yml` | The entry point is `include:` across four modules. `podman-compose` support for `include` is the first thing that would have to be proven, and the whole layout rests on it |
-| Homepage, cAdvisor, Vector | All three talk to `/var/run/docker.sock`. Podman's socket is Docker-API-compatible and lives elsewhere; Homepage and Vector would probably follow, cAdvisor is the doubtful one |
-| `restart: unless-stopped`, 30+ services | There is no daemon to restart anything. Podman does it through systemd units (quadlet) or `podman-restart.service`, so the semantics have to be rebuilt rather than translated |
-| `/etc/docker/daemon.json` | Ignored. Podman logs to journald, so the `10m x 3` cap described in SYSTEM_NOTES stops existing and the journal cap becomes the only thing standing between the logs and the SD card |
-| PUID/PGID on every linuxserver image | Rootless Podman maps UIDs into a subordinate range, which collides with the ownership of files on the external disk. Running Podman rootful avoids it and throws away the main reason to switch |
-| `network_mode: host` on 5 services, Caddy on 80/443 | Rootless cannot bind below 1024 without extra configuration |
-| 8 distinct `docker` subcommands across `scripts/`, plus `scripts/deploy/apply.sh` | Mostly an alias away, mostly |
-
-### What it would buy
-
-No root daemon, if run rootless. That is the real argument for Podman and it matters on a machine
-exposed to the internet. This one barely is: what is public goes through an outbound Cloudflare
-tunnel (the deploy webhook and a few apps behind Cloudflare Access), and what reaches the home
-address directly is BitTorrent's port and what aceserve maps over UPnP. The gain is close to theoretical here, and
-running rootful to dodge the UID problem would remove even that.
-
-### When to revisit
-
-If the Pi ever gets a service genuinely exposed to the internet, or if Docker's licensing or
-upstream direction becomes a problem. As a way to learn Podman it is a fine project; as an
-improvement to this server it is not.
-
----
-
-## Hardware transcoding on the Pi (v4l2m2m) — tried, reverted
-
-Jellyfin transcodes with `libx264` because `EnableHardwareEncoding` is off, and a Pi 4 cannot
-software-encode 1080p sport in real time: measured at **1.39x on 1080p25 synthetic video with the
-machine near idle**, which halves on a 50fps stream, and the player then restarts every few
-seconds. This is the "the stream keeps cutting" symptom, and it only affects clients that cannot
-direct play. A TV app playing the same channel, even at 4K, copies bytes and is unaffected.
-
-Mapping `/dev/video10-12` into the container and turning the setting on did not work:
-
-```
-[h264_v4l2m2m] VIDIOC_STREAMON failed on output context
-[vost#0:0/h264_v4l2m2m] Error encoding a frame: No such process
-Conversion failed!
-```
-
-The encoder itself is fine in isolation, `h264_v4l2m2m` encodes synthetic 1080p at **2.45x against
-libx264's 1.39x**, so the fault is in the real transcode rather than the hardware. Untested
-suspects, in the order worth trying: `gpu_mem` too low for the codec firmware, several ffmpeg
-processes contending for the single encoder at `/dev/video11` (the player retried four times in
-ninety seconds, and each retry starts another), and the `high` profile at `level 42` the transcode
-asks for.
-
-**The better fix is upstream of all this: stop transcoding.** The source is H.264, which browsers
-play natively, so the work is finding why Jellyfin will not direct play or remux it. Transcoding
-efficiently is a worse answer than not transcoding.
-
----
-
-## ops/cutoff-search.sh is being retired
-
-Commented out of the crontab on 2026-08-24 at Jorge's call, script kept. What still needs writing
-down is the reason and what covers the gap: the nightly search existed for releases that scrolled
-out of the RSS window, so if nothing replaces it, that case stops being covered. Decide, write it
-here, and then delete the script and its cron line together.
-
----
-
-## Smaller open items
-
-- **The orphan `Socks5` proxy in Prowlarr.** It points at `nl.socks.nordhold.net:1080` (tag
-  `nordvpn`) and no indexer is tagged to it since C411 went direct on 2026-08-21. Delete it the next
-  time that screen is open, or it is a trap for whoever tags something with `nordvpn` next.
-- **C411's own figures.** `/api/auth/me` returns `uploadCredit` and `minRatioForDownload`, and
-  tracker-control reads neither: the 0.8 in `config/trackers/rules.json` is typed in by hand.
-- **A DHCP reservation for the Pi's eth0.** The two `/32` routes Tailscale advertises are typed in
-  by hand; the wifi address is reserved, the cable one is a plain lease. If it changes, Plex remote
-  breaks silently.
-- **`config/qbittorrent/seed-rules.json` is read by nothing** since the script that used it was
-  deleted; seed goals live in `config/qbit-manage/config.yml`. Delete it, and the notes in
-  `config/trackers/rules.json` that still quote its 360 h / 240 h.
+- **The orphan `Socks5` proxy in Prowlarr** (`nl.socks.nordhold.net:1080`, tag `nordvpn`) has no
+  indexer tagged to it. Delete it, or it is a trap for whoever tags something `nordvpn` next.
+- **C411's own figures.** `/api/auth/me` returns `uploadCredit` and `minRatioForDownload`; tracker-control
+  reads neither, and the 0.8 in `config/trackers/rules.json` is typed in by hand.
+- **A DHCP reservation for the Pi's eth0.** The `/32` routes Tailscale advertises are typed in by
+  hand; wifi is reserved, cable is a plain lease. If it moves, Plex remote breaks silently.
+- **`config/qbittorrent/seed-rules.json` is read by nothing**; seed goals are in
+  `config/qbit-manage/config.yml`. Delete it, and the notes in `config/trackers/rules.json` that
+  still quote its 360 h / 240 h.
 - **`config/arr-exports/` is a July snapshot** that differs from `config/arr/`, which is what
-  `scripts/sync/arr-config.sh` pushes. Delete it.
+  `scripts/sync/arr-config.sh` pushes. Delete the directory.
 - **The "Acestream updater not running" alert** reads `acestream_last_run_timestamp`, from the
-  updater that bifrost replaced. Check whether anything still writes it, then fix or delete the rule.
-
----
-
-## Removing a provisioned alert rule needs `deleteRules`, and the dashboard trap is its twin
-
-Found on 2026-09-01, when a rule deleted from git on 2026-08-26 fired at 01:36. Grafana's own
-documentation is explicit: taking a rule out of the `groups` section leaves it in place, and it goes
-on evaluating. Grafana's database had 39 rules against the file's 38, and the extra one was the
-deleted one, not paused.
-
-So a deletion is two edits: take the rule out of `groups`, and name its uid under `deleteRules`. The
-block stays in the file afterwards; re-applying it costs nothing.
-
-Its twin is already written up above: re-provisioning a *dashboard* whose UID existed and was deleted
-silently does nothing. Same shape, opposite direction. Anything provisioned from a file here should
-be assumed to need an explicit instruction to disappear.
+  updater bifrost replaced. Check whether anything still writes it; fix or delete the rule.
+- **Stale comments in code**: the commented `*/15` cron example at the end of `apply.sh` (and its
+  "15-min run" prune comment), and the Apple 2FA step in `recovery-status.sh`'s header, which the
+  script does not check.

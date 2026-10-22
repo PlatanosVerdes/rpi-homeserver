@@ -13,6 +13,7 @@ The workflow is `.github/workflows/service-images.yml`; the decisions it makes l
 
 ## The path of a change
 
+<!-- diagram: push-to-container -->
 ```
 push to main touching services/caddy/
    │
@@ -77,18 +78,10 @@ request from a fork also gets a read-only token from GitHub, whatever the workfl
 
 ## What the Pi does
 
-`scripts/deploy/apply.sh`, on a pass where HEAD moved:
-
-- **Services with a published image** (`image:` on a registry and a `build:`): if the pinned tag is
-  not on the Pi, `docker compose pull` it. Tags are immutable, so one already present is the one
-  pinned and the registry is not asked. A source change alone does nothing here.
-- If a pull fails (GHCR unreachable, the package not public), the deploy **builds that service from
-  source** under the pinned tag, the old path, and logs `WARNING: could not pull ...`. A deploy
-  keeps working without GHCR, at the old cost.
-- **Services without one** (anything compose builds without an `image:`): built when their context
-  changed, or when `versions.env` or a compose file did, exactly as before.
-- Then `docker compose up -d` without `--build`, which recreates only the containers whose image
-  changed. Bifrost, Caddy and the rest stay up through any push that did not move their pin.
+On a pass where HEAD moved, the deploy pulls a published image only if its pinned tag is not on the
+Pi yet (tags are immutable), and **builds it from source** under the pinned tag if the pull fails, so
+a deploy keeps working without GHCR. Then `up -d` without `--build`, which recreates only the
+containers whose image changed. The full pass: [deploy.md](deploy.md).
 
 To build from source on purpose, without waiting for CI:
 

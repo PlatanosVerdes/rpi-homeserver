@@ -5,7 +5,7 @@ lives only on the Pi: it has no history, no copy elsewhere, and editing it means
 This keeps it **encrypted in a private repo** instead and lets the deploy write `.env` from it.
 
 Nothing here is required. A node without the checkout described below, or without `sops`, uses
-its `.env` as before.
+its `.env` as before. Bitwarden Secrets Manager was tried first and dropped ([decisions.md](decisions.md)).
 
 ## Terms
 

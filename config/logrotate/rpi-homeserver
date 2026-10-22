@@ -2,7 +2,7 @@
 #
 # Installed to /etc/logrotate.d/rpi-homeserver by scripts/setup/install-logrotate.sh, which scripts/deploy/apply.sh
 # runs on every deploy. It used to be a hand-written host file documented only in
-# SYSTEM_NOTES.md, so a rebuilt Pi silently went back to logs that grow forever, and
+# a host-notes doc, so a rebuilt Pi silently went back to logs that grow forever, and
 # rpi-services was never covered at all: one-pace.log had reached 1.2 MB with nothing rotating it.
 #
 # copytruncate is not optional: the cron jobs hold these files open with `>>`, so rotating by

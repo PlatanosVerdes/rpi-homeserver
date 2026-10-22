@@ -76,8 +76,64 @@ the file and nothing else:
 | Not in films/ or series/ | Live TV and anything outside the library has no file to change |
 
 `no_direct_play` entries teach the nightly pass nothing and are never put at the head of its
-queue; only `cause=codec` sessions are. Why the two are told apart is in
-[alerting.md](alerting.md#which-audio-codecs-get-converted-is-learned).
+queue; only `cause=codec` sessions are. Why the two are told apart is
+[below](#which-codecs-get-converted-is-learned).
+
+## Which codecs get converted is learned
+
+`audio-compat.py` used to carry a list of codecs "the TV decodes without help". A list kept by hand
+is wrong the day a client disagrees with it, so there is no list. But "a client had this codec
+re-encoded" is not proof the client cannot play it either, and the difference is the `cause` label
+on `media_transcode_sessions`:
+
+| `cause` | Meaning | Can a file change fix it |
+| :--- | :--- | :--- |
+| `codec` | Direct play was allowed and the client's profile refused this audio codec | Yes, an added track in another codec |
+| `no_direct_play` | Plex: the client did not ask for direct play | No |
+| `other` | Jellyfin: its `TranscodeReasons` name something other than the audio codec | No |
+| `unknown` | Nothing says which | Not known, so nothing is done |
+
+`no_direct_play` is the trap. The Plex app on a Samsung TV turns direct play off itself for some 4K
+files, and Plex then builds a DASH stream (video and audio cut into short segments over HTTP) whose
+profile takes only AAC. EAC3 is re-encoded; once an AC3 track is added, the AC3 is re-encoded just
+the same. Plex's session API does not say whether direct play was requested, only the decision
+request in its log does (`directPlay=0` or `1`, keyed by the transcode session's id), so pi-metrics
+mounts Plex's `Logs` directory read-only. Those requests are logged at debug level, Plex's default;
+with debug logging off, every Plex session reads `unknown`. Jellyfin reports its own reasons, and
+`AudioCodecNotSupported` is the one that means `codec`.
+
+The `playback` collector writes `appdata/pi-metrics/audio-recodes.json` from `codec` sessions only:
+the audio codec, which clients, and the last hundred files it happened on. It also requires the video
+to have been copied. When the video is re-encoded too, the audio goes along whatever its codec, and
+Jellyfin's Live TV does that to AAC every day.
+
+The same file lists sessions whose client turned direct play off, marked as not fixable and
+teaching no codec, and each entry carries a conversion plan worked out from the server's description
+of the file: which track the AC3 is built from, the extra size, the duration. That is what the page
+shows, and the alert links there.
+
+At 01:30 `audio-compat.py` reads that file. A library file is converted when its main track (flagged default,
+else the first) is in a codec recorded there or in its seed (DTS and TrueHD, what it converted
+before anything was measured), and no other track would play in its place: one in a playable codec,
+the same language and as many channels up to 5.1, that is not a commentary. The recorded files go first, newest first, so the film that set off the alert is
+the first one fixed. What it does **not** do:
+
+- **Convert on a guess.** A codec no server has refused for a client yet is left alone.
+- **Help a client that cannot play AC3.** AC3 is what it adds, so if AC3 itself is recorded as
+  refused it says so in `audio-compat.log` and ignores it; the alert says the same.
+- **Fix a client that turned direct play off.** That is in the client, not the file.
+- **Pick a track for the client.** A file with a DTS 5.1 and an AC3 5.1 of the same mix already has
+  something playable, so it is skipped, and if the client still chose the DTS the log says so the
+  next night.
+- **Forget.** A codec a client update fixed stays recorded until it is deleted from the JSON by hand,
+  followed by `docker restart pi-metrics`: the collector holds the file in memory and would write the
+  codec straight back.
+- **Touch a file that is still seeding**, for the hardlink reason in the script's docstring. The
+  page can, after a confirmation; [below](#a-file-that-is-still-seeding) is what that costs.
+
+Adding a codec can put a lot of the library in the queue at once, and every conversion keeps the
+old file as `.original` beside the new one, so the disk pays for both until those are pruned.
+`MAX_PER_RUN` (two a night) is what spreads that out.
 
 ## A file that is still seeding
 

@@ -177,9 +177,8 @@ Icon names: search [walkxcode/dashboard-icons](https://github.com/walkxcode/dash
 ## Step 5 — Deploy
 
 ### Either repo
-A push to `main` deploys within seconds via the GitHub webhook
-(see [deploy-webhook.md](deploy-webhook.md)). One script handles both repos, so to
-trigger it by hand:
+A push to `main` deploys within seconds via the GitHub webhook ([deploy.md](deploy.md)). One script
+handles both repos, so to trigger it by hand:
 ```bash
 bash ~/rpi-homeserver/scripts/deploy/apply.sh
 ```
@@ -204,7 +203,7 @@ docker exec caddy caddy reload --config /etc/caddy/Caddyfile
 3. Reference it in the compose file as `${MY_SECRET}`
 
 If the service should be reachable from the internet, it goes behind a Cloudflare Access application
-first, then a tunnel route; see the `prometheus.probe.access` label in step 1.
+first, then a tunnel route: [access.md](access.md#adding-a-public-app).
 
 ---
 
