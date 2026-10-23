@@ -69,6 +69,7 @@ number.
 | | [deploy.md](docs/deploy.md) | The deploy pass, concurrency and retries, the webhook and tunnel |
 | | [secrets.md](docs/secrets.md) | `.env` encrypted per node with SOPS + age |
 | | [backups.md](docs/backups.md) | Nightly appdata archive, restore, offsite |
+| | [updates.md](docs/updates.md) | Renovate's image update PRs, and which ones merge on their own |
 | **Reach it** | [access.md](docs/access.md) | The three doors, adding a public app |
 | | [tailscale.md](docs/tailscale.md) | Exit node, subnet routes, Pi-hole as tailnet DNS, guests |
 | | [plex-remote-access.md](docs/plex-remote-access.md) | Why Plex counts as local from outside, and how to keep it so |

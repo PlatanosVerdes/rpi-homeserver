@@ -17,7 +17,8 @@ Images built from `services/` are not built by the Pi: GitHub Actions builds the
 "Deploy <service> <tag>" commit is the push that deploys them ([service-images.md](service-images.md)).
 Apps in their own repos (bifrost, sleipnir, muninn) are pinned the same way: their release runs this
 repo's `bump-app-versions.yml` ("Deploy app"), which commits the new tag to `versions.env`. The
-rpi-services apps do the same in that repo.
+rpi-services apps do the same in that repo. Third-party images arrive as Renovate pull requests
+([updates.md](updates.md)), and merging one is the push.
 
 ## One pass
 

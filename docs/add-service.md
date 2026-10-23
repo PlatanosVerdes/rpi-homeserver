@@ -22,9 +22,11 @@ Two repos are involved — pick the right one before starting:
 **For rpi-services**, add it directly to `docker-compose.yml`.
 
 Versions never go inline and are never `latest`: they live in `versions.env`, which is committed,
-so a rebuild cannot silently pull a different image. Add the line there first:
+so a rebuild cannot silently pull a different image. Add the line there first, under the
+annotation Renovate needs to keep it updated ([updates.md](updates.md)):
 
 ```bash
+# renovate: image=filebrowser/filebrowser
 FILEBROWSER_VERSION=v2.32.0
 ```
 
@@ -219,7 +221,7 @@ first, then a tunnel route: [access.md](access.md#adding-a-public-app).
 - [ ] `prometheus.probe` label set, or the service genuinely serves no HTTP
 - [ ] No `ports:` unless the host needs it (then `127.0.0.1:`), and `host.ports` if on the host network
 - [ ] HTTPS route added (Caddyfile or rpi-services `*.caddy`)
-- [ ] Version pinned in `versions.env`, image referenced as `${SERVICE_VERSION}`
+- [ ] Version pinned in `versions.env` under its `# renovate: image=` line, image referenced as `${SERVICE_VERSION}`
 - [ ] Built from `services/`: `image: ghcr.io/platanosverdes/rpi-homeserver-<name>:${<NAME>_IMAGE_TAG}`
       beside `build:`, `<NAME>_IMAGE_TAG=unbuilt` in `versions.env`, a `.dockerignore`
 - [ ] Own-name profile plus group and `all`; any cron job for it has `# when: <service>`
