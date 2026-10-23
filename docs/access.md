@@ -18,7 +18,7 @@ one or more of them on purpose.
 | Deploy webhook | no | no login, `/hooks/deploy` only, HMAC-checked ([deploy.md](deploy.md)) |
 | Companion repo apps | per app | some behind Access, some public by design (a public flight board, rate limited) |
 | Plex | yes, on its LAN address | no ([plex-remote-access.md](plex-remote-access.md)) |
-| bifrost, each node | yes | behind Access, its own application per node; only the page and its API pass the tunnel, streams answer 404. Viewers are invited from the page (bifrost's Share…) |
+| bifrost, each node | yes | behind Access, its own application per node; only the page and its API pass the tunnel, streams answer 404. Viewers are invited from the page (bifrost's Share…), by email or by a one-use invite link; `/join` is a second Access app that admits anyone who signs in, and bifrost checks the link |
 | Jellyfin, audio-convert, the arrs, qBittorrent, Homepage, the rest | yes | no public DNS at all |
 
 Video never goes through Cloudflare: its terms forbid it, and TV apps cannot do a web login. Media
