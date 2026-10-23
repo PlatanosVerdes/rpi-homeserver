@@ -30,6 +30,11 @@
       "versioning": "regex:^v?(?<major>\\d+)\\.(?<minor>\\d+)(?:\\.(?<patch>\\d+))?(?:\\.(?<build>\\d+))?(?:-[0-9a-f]{9})?(?<compatibility>ubu\\d+)?(?:_v2\\.\\d+\\.\\d+)?-ls(?<revision>\\d+)$"
     },
     {
+      "description": "Held on 10.x: Jellyfin 12 needs plugins rebuilt for .NET 10, and the SSO plugin (Google login) has no build for it",
+      "matchPackageNames": ["lscr.io/linuxserver/jellyfin"],
+      "allowedVersions": "/^10\\./"
+    },
+    {
       "description": "Monitoring and CI only: a bad update here takes nothing at home down",
       "matchUpdateTypes": ["minor", "patch", "digest"],
       "matchPackageNames": [

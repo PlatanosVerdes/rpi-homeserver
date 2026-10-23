@@ -44,6 +44,15 @@ get their own versioning rule, so an `-ls` rebuild counts as an update and an Ub
 Its pull requests run the same checks as anyone's: Host ports, and Service images, which builds
 Caddy or audio-convert when a base version they take as a build arg changes.
 
+## Held back
+
+- **Jellyfin stays on 10.x.** 12.0 moved the server to .NET 10, so every non-bundled plugin needs a
+  rebuild, and the SSO plugin behind the Google login ([9p4/jellyfin-plugin-sso](https://github.com/9p4/jellyfin-plugin-sso))
+  has none: its last release targets 10.11. Upgrading would leave the Google button broken. 12 also
+  migrates the database with no way back, so its notes ask for plugins removed and a backup first.
+  To lift the hold, drop the `allowedVersions` rule in `renovate.json` once the plugin ships a 12
+  build, back up `appdata/jellyfin` on both nodes, and run a full library scan after the upgrade.
+
 ## Adding a version line
 
 Put the annotation right above the line, with the image as compose names it:
