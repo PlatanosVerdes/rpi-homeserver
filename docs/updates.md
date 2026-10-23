@@ -29,7 +29,9 @@ get their own versioning rule, so an `-ls` rebuild counts as an update and an Ub
 ## When it runs and what it merges
 
 - Monday before 07:00 Madrid time, and only versions published at least three days ago: a broken
-  release usually gets pulled or patched inside that window.
+  release usually gets pulled or patched inside that window. GHCR and lscr.io publish no release
+  dates, so their images (the linuxserver ones, Seerr, Homepage, the *arrs' helpers) skip the wait;
+  requiring a date would hold them back forever.
 - **Merged on its own once CI passes:** minor, patch and digest updates to the monitoring stack
   (Prometheus and its exporters, cAdvisor, Vector, VictoriaLogs), grouped in one PR, and to GitHub
   Actions. A bad one there loses metrics or a CI run, nothing at home.

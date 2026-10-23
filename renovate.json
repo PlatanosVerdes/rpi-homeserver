@@ -4,6 +4,7 @@
   "timezone": "Europe/Madrid",
   "schedule": ["* 0-6 * * 1"],
   "minimumReleaseAge": "3 days",
+  "minimumReleaseAgeBehaviour": "timestamp-optional",
   "customManagers": [
     {
       "description": "versions.env lines annotated with `# renovate: image=<image>`",
