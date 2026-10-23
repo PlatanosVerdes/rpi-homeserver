@@ -3,9 +3,9 @@
 `https://sleipnir.platanosverdes.com` lists every gluetun tunnel on this machine, found by the
 `sleipnir.enable` label, and moves its exit to another country or server in place: whatever uses the
 tunnel carries on after a pause of a few seconds. It does not decide which container uses which
-tunnel; that stays in compose. sleipnir is its own app, pinned here as `SLEIPNIR_VERSION`; how it
-works, its labels and its settings are in its README:
-[PlatanosVerdes/sleipnir](https://github.com/PlatanosVerdes/sleipnir).
+tunnel; that stays in compose. sleipnir is its own app, pinned here as `SLEIPNIR_VERSION`; how a
+switch works, its labels and its settings are in its docs:
+[switching](https://github.com/PlatanosVerdes/sleipnir/blob/main/docs/switching.md), [tunnels](https://github.com/PlatanosVerdes/sleipnir/blob/main/docs/tunnels.md) and [configuration](https://github.com/PlatanosVerdes/sleipnir/blob/main/docs/configuration.md).
 
 What is specific to this repo:
 
