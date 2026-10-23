@@ -3,6 +3,13 @@
 Ideas that were tried or weighed and turned down, with the reason, so they are not tried again the
 same way. Open work is in [PENDING.md](../PENDING.md).
 
+## Dependabot for image updates: Renovate instead
+
+Dependabot only reads literal tags in compose files and Dockerfiles. Every image here is
+`${VARIABLE}` from `versions.env`, so it would have seen the GitHub Actions and the `golang`
+builders and none of the services. Renovate reads `versions.env` through a regex manager and
+handles the linuxserver tag scheme ([updates.md](updates.md)).
+
 ## Bitwarden Secrets Manager for `.env`: dropped
 
 Tried as the home for `.env`, and it did not fit the workflow. SOPS + age with a private repo is

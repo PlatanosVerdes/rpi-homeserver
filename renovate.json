@@ -1,0 +1,52 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":disableRateLimiting"],
+  "timezone": "Europe/Madrid",
+  "schedule": ["* 0-6 * * 1"],
+  "minimumReleaseAge": "3 days",
+  "customManagers": [
+    {
+      "description": "versions.env lines annotated with `# renovate: image=<image>`",
+      "customType": "regex",
+      "managerFilePatterns": ["/^versions\\.env$/"],
+      "matchStrings": ["# renovate: image=(?<depName>\\S+)\\n[A-Z0-9_]+=(?<currentValue>[^\\s:@]+)\\n"],
+      "datasourceTemplate": "docker"
+    },
+    {
+      "description": "Images without version tags, pinned by the digest of latest",
+      "customType": "regex",
+      "managerFilePatterns": ["/^versions\\.env$/"],
+      "matchStrings": ["# renovate: image=(?<depName>\\S+)\\n[A-Z0-9_]+_DIGEST=(?<currentDigest>sha256:[a-f0-9]{64})\\n"],
+      "datasourceTemplate": "docker",
+      "currentValueTemplate": "latest"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "linuxserver tags: <version>[.<build>][-<hash>][ubuNNNN][_v<libtorrent>]-ls<revision>",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["lscr.io/linuxserver/**"],
+      "versioning": "regex:^v?(?<major>\\d+)\\.(?<minor>\\d+)(?:\\.(?<patch>\\d+))?(?:\\.(?<build>\\d+))?(?:-[0-9a-f]{9})?(?<compatibility>ubu\\d+)?(?:_v2\\.\\d+\\.\\d+)?-ls(?<revision>\\d+)$"
+    },
+    {
+      "description": "Monitoring and CI only: a bad update here takes nothing at home down",
+      "matchUpdateTypes": ["minor", "patch", "digest"],
+      "matchPackageNames": [
+        "prom/**",
+        "ghcr.io/google/cadvisor",
+        "timberio/vector",
+        "victoriametrics/victoria-logs",
+        "esanchezm/prometheus-qbittorrent-exporter",
+        "amonacoos/pihole6_exporter"
+      ],
+      "groupName": "monitoring",
+      "automerge": true
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["minor", "patch", "digest"],
+      "groupName": "github actions",
+      "automerge": true
+    }
+  ]
+}

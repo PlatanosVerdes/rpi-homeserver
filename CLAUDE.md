@@ -299,6 +299,10 @@ export COMPOSE_ENV_FILES=versions.env,.env
 docker compose up -d
 ```
 
-**To update a service:** bump its version in `versions.env`, commit, and let the auto-deploy
+**Updates come from Renovate** ([docs/updates.md](docs/updates.md)): every third-party line in
+`versions.env` has a `# renovate: image=<image>` line right above it, which is how Renovate knows
+the image. A new version line needs one; the apps' own images and `*_IMAGE_TAG` must not have one.
+
+**To update a service by hand:** bump its version in `versions.env`, commit, and let the auto-deploy
 apply it (or `bash scripts/recovery/rebuild-service.sh <service>`). Check the running version first with
 `docker inspect --format '{{.Config.Image}}' <container>`.
