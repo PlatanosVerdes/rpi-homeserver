@@ -9,61 +9,20 @@ alerts. One `docker-compose.yml` includes four modules, every image version is p
 > live in [rpi-services](https://github.com/PlatanosVerdes/rpi-services). This repo stays generic
 > enough to clone. Both share `media-network` and one Caddy, and are deployed by the same script.
 
-## Two nodes, three doors
+## Quick start
 
-![Two nodes and the three ways in](docs/diagrams/two-nodes-three-doors.png)
+Follow [docs/host-setup.md](docs/host-setup.md): Docker, the data disk, `.env` from `.env.example`,
+then `docker compose up -d` with `COMPOSE_ENV_FILES=versions.env,.env`. From there the cron (and,
+once set up, the webhook) keeps the Pi in step with `main`.
 
-| Node | Runs | Deploys on |
-| :--- | :--- | :--- |
-| raspi (main) | everything: `COMPOSE_PROFILES=all` plus the tunnel | the GitHub webhook and a 30-minute cron |
-| streamhalla | the AceStream + Jellyfin subset and its own metrics, with `overrides/secondary-node.yml` | its own 30-minute cron |
+Everything else (the two nodes, the three doors, what runs, how a change deploys, what gets deleted
+and the everyday commands) is in [docs/overview.md](docs/overview.md).
 
-Both run `main`. Differences live in each node's `.env`, which the deploy decrypts from a private
-repo. Details: [docs/nodes.md](docs/nodes.md).
-
-| Door | Who gets in |
-| :--- | :--- |
-| Tailnet (Tailscale + Pi-hole + Caddy) | your devices; most apps ask nothing more |
-| Public, behind Cloudflare Access | anyone who passes Access's login, through an outbound tunnel |
-| Public, no login | only the deploy webhook (HMAC-signed) and apps public by design |
-
-Plex is never proxied: it is reached on its LAN address, over Tailscale subnet routes from outside.
-Details: [docs/access.md](docs/access.md).
-
-## What runs
-
-| Module | Services |
-| :--- | :--- |
-| `compose-core.yml` | Caddy, Homepage, Pi-hole, Speedtest-tracker, cloudflared (opt-in) |
-| `compose-media.yml` | Plex, Jellyfin, Seerr, Bazarr, Maintainerr, Tautulli, watch-next, subtitle-links, audio-convert; AceStream: gluetun, aceserve, kubo, bifrost, farnsworth; sleipnir, muninn |
-| `compose-arrs.yml` | Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr, Unpackerr, autobrr, qbit-manage, tracker-control, cross-seed, torrent-drop |
-| `compose-mon.yml` | Prometheus, Grafana, Pushgateway, node-exporter, cAdvisor, blackbox-exporter, pi-metrics, qBittorrent and Pi-hole exporters, tailscale-metrics, VictoriaLogs, Vector |
-
-Every service has a profile of its own name plus a group, so a node picks exactly what it runs.
-Images for the services in `services/` are built by GitHub Actions and pulled, not compiled on the
-Pi. bifrost, sleipnir and muninn are apps in their own repos, pinned here.
-
-## How a change deploys
-
-
-1. A push to `main` reaches the Pi through a GitHub webhook and a Cloudflare tunnel; a cron every
-   30 minutes on each node catches anything missed.
-2. `scripts/deploy/apply.sh` decrypts `.env`, pulls both repos, recreates only the containers whose
-   image changed, and pushes the config that lives in apps' databases back into them.
-3. A change to a `services/` image deploys when CI commits its new pin, minutes after the source push.
-
-Details: [docs/deploy.md](docs/deploy.md).
-
-## What gets deleted
-
-Nothing is deleted before it is watched. A watched film goes two days later; its torrent goes when
-its tracker is paid, never before. [docs/lifecycle.md](docs/lifecycle.md) has the rules and every
-number.
-
-## Documentation
+## Docs
 
 | | Doc | What it covers |
 | :--- | :--- | :--- |
+| **Start** | [overview.md](docs/overview.md) | Two nodes and three doors, what runs, how a change deploys, what gets deleted, everyday commands |
 | **Run it** | [host-setup.md](docs/host-setup.md) | A fresh Pi to the first deploy: disks, Docker, journald, cron |
 | | [nodes.md](docs/nodes.md) | The two nodes, profiles, the override file, what one node reads from the other |
 | | [deploy.md](docs/deploy.md) | The deploy pass, concurrency and retries, the webhook and tunnel |
@@ -88,23 +47,3 @@ number.
 | | [decisions.md](docs/decisions.md) | Ideas tried or weighed and turned down |
 
 Open work: [PENDING.md](PENDING.md). Conventions for changes: [CLAUDE.md](CLAUDE.md).
-
-## Quick start
-
-Follow [docs/host-setup.md](docs/host-setup.md): Docker, the data disk, `.env` from `.env.example`,
-then `docker compose up -d` with `COMPOSE_ENV_FILES=versions.env,.env`. From there the cron (and,
-once set up, the webhook) keeps the Pi in step with `main`.
-
-## Everyday commands
-
-```bash
-bash scripts/deploy/apply.sh                         # deploy now, instead of waiting
-tail -f ~/rpi-homeserver/apply.log                   # what the last deploys did
-docker logs -f <container>                           # one service's output
-bash scripts/recovery/rebuild-service.sh <service>   # rebuild one service from scratch
-bash scripts/recovery/recovery-status.sh             # after a rebuild: what still needs a human
-bash scripts/ops/backup.sh                           # a backup now
-```
-
-Run compose by hand with `export COMPOSE_ENV_FILES=versions.env,.env` first, or image versions do
-not resolve.
