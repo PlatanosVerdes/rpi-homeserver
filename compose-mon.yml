@@ -193,6 +193,8 @@ services:
       # and chat id come from .env), so it is mounted over the empty dir above
       - ${APP_CONFIG_PATH}/grafana-alerting:/etc/grafana/provisioning/alerting:ro
       - ${CONFIG_ROOT}/grafana/dashboards_json:/etc/grafana/dashboards_json:ro
+      # A companion repo's dashboards (EXT_GRAFANA_DASHBOARDS, a folder); unset, the empty one.
+      - ${EXT_GRAFANA_DASHBOARDS:-./config/grafana/dashboards_ext}:/etc/grafana/dashboards_ext:ro
     networks:
       - media-network
 
