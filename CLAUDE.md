@@ -5,7 +5,7 @@
 A modular Docker-based home server on Raspberry Pis. All services run as Docker containers managed by
 Docker Compose. The repo is the source of truth: a push to `main` deploys within seconds via a GitHub
 webhook, with a cron every 30 minutes on each node as the fallback (`scripts/deploy/apply.sh`
-handles both). Overview and doc map: [README.md](README.md).
+handles both). Overview and doc map: [README.md](README.md), [docs/overview.md](docs/overview.md).
 
 **Two-repo architecture:** Both repos are public. The split is *generic vs personal*, not private vs
 public: this repo is meant to be clonable and useful to anyone, so nothing personal lives here.
@@ -166,7 +166,7 @@ See [docs/add-service.md](docs/add-service.md) for the step-by-step guide. Short
 
 | Service | Where its code is | Notes |
 | :--- | :--- | :--- |
-| bifrost | [PlatanosVerdes/bifrost](https://github.com/PlatanosVerdes/bifrost), pinned as `BIFROST_VERSION` | AceStream list and the proxy Jellyfin plays from. Serves `/channel/<slug>`, `/api/channels` (farnsworth reads it) and `/api/status`. The rules it must keep are in its README |
+| bifrost | [PlatanosVerdes/bifrost](https://github.com/PlatanosVerdes/bifrost), pinned as `BIFROST_VERSION` | AceStream list and the proxy Jellyfin plays from. Serves `/channel/<slug>`, `/api/channels` (farnsworth reads it) and `/api/status`. The rules it must keep are in [its docs/rules.md](https://github.com/PlatanosVerdes/bifrost/blob/main/docs/rules.md) |
 | sleipnir, huginn | [PlatanosVerdes/sleipnir](https://github.com/PlatanosVerdes/sleipnir), `SLEIPNIR_VERSION` | One image run twice (`huginn` via `command`). Tunnels opt in with `sleipnir.enable` ([docs/sleipnir.md](docs/sleipnir.md)) |
 | muninn | [PlatanosVerdes/muninn](https://github.com/PlatanosVerdes/muninn), `MUNINN_VERSION` | Who uses each bot. Bots opt in with a `muninn.stats` label (their `/bot-stats` URL, on an unpublished port: it holds names; Go bots use `github.com/PlatanosVerdes/gonana/botstats`) and join the internal `muninn` network (`networks: muninn: external: true`), so a public bot like torre stays off media-network. Shares docker-socket-proxy with sleipnir on `docker-api` |
 | everything in `services/` | here, built by CI ([docs/service-images.md](docs/service-images.md)) | A source change deploys when CI pins the new `<NAME>_IMAGE_TAG`, minutes after the push. `bash scripts/recovery/rebuild-service.sh <name>` builds it on the Pi instead |
@@ -234,7 +234,7 @@ when it was built.
 | Add a file to `docs/` | It is linked from `README.md`, in the section it belongs to. An unlinked doc is one nobody finds |
 | Rename or delete a doc | `git grep -n '<old-name>.md'` across the whole repo: docs, CLAUDE.md, and the code comments, compose files and dashboards that point at docs. Cross-links break silently |
 | Decide against an idea | A short entry in [docs/decisions.md](docs/decisions.md) with the reason, not a section in PENDING.md |
-| Add a service | Its compose module line in README's "What runs", `versions.env`, the profile tables in [docs/nodes.md](docs/nodes.md), and the checklist in [docs/add-service.md](docs/add-service.md) |
+| Add a service | Its compose module line in [docs/overview.md](docs/overview.md)'s "What runs", `versions.env`, the profile tables in [docs/nodes.md](docs/nodes.md), and the checklist in [docs/add-service.md](docs/add-service.md) |
 | Automate something that used to be manual | Every doc still walking the reader through it by hand. A guide describing a step the deploy now performs is worse than no guide, because it gets followed |
 | Abandon an approach | Say so in the **title**, not in a note further down. A file list is read without opening anything |
 
