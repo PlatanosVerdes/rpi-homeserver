@@ -10,3 +10,12 @@ providers:
     options:
       path: /etc/grafana/dashboards_json
       foldersFromFilesStructure: true
+  - name: 'companion'
+    orgId: 1
+    folder: ''
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /etc/grafana/dashboards_ext
+      foldersFromFilesStructure: true

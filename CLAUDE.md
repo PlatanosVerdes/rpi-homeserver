@@ -205,6 +205,9 @@ Dashboard folders come from the directory structure (`foldersFromFilesStructure`
 `dashboards_json/media/` is the Grafana folder "media". Put a dashboard where its subject lives, not
 where the data comes from: `/mnt/data` usage is media, not infrastructure.
 
+A companion repo's dashboards come in through `EXT_GRAFANA_DASHBOARDS` (a folder, same structure) and
+are not linked from Home: Home is this repo's, and this repo is generic.
+
 **Alerting** is provisioned too, from `config/grafana/alerting/` (rules, notification policy, and a
 contact-point *template* for the Telegram bot). It is read-only in the Grafana UI on purpose. The
 token and chat id come from `.env` via the deploy's render step, never from git. Full explanation
