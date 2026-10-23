@@ -55,7 +55,8 @@ Home. Changes are made in Grafana, exported and committed; the provisioned copy 
 | network, services | Pi-hole; One Pace, Watch-next |
 
 A companion repo adds its own through `EXT_GRAFANA_DASHBOARDS`, a folder whose subfolders become
-Grafana folders the same way. They are not linked from Home, which only knows this repo's.
+Grafana folders the same way. Home lists the ones tagged `services` in its Services panel, by tag
+rather than by name, because Home only knows this repo's dashboards.
 
 Community dashboards imported by hand: `1860` (Node Exporter Full) and `193` (cAdvisor).
 
