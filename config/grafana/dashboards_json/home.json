@@ -677,6 +677,31 @@
         "content": "- 🚀 [Deploy Monitor](/d/deploy-monitor/deploy-monitor)\n- 💾 [Backup Monitor](/d/backup-monitor/backup-monitor)\n- 🔗 [Webhook & Tunnel](/d/webhook-tunnel/webhook-tunnel)\n- 📺 [Watch-next](/d/watch-next/watch-next)"
       },
       "transparent": false
+    },
+    {
+      "type": "dashlist",
+      "title": "Services",
+      "description": "Dashboards tagged services, from this repo or a companion one.",
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 14
+      },
+      "options": {
+        "showStarred": false,
+        "showRecentlyViewed": false,
+        "showSearch": true,
+        "showHeadings": false,
+        "showFolderNames": false,
+        "maxItems": 20,
+        "query": "",
+        "tags": [
+          "services"
+        ],
+        "includeVars": false,
+        "keepTime": false
+      }
     }
   ]
 }

@@ -205,8 +205,9 @@ Dashboard folders come from the directory structure (`foldersFromFilesStructure`
 `dashboards_json/media/` is the Grafana folder "media". Put a dashboard where its subject lives, not
 where the data comes from: `/mnt/data` usage is media, not infrastructure.
 
-A companion repo's dashboards come in through `EXT_GRAFANA_DASHBOARDS` (a folder, same structure) and
-are not linked from Home: Home is this repo's, and this repo is generic.
+A companion repo's dashboards come in through `EXT_GRAFANA_DASHBOARDS` (a folder, same structure). Home
+does not link them by name, since this repo is generic: its Services panel, below the four, lists every
+dashboard tagged `services`, so a companion dashboard appears there by carrying that tag.
 
 **Alerting** is provisioned too, from `config/grafana/alerting/` (rules, notification policy, and a
 contact-point *template* for the Telegram bot). It is read-only in the Grafana UI on purpose. The
