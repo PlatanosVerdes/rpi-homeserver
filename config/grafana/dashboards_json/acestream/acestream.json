@@ -13,6 +13,69 @@
         "iconColor": "rgba(0, 211, 255, 1)",
         "name": "Annotations & Alerts",
         "type": "dashboard"
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "enable": true,
+        "iconColor": "orange",
+        "name": "Source switches",
+        "expr": "sum by (channel)(acestream_stream_source_switches_total - acestream_stream_source_switches_total offset 1m) > 0",
+        "step": "60s",
+        "titleFormat": "Source switch",
+        "textFormat": "{{channel}}",
+        "tagKeys": "channel",
+        "useValueForTime": false,
+        "filter": {
+          "exclude": false,
+          "ids": [
+            10,
+            11,
+            12
+          ]
+        }
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "enable": true,
+        "iconColor": "#8e8e93",
+        "name": "List changes",
+        "expr": "acestream_updates_with_changes_total - acestream_updates_with_changes_total offset 1m > 0",
+        "step": "60s",
+        "titleFormat": "List changed",
+        "textFormat": "The channel list was rebuilt",
+        "useValueForTime": false,
+        "filter": {
+          "exclude": false,
+          "ids": [
+            22
+          ]
+        }
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "enable": true,
+        "iconColor": "red",
+        "name": "Failed downloads",
+        "expr": "acestream_update_errors_total - acestream_update_errors_total offset 1m > 0",
+        "step": "60s",
+        "titleFormat": "Download failed",
+        "textFormat": "A list source could not be downloaded",
+        "useValueForTime": false,
+        "filter": {
+          "exclude": false,
+          "ids": [
+            22
+          ]
+        }
       }
     ]
   },
@@ -22,217 +85,185 @@
   "links": [],
   "panels": [
     {
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "fixedColor": "blue",
-            "mode": "fixed"
-          },
-          "decimals": 0,
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": 0
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
+      "id": 100,
+      "type": "row",
+      "title": "Now",
+      "collapsed": false,
       "gridPos": {
         "x": 0,
         "y": 0,
-        "w": 4,
-        "h": 4
+        "w": 24,
+        "h": 1
       },
+      "panels": []
+    },
+    {
       "id": 1,
+      "type": "stat",
+      "title": "Playing now",
+      "description": "Channels with at least one viewer, and how many viewers each has.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "noValue": "Nothing playing",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none",
+          "decimals": 0
+        },
+        "overrides": []
+      },
       "options": {
-        "colorMode": "value",
-        "graphMode": "area",
+        "colorMode": "none",
+        "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "auto",
+        "textMode": "value_and_name",
+        "wideLayout": true,
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
           ],
           "fields": "",
           "values": false
-        },
-        "textMode": "auto",
-        "wideLayout": true
+        }
       },
       "targets": [
         {
-          "expr": "increase(acestream_run_total[24h])",
-          "instant": true,
-          "refId": "A",
           "datasource": {
             "type": "prometheus",
             "uid": "${datasource}"
-          }
+          },
+          "editorMode": "code",
+          "expr": "acestream_stream_viewers > 0",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "legendFormat": "{{channel}}"
         }
-      ],
-      "title": "Executions (24h)",
-      "type": "stat",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      }
+      ]
     },
     {
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "fixedColor": "purple",
-            "mode": "fixed"
-          },
-          "decimals": 0,
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": 0
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "x": 4,
-        "y": 0,
-        "w": 4,
-        "h": 4
-      },
       "id": 2,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto",
-        "wideLayout": true
-      },
-      "targets": [
-        {
-          "expr": "increase(acestream_updates_with_changes_total[24h])",
-          "instant": true,
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          }
-        }
-      ],
-      "title": "Playlist Changes (24h)",
       "type": "stat",
+      "title": "Lowest headroom",
+      "description": "Download speed divided by the bitrate the channel needs, worst playing channel. Below 1.0x the buffer drains and the picture will stall.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
-    },
-    {
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 1,
+        "w": 3,
+        "h": 4
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "thresholds"
           },
-          "decimals": 0,
           "mappings": [],
+          "noValue": "Nothing playing",
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": 0
+                "color": "red",
+                "value": null
               },
               {
-                "color": "red",
-                "value": 0.1
+                "color": "green",
+                "value": 1
               }
             ]
-          }
+          },
+          "unit": "suffix:x",
+          "decimals": 2
         },
         "overrides": []
       },
-      "gridPos": {
-        "x": 8,
-        "y": 0,
-        "w": 4,
-        "h": 4
-      },
-      "id": 3,
       "options": {
         "colorMode": "value",
-        "graphMode": "area",
+        "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
           ],
           "fields": "",
           "values": false
-        },
-        "textMode": "auto",
-        "wideLayout": true
+        }
       },
       "targets": [
         {
-          "expr": "increase(acestream_update_errors_total[24h])",
-          "instant": true,
-          "refId": "A",
           "datasource": {
             "type": "prometheus",
             "uid": "${datasource}"
-          }
+          },
+          "editorMode": "code",
+          "expr": "min(acestream_stream_headroom and on(channel) (acestream_stream_viewers > 0))",
+          "refId": "A",
+          "instant": true,
+          "range": false
         }
-      ],
-      "title": "Errors (24h)",
+      ]
+    },
+    {
+      "id": 3,
       "type": "stat",
+      "title": "List last run",
+      "description": "Time since bifrost last rebuilt the channel list. It runs every few minutes, so a long gap means the updater is stuck.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
-    },
-    {
+      },
+      "gridPos": {
+        "x": 9,
+        "y": 1,
+        "w": 3,
+        "h": 4
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "thresholds"
           },
-          "decimals": 0,
           "mappings": [],
+          "noValue": "No data",
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
                 "color": "green",
-                "value": 0
+                "value": null
               },
               {
                 "color": "orange",
-                "value": 900
+                "value": 600
               },
               {
                 "color": "red",
@@ -240,449 +271,557 @@
               }
             ]
           },
-          "unit": "s"
+          "unit": "s",
+          "decimals": 1
         },
         "overrides": []
       },
-      "gridPos": {
-        "x": 12,
-        "y": 0,
-        "w": 4,
-        "h": 4
-      },
-      "id": 4,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto",
-        "wideLayout": true
-      },
-      "targets": [
-        {
-          "expr": "time() - acestream_last_run_timestamp",
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          }
-        }
-      ],
-      "title": "Last Run",
-      "type": "stat",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      }
-    },
-    {
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "fixedColor": "green",
-            "mode": "fixed"
-          },
-          "decimals": 0,
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": 0
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "x": 16,
-        "y": 0,
-        "w": 4,
-        "h": 4
-      },
-      "id": 6,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto",
-        "wideLayout": true
-      },
-      "targets": [
-        {
-          "expr": "acestream_unique_channels",
-          "instant": true,
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          }
-        }
-      ],
-      "title": "Unique Channels",
-      "type": "stat",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      }
-    },
-    {
-      "description": "Time elapsed since the last Jellyfin playlist refresh was triggered.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "decimals": 0,
-          "mappings": [
-            {
-              "options": {
-                "0": {
-                  "color": "blue",
-                  "text": "Never"
-                }
-              },
-              "type": "value"
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": 0
-              },
-              {
-                "color": "orange",
-                "value": 3600
-              },
-              {
-                "color": "red",
-                "value": 86400
-              }
-            ]
-          },
-          "unit": "s"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "x": 20,
-        "y": 0,
-        "w": 4,
-        "h": 4
-      },
-      "id": 7,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
           ],
           "fields": "",
           "values": false
-        },
-        "textMode": "auto",
-        "wideLayout": true
+        }
       },
       "targets": [
         {
-          "expr": "time() - acestream_jellyfin_last_refresh_timestamp",
-          "refId": "A",
           "datasource": {
             "type": "prometheus",
             "uid": "${datasource}"
-          }
+          },
+          "editorMode": "code",
+          "expr": "time() - acestream_last_run_timestamp",
+          "refId": "A",
+          "instant": true,
+          "range": false
         }
-      ],
-      "title": "Last Jellyfin Refresh",
+      ]
+    },
+    {
+      "id": 4,
       "type": "stat",
+      "title": "Stalls",
+      "description": "Playback stalls in the selected range. Anything above zero means a viewer saw the picture freeze.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
-      }
-    },
-    {
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 1,
+        "w": 3,
+        "h": 4
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "mode": "thresholds"
           },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 15,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "stepBefore",
-            "lineWidth": 2,
-            "pointSize": 4,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "always",
-            "showValues": false,
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [
-            {
-              "options": {
-                "0": {
-                  "index": 0,
-                  "text": "Failed"
-                },
-                "200": {
-                  "index": 1,
-                  "text": "OK (200)"
-                }
-              },
-              "type": "value"
-            }
-          ],
+          "mappings": [],
+          "noValue": "No data",
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": 0
+                "color": "text",
+                "value": null
               },
               {
                 "color": "red",
-                "value": 201
+                "value": 1
               }
             ]
-          }
+          },
+          "unit": "none",
+          "decimals": 0
         },
         "overrides": []
       },
-      "gridPos": {
-        "x": 0,
-        "y": 13,
-        "w": 12,
-        "h": 6
-      },
-      "id": 9,
       "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "multi",
-          "sort": "none"
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
         }
       },
       "targets": [
         {
-          "expr": "acestream_source_http_code",
-          "legendFormat": "{{url}}",
-          "refId": "A",
           "datasource": {
             "type": "prometheus",
             "uid": "${datasource}"
-          }
+          },
+          "editorMode": "code",
+          "expr": "round(sum(increase(acestream_stream_stalls_total[$__range])) or vector(0))",
+          "refId": "A",
+          "instant": true,
+          "range": false
         }
-      ],
-      "title": "Source URLs Status",
-      "type": "timeseries",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      }
+      ]
     },
     {
       "id": 5,
-      "type": "timeseries",
-      "title": "Activity Timeline (runs by outcome)",
-      "description": "Buckets grow with the panel but never drop below five minutes: bifrost reads the list every few minutes, and a shorter window leaves increase() without two samples and empties the panel. Errors keep the right axis, since stacked against a few hundred quiet runs a single one is a pixel.",
+      "type": "stat",
+      "title": "Source switches",
+      "description": "Times a stream moved to another source in the selected range.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
       "gridPos": {
-        "x": 0,
-        "y": 4,
-        "w": 24,
-        "h": 9
+        "x": 15,
+        "y": 1,
+        "w": 3,
+        "h": 4
       },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "editorMode": "code",
-          "expr": "round(increase(acestream_updates_no_changes_total[$__rate_interval]))",
-          "refId": "A",
-          "legendFormat": "OK · no change",
-          "instant": false,
-          "range": true
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "editorMode": "code",
-          "expr": "round(increase(acestream_updates_with_changes_total[$__rate_interval]))",
-          "refId": "B",
-          "legendFormat": "OK · updated",
-          "instant": false,
-          "range": true
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "editorMode": "code",
-          "expr": "round(increase(acestream_update_errors_total[$__rate_interval]))",
-          "refId": "C",
-          "legendFormat": "Error",
-          "instant": false,
-          "range": true
-        }
-      ],
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "mode": "thresholds"
           },
-          "decimals": 0,
-          "custom": {
-            "drawStyle": "bars",
-            "fillOpacity": 85,
-            "lineWidth": 0,
-            "barAlignment": 0,
-            "showPoints": "never",
-            "stacking": {
-              "group": "A",
-              "mode": "normal"
-            },
-            "axisLabel": "runs"
-          },
+          "mappings": [],
+          "noValue": "No data",
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "text",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "none",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "round(sum(increase(acestream_stream_source_switches_total[$__range])) or vector(0))",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Remux restarts",
+      "description": "ffmpeg restarts in the selected range.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 1,
+        "w": 3,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "noValue": "No data",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "none",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "round(sum(increase(acestream_stream_remux_restarts_total[$__range])) or vector(0))",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Failed downloads",
+      "description": "Channel list source downloads that failed in the selected range (up to 3 per run).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 21,
+        "y": 1,
+        "w": 3,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "noValue": "No data",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "none",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "round(sum(increase(acestream_update_errors_total[$__range])) or vector(0))",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ]
+    },
+    {
+      "id": 101,
+      "type": "row",
+      "title": "Playback quality",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Headroom per channel",
+      "description": "Download speed divided by the bitrate needed. The red band is below 1.0x, where the buffer drains. Marks show source switches.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 6,
+        "w": 24,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#8e8e93"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisSoftMin": 0,
+            "thresholdsStyle": {
+              "mode": "area"
+            },
+            "axisPlacement": "auto",
+            "gradientMode": "none",
+            "axisSoftMax": 2
+          },
+          "unit": "suffix:x",
+          "noValue": "Nothing playing in this range",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "transparent",
+                "value": 1
+              }
+            ]
+          },
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "min"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "acestream_stream_headroom",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{channel}}"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Peers",
+      "description": "Peers each playing channel is connected to, on the same time axis as headroom.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 15,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#8e8e93"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisSoftMin": 0,
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "axisPlacement": "auto",
+            "gradientMode": "none"
+          },
+          "unit": "none",
+          "noValue": "Nothing playing in this range",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
                 "value": null
               }
             ]
           },
-          "min": 0
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "acestream_stream_peers",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{channel}}"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Download vs needed",
+      "description": "What the swarm delivers (solid) against the channel bitrate (dashed). Download under the dashed line is the buffer draining.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 15,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#8e8e93"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisSoftMin": 0,
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "axisPlacement": "auto",
+            "gradientMode": "none"
+          },
+          "unit": "Bps",
+          "noValue": "Nothing playing in this range",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
         },
         "overrides": [
           {
             "matcher": {
-              "id": "byName",
-              "options": "OK · no change"
+              "id": "byRegexp",
+              "options": ".* needed"
             },
             "properties": [
               {
-                "id": "color",
+                "id": "custom.lineStyle",
                 "value": {
-                  "mode": "fixed",
-                  "fixedColor": "green"
+                  "fill": "dash",
+                  "dash": [
+                    10,
+                    10
+                  ]
                 }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "OK · updated"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "blue"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Error"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "red"
-                }
-              },
-              {
-                "id": "custom.stacking",
-                "value": {
-                  "mode": "none"
-                }
-              },
-              {
-                "id": "custom.axisPlacement",
-                "value": "right"
-              },
-              {
-                "id": "custom.axisLabel",
-                "value": "errors"
-              },
-              {
-                "id": "custom.axisSoftMax",
-                "value": 1
-              },
-              {
-                "id": "custom.fillOpacity",
-                "value": 100
               },
               {
                 "id": "custom.lineWidth",
@@ -694,34 +833,283 @@
       },
       "options": {
         "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
           "showLegend": true,
-          "calcs": [
-            "sum"
-          ]
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
         },
         "tooltip": {
           "mode": "multi",
           "sort": "desc"
         }
       },
-      "interval": "5m"
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "acestream_stream_download_bytes_per_second",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{channel}} download"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "acestream_stream_bitrate_bytes_per_second",
+          "refId": "B",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{channel}} needed"
+        }
+      ]
     },
     {
-      "id": 8,
+      "id": 102,
+      "type": "row",
+      "title": "List pipeline",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 22,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 20,
       "type": "state-timeline",
-      "title": "Jellyfin refresh history",
-      "description": "Green = refresh OK (200/204), red = error, grey = not triggered.",
+      "title": "Source downloads",
+      "description": "One row per list source: green while its download succeeded, red while it failed. A failed source keeps the last good list.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
       "gridPos": {
-        "x": 12,
-        "y": 13,
-        "w": 12,
+        "x": 0,
+        "y": 23,
+        "w": 8,
         "h": 6
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Failed: no response",
+                  "color": "red",
+                  "index": 0
+                },
+                "403": {
+                  "text": "Failed: HTTP 403",
+                  "color": "red",
+                  "index": 1
+                },
+                "404": {
+                  "text": "Failed: HTTP 404",
+                  "color": "red",
+                  "index": 2
+                },
+                "429": {
+                  "text": "Failed: HTTP 429",
+                  "color": "red",
+                  "index": 3
+                },
+                "500": {
+                  "text": "Failed: HTTP 500",
+                  "color": "red",
+                  "index": 4
+                },
+                "502": {
+                  "text": "Failed: HTTP 502",
+                  "color": "red",
+                  "index": 5
+                },
+                "503": {
+                  "text": "Failed: HTTP 503",
+                  "color": "red",
+                  "index": 6
+                },
+                "504": {
+                  "text": "Failed: HTTP 504",
+                  "color": "red",
+                  "index": 7
+                }
+              }
+            },
+            {
+              "type": "range",
+              "options": {
+                "from": 200,
+                "to": 299,
+                "result": {
+                  "text": "OK",
+                  "color": "green",
+                  "index": 8
+                }
+              }
+            },
+            {
+              "type": "range",
+              "options": {
+                "from": 300,
+                "to": 599,
+                "result": {
+                  "text": "Failed: HTTP error",
+                  "color": "red",
+                  "index": 9
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 200
+              }
+            ]
+          },
+          "custom": {
+            "lineWidth": 0,
+            "fillOpacity": 85
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showValue": "never",
+        "mergeValues": true,
+        "alignValue": "left",
+        "rowHeight": 0.8,
+        "legend": {
+          "showLegend": false,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "acestream_source_http_code",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{url}}"
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "type": "state-timeline",
+      "title": "Jellyfin refresh",
+      "description": "Whether bifrost asked Jellyfin to reload the guide after the last run. It only does so after the list changed, so most of the time it is not needed.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 23,
+        "w": 8,
+        "h": 6
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Not needed",
+                  "color": "#8e8e93",
+                  "index": 0
+                }
+              }
+            },
+            {
+              "type": "range",
+              "options": {
+                "from": 200,
+                "to": 299,
+                "result": {
+                  "text": "Refreshed",
+                  "color": "green",
+                  "index": 1
+                }
+              }
+            },
+            {
+              "type": "range",
+              "options": {
+                "from": 300,
+                "to": 599,
+                "result": {
+                  "text": "Failed",
+                  "color": "red",
+                  "index": 2
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#8e8e93",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "lineWidth": 0,
+            "fillOpacity": 85
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showValue": "never",
+        "mergeValues": true,
+        "alignValue": "left",
+        "rowHeight": 0.8,
+        "legend": {
+          "showLegend": false,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
       },
       "targets": [
         {
@@ -732,578 +1120,105 @@
           "editorMode": "code",
           "expr": "acestream_jellyfin_refresh_http_code",
           "refId": "A",
-          "legendFormat": "Jellyfin refresh",
           "instant": false,
-          "range": true
+          "range": true,
+          "legendFormat": "Jellyfin refresh"
         }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "decimals": 0,
-          "custom": {
-            "fillOpacity": 85,
-            "lineWidth": 0
-          },
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "0": {
-                  "text": "Not triggered",
-                  "color": "#4a5568",
-                  "index": 0
-                },
-                "200": {
-                  "text": "OK",
-                  "color": "green",
-                  "index": 1
-                },
-                "204": {
-                  "text": "OK",
-                  "color": "green",
-                  "index": 2
-                }
-              }
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "#4a5568",
-                "value": null
-              },
-              {
-                "color": "green",
-                "value": 200
-              },
-              {
-                "color": "red",
-                "value": 205
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "showValue": "never",
-        "mergeValues": true,
-        "alignValue": "center",
-        "rowHeight": 0.9,
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      }
+      ]
     },
     {
-      "id": 15,
-      "type": "row",
-      "title": "Streams: swarm health",
-      "collapsed": false,
-      "gridPos": {
-        "x": 0,
-        "y": 19,
-        "w": 24,
-        "h": 1
-      },
-      "panels": []
-    },
-    {
-      "id": 10,
-      "title": "Headroom (download ÷ bitrate)",
+      "id": 22,
       "type": "timeseries",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "description": "Below 1 the swarm delivers less than the stream needs and the player is about to stall. From bifrost's engine stats, every 5 s.",
-      "gridPos": {
-        "x": 0,
-        "y": 20,
-        "w": 12,
-        "h": 8
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "acestream_stream_headroom",
-          "legendFormat": "{{channel}}",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          }
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none",
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "spanNulls": false,
-            "showPoints": "never",
-            "thresholdsStyle": {
-              "mode": "line+area"
-            }
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "green",
-                "value": 1
-              }
-            ]
-          },
-          "min": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      }
-    },
-    {
-      "id": 11,
-      "title": "Download vs needed",
-      "type": "timeseries",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "description": "What the engine downloads against the stream's bitrate, measured by bifrost from what it relays.",
-      "gridPos": {
-        "x": 12,
-        "y": 20,
-        "w": 12,
-        "h": 8
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "acestream_stream_download_bytes_per_second",
-          "legendFormat": "{{channel}} download",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          }
-        },
-        {
-          "refId": "B",
-          "expr": "acestream_stream_bitrate_bytes_per_second",
-          "legendFormat": "{{channel}} needed",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          }
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "Bps",
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "spanNulls": false,
-            "showPoints": "never"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      }
-    },
-    {
-      "id": 12,
-      "title": "Peers",
-      "type": "timeseries",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "description": "Peers the engine is connected to for each playing channel.",
-      "gridPos": {
-        "x": 0,
-        "y": 28,
-        "w": 8,
-        "h": 7
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "acestream_stream_peers",
-          "legendFormat": "{{channel}}",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          }
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none",
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "spanNulls": false,
-            "showPoints": "never"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      }
-    },
-    {
-      "id": 13,
-      "type": "state-timeline",
-      "title": "Too slow",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "x": 8,
-        "y": 28,
-        "w": 8,
-        "h": 7
-      },
-      "description": "Red while the download has stayed under the bitrate for 15 s.",
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "acestream_stream_starving",
-          "legendFormat": "{{channel}}",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          }
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "0": {
-                  "text": "ok",
-                  "color": "green"
-                },
-                "1": {
-                  "text": "too slow",
-                  "color": "red"
-                }
-              }
-            }
-          ],
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 1
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "showValue": "never",
-        "mergeValues": true,
-        "rowHeight": 0.8,
-        "legend": {
-          "showLegend": false
-        }
-      }
-    },
-    {
-      "id": 14,
-      "type": "bargauge",
-      "title": "Stalls in range",
+      "title": "Channels in the list",
+      "description": "Unique channels after merging all sources. Marks show list changes and failed runs.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
       "gridPos": {
         "x": 16,
-        "y": 28,
+        "y": 23,
         "w": 8,
-        "h": 7
+        "h": 6
       },
-      "description": "Times the engine left its downloading state while playing, per channel, over the selected range.",
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum by (channel) (increase(acestream_stream_stalls_total[$__range]))",
-          "legendFormat": "{{channel}}",
-          "instant": true,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          }
-        }
-      ],
       "fieldConfig": {
         "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#8e8e93"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisSoftMin": 0,
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "axisPlacement": "auto",
+            "gradientMode": "none"
+          },
           "unit": "none",
-          "decimals": 0,
+          "noValue": "No data",
+          "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "text",
                 "value": null
-              },
-              {
-                "color": "orange",
-                "value": 1
-              },
-              {
-                "color": "red",
-                "value": 5
               }
             ]
-          }
+          },
+          "decimals": 0
         },
         "overrides": []
       },
       "options": {
-        "orientation": "horizontal",
-        "displayMode": "basic",
-        "showUnfilled": true
-      }
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "acestream_unique_channels",
+          "refId": "A",
+          "instant": false,
+          "range": true,
+          "legendFormat": "Channels"
+        }
+      ]
     },
     {
-      "id": 16,
+      "id": 103,
       "type": "row",
-      "title": "Streams: source switches",
+      "title": "Bifrost log (raspi only)",
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 35,
+        "y": 29,
         "w": 24,
         "h": 1
       },
       "panels": []
     },
     {
-      "id": 17,
-      "type": "stat",
-      "title": "Switches in range",
-      "description": "Times a starving channel moved its viewers to a better source of the same channel, over the selected range. The picture jumps; it does not stall.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 36,
-        "w": 6,
-        "h": 4
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum(increase(acestream_stream_source_switches_total[$__range])) or vector(0)",
-          "instant": true,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          }
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none",
-          "decimals": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "colorMode": "value",
-        "graphMode": "none",
-        "textMode": "auto"
-      }
-    },
-    {
-      "id": 18,
-      "type": "stat",
-      "title": "Remux restarts in range",
-      "description": "ffmpeg runs restarted under a playing channel (stuck for 10 s, or ended). Each one is a few seconds of picture lost; above zero is worth a look at the log below.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 40,
-        "w": 6,
-        "h": 4
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum(increase(acestream_stream_remux_restarts_total[$__range])) or vector(0)",
-          "instant": true,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          }
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none",
-          "decimals": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 1
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "colorMode": "value",
-        "graphMode": "none",
-        "textMode": "auto"
-      }
-    },
-    {
-      "id": 19,
-      "type": "timeseries",
-      "title": "Switches per channel",
-      "description": "Source switches per channel. The counters restart with bifrost and vanish while nobody watches, which increase() reads through.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "x": 6,
-        "y": 36,
-        "w": 18,
-        "h": 8
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum by (channel) (increase(acestream_stream_source_switches_total[$__rate_interval]))",
-          "legendFormat": "{{channel}}",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          }
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none",
-          "decimals": 0,
-          "custom": {
-            "drawStyle": "bars",
-            "fillOpacity": 80,
-            "lineWidth": 1
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      }
-    },
-    {
-      "id": 20,
+      "id": 30,
       "type": "logs",
       "title": "Probes, switches and remux (bifrost log)",
       "description": "What bifrost said about each probe (probing, kept and why), each switch (from, to, headroom) and any ffmpeg remux trouble. The raspi only: streamhalla does not ship its logs, so for it the counters above are all there is.",
@@ -1313,7 +1228,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 44,
+        "y": 30,
         "w": 24,
         "h": 10
       },
@@ -1373,5 +1288,7 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Acestream Monitor"
+  "title": "Acestream Monitor",
+  "description": "bifrost (AceStream to Jellyfin proxy): what is playing, how healthy the swarm is, and whether the channel list is fresh.",
+  "version": 1
 }
