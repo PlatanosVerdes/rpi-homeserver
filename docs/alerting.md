@@ -51,7 +51,7 @@ Home. Changes are made in Grafana, exported and committed; the provisioned copy 
 | :--- | :--- |
 | infrastructure | Container Health (host and per-container, Storage section), Service probes (what Home's "Services down" is about), Deploy Monitor, Backup Monitor, Tailscale, Webhook & Tunnel |
 | media | Lifecycle (when each torrent goes, films in grace, the recycle bin), Private trackers, Indexers, Disk usage, Media Pipeline, Audio languages |
-| acestream | Acestream Monitor: bifrost's channels, what is playing and its swarm health, per node |
+| acestream | Acestream Monitor: bifrost's channels, what is playing, its swarm health and source switches, per node (the switch log is the raspi's only) |
 | network, services | Pi-hole; One Pace, Watch-next |
 
 A companion repo adds its own through `EXT_GRAFANA_DASHBOARDS`, a folder whose subfolders become
