@@ -135,7 +135,7 @@
       },
       "targets": [
         {
-          "expr": "increase(acestream_updates_with_changes[24h])",
+          "expr": "increase(acestream_updates_with_changes_total[24h])",
           "instant": true,
           "refId": "A",
           "datasource": {
@@ -199,7 +199,7 @@
       },
       "targets": [
         {
-          "expr": "increase(acestream_update_errors[24h])",
+          "expr": "increase(acestream_update_errors_total[24h])",
           "instant": true,
           "refId": "A",
           "datasource": {
@@ -558,7 +558,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "round(increase(acestream_updates_no_changes[$__rate_interval]))",
+          "expr": "round(increase(acestream_updates_no_changes_total[$__rate_interval]))",
           "refId": "A",
           "legendFormat": "OK · no change",
           "instant": false,
@@ -570,7 +570,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "round(increase(acestream_updates_with_changes[$__rate_interval]))",
+          "expr": "round(increase(acestream_updates_with_changes_total[$__rate_interval]))",
           "refId": "B",
           "legendFormat": "OK · updated",
           "instant": false,
@@ -582,7 +582,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "round(increase(acestream_update_errors[$__rate_interval]))",
+          "expr": "round(increase(acestream_update_errors_total[$__rate_interval]))",
           "refId": "C",
           "legendFormat": "Error",
           "instant": false,
