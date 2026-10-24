@@ -13,6 +13,8 @@ log() { echo "$(date '+%Y-%m-%d %H:%M:%S') - $1"; }
 # checkout of it: each repo's .env is decrypted from <node>/<repo>.env before anything reads it, and
 # only rewritten when it changed. <node> is this machine's Tailscale name. Without the checkout or
 # sops, .env is used as it is.
+# cron's PATH has no /usr/local/bin, where sops lives on streamhalla: without this the secrets step was skipped.
+export PATH="/usr/local/bin:$PATH"
 SECRETS_DIR="${SECRETS_DIR:-$HOME/homelab-secrets}"
 if [[ -d "$SECRETS_DIR/.git" ]] && command -v sops >/dev/null 2>&1; then
     git -C "$SECRETS_DIR" pull -q --ff-only 2>/dev/null ||
