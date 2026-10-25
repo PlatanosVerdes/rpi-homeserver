@@ -89,6 +89,8 @@ services:
     restart: unless-stopped
     mem_limit: 256m
     memswap_limit: 256m
+    # Default is 1024; yields the CPU to live streams when the Pi is busy.
+    cpu_shares: 128
     profiles: [speedtest-tracker, essential, moni, all]
     dns:
       - 8.8.8.8

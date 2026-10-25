@@ -164,6 +164,7 @@ services:
     restart: unless-stopped
     mem_limit: 512m
     memswap_limit: 512m
+    cpu_shares: 128
     profiles: [kubo, acestream, all]
     # No published ports: the gateway is for bifrost, over the docker network.
     environment:
@@ -245,6 +246,7 @@ services:
     # Capped at one core: a SignalR reconnect loop against Radarr can leak threads until it eats a
     # whole one, and subtitles never need more.
     cpus: 1.0
+    cpu_shares: 128
     # 512m was its working size, not a ceiling: 25.8k limit hits in a day and a half.
     mem_limit: 768m
     memswap_limit: 768m

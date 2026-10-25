@@ -44,6 +44,8 @@ services:
     # Headless Chromium. Peaked at 771 MB and hit 768m 16.7k times in a day and a half.
     mem_limit: 1g
     memswap_limit: 1g
+    # Default is 1024; yields the CPU to live streams when the Pi is busy.
+    cpu_shares: 128
     profiles: [flaresolverr, media, all]
     dns:
       - 8.8.8.8
@@ -61,6 +63,7 @@ services:
     labels:
       prometheus.probe: "http://prowlarr:9696/"
     restart: unless-stopped
+    cpu_shares: 128
     profiles: [prowlarr, media, all]
     dns:
       - 8.8.8.8
@@ -83,6 +86,7 @@ services:
     labels:
       prometheus.probe: "http://radarr:7878/"
     restart: unless-stopped
+    cpu_shares: 128
     profiles: [radarr, media, all]
     dns:
       - 8.8.8.8
@@ -109,6 +113,7 @@ services:
     labels:
       prometheus.probe: "http://sonarr:8989/"
     restart: unless-stopped
+    cpu_shares: 128
     profiles: [sonarr, media, all]
     dns:
       - 8.8.8.8
