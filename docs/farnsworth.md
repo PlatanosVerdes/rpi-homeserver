@@ -5,7 +5,7 @@
 | Piece | Job |
 | :--- | :--- |
 | [bifrost](https://github.com/PlatanosVerdes/bifrost) (pinned as `BIFROST_VERSION`) | Reads the channel list from IPFS through `kubo`, writes Jellyfin's M3U (one stable URL per channel) and an XMLTV guide cut to those channels, and is the proxy Jellyfin plays from: it picks a live source per channel and shares one engine connection among everyone watching. It never opens a channel on its own: the Pi plays one at a time |
-| `aceserve` | The engine, on the host network so its P2P uses the home line. Only its HTTP and HTTPS go through `gluetun` (`http_proxy`, `https_proxy`), because Spanish ISPs block the AceStream API and content servers during matches; peers stay on the line. `ACESTREAM_UPLOAD_LIMIT` (KB/s) and `ACESTREAM_MAX_PEERS` cap what it shares, unset by default |
+| `aceserve` | The engine, on the host network so its P2P uses the home line. Only its HTTP and HTTPS go through `gluetun` (`http_proxy`, `https_proxy`), because Spanish ISPs block the AceStream API and content servers during matches; peers stay on the line. `ACESTREAM_UPLOAD_LIMIT` caps its upload (1200 KB/s by default, 0 for none) and `ACESTREAM_MAX_PEERS` its peers |
 | Jellyfin | Live TV tuner (M3U) `/config/acestream/channels_ace.m3u`; the XMLTV provider is pointed at `/config/acestream/guide.xml` by the deploy (`scripts/sync/jellyfin-guide.sh`) |
 | farnsworth | The page below, for VLC |
 

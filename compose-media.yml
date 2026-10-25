@@ -142,7 +142,7 @@ services:
         $${UPLOAD_LIMIT:+--upload-limit $$UPLOAD_LIMIT} $${MAX_PEERS:+--max-peers $$MAX_PEERS}
     environment:
       - TZ=${TZ}
-      - UPLOAD_LIMIT=${ACESTREAM_UPLOAD_LIMIT:-}
+      - UPLOAD_LIMIT=${ACESTREAM_UPLOAD_LIMIT:-1200}
       - MAX_PEERS=${ACESTREAM_MAX_PEERS:-}
       # The engine is Python and its API calls go through urllib, which honours these. Its content
       # servers answer plain HTTP too, blocked on match days; peers are not HTTP and stay on the line.
