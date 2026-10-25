@@ -213,19 +213,12 @@ services:
     volumes:
       - ${APP_CONFIG_PATH}/jellyfin/acestream:/data
       - ${APP_CONFIG_PATH}/bifrost:/state
+      # The folder, not the file: git replaces the file, and a file mount keeps the old one.
+      - ./config/bifrost:/config:ro
     environment:
       - TZ=${TZ}
-      # One entry per list, each with backup routes to the same list; another list is another entry.
-      - |-
-        SOURCE_URLS=[
-          {
-            "url": "http://kubo:8080/ipns/k51qzi5uqu5di462t7j4vu4akwfhvtjhy88qbupktvoacqfqe9uforjvhyi4wr/hashes_acestream.m3u",
-            "backup": [
-              "https://ipfs.io/ipns/k51qzi5uqu5di462t7j4vu4akwfhvtjhy88qbupktvoacqfqe9uforjvhyi4wr/hashes_acestream.m3u",
-              "https://dweb.link/ipns/k51qzi5uqu5di462t7j4vu4akwfhvtjhy88qbupktvoacqfqe9uforjvhyi4wr/hashes_acestream.m3u"
-            ]
-          }
-        ]
+      # The channel lists, one entry per list with backup routes to it; bifrost rereads the file.
+      - SOURCE_URLS=/config/lists.json
       - ACESERVE_BASE_URL=http://172.19.0.1:6878
       - CHANNEL_BASE_URL=http://bifrost:6879/channel/
       # Cut down to our channels into guide.xml, which Jellyfin reads (scripts/sync/jellyfin-guide.sh).
