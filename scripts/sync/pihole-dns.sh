@@ -87,6 +87,29 @@ while IFS= read -r host; do
     fi
 done <<< "$wanted"
 
+# Each http://<name> site in Caddy is also <name>.pi at STATIC_IP: at home a browser reaches it on
+# the LAN by name, without going through Tailscale, which the *.platanosverdes.com names do.
+lan_wanted=$(grep -ohP '^http://\K[a-z0-9-]+(?=[\s,{])' "${sources[@]}" 2>/dev/null | sort -u | sed 's/$/.pi/')
+lan=0
+if [[ -n "${STATIC_IP:-}" ]]; then
+    while IFS= read -r host; do
+        [[ -z "$host" ]] && continue
+        existing_ip=$(printf '%s\n' "$current" | awk -v h="$host" '$2==h{print $1; exit}')
+        [[ "$existing_ip" == "$STATIC_IP" ]] && continue
+        if [[ -n "$existing_ip" ]]; then
+            old_value=$(jq -rn --arg v "$existing_ip $host" '$v|@uri')
+            curl -s -o /dev/null -X DELETE "$PIHOLE_BASE/config/dns/hosts/$old_value?sid=$sid"
+        fi
+        new_value=$(jq -rn --arg v "$STATIC_IP $host" '$v|@uri')
+        status=$(curl -s -o /dev/null -w '%{http_code}' -X PUT "$PIHOLE_BASE/config/dns/hosts/$new_value?sid=$sid")
+        if [[ "$status" == 2* ]]; then
+            lan=$((lan + 1))
+        else
+            echo "sync-pihole-dns: failed to write $host (HTTP $status)" >&2
+        fi
+    done <<< "$lan_wanted"
+fi
+
 pruned=0
 if (( prune )); then
     stale=$(printf '%s\n' "$current" |
@@ -102,5 +125,5 @@ fi
 
 left_alone=$(comm -23 \
     <(printf '%s\n' "$current" | awk 'NF{print $2}' | sort -u) \
-    <(printf '%s\n' "$wanted" | sort -u) | grep -c . || true)
-echo "pihole DNS: $added added, $updated re-pointed, $unchanged unchanged, $pruned removed with their route, $removed left to public DNS, $left_alone unrelated entries left untouched"
+    <(printf '%s\n' "$wanted" "$lan_wanted" | awk 'NF' | sort -u) | grep -c . || true)
+echo "pihole DNS: $added added, $updated re-pointed, $unchanged unchanged, $pruned removed with their route, $removed left to public DNS, $lan LAN names written, $left_alone unrelated entries left untouched"

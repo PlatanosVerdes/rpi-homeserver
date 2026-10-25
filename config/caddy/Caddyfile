@@ -177,83 +177,83 @@ https://muninn.platanosverdes.com {
     reverse_proxy muninn:8095
 }
 # --- HTTP (LAN short names) ---
-http://raspi http://homepage {
+http://raspi http://homepage http://raspi.pi {
     log
     reverse_proxy homepage:3000
 }
-http://jellyfin {
+http://jellyfin, http://jellyfin.pi {
     log
     reverse_proxy host.docker.internal:8096
 }
-http://seerr {
+http://seerr, http://seerr.pi {
     log
     reverse_proxy seerr:5055
 }
-http://overseerr {
+http://overseerr, http://overseerr.pi {
     log
     redir http://seerr{uri} permanent
 }
-http://plex {
+http://plex, http://plex.pi {
     log
     # Same target as the HTTPS route above: local from the LAN, and local over the tailnet too.
     redir http://{env.STATIC_IP}:32400{uri}
 }
-http://logs {
+http://logs, http://logs.pi {
     log
     reverse_proxy victorialogs:9428
 }
-http://farnsworth {
+http://farnsworth, http://farnsworth.pi {
     reverse_proxy farnsworth:8086
 }
-http://grafana {
+http://grafana, http://grafana.pi {
     log
     reverse_proxy grafana:3000
 }
-http://prometheus {
+http://prometheus, http://prometheus.pi {
     log
     reverse_proxy prometheus:9090
 }
-http://push {
+http://push, http://push.pi {
     log
     reverse_proxy pushgateway:9091
 }
-http://prowlarr {
+http://prowlarr, http://prowlarr.pi {
     log
     reverse_proxy prowlarr:9696
 }
-http://radarr {
+http://radarr, http://radarr.pi {
     log
     reverse_proxy radarr:7878
 }
-http://sonarr {
+http://sonarr, http://sonarr.pi {
     log
     reverse_proxy sonarr:8989
 }
-http://flare {
+http://flare, http://flare.pi {
     log
     reverse_proxy flaresolverr:8191
 }
-http://torrent {
+http://torrent, http://torrent.pi {
     log
     reverse_proxy qbittorrent:8080
 }
-http://drop {
+http://drop, http://drop.pi {
     log
     reverse_proxy torrent-drop:8087
 }
-http://audio {
+http://audio, http://audio.pi {
     log
     reverse_proxy audio-convert:8088
 }
-http://autobrr {
+http://autobrr, http://autobrr.pi {
     log
     reverse_proxy autobrr:7474
 }
-http://speedtest {
+http://speedtest, http://speedtest.pi {
     log
     reverse_proxy speedtest-tracker:80
 }
-http://pihole {
+http://pihole, http://pihole.pi {
     log
     reverse_proxy host.docker.internal:8081
 }
