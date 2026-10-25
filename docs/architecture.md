@@ -151,7 +151,7 @@ schedule), `ci/` (GitHub Actions). The cron lines are in `scripts/crontab`.
 | Script | What it does |
 | :--- | :--- |
 | `deploy/apply.sh` | The deploy pass, on push and every 30 minutes. One lock, coalescing rather than queueing, with retries for a failed build: [deploy.md](deploy.md) |
-| tracker-control (service) | Reads each tracker account and moves Prowlarr's freeleech filter, Radarr's `requiredFlags` and autobrr's grab rate from the headroom: [private-trackers.md](private-trackers.md#the-control-loop). One reader per site; the parsing is deliberately dumb about markup |
+| tracker-control (service) | Reads each tracker account and moves Prowlarr's freeleech filter, Radarr's `requiredFlags` and autobrr's grab rate from the headroom: [private-trackers.md](private-trackers.md#the-control-loop). One reader per site; the parsing is deliberately dumb about markup. Also puts qBittorrent on its alternative limits while anything plays on Jellyfin: [private-trackers.md](private-trackers.md#quiet-while-watching) |
 | `setup/install-crontab.sh` | Merges both repos' cron fragments, installs only if it differs, prints the diff |
 | `setup/install-logrotate.sh` | Installs the rotation policy root-owned 0644, because logrotate silently ignores anything else |
 | `recovery/rebuild-service.sh` | Rebuilds one compose service from scratch, by hand. For one CI publishes, this is the build-from-source fallback ([service-images.md](service-images.md)) |

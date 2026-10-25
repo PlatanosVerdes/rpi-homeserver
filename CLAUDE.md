@@ -100,7 +100,7 @@ How the pass works, step by step: [docs/deploy.md](docs/deploy.md). The rules th
 
 ## Networking
 
-- **Local LAN:** Caddy listens for HTTP short names (`http://jellyfin`, `http://grafana`, etc.). Clients need an entry in `/etc/hosts` pointing `STATIC_IP` to those names.
+- **Local LAN:** every Caddy short site (`http://jellyfin`) also answers `http://<name>.pi`, which Pi-hole points at `STATIC_IP` (written by `pihole-dns.sh`): at home `http://jellyfin.pi` stays on the LAN, while `*.platanosverdes.com` goes through Tailscale. Bare short names still need `/etc/hosts`.
 - **Remote (Tailscale):** All HTTPS subdomains (`*.platanosverdes.com`) resolve to the Pi's Tailscale IP (`TAILSCALE_IP`). Certificates issued automatically via Cloudflare DNS challenge.
 - **Pi-hole:** DNS for the whole tailnet. Every `*.platanosverdes.com` host in the Caddyfile points to `TAILSCALE_IP` in Pi-hole's custom DNS (written by `scripts/sync/pihole-dns.sh`, never by hand), except those in `PIHOLE_DNS_PUBLIC_HOSTS` (Grafana), which resolve to Cloudflare Access even on the tailnet.
 - **Docker network:** All services share `media-network` (bridge), except the host-network ones listed in [docs/architecture.md](docs/architecture.md#the-network).
