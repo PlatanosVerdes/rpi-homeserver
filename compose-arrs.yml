@@ -63,6 +63,7 @@ services:
     labels:
       prometheus.probe: "http://prowlarr:9696/"
     restart: unless-stopped
+    cpu_shares: 128
     profiles: [prowlarr, media, all]
     dns:
       - 8.8.8.8
@@ -85,6 +86,7 @@ services:
     labels:
       prometheus.probe: "http://radarr:7878/"
     restart: unless-stopped
+    cpu_shares: 128
     profiles: [radarr, media, all]
     dns:
       - 8.8.8.8
@@ -111,6 +113,7 @@ services:
     labels:
       prometheus.probe: "http://sonarr:8989/"
     restart: unless-stopped
+    cpu_shares: 128
     profiles: [sonarr, media, all]
     dns:
       - 8.8.8.8
