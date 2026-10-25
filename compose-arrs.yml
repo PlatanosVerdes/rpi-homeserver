@@ -44,6 +44,8 @@ services:
     # Headless Chromium. Peaked at 771 MB and hit 768m 16.7k times in a day and a half.
     mem_limit: 1g
     memswap_limit: 1g
+    # Default is 1024; yields the CPU to live streams when the Pi is busy.
+    cpu_shares: 128
     profiles: [flaresolverr, media, all]
     dns:
       - 8.8.8.8
