@@ -132,8 +132,18 @@ services:
     # that the kernel OOM-kills it every 10-15 min of streaming.
     mem_limit: 1600m
     memswap_limit: 1600m
+    # The image's own command, plus the limits only when set: the engine reads no env of its own.
+    command:
+      - sh
+      - -c
+      - >-
+        exec python main.py --bind-all --live-cache-type memory --live-mem-cache-size 104857600
+        --disable-sentry --log-stdout --disable-upnp
+        $${UPLOAD_LIMIT:+--upload-limit $$UPLOAD_LIMIT} $${MAX_PEERS:+--max-peers $$MAX_PEERS}
     environment:
       - TZ=${TZ}
+      - UPLOAD_LIMIT=${ACESTREAM_UPLOAD_LIMIT:-}
+      - MAX_PEERS=${ACESTREAM_MAX_PEERS:-}
       # The engine is Python and its API calls go through urllib, which honours these. Its content
       # servers answer plain HTTP too, blocked on match days; peers are not HTTP and stay on the line.
       - http_proxy=http://127.0.0.1:8888
