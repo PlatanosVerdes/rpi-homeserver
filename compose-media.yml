@@ -134,7 +134,10 @@ services:
     memswap_limit: 1600m
     environment:
       - TZ=${TZ}
-      # The engine is Python and its API calls go through urllib, which honours these.
+      # The engine is Python and its API calls go through urllib, which honours these. Its content
+      # servers answer plain HTTP too, blocked on match days; peers are not HTTP and stay on the line.
+      - http_proxy=http://127.0.0.1:8888
+      - HTTP_PROXY=http://127.0.0.1:8888
       - https_proxy=http://127.0.0.1:8888
       - HTTPS_PROXY=http://127.0.0.1:8888
       - no_proxy=localhost,127.0.0.1
