@@ -216,10 +216,15 @@ services:
     environment:
       - TZ=${TZ}
       # One entry per list, each with backup routes to the same list; another list is another entry.
-      - >-
+      - |-
         SOURCE_URLS=[
-        {"url": "http://kubo:8080/ipns/k51qzi5uqu5di462t7j4vu4akwfhvtjhy88qbupktvoacqfqe9uforjvhyi4wr/hashes_acestream.m3u",
-        "backup": ["https://ipfs.io/ipns/k51qzi5uqu5di462t7j4vu4akwfhvtjhy88qbupktvoacqfqe9uforjvhyi4wr/hashes_acestream.m3u", "https://dweb.link/ipns/k51qzi5uqu5di462t7j4vu4akwfhvtjhy88qbupktvoacqfqe9uforjvhyi4wr/hashes_acestream.m3u"]}
+          {
+            "url": "http://kubo:8080/ipns/k51qzi5uqu5di462t7j4vu4akwfhvtjhy88qbupktvoacqfqe9uforjvhyi4wr/hashes_acestream.m3u",
+            "backup": [
+              "https://ipfs.io/ipns/k51qzi5uqu5di462t7j4vu4akwfhvtjhy88qbupktvoacqfqe9uforjvhyi4wr/hashes_acestream.m3u",
+              "https://dweb.link/ipns/k51qzi5uqu5di462t7j4vu4akwfhvtjhy88qbupktvoacqfqe9uforjvhyi4wr/hashes_acestream.m3u"
+            ]
+          }
         ]
       - ACESERVE_BASE_URL=http://172.19.0.1:6878
       - CHANNEL_BASE_URL=http://bifrost:6879/channel/
