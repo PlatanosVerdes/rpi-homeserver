@@ -205,6 +205,14 @@ services:
       - DIGITALCORE_PASSWORD=${DIGITALCORE_PASSWORD:-}
       - C411_USER=${C411_USER:-}
       - C411_PASSWORD=${C411_PASSWORD:-}
+      # While anything plays on Jellyfin, qBittorrent runs on these limits (docs/private-trackers.md#quiet-while-watching)
+      - JELLYFIN_API_KEY=${JELLYFIN_API_KEY:-}
+      - QUIET_DOWN_KIB=${QUIET_DOWN_KIB:-3072}
+      - QUIET_UP_KIB=${QUIET_UP_KIB:-1024}
+      - QUIET_WHILE_WATCHING=${QUIET_WHILE_WATCHING:-on}
+    # Jellyfin is on the host network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       # The arr and Prowlarr API keys live in their config.xml and nowhere else, and Prowlarr holds
       # TorrentLeech's login, so those secrets are not duplicated into .env. The other three sites

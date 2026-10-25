@@ -111,12 +111,18 @@ func metrics(w http.ResponseWriter, _ *http.Request) {
 	out.WriteString("# TYPE tracker_control_loop_failures gauge\n")
 	out.WriteString("# HELP tracker_control_loop_interval_seconds How often it is supposed to run, so overdue is answerable without knowing the schedule\n")
 	out.WriteString("# TYPE tracker_control_loop_interval_seconds gauge\n")
+	out.WriteString("# HELP tracker_control_quiet 1 while qBittorrent runs on its alternative limits because something plays on Jellyfin\n")
+	out.WriteString("# TYPE tracker_control_quiet gauge\n")
+	out.WriteString("# HELP tracker_control_jellyfin_playing Jellyfin sessions playing something at the last look\n")
+	out.WriteString("# TYPE tracker_control_jellyfin_playing gauge\n")
 	out.WriteString("# HELP tracker_control_dry_run 1 while it reports what it would change and writes nothing\n")
 	out.WriteString("# TYPE tracker_control_dry_run gauge\n")
 	fmt.Fprintf(&out, "tracker_control_loop_timestamp_seconds %d\n", snap.last.Unix())
 	fmt.Fprintf(&out, "tracker_control_loop_seconds %.3f\n", snap.took.Seconds())
 	fmt.Fprintf(&out, "tracker_control_loop_failures %d\n", snap.failures)
 	fmt.Fprintf(&out, "tracker_control_loop_interval_seconds %d\n", int(snap.interval.Seconds()))
+	fmt.Fprintf(&out, "tracker_control_quiet %d\n", boolInt(quietOn.Load()))
+	fmt.Fprintf(&out, "tracker_control_jellyfin_playing %d\n", quietPlaying.Load())
 	fmt.Fprintf(&out, "tracker_control_dry_run %d\n", boolInt(dryRun))
 
 	w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
@@ -131,6 +137,9 @@ func main() {
 	}
 
 	go loop(every)
+	if os.Getenv("QUIET_WHILE_WATCHING") != "off" {
+		go quietWhileWatching(30 * time.Second)
+	}
 	http.HandleFunc("/metrics", metrics)
 	http.HandleFunc("/", metrics)
 	log.Printf("tracker-control on :%s, every %s, dry_run=%v", port, every, dryRun)

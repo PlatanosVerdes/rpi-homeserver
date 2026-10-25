@@ -158,6 +158,31 @@ alerts sit on them: headroom under 10 GB, ratio below the line, an obligation wi
 stopped, and no reading in two hours. The last matters most: a stopped reader looks exactly like a
 healthy account.
 
+## Quiet while watching
+
+A Pi 4 does not have the CPU or the line to download at full speed and serve video at the same
+time: with two channels playing, qBittorrent took a quarter of a core and the load sat at 17 on four
+cores. So tracker-control also watches Jellyfin, every 30 seconds, apart from its 30-minute loop:
+
+- **Something plays on Jellyfin** (a film, an episode, a live channel from bifrost; paused sessions
+  do not count): it turns on qBittorrent's **alternative speed limits**, the turtle in its web UI,
+  set to `QUIET_DOWN_KIB` down and `QUIET_UP_KIB` up (3072 and 1024 KiB/s by default).
+- **Nothing has played for 2 minutes**: it turns them off again. The 2 minutes cover a pause, a
+  channel change or the next episode, so the limits do not flap.
+- **Throttled, never paused.** Seeding goes on, slower: the accounts above still need the upload,
+  and a paused torrent stops counting towards a hit & run window.
+- **It only lifts limits it set.** If the turtle was turned on by hand, it stays on.
+- **What it does not see:** a stream watched straight from bifrost or Plex, not through Jellyfin.
+
+The limits are written to qBittorrent's preferences when the service starts, so changing the
+variables in `.env` and redeploying is how to tune them. `QUIET_WHILE_WATCHING=off` turns it off. It
+needs `JELLYFIN_API_KEY`; without a valid key it logs `quiet: Jellyfin: /Sessions: 401` and changes
+nothing.
+
+Its log lines start with `quiet:` (in VictoriaLogs: `container:tracker-control "quiet:"`), and it
+exports `tracker_control_quiet` (1 while it holds the limits on) and
+`tracker_control_jellyfin_playing` (sessions playing at the last look).
+
 ## TorrentLeech
 
 | Rule (from staff in `#tlhelp`) | Value |
