@@ -239,6 +239,10 @@ http://torrent, http://torrent.pi {
 }
 http://drop, http://drop.pi {
     log
+    # Anyone on the wifi could otherwise hand qBittorrent a torrent.
+    basic_auth {
+        drop {$DROP_AUTH_HASH}
+    }
     reverse_proxy torrent-drop:8087
 }
 http://audio, http://audio.pi {

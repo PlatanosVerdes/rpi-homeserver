@@ -26,6 +26,7 @@ services:
     environment:
       - CF_API_TOKEN=${CF_API_TOKEN}
       - CADDY_EMAIL=${CADDY_EMAIL}
+      - DROP_AUTH_HASH=${DROP_AUTH_HASH}
       # Target for the Plex redirects, see the Caddyfile
       - STATIC_IP=${STATIC_IP}
     volumes:
