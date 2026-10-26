@@ -294,3 +294,19 @@ func TestAllCategoriesWithACountryTakesEverythingFromIt(t *testing.T) {
 		t.Fatalf("got %v", got)
 	}
 }
+
+func TestRetroIsTheDefaultSkin(t *testing.T) {
+	a := &app{}
+	for path, want := range map[string]string{"/": retroCSS[:40], "/modern": `aria-current="true">Modern`} {
+		rec := httptest.NewRecorder()
+		a.index(rec, httptest.NewRequest("GET", path, nil))
+		if !strings.Contains(rec.Body.String(), want) {
+			t.Fatalf("%s does not serve its skin", path)
+		}
+	}
+	rec := httptest.NewRecorder()
+	a.index(rec, httptest.NewRequest("GET", "/retro", nil))
+	if rec.Code != http.StatusMovedPermanently || rec.Header().Get("Location") != "/" {
+		t.Fatalf("/retro: %d %s", rec.Code, rec.Header().Get("Location"))
+	}
+}
