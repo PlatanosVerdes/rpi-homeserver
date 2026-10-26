@@ -407,6 +407,33 @@ services:
     networks:
       - media-network
 
+  # --- baird: which channels there are ---
+  # Reads the shared lists (config/acestream), web pages that link acestream ids and the engine's
+  # catalogue, applies what its page decided and writes one M3U, the only list bifrost reads.
+  baird:
+    image: ghcr.io/platanosverdes/rpi-homeserver-baird:${BAIRD_IMAGE_TAG}
+    build: ./services/baird
+    user: "${PUID}:${PGID}"
+    container_name: baird
+    labels:
+      prometheus.probe: "http://baird:8089/"
+    restart: unless-stopped
+    mem_limit: 64m
+    memswap_limit: 64m
+    profiles: [baird, acestream, all]
+    environment:
+      - TZ=${TZ}
+      - ENGINE_URL=http://172.19.0.1:6878
+      # Optional: which sources failed to open, so a dropped one that fails is not kept for days.
+      - PLAYER_URL=http://bifrost:6879
+    volumes:
+      # choices.json (what the page decided) and baird.m3u (what it built).
+      - ${APP_CONFIG_PATH}/baird:/config
+      # The shared lists it starts from.
+      - ./config/acestream:/upstream:ro
+    networks:
+      - media-network
+
   # --- sleipnir: see and move every gluetun tunnel on this machine (github.com/PlatanosVerdes/sleipnir) ---
   # Tunnels are found by the sleipnir.enable label, through a socket proxy that only lets it list
   # containers. It changes where a tunnel exits; which container uses which tunnel stays in compose.

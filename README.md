@@ -40,6 +40,7 @@ and the everyday commands) is in [docs/overview.md](docs/overview.md).
 | | [audio-convert.md](docs/audio-convert.md) | Adding an AC3 track to files a client re-encodes |
 | | [watch-next.md](docs/watch-next.md) | Fetching the next episodes as you watch |
 | **Services** | [farnsworth.md](docs/farnsworth.md) | AceStream live TV, and handing a channel to VLC |
+| | [baird.md](docs/baird.md) | Which AceStream channels there are: the shared lists curated, plus pages and the engine catalogue |
 | | [sleipnir.md](docs/sleipnir.md) | The VPN tunnel panel |
 | | [service-images.md](docs/service-images.md) | How `services/` images are built, pinned and pulled |
 | | [add-service.md](docs/add-service.md) | Checklist for a new service |
