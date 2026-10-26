@@ -77,6 +77,12 @@
         description: Acestream channels in your player
         server: my-docker
         container: farnsworth
+    - Baird:
+        icon: https://baird.platanosverdes.com/icon.svg
+        href: https://baird.platanosverdes.com
+        description: Acestream channels picked from pages and the engine
+        server: my-docker
+        container: baird
     - bifrost:
         icon: https://bifrost.platanosverdes.com/favicon.svg
         href: https://bifrost.platanosverdes.com

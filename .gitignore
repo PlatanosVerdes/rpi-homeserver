@@ -82,6 +82,7 @@ credentials/
 
 # Go binaries left by a local `go build` in a service directory
 services/subtitle-links/subtitle-links
+services/baird/baird
 services/watch-next/watch-next
 services/farnsworth/farnsworth
 services/tailscale-metrics/tailscale-metrics

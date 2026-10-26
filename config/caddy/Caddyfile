@@ -163,6 +163,11 @@ https://drop.platanosverdes.com {
     import cf_tls
     reverse_proxy torrent-drop:8087
 }
+https://baird.platanosverdes.com {
+    log
+    import cf_tls
+    reverse_proxy baird:8089
+}
 https://audio.platanosverdes.com {
     log
     import cf_tls
