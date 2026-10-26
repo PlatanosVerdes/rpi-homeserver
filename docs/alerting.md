@@ -75,6 +75,7 @@ What the rules cover, by group:
 | Group | Rules |
 | :--- | :--- |
 | Host | system and data disk almost full, Pi running hot, memory almost exhausted, container restart loop |
+| streamhalla | offline (from the raspi's Tailscale view), bifrost not running, system disk almost full, running hot |
 | Deploy and backup | deploy failing, backup failed, no recent backup, backup archive grew sharply |
 | Services | Prometheus target down, service not answering, public route behind Access broken, pi-metrics / tracker-control / qbit-manage overdue |
 | Torrents | a requested download stalled, torrents in error, seeding to nobody, a tracker warning about to be re-checked, a torrent nothing will clean up, download nothing can import, data nothing owns |
