@@ -119,6 +119,12 @@
         description: AENA departures and arrivals, with flight alerts
         server: my-docker
         container: torre
+    - Apex:
+        icon: https://apex.platanosverdes.com/icon.svg
+        href: https://apex.platanosverdes.com
+        description: Motorcycle routes for Google Maps
+        server: my-docker
+        container: apex
 
 - Monitoring:
     - Grafana:
