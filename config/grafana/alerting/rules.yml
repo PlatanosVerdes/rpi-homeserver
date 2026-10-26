@@ -288,6 +288,131 @@ groups:
               conditions:
                 - evaluator: { type: gt, params: [0] }
 
+      # streamhalla runs no Grafana of its own. Offline is read from the raspi's Tailscale view, since
+      # its own Prometheus is unreachable then; the rest query it and stay quiet while it is (KeepLast).
+      - uid: homelab-streamhalla-offline
+        title: 'streamhalla, offline'
+        condition: C
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: streamhalla has been off the tailnet for 10 minutes
+          description: >-
+            The node is off, has no network, or Tailscale stopped on it. Its TV is down with it, and
+            the other streamhalla alerts cannot run until it is back.
+        noDataState: OK
+        execErrState: KeepLast
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: 'tailscale_peer_online{job="tailscale",hostname="streamhalla"} == bool 0'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+
+      - uid: homelab-streamhalla-bifrost-down
+        title: 'streamhalla, bifrost not running'
+        condition: C
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: cAdvisor on streamhalla has not seen the bifrost container for 5 minutes
+          description: >-
+            Live TV on streamhalla is down. Also fires if cAdvisor itself stopped there; check
+            `ssh streamhalla docker ps -a`.
+        noDataState: OK
+        execErrState: KeepLast
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus-streamhalla
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: 'absent(container_last_seen{name="bifrost"})'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+
+      - uid: homelab-streamhalla-disk-root
+        title: 'streamhalla, system disk almost full'
+        condition: C
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Less than 15% free on streamhalla's / (the SD card)
+        noDataState: OK
+        execErrState: KeepLast
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus-streamhalla
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: '(node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) < bool 0.15'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+
+      - uid: homelab-streamhalla-temp-high
+        title: 'streamhalla, running hot'
+        condition: C
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: streamhalla's SoC above 75 C for 10 minutes
+          description: Sustained throttling territory. Check airflow and heavy containers.
+        noDataState: OK
+        execErrState: KeepLast
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus-streamhalla
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: 'node_thermal_zone_temp > bool 75'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+
       - uid: homelab-acestream-sources-all-failing
         title: 'Acestream, every source URL failing'
         condition: C
