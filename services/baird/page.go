@@ -5,18 +5,21 @@ import (
 	"strings"
 )
 
-// The same page in two skins: /retro adds an early-2000s stylesheet over the modern one.
+// The same page in two skins: the early-2000s one at / is the default, the modern one at /modern.
 var retroHTML = strings.NewReplacer(
 	"</style>", "</style>\n<style>"+retroCSS+"</style>",
-	`<a href="/" aria-current="true">Modern</a><a href="/retro">Retro</a>`, `<a href="/">Modern</a><a href="/retro" aria-current="true">Retro</a>`,
+	`<a href="/modern" aria-current="true">Modern</a><a href="/">Retro</a>`, `<a href="/modern">Modern</a><a href="/" aria-current="true">Retro</a>`,
 ).Replace(pageHTML)
 
 func (a *app) index(w http.ResponseWriter, r *http.Request) {
-	page := pageHTML
+	page := retroHTML
 	switch r.URL.Path {
 	case "/":
+	case "/modern":
+		page = pageHTML
 	case "/retro":
-		page = retroHTML
+		http.Redirect(w, r, "/", http.StatusMovedPermanently)
+		return
 	default:
 		http.NotFound(w, r)
 		return
@@ -174,7 +177,7 @@ const pageHTML = `<!doctype html>
     <h1><img src="/icon.svg" alt="">Baird</h1>
     <p id="summary">Loading…</p>
   </div>
-  <div class="look">Look <nav aria-label="Look"><a href="/" aria-current="true">Modern</a><a href="/retro">Retro</a></nav></div>
+  <div class="look">Look <nav aria-label="Look"><a href="/modern" aria-current="true">Modern</a><a href="/">Retro</a></nav></div>
 </header>
 
 <div class="layout">

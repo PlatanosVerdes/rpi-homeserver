@@ -16,7 +16,7 @@ the engine's catalogue (aceserve /search) ───────┘   «which»  
 | A web page that links `acestream://<id>` buttons | Reads every id on it and lists them under one channel name you give it, so a page with twelve buttons becomes one channel with twelve sources |
 | The engine's catalogue | The same list [acestreamui.app](https://acestreamui.app) shows, about 1,700 channels. You pick categories, narrowed to some countries if you like ("sport from Spain and the UK"), and switch single channels in or out. Infohashes become the content ids bifrost plays by (`get_content_id`, cached for good in `ids.json`) |
 
-The page is at `https://baird.<domain>`, tailnet only, with a second skin at `/retro`. Named for
+The page is at `https://baird.<domain>`, tailnet only: an early-2000s skin there, a modern one at `/modern`. Named for
 John Logie Baird, who showed the first television picture of a face in 1925.
 
 ## The shared lists, and what they drop
