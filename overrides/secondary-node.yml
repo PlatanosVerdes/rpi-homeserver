@@ -16,6 +16,9 @@ services:
       # aceserve is on the host network; the bridge gateway the main node uses is not stable here.
       - ACESERVE_BASE_URL=http://host.docker.internal:6878
       - BIFROST_NAME=${BIFROST_NAME}
+      # baird runs on the main node only: this node reads the shared lists as they are.
+      - SOURCE_URLS=/upstream/upstream.json
+      - KEEP_DROPPED=72h
 
   prometheus:
     ports:
