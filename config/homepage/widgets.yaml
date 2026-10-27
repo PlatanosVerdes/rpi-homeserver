@@ -8,7 +8,3 @@
     cpu: true
     memory: true
     disk: /mnt/data # Using your mapped environment path
-
-- search:
-    provider: duckduckgo
-    focus: true
