@@ -51,8 +51,12 @@ page, set on the machine whose page you open:
 ```bash
 SLEIPNIR_NAME=Raspberry
 SLEIPNIR_PEERS=streamhalla=http://100.120.107.32:8092
-SLEIPNIR_TOKEN=<same random string on every machine>
+SLEIPNIR_TOKEN=<this machine's own random string>
+SLEIPNIR_PEER_TOKENS=streamhalla=<streamhalla's SLEIPNIR_TOKEN>
 ```
+
+One token per machine, so the one that leaks from a peer does not open this one. A peer missing
+from `SLEIPNIR_PEER_TOKENS` is sent this machine's own token.
 
 Peers answer on `:8092`, published on the Tailscale address only, and that listener exists only when
 `SLEIPNIR_TOKEN` is set. A peer that does not answer shows as "No answer".

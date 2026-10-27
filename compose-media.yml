@@ -463,6 +463,7 @@ services:
       - SLEIPNIR_NAME=${SLEIPNIR_NAME:-}
       - SLEIPNIR_PEERS=${SLEIPNIR_PEERS:-}
       - SLEIPNIR_TOKEN=${SLEIPNIR_TOKEN:-}
+      - SLEIPNIR_PEER_TOKENS=${SLEIPNIR_PEER_TOKENS:-}
       - PEER_LISTEN_ADDR=:8092
     volumes:
       # gluetun's own server list, kept current by its updater: the countries a tunnel can pick.
