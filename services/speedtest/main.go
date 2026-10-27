@@ -212,9 +212,10 @@ func metrics(w http.ResponseWriter, _ *http.Request) {
 				fmt.Fprintf(&out, "speedtest_loaded_latency_ms{direction=%q,stat=%q} %g\n", direction, stat, value)
 			}
 		}
-		gauge("speedtest_server_info", "Which server and ISP the result came from")
-		fmt.Fprintf(&out, "speedtest_server_info{server_id=\"%d\",server=%q,location=%q,isp=%q} 1\n",
-			r.Server.ID, r.Server.Name, r.Server.Location, r.ISP)
+		// One new series per test through result_url: four a day, and it is what makes the result linkable.
+		gauge("speedtest_server_info", "Which server and ISP the result came from, and its page on speedtest.net")
+		fmt.Fprintf(&out, "speedtest_server_info{server_id=\"%d\",server=%q,location=%q,isp=%q,result_url=%q} 1\n",
+			r.Server.ID, r.Server.Name, r.Server.Location, r.ISP, r.Result.URL)
 	}
 
 	w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
