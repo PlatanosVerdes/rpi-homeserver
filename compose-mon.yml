@@ -221,6 +221,26 @@ services:
     networks:
       - media-network
 
+  # --- SMOKEPING PROBER (latency and packet loss to the internet, continuously) ---
+  # One ping a second to each target, kept as histograms: what speedtest's four tests a day miss.
+  # Two providers, so a dead line (both fail) reads differently from one provider's trouble.
+  smokeping-prober:
+    image: quay.io/superq/smokeping-prober:${SMOKEPING_PROBER_VERSION}
+    container_name: smokeping-prober
+    labels:
+      prometheus.probe: "http://smokeping-prober:9374/-/healthy"
+    restart: unless-stopped
+    mem_limit: 32m
+    memswap_limit: 32m
+    cpu_shares: 128
+    profiles: [smokeping-prober, moni, all]
+    # Unprivileged ICMP, which Docker's default ping_group_range allows; no --privileged needed.
+    command: ["1.1.1.1", "8.8.8.8"]
+    environment:
+      - GOMAXPROCS=1
+    networks:
+      - media-network
+
   # --- PI-METRICS (the numbers no exporter provides) ---
   # Was three cron scripts pushing to Pushgateway and writing node_exporter textfiles. Scraped
   # instead, so its death is visible: a pushed metric outlives the thing that pushed it.

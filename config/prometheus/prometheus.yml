@@ -21,6 +21,10 @@ scrape_configs:
     static_configs:
       - targets: ['speedtest:9798']
 
+  - job_name: 'smokeping'
+    static_configs:
+      - targets: ['smokeping-prober:9374']
+
   - job_name: 'pihole'
     static_configs:
       - targets: ['pihole-exporter:9666']

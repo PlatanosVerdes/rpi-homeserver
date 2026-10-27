@@ -21,6 +21,9 @@ became services instead of cron scripts. Nothing writes node-exporter textfiles 
 - **blackbox-exporter** probes every container with a `prometheus.probe` label from the inside, and
   every `prometheus.probe.access` label from the internet's side ([access.md](access.md)). No scrape
   job to edit for a new service ([add-service.md](add-service.md)).
+- **smokeping-prober** pings 1.1.1.1 and 8.8.8.8 once a second and keeps the round trips as
+  histograms, for latency and packet loss between the speedtest's four runs a day (Speedtest
+  dashboard). An outage it sees cannot reach Telegram either; the dead man's switch below covers that.
 - **The second node's Prometheus** is a second Grafana datasource, chosen by the Node selector on the
   dashboards that have one ([nodes.md](nodes.md)).
 
