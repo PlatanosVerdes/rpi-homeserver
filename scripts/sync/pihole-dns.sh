@@ -6,8 +6,9 @@
 # EXT_CADDY_PATH when that repo is present.
 #
 # Ours is a *.platanosverdes.com entry pointing at TAILSCALE_IP: those follow Caddy, written when a
-# route appears, re-pointed when stale, deleted when the route is gone. Anything else (another IP,
-# another domain) was added by hand and is never touched.
+# route appears, re-pointed when stale, deleted when the route is gone. So is a <name>.pi entry
+# pointing at STATIC_IP. Anything else (another IP, another domain) was added by hand and is never
+# touched.
 #
 # PIHOLE_DNS_PUBLIC_HOSTS (space separated) are hosts that must resolve to their public record
 # even on the tailnet, e.g. one behind Cloudflare Access that signs you in there: they are not
@@ -111,19 +112,26 @@ if [[ -n "${STATIC_IP:-}" ]]; then
 fi
 
 pruned=0
-if (( prune )); then
-    stale=$(printf '%s\n' "$current" |
-        awk -v ip="$TAILSCALE_IP" '$1==ip && $2 ~ /\.platanosverdes\.com$/ {print $2}' | sort -u |
-        comm -23 - <(printf '%s\n' "$wanted" "$public" | awk 'NF' | sort -u))
+# Deletes our entries (at <ip>, names ending in <suffix>) that are no longer in the wanted list(s).
+prune_stale() {
+    local ip=$1 suffix=$2 host value
+    shift 2
     while IFS= read -r host; do
         [[ -z "$host" ]] && continue
-        value=$(jq -rn --arg v "$TAILSCALE_IP $host" '$v|@uri')
+        value=$(jq -rn --arg v "$ip $host" '$v|@uri')
         curl -s -o /dev/null -X DELETE "$PIHOLE_BASE/config/dns/hosts/$value?sid=$sid"
         pruned=$((pruned + 1))
-    done <<< "$stale"
+    done < <(printf '%s\n' "$current" |
+        awk -v ip="$ip" -v suffix="$suffix" '$1==ip && substr($2, length($2)-length(suffix)+1)==suffix {print $2}' |
+        sort -u | comm -23 - <(printf '%s\n' "$@" | awk 'NF' | sort -u))
+}
+if (( prune )); then
+    prune_stale "$TAILSCALE_IP" ".platanosverdes.com" "$wanted" "$public"
+    [[ -n "${STATIC_IP:-}" ]] && prune_stale "$STATIC_IP" ".pi" "$lan_wanted"
 fi
 
 left_alone=$(comm -23 \
     <(printf '%s\n' "$current" | awk 'NF{print $2}' | sort -u) \
     <(printf '%s\n' "$wanted" "$lan_wanted" | awk 'NF' | sort -u) | grep -c . || true)
+left_alone=$((left_alone - pruned))
 echo "pihole DNS: $added added, $updated re-pointed, $unchanged unchanged, $pruned removed with their route, $removed left to public DNS, $lan LAN names written, $left_alone unrelated entries left untouched"
