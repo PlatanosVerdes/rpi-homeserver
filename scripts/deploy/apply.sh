@@ -10,9 +10,9 @@ DEPLOY_TRIGGER="${DEPLOY_TRIGGER:-cron}"
 log() { echo "$(date '+%Y-%m-%d %H:%M:%S') - $1"; }
 
 # Secrets kept encrypted in a private repo (SOPS + age, docs/secrets.md), where this node has a
-# checkout of it: each repo's .env is decrypted from <node>/<repo>.env before anything reads it, and
-# only rewritten when it changed. <node> is this machine's Tailscale name. Without the checkout or
-# sops, .env is used as it is.
+# checkout of it: each repo's .env is decrypted from common/<repo>.env plus <node>/<repo>.env before
+# anything reads it, and only rewritten when it changed. <node> is this machine's Tailscale name.
+# Without the checkout or sops, .env is used as it is.
 # cron's PATH has no /usr/local/bin, where sops lives on streamhalla: without this the secrets step was skipped.
 export PATH="/usr/local/bin:$PATH"
 SECRETS_DIR="${SECRETS_DIR:-$HOME/homelab-secrets}"
@@ -21,11 +21,22 @@ if [[ -d "$SECRETS_DIR/.git" ]] && command -v sops >/dev/null 2>&1; then
         log "[secrets] WARNING: could not pull $SECRETS_DIR, decrypting the copy on disk"
     node=$(tailscale status --json 2>/dev/null | jq -r '.Self.DNSName // empty' | cut -d. -f1)
     node=${node:-$(hostname -s)}
+    # The node's own file wins over common/ on a name both define.
+    decrypt_env() {
+        local common=$1 own shared=""
+        own=$(sops decrypt --input-type dotenv --output-type dotenv "$2") || return 1
+        if [[ -f "$common" ]]; then
+            shared=$(sops decrypt --input-type dotenv --output-type dotenv "$common") || return 1
+            awk -F= 'NR == FNR { seen[$1] = 1; next } !($1 in seen)' \
+                <(printf '%s\n' "$own") <(printf '%s\n' "$shared")
+        fi
+        printf '%s\n' "$own"
+    }
     for pair in "rpi-homeserver:$PROJECT_DIR" "rpi-services:$SERVICES_DIR"; do
         src="$SECRETS_DIR/$node/${pair%%:*}.env"
         dst="${pair#*:}/.env"
         [[ -f "$src" && -d "${pair#*:}" ]] || continue
-        if (umask 077; sops decrypt --input-type dotenv --output-type dotenv "$src" > "$dst.decrypted"); then
+        if (umask 077; decrypt_env "$SECRETS_DIR/common/${pair%%:*}.env" "$src" > "$dst.decrypted"); then
             if cmp -s "$dst.decrypted" "$dst"; then
                 rm -f "$dst.decrypted"
             else
