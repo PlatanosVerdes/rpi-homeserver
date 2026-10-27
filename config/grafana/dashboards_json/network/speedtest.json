@@ -5,8 +5,9 @@
     "network",
     "homelab"
   ],
+  "description": "Ookla speed tests every 6 h from services/speedtest, per node.",
   "schemaVersion": 42,
-  "version": 1,
+  "version": 2,
   "editable": true,
   "graphTooltip": 1,
   "preload": false,
@@ -58,24 +59,67 @@
   "panels": [
     {
       "id": 1,
+      "type": "row",
+      "title": "Latest test",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": 2,
       "type": "stat",
       "title": "Download",
+      "description": "",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
       "gridPos": {
-        "h": 4,
-        "w": 4,
+        "h": 5,
+        "w": 5,
         "x": 0,
-        "y": 0
+        "y": 1
       },
       "fieldConfig": {
         "defaults": {
           "unit": "bps",
+          "mappings": [],
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#5794F2"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
           "decimals": 0
         },
         "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "textMode": "value",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
       },
       "targets": [
         {
@@ -87,14 +131,53 @@
           "expr": "max(speedtest_download_bits_per_second) or max(speedtest_tracker_download_bits)",
           "legendFormat": "",
           "refId": "A",
-          "instant": true
+          "range": true
         }
-      ],
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Upload",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 5,
+        "x": 5,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bps",
+          "mappings": [],
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#B877D9"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
       "options": {
-        "colorMode": "none",
-        "graphMode": "none",
+        "colorMode": "value",
+        "graphMode": "area",
         "justifyMode": "center",
         "textMode": "value",
+        "wideLayout": true,
+        "showPercentChange": false,
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -102,28 +185,6 @@
           "fields": "",
           "values": false
         }
-      }
-    },
-    {
-      "id": 2,
-      "type": "stat",
-      "title": "Upload",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 4,
-        "y": 0
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bps",
-          "decimals": 0
-        },
-        "overrides": []
       },
       "targets": [
         {
@@ -135,14 +196,60 @@
           "expr": "max(speedtest_upload_bits_per_second) or max(speedtest_tracker_upload_bits)",
           "legendFormat": "",
           "refId": "A",
-          "instant": true
+          "range": true
         }
-      ],
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Ping",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 10,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "mappings": [],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 30
+              },
+              {
+                "color": "red",
+                "value": 60
+              }
+            ]
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
       "options": {
-        "colorMode": "none",
-        "graphMode": "none",
+        "colorMode": "value",
+        "graphMode": "area",
         "justifyMode": "center",
         "textMode": "value",
+        "wideLayout": true,
+        "showPercentChange": false,
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -150,28 +257,6 @@
           "fields": "",
           "values": false
         }
-      }
-    },
-    {
-      "id": 3,
-      "type": "stat",
-      "title": "Ping",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 8,
-        "y": 0
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ms",
-          "decimals": 1
-        },
-        "overrides": []
       },
       "targets": [
         {
@@ -183,14 +268,124 @@
           "expr": "max(speedtest_ping_ms) or max(speedtest_tracker_ping_ms)",
           "legendFormat": "",
           "refId": "A",
-          "instant": true
+          "range": true
         }
-      ],
+      ]
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Bufferbloat",
+      "description": "Latency a saturated link adds over the idle ping, graded like Waveform's test: A+ under 5 ms, A under 30, B under 60, C under 200, D under 400.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 3,
+        "x": 14,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "mappings": [
+            {
+              "type": "range",
+              "options": {
+                "from": 0,
+                "to": 5,
+                "result": {
+                  "text": "A+",
+                  "color": "dark-green",
+                  "index": 0
+                }
+              }
+            },
+            {
+              "type": "range",
+              "options": {
+                "from": 5,
+                "to": 30,
+                "result": {
+                  "text": "A",
+                  "color": "green",
+                  "index": 1
+                }
+              }
+            },
+            {
+              "type": "range",
+              "options": {
+                "from": 30,
+                "to": 60,
+                "result": {
+                  "text": "B",
+                  "color": "yellow",
+                  "index": 2
+                }
+              }
+            },
+            {
+              "type": "range",
+              "options": {
+                "from": 60,
+                "to": 200,
+                "result": {
+                  "text": "C",
+                  "color": "orange",
+                  "index": 3
+                }
+              }
+            },
+            {
+              "type": "range",
+              "options": {
+                "from": 200,
+                "to": 400,
+                "result": {
+                  "text": "D",
+                  "color": "red",
+                  "index": 4
+                }
+              }
+            },
+            {
+              "type": "range",
+              "options": {
+                "from": 400,
+                "to": null,
+                "result": {
+                  "text": "F",
+                  "color": "dark-red",
+                  "index": 5
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
       "options": {
-        "colorMode": "none",
+        "colorMode": "value",
         "graphMode": "none",
         "justifyMode": "center",
         "textMode": "value",
+        "wideLayout": true,
+        "showPercentChange": false,
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -198,28 +393,6 @@
           "fields": "",
           "values": false
         }
-      }
-    },
-    {
-      "id": 4,
-      "type": "stat",
-      "title": "Jitter",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 12,
-        "y": 0
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ms",
-          "decimals": 1
-        },
-        "overrides": []
       },
       "targets": [
         {
@@ -228,17 +401,63 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "max(speedtest_ping_jitter_ms) or max(speedtest_tracker_ping_jitter_ms)",
+          "expr": "clamp_min((((max(speedtest_loaded_latency_ms{direction=\"download\",stat=\"iqm\"}) or max(speedtest_tracker_download_latency_iqm_ms)) > (max(speedtest_loaded_latency_ms{direction=\"upload\",stat=\"iqm\"}) or max(speedtest_tracker_upload_latency_iqm_ms))) or (max(speedtest_loaded_latency_ms{direction=\"upload\",stat=\"iqm\"}) or max(speedtest_tracker_upload_latency_iqm_ms))) - (max(speedtest_ping_ms) or max(speedtest_tracker_ping_ms)), 0)",
           "legendFormat": "",
           "refId": "A",
           "instant": true
         }
-      ],
+      ]
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Packet loss",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 3,
+        "x": 17,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "mappings": [],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.5
+              },
+              {
+                "color": "red",
+                "value": 2
+              }
+            ]
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
       "options": {
-        "colorMode": "none",
+        "colorMode": "value",
         "graphMode": "none",
         "justifyMode": "center",
         "textMode": "value",
+        "wideLayout": true,
+        "showPercentChange": false,
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -246,28 +465,6 @@
           "fields": "",
           "values": false
         }
-      }
-    },
-    {
-      "id": 5,
-      "type": "stat",
-      "title": "Packet loss",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 16,
-        "y": 0
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percent",
-          "decimals": 1
-        },
-        "overrides": []
       },
       "targets": [
         {
@@ -281,12 +478,57 @@
           "refId": "A",
           "instant": true
         }
-      ],
+      ]
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Since last test",
+      "description": "Tests run every 6 h at minute 47; past 7 h one was missed, see the service's logs.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 20,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dtdurations",
+          "mappings": [],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 25200
+              },
+              {
+                "color": "red",
+                "value": 46800
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
       "options": {
-        "colorMode": "none",
+        "colorMode": "value",
         "graphMode": "none",
         "justifyMode": "center",
         "textMode": "value",
+        "wideLayout": true,
+        "showPercentChange": false,
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -294,27 +536,6 @@
           "fields": "",
           "values": false
         }
-      }
-    },
-    {
-      "id": 6,
-      "type": "stat",
-      "title": "Last test",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 20,
-        "y": 0
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "dateTimeFromNow"
-        },
-        "overrides": []
       },
       "targets": [
         {
@@ -323,30 +544,448 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "max(speedtest_timestamp_seconds) * 1000",
+          "expr": "time() - max(speedtest_timestamp_seconds)",
           "legendFormat": "",
           "refId": "A",
           "instant": true
         }
-      ],
+      ]
+    },
+    {
+      "id": 8,
+      "type": "row",
+      "title": "Over the selected range",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 6
+      }
+    },
+    {
+      "id": 9,
+      "type": "stat",
+      "title": "Average download",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 4,
+        "x": 0,
+        "y": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bps",
+          "mappings": [],
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#5794F2"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
       "options": {
-        "colorMode": "none",
+        "colorMode": "value",
         "graphMode": "none",
         "justifyMode": "center",
         "textMode": "value",
+        "wideLayout": true,
+        "showPercentChange": false,
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "mean"
           ],
           "fields": "",
           "values": false
         }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "max(speedtest_download_bits_per_second) or max(speedtest_tracker_download_bits)",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "stat",
+      "title": "Worst download",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 4,
+        "x": 4,
+        "y": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bps",
+          "mappings": [],
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#5794F2"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "value",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "reduceOptions": {
+          "calcs": [
+            "min"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "max(speedtest_download_bits_per_second) or max(speedtest_tracker_download_bits)",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "stat",
+      "title": "Average upload",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 4,
+        "x": 8,
+        "y": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bps",
+          "mappings": [],
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#B877D9"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "value",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "reduceOptions": {
+          "calcs": [
+            "mean"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "max(speedtest_upload_bits_per_second) or max(speedtest_tracker_upload_bits)",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "stat",
+      "title": "Worst upload",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 4,
+        "x": 12,
+        "y": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bps",
+          "mappings": [],
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#B877D9"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "value",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "reduceOptions": {
+          "calcs": [
+            "min"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "max(speedtest_upload_bits_per_second) or max(speedtest_tracker_upload_bits)",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "type": "stat",
+      "title": "Average ping",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 4,
+        "x": 16,
+        "y": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "mappings": [],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 30
+              },
+              {
+                "color": "red",
+                "value": 60
+              }
+            ]
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "value",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "reduceOptions": {
+          "calcs": [
+            "mean"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "max(speedtest_ping_ms) or max(speedtest_tracker_ping_ms)",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "type": "stat",
+      "title": "Worst ping",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 4,
+        "x": 20,
+        "y": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "mappings": [],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 30
+              },
+              {
+                "color": "red",
+                "value": 60
+              }
+            ]
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "value",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "reduceOptions": {
+          "calcs": [
+            "max"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "max(speedtest_ping_ms) or max(speedtest_tracker_ping_ms)",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "type": "row",
+      "title": "History",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 10
       }
     },
     {
-      "id": 7,
+      "id": 16,
       "type": "timeseries",
       "title": "Bandwidth",
+      "description": "",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -355,21 +994,76 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 4
+        "y": 11
       },
       "fieldConfig": {
         "defaults": {
           "unit": "bps",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
           "custom": {
             "drawStyle": "line",
             "lineInterpolation": "stepAfter",
             "lineWidth": 2,
-            "fillOpacity": 10,
+            "fillOpacity": 18,
+            "gradientMode": "opacity",
             "spanNulls": true,
-            "showPoints": "never"
+            "showPoints": "never",
+            "axisSoftMin": 0,
+            "axisBorderShow": false
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Download"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Upload"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B877D9"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "mean",
+            "min",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
       },
       "targets": [
         {
@@ -394,23 +1088,13 @@
           "refId": "B",
           "range": true
         }
-      ],
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      }
+      ]
     },
     {
-      "id": 8,
+      "id": 17,
       "type": "timeseries",
-      "title": "Idle latency",
+      "title": "Latency: idle vs under load",
+      "description": "The gap between idle and under load is the bufferbloat: what a video call feels while something else saturates the line.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -419,21 +1103,91 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 13
+        "y": 20
       },
       "fieldConfig": {
         "defaults": {
           "unit": "ms",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
           "custom": {
             "drawStyle": "line",
             "lineInterpolation": "stepAfter",
             "lineWidth": 2,
-            "fillOpacity": 10,
+            "fillOpacity": 18,
+            "gradientMode": "opacity",
             "spanNulls": true,
-            "showPoints": "never"
+            "showPoints": "never",
+            "axisSoftMin": 0,
+            "axisBorderShow": false
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Idle"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#73BF69"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Downloading"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FF9830"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Uploading"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#F2CC0C"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "mean",
+            "min",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
       },
       "targets": [
         {
@@ -443,63 +1197,10 @@
           },
           "editorMode": "code",
           "expr": "max(speedtest_ping_ms) or max(speedtest_tracker_ping_ms)",
-          "legendFormat": "Ping",
+          "legendFormat": "Idle",
           "refId": "A",
           "range": true
         },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "editorMode": "code",
-          "expr": "max(speedtest_ping_jitter_ms) or max(speedtest_tracker_ping_jitter_ms)",
-          "legendFormat": "Jitter",
-          "refId": "B",
-          "range": true
-        }
-      ],
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      }
-    },
-    {
-      "id": 9,
-      "type": "timeseries",
-      "title": "Latency under load (IQM)",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 13
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ms",
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "stepAfter",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "spanNulls": true,
-            "showPoints": "never"
-          }
-        },
-        "overrides": []
-      },
-      "targets": [
         {
           "datasource": {
             "type": "prometheus",
@@ -507,8 +1208,8 @@
           },
           "editorMode": "code",
           "expr": "max(speedtest_loaded_latency_ms{direction=\"download\",stat=\"iqm\"}) or max(speedtest_tracker_download_latency_iqm_ms)",
-          "legendFormat": "Download",
-          "refId": "A",
+          "legendFormat": "Downloading",
+          "refId": "B",
           "range": true
         },
         {
@@ -518,42 +1219,119 @@
           },
           "editorMode": "code",
           "expr": "max(speedtest_loaded_latency_ms{direction=\"upload\",stat=\"iqm\"}) or max(speedtest_tracker_upload_latency_iqm_ms)",
-          "legendFormat": "Upload",
-          "refId": "B",
+          "legendFormat": "Uploading",
+          "refId": "C",
           "range": true
         }
-      ],
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      }
+      ]
     },
     {
-      "id": 10,
-      "type": "table",
-      "title": "Test server",
+      "id": 18,
+      "type": "timeseries",
+      "title": "Jitter and packet loss",
+      "description": "",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
       "gridPos": {
-        "h": 5,
-        "w": 24,
-        "x": 0,
-        "y": 21
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 20
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "none"
+          "unit": "ms",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "fillOpacity": 18,
+            "gradientMode": "opacity",
+            "spanNulls": true,
+            "showPoints": "never",
+            "axisSoftMin": 0,
+            "axisBorderShow": false
+          }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Jitter"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#73BF69"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Packet loss"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#F2495C"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Packet loss"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              },
+              {
+                "id": "custom.drawStyle",
+                "value": "bars"
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 60
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "mean",
+            "min",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
       },
       "targets": [
         {
@@ -562,39 +1340,272 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "speedtest_server_info",
-          "legendFormat": "",
+          "expr": "max(speedtest_ping_jitter_ms) or max(speedtest_tracker_ping_jitter_ms)",
+          "legendFormat": "Jitter",
           "refId": "A",
-          "format": "table",
-          "instant": true
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "max(speedtest_packet_loss_percent) or max(speedtest_tracker_packet_loss_percent)",
+          "legendFormat": "Packet loss",
+          "refId": "B",
+          "range": true
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "type": "table",
+      "title": "Tests",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "One row per test in the selected range, newest first. The full history is appdata/speedtest/results.jsonl on each node.",
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 28
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Download"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bps"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "basic",
+                  "valueDisplayMode": "text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              },
+              {
+                "id": "min",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Upload"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bps"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "basic",
+                  "valueDisplayMode": "text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B877D9"
+                }
+              },
+              {
+                "id": "min",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ping"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "ms"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Measured"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dateTimeAsLocal"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Result"
+            },
+            "properties": [
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Open on speedtest.net",
+                    "url": "${__value.raw}",
+                    "targetBlank": true
+                  }
+                ]
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "regex",
+                    "options": {
+                      "pattern": ".+",
+                      "result": {
+                        "text": "Open ↗"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "sortBy": [
+          {
+            "displayName": "Measured",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "max by (result_url, server, isp) (last_over_time((speedtest_timestamp_seconds * 1000 * on() group_left(result_url, server, isp) speedtest_server_info)[$__range:5m]))",
+          "legendFormat": "",
+          "refId": "Measured",
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "max by (result_url, server, isp) (last_over_time((speedtest_download_bits_per_second * on() group_left(result_url, server, isp) speedtest_server_info)[$__range:5m]))",
+          "legendFormat": "",
+          "refId": "Download",
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "max by (result_url, server, isp) (last_over_time((speedtest_upload_bits_per_second * on() group_left(result_url, server, isp) speedtest_server_info)[$__range:5m]))",
+          "legendFormat": "",
+          "refId": "Upload",
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "max by (result_url, server, isp) (last_over_time((speedtest_ping_ms * on() group_left(result_url, server, isp) speedtest_server_info)[$__range:5m]))",
+          "legendFormat": "",
+          "refId": "Ping",
+          "instant": true,
+          "format": "table"
         }
       ],
-      "options": {
-        "showHeader": true
-      },
       "transformations": [
         {
-          "id": "labelsToFields",
-          "options": {
-            "mode": "columns"
-          }
+          "id": "merge",
+          "options": {}
         },
         {
           "id": "organize",
           "options": {
             "excludeByName": {
-              "Time": true,
-              "Value": true,
-              "__name__": true,
-              "instance": true,
-              "job": true,
-              "service": true
+              "Time": true
+            },
+            "indexByName": {
+              "Value #Measured": 0,
+              "Value #Download": 1,
+              "Value #Upload": 2,
+              "Value #Ping": 3,
+              "server": 4,
+              "isp": 5,
+              "result_url": 6
             },
             "renameByName": {
+              "Value #Measured": "Measured",
+              "Value #Download": "Download",
+              "Value #Upload": "Upload",
+              "Value #Ping": "Ping",
               "server": "Server",
-              "location": "Location",
               "isp": "ISP",
-              "server_id": "Server id"
+              "result_url": "Result"
             }
           }
         }
