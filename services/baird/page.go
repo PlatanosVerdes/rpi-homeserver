@@ -85,11 +85,6 @@ const pageHTML = `<!doctype html>
   .look nav { display:inline-flex; border:1px solid var(--line); border-radius:.35rem; overflow:hidden; }
   .look a { padding:.25rem .7rem; color:var(--ink); text-decoration:none; background:var(--panel); }
   .look a[aria-current] { background:var(--ink); color:var(--paper); }
-  .playlist { margin-top:1.3rem; padding:.7rem .5rem; border-top:1px solid var(--line); font-size:.85rem; }
-  .playlist b { font:600 1rem var(--head); display:block; }
-  .playlist p { color:var(--muted); margin:.2rem 0 .5rem; }
-  .playlist code { display:block; word-break:break-all; background:var(--panel); border:1px solid var(--line); border-radius:.35rem;
-                   padding:.35rem .5rem; margin-bottom:.4rem; font:500 .8rem var(--body); }
 
   .layout { display:grid; grid-template-columns:19rem minmax(0, 1fr); gap:2rem; align-items:start; }
   /* A phone has room for one column: the list of everything first, then what was picked, with a way back. */
@@ -215,12 +210,6 @@ const pageHTML = `<!doctype html>
     <div class="navhead"><b>Web pages</b><button class="more" id="openadd">Add</button></div>
     <div id="navpages"></div>
   </div>
-  <div class="playlist">
-    <b>Playlist for players</b>
-    <p>The list this page builds. bifrost reads it; open it in VLC or any IPTV player to watch without Jellyfin.</p>
-    <code id="listurl"></code>
-    <button class="btn quiet" id="copy">Copy address</button>
-  </div>
 </nav>
 
 <main>
@@ -273,9 +262,6 @@ function countriesOf(c) { return c.countries && c.countries.length ? c.countries
 function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
 function host(u) { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return u; } }
 
-var listURL = location.origin + '/baird.m3u';
-$('listurl').textContent = listURL;
-$('copy').addEventListener('click', function () { navigator.clipboard.writeText(listURL).then(function () { toast('Address copied'); }); });
 
 function toast(msg) {
   var t = $('toast'); t.textContent = msg; t.classList.remove('hidden');
