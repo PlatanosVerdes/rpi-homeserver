@@ -27,7 +27,8 @@ rpi-services apps do the same in that repo. Third-party images arrive as Renovat
 In order, with the reason where it is not obvious:
 
 1. **Secrets.** If `~/homelab-secrets` is a git checkout and `sops` is installed, pull it and decrypt
-   `<node>/<repo>.env` over each repo's `.env`, only when the result differs ([secrets.md](secrets.md)).
+   `common/<repo>.env` plus `<node>/<repo>.env` (the node's names winning) over each repo's `.env`,
+   only when the result differs ([secrets.md](secrets.md)).
    On a node set up this way, an edit to `.env` on the Pi is undone here.
 2. **Lock.** `flock` on `.deploy.lock`; see [Concurrency](#concurrency-and-retries).
 3. **Pull** with `git pull --no-rebase`: with no strategy configured git refuses to pull once the
