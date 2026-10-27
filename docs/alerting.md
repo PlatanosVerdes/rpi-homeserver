@@ -11,7 +11,8 @@ Prometheus's own guidance is that the Pushgateway is for **batch jobs**, and its
 matters here: a pushed series is served forever whether or not anything still produces it, and there
 is no `up`. So only the daily backup and the deploy push; everything that runs forever is scraped,
 where death shows as `up == 0`. That is why `tailscale-metrics`, `pi-metrics` and `tracker-control`
-became services instead of cron scripts. Nothing writes node-exporter textfiles any more.
+became services instead of cron scripts. Nothing writes node-exporter textfiles any more, and node-exporter no longer reads them: a file
+left behind kept serving frozen values as if they were live.
 
 - **pi-metrics** serves the numbers no exporter provides (media, upgrades, torrents, orphans,
   indexer usage, where the disk went, zram, playback) from a snapshot refreshed in the background,
