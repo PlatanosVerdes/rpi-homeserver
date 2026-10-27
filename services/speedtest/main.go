@@ -1,8 +1,11 @@
-// speedtest: Ookla's CLI on a fixed schedule, its last result served as Prometheus metrics.
-// The result is kept on disk so a restart serves it; testing on start would mean one per deploy.
+// speedtest: Ookla's CLI on a fixed schedule, its last result served as Prometheus metrics and
+// every result appended to a JSON-lines history. A restart serves the history's last line rather
+// than testing on start, which would mean one test per deploy.
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,7 +19,7 @@ import (
 	"time"
 )
 
-var statePath = env("STATE_PATH", "/state/last.json")
+var historyPath = env("HISTORY_PATH", "/state/results.jsonl")
 
 type latency struct {
 	IQM    float64 `json:"iqm"`
@@ -59,6 +62,8 @@ var (
 	lastRaw  []byte
 	failures int
 	lastTry  time.Time
+	// Held for a whole test, so a manual run and a scheduled one never share the line.
+	testRun sync.Mutex
 )
 
 func env(name, fallback string) string {
@@ -84,7 +89,20 @@ func next(now time.Time, everyHours, minute int) time.Time {
 	return t
 }
 
-func run() {
+// compact drops serverSelection, the servers tried before picking one: over half of each result.
+func compact(raw []byte) ([]byte, error) {
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &fields); err != nil {
+		return nil, err
+	}
+	delete(fields, "serverSelection")
+	return json.Marshal(fields)
+}
+
+func run() (*result, error) {
+	testRun.Lock()
+	defer testRun.Unlock()
+
 	out, err := exec.Command("speedtest", "--accept-license", "--accept-gdpr", "--format=json").Output()
 	var parsed result
 	if err == nil {
@@ -93,6 +111,10 @@ func run() {
 	if err == nil && parsed.Download.Bandwidth == 0 {
 		err = fmt.Errorf("no download measured: %s", strings.TrimSpace(string(out)))
 	}
+	var line []byte
+	if err == nil {
+		line, err = compact(out)
+	}
 
 	mu.Lock()
 	defer mu.Unlock()
@@ -100,28 +122,57 @@ func run() {
 	if err != nil {
 		failures++
 		log.Printf("speedtest failed: %v", err)
-		return
+		return nil, err
 	}
-	last, lastRaw = &parsed, out
-	if err := os.WriteFile(statePath, out, 0o644); err != nil {
+	last, lastRaw = &parsed, line
+	if err := appendLine(line); err != nil {
 		log.Printf("cannot keep the result: %v", err)
 	}
 	log.Printf("down %.0f Mbit/s, up %.0f Mbit/s, ping %.1f ms via %s, %s",
 		parsed.Download.Bandwidth*8/1e6, parsed.Upload.Bandwidth*8/1e6, parsed.Ping.Latency,
 		parsed.Server.Name, parsed.Result.URL)
+	return &parsed, nil
 }
 
+func appendLine(line []byte) error {
+	file, err := os.OpenFile(historyPath, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0o644)
+	if err != nil {
+		return err
+	}
+	// A line cut short by a crash has no newline; without one here the next result joins it.
+	tail := make([]byte, 1)
+	if info, err := file.Stat(); err == nil && info.Size() > 0 {
+		if _, err := file.ReadAt(tail, info.Size()-1); err == nil && tail[0] != '\n' {
+			line = append([]byte{'\n'}, line...)
+		}
+	}
+	if _, err := file.Write(append(line, '\n')); err != nil {
+		file.Close()
+		return err
+	}
+	return file.Close()
+}
+
+// load serves the newest valid line, so a line cut short by a crash mid-write costs only itself.
 func load() {
-	raw, err := os.ReadFile(statePath)
+	file, err := os.Open(historyPath)
 	if err != nil {
 		return
 	}
-	var parsed result
-	if err := json.Unmarshal(raw, &parsed); err != nil {
-		log.Printf("ignoring %s: %v", statePath, err)
-		return
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+	for scanner.Scan() {
+		line := bytes.TrimSpace(scanner.Bytes())
+		var parsed result
+		if len(line) == 0 || json.Unmarshal(line, &parsed) != nil {
+			continue
+		}
+		last, lastRaw = &parsed, bytes.Clone(line)
 	}
-	last, lastRaw = &parsed, raw
+	if err := scanner.Err(); err != nil {
+		log.Printf("reading %s: %v", historyPath, err)
+	}
 }
 
 func metrics(w http.ResponseWriter, _ *http.Request) {
@@ -182,6 +233,18 @@ func lastResult(w http.ResponseWriter, _ *http.Request) {
 	w.Write(raw)
 }
 
+func runNow(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "POST to run a test", http.StatusMethodNotAllowed)
+		return
+	}
+	if _, err := run(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadGateway)
+		return
+	}
+	lastResult(w, r)
+}
+
 func main() {
 	port := env("PORT", "9798")
 	everyHours := max(number("EVERY_HOURS", 6), 1)
@@ -199,5 +262,6 @@ func main() {
 
 	http.HandleFunc("/metrics", metrics)
 	http.HandleFunc("/last", lastResult)
+	http.HandleFunc("/run", runNow)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
