@@ -36,7 +36,7 @@ sudo mount -a
 ```
 
 `nofail` keeps a boot from hanging when the disk is unplugged. Set `DATA_ROOT=/mnt/data` and
-`DATA_DB_ROOT=/mnt/data/db`: databases that write constantly (VictoriaLogs, speedtest) go there, not
+`DATA_DB_ROOT=/mnt/data/db`: databases that write constantly (VictoriaLogs) go there, not
 on the SD card.
 
 ## 4. Docker log limits
@@ -131,7 +131,7 @@ deploy writes one per `http://<name>` site in Caddy, pointing at `STATIC_IP`, so
 LAN and the Pi does not encrypt the video twice. For bare `http://jellyfin` names, `/etc/hosts`:
 
 ```
-<STATIC_IP>    raspi homepage jellyfin seerr plex grafana prometheus push prowlarr radarr sonarr flare torrent speedtest pihole
+<STATIC_IP>    raspi homepage jellyfin seerr plex grafana prometheus push prowlarr radarr sonarr flare torrent pihole
 ```
 
 ## 10. What still needs a human

@@ -10,6 +10,16 @@ Dependabot only reads literal tags in compose files and Dockerfiles. Every image
 builders and none of the services. Renovate reads `versions.env` through a regex manager and
 handles the linuxserver tag scheme ([updates.md](updates.md)).
 
+## speedtest-tracker: replaced
+
+It averaged the most CPU of any container while idle: a Laravel app in which every request boots
+PHP, called every 15 s by Prometheus and blackbox and every minute by its own scheduler cron, for
+four tests a day. `services/speedtest` runs the same Ookla CLI on the same schedule and serves the
+last result as metrics, so results stay comparable. Every result is appended to
+`appdata/speedtest/results.jsonl`, one line per test (~1 KB once the list of servers Ookla tried is
+dropped), so the history outlives Prometheus's 15 days without a database. Its web UI went with it;
+a manual test is a POST to `/run` ([private-trackers.md](private-trackers.md)).
+
 ## Bitwarden Secrets Manager for `.env`: dropped
 
 Tried as the home for `.env`, and it did not fit the workflow. SOPS + age with a private repo is

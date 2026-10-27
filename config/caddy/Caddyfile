@@ -128,11 +128,6 @@ https://autobrr.platanosverdes.com {
     import cf_tls
     reverse_proxy autobrr:7474
 }
-https://speedtest.platanosverdes.com {
-    log
-    import cf_tls
-    reverse_proxy speedtest-tracker:80
-}
 https://pihole.platanosverdes.com {
     log
     import cf_tls
@@ -253,10 +248,6 @@ http://audio, http://audio.pi {
 http://autobrr, http://autobrr.pi {
     log
     reverse_proxy autobrr:7474
-}
-http://speedtest, http://speedtest.pi {
-    log
-    reverse_proxy speedtest-tracker:80
 }
 http://pihole, http://pihole.pi {
     log

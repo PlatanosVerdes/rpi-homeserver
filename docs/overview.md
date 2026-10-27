@@ -27,7 +27,7 @@ Details: [docs/access.md](access.md).
 
 | Module | Services |
 | :--- | :--- |
-| `compose-core.yml` | Caddy, Homepage, Pi-hole, Speedtest-tracker, cloudflared (opt-in) |
+| `compose-core.yml` | Caddy, Homepage, Pi-hole, speedtest, cloudflared (opt-in) |
 | `compose-media.yml` | Plex, Jellyfin, Seerr, Bazarr, Maintainerr, Tautulli, watch-next, subtitle-links, audio-convert; AceStream: gluetun, aceserve, kubo, bifrost, farnsworth, baird; sleipnir, muninn |
 | `compose-arrs.yml` | Prowlarr, Radarr, Sonarr, qBittorrent, FlareSolverr, Unpackerr, autobrr, qbit-manage, tracker-control, cross-seed, torrent-drop |
 | `compose-mon.yml` | Prometheus, Grafana, Pushgateway, node-exporter, cAdvisor, blackbox-exporter, pi-metrics, qBittorrent and Pi-hole exporters, tailscale-metrics, VictoriaLogs, Vector |

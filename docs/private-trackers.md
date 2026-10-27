@@ -480,8 +480,9 @@ nc -vz <public-ip> <port>
 docker exec qbittorrent curl -s \
   "http://localhost:8080/api/v2/sync/torrentPeers?hash=<hash>&rid=0" | grep -o '"flags":"[^"]*"'
 
-# a shareable speedtest, which trackers ask for
-docker exec speedtest-tracker speedtest --accept-license --accept-gdpr -f json
+# a shareable speedtest, which trackers ask for: the link is result.url, and the run is kept in the
+# history like a scheduled one
+docker exec speedtest wget -qO- --post-data= localhost:9798/run
 ```
 
 All flags without an `I` after a few minutes of seeding means the chain is broken: check the three
