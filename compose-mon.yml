@@ -38,7 +38,6 @@ services:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
       - /:/rootfs:ro
-      - /var/lib/node_exporter/textfile_collector:/textfile_collector:ro
       # The / bind mount is not recursive, so the data disk needs its own mount or the
       # filesystem collector cannot see it (no free-space metric for it, no disk-full alert)
       - ${DATA_ROOT}:/rootfs${DATA_ROOT}:ro
@@ -47,7 +46,6 @@ services:
       - '--path.sysfs=/host/sys'
       - '--path.rootfs=/rootfs'
       - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
-      - '--collector.textfile.directory=/textfile_collector'
 
   # --- CADVISOR (Container metrics) ---
   cadvisor:

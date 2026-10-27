@@ -98,12 +98,6 @@ reaches the log that ends at a crash.
 
 ## 7. Directories the containers expect
 
-```bash
-# node-exporter mounts it; nothing writes .prom files any more, but a missing one is created as root
-sudo mkdir -p /var/lib/node_exporter/textfile_collector
-sudo chown -R $USER:$USER /var/lib/node_exporter
-```
-
 `appdata/` bind mounts for services running as `1000:1000` are created and chowned by the deploy.
 After restoring or copying `appdata` by hand, run `sudo chown -R $USER:$USER ~/rpi-homeserver/appdata`.
 
