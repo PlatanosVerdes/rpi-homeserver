@@ -79,7 +79,8 @@ const pageHTML = `<!doctype html>
            padding-bottom:1.1rem; border-bottom:2px solid var(--ink); margin-bottom:1.3rem; }
   h1 { font:700 2.4rem/1 var(--head); margin:0; display:flex; gap:.6rem; align-items:center; }
   h1 img { width:2rem; height:2rem; }
-  #summary { margin:.45rem 0 0; color:var(--muted); }
+  #summary { margin:.45rem 0 0; color:var(--muted); overflow-wrap:anywhere; }
+  body { overflow-x:hidden; }
   .look { display:flex; align-items:center; gap:.5rem; font-size:.85rem; color:var(--muted); }
   .look nav { display:inline-flex; border:1px solid var(--line); border-radius:.35rem; overflow:hidden; }
   .look a { padding:.25rem .7rem; color:var(--ink); text-decoration:none; background:var(--panel); }
@@ -91,7 +92,20 @@ const pageHTML = `<!doctype html>
                    padding:.35rem .5rem; margin-bottom:.4rem; font:500 .8rem var(--body); }
 
   .layout { display:grid; grid-template-columns:19rem minmax(0, 1fr); gap:2rem; align-items:start; }
-  @media (max-width:52rem) { .layout { grid-template-columns:1fr; } .layout > nav { position:static !important; max-height:none !important; } }
+  /* A phone has room for one column: the list of everything first, then what was picked, with a way back. */
+  #back { display:none; }
+  @media (max-width:52rem) {
+    .layout { grid-template-columns:1fr; }
+    .layout > nav { position:static !important; max-height:none !important; }
+    .layout:not(.detail) > main, .layout.detail > nav { display:none; }
+    #back { display:block; margin:0 0 .6rem; padding:.4rem 0; }
+    header { align-items:start; gap:.6rem; padding-bottom:.8rem; margin-bottom:.9rem; }
+    h1 { font-size:1.8rem; }
+    h1 img { width:1.5rem; height:1.5rem; }
+    #summary { font-size:.88rem; line-height:1.4; }
+    .wrap { padding-top:1rem; }
+    #bar .btn { width:100%; }
+  }
 
   .layout > nav { position:sticky; top:1rem; max-height:calc(100vh - 2rem); overflow-y:auto; padding-right:.3rem; }
   #nq { width:100%; }
@@ -210,6 +224,7 @@ const pageHTML = `<!doctype html>
 </nav>
 
 <main>
+  <button class="more" id="back">‹ Everything</button>
   <div id="head"></div>
   <div id="filters"><div id="fchips"></div><input id="q" type="search" autocomplete="off" spellcheck="false"></div>
   <div id="bar"></div>
@@ -491,8 +506,13 @@ function setGroup(group, on) {
 
 function select(kind, key) {
   sel = { kind: kind, key: key }; shown = 150; $('q').value = '';
+  document.querySelector('.layout').classList.add('detail');
   nav(); main(); window.scrollTo({ top: 0 });
 }
+$('back').addEventListener('click', function () {
+  document.querySelector('.layout').classList.remove('detail');
+  window.scrollTo({ top: 0 });
+});
 
 document.querySelector('.layout > nav').addEventListener('click', function (e) {
   var t = e.target.closest('[data-toggle]');
