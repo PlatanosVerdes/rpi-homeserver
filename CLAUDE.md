@@ -100,9 +100,9 @@ How the pass works, step by step: [docs/deploy.md](docs/deploy.md). The rules th
 
 ## Networking
 
-- **Local LAN:** every Caddy short site (`http://jellyfin`) also answers `http://<name>.pi`, which Pi-hole points at `STATIC_IP` (written by `pihole-dns.sh`): at home `http://jellyfin.pi` stays on the LAN, while `*.platanosverdes.com` goes through Tailscale. Bare short names still need `/etc/hosts`.
-- **Remote (Tailscale):** All HTTPS subdomains (`*.platanosverdes.com`) resolve to the Pi's Tailscale IP (`TAILSCALE_IP`). Certificates issued automatically via Cloudflare DNS challenge.
-- **Pi-hole:** DNS for the whole tailnet. Every `*.platanosverdes.com` host in the Caddyfile points to `TAILSCALE_IP` in Pi-hole's custom DNS (written by `scripts/sync/pihole-dns.sh`, never by hand), except those in `PIHOLE_DNS_PUBLIC_HOSTS` (Grafana), which resolve to Cloudflare Access even on the tailnet.
+- **Local LAN:** every Caddy short site (`http://jellyfin`) also answers `http://<name>.pi`, which Pi-hole points at `STATIC_IP` (written by `pihole-dns.sh`): at home `http://jellyfin.pi` stays on the LAN, while `*.<domain>` goes through Tailscale. Bare short names still need `/etc/hosts`.
+- **Remote (Tailscale):** All HTTPS subdomains (`*.<domain>`) resolve to the Pi's Tailscale IP (`TAILSCALE_IP`). Certificates issued automatically via Cloudflare DNS challenge.
+- **Pi-hole:** DNS for the whole tailnet. Every `*.<domain>` host in the Caddyfile points to `TAILSCALE_IP` in Pi-hole's custom DNS (written by `scripts/sync/pihole-dns.sh`, never by hand), except those in `PIHOLE_DNS_PUBLIC_HOSTS` (Grafana), which resolve to Cloudflare Access even on the tailnet.
 - **Docker network:** All services share `media-network` (bridge), except the host-network ones listed in [docs/architecture.md](docs/architecture.md#the-network).
 - **Plex is never proxied.** Remote playback is paid since April 2025 and the client decides remote
   vs local from the per-connection `local` flag Plex publishes to plex.tv, which only RFC1918

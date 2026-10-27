@@ -1570,7 +1570,7 @@ groups:
             client give up direct play does, usually Force Direct Play in the client's settings.{{ else if eq $labels.cause "codec" }}{{ if eq $labels.codec "ac3" }}The client
             refuses AC3, which is the track scripts/sync/audio-compat.py adds, so nothing here fixes
             it.{{ else }}Direct play was allowed and the client's profile
-            refused {{ $labels.codec }}. Open https://audio.platanosverdes.com: the file is listed there
+            refused {{ $labels.codec }}. Open https://audio.${DOMAIN}: the file is listed there
             with its plan (which track the AC3 5.1 is built from, the extra space, how long it takes),
             and Play converts it now. Otherwise scripts/sync/audio-compat.py does it at 01:30, unless it
             is still seeding or already has a track that plays in its place; the page says which.{{ end }}{{ else if eq $labels.cause "other" }}Jellyfin gave a reason

@@ -211,7 +211,7 @@ runs() {
 
 render_grafana_alerting() {
     # Grafana reads alerting from appdata and not from git, because the Telegram token must not be
-    # committed: rules copied as-is, the contact point rendered from its .tmpl with .env values.
+    # committed: rules get DOMAIN and the contact point is rendered from its .tmpl, both from .env.
     local src="$PROJECT_DIR/config/grafana/alerting"
     local dst="$APPDATA/grafana-alerting"
     [[ -d "$src" ]] || return 0
@@ -227,7 +227,8 @@ render_grafana_alerting() {
         return 0
     fi
 
-    sudo cp -f "$src"/policies.yml "$src"/rules.yml "$dst"/
+    sudo cp -f "$src"/policies.yml "$dst"/
+    sed -e "s|\${DOMAIN}|${DOMAIN}|g" "$src/rules.yml" | sudo tee "$dst/rules.yml" >/dev/null
     sed -e "s|\${TELEGRAM_ALERT_BOT_TOKEN}|${TELEGRAM_ALERT_BOT_TOKEN}|g" \
         -e "s|\${TELEGRAM_ALERT_CHAT_ID}|${TELEGRAM_ALERT_CHAT_ID}|g" \
         "$src/contact-points.yml.tmpl" | sudo tee "$dst/contact-points.yml" >/dev/null
@@ -609,7 +610,7 @@ if runs autobrr || runs maintainerr; then
     "$PROJECT_DIR/scripts/ops/config-export.py" --check 2>&1 | while IFS= read -r line; do log "[config-drift] $line"; done
 fi
 
-# Converge Pi-hole's custom DNS to the *.platanosverdes.com hosts declared in Caddy. Additive
+# Converge Pi-hole's custom DNS to the *.$DOMAIN hosts declared in Caddy. Additive
 # only (see the script), so it never touches an entry it did not derive from Caddy.
 bash "$PROJECT_DIR/scripts/sync/pihole-dns.sh" 2>&1 | while IFS= read -r line; do log "[pihole-dns] $line"; done
 

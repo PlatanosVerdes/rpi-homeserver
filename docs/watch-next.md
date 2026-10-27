@@ -38,7 +38,7 @@ docker compose up -d watch-next tautulli
 watch-next's image is built by CI and pulled, not compiled on the Pi
 ([service-images.md](service-images.md)).
 
-If Tautulli is new, open `https://tautulli.platanosverdes.com` and run its setup wizard once to
+If Tautulli is new, open `https://tautulli.<domain>` and run its setup wizard once to
 pair it with Plex (`http://host.docker.internal:32400`).
 
 ### 2. Tautulli (Plex)

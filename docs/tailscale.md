@@ -19,7 +19,7 @@ reach my NAS at 192.168.1.50?" Because that is the subnet router's job, and it i
 separately.
 
 Pi-hole is then the DNS server for the whole tailnet, so ad-blocking applies on every device and the
-`*.platanosverdes.com` names resolve from anywhere.
+`*.<domain>` names resolve from anywhere.
 
 The Pi needs a static LAN address first, reserved in the router against its MAC for wifi and cable
 ([host-setup.md](host-setup.md#6-ip-forwarding-static-ip-tailscale)): the routes below name it.
