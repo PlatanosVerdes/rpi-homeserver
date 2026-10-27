@@ -1,9 +1,9 @@
 # The order of the groups BELOW IS IGNORED: homepage lays the page out in the order the
 # `layout:` block of settings.yaml lists them. Change that file to move a group.
 #
-# Groups are named after what you came here to do, not after a software category. The old
-# "Indexers" group held Radarr, Sonarr, Bazarr and FlareSolverr, none of which is an indexer,
-# so nobody looking for Radarr would have opened it. Order is by what actually gets used.
+# Groups are named after what you came here to do, not after a software category, and ordered by
+# how often that is: watching first, administration last. A card with nothing to open
+# (FlareSolverr, qbit-manage, a bot) is left out.
 
 - Watch:
     - Jellyfin:
@@ -35,6 +35,48 @@
           url: http://seerr:5055
           key: "{{HOMEPAGE_VAR_SEERR_TOKEN}}"
 
+- Live TV:
+    - bifrost:
+        icon: https://bifrost.{{HOMEPAGE_VAR_DOMAIN}}/favicon.svg
+        href: https://bifrost.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Acestream channels, their state and what is playing
+        server: my-docker
+        container: bifrost
+    - Baird:
+        icon: https://baird.{{HOMEPAGE_VAR_DOMAIN}}/icon.svg
+        href: https://baird.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Acestream channels picked from pages and the engine
+        server: my-docker
+        container: baird
+    - Farnsworth:
+        icon: https://farnsworth.{{HOMEPAGE_VAR_DOMAIN}}/icon.svg
+        href: https://farnsworth.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Acestream channels in your player
+        server: my-docker
+        container: farnsworth
+
+- Apps:
+    - Fantasy:
+        icon: https://fantasy.{{HOMEPAGE_VAR_DOMAIN}}/assets/favicon.png
+        href: https://fantasy.{{HOMEPAGE_VAR_DOMAIN}}
+        server: my-docker
+        container: laliga-fantasy
+        # /healthz answers 503 when the last refresh failed or the session is dying, so the
+        # dot on the card is the real state and not just "the container is up".
+        siteMonitor: http://laliga-fantasy:8000/healthz
+    - torre:
+        icon: https://torre.{{HOMEPAGE_VAR_DOMAIN}}/icon.svg
+        href: https://torre.{{HOMEPAGE_VAR_DOMAIN}}
+        description: AENA departures and arrivals, with flight alerts
+        server: my-docker
+        container: torre
+    - Apex:
+        icon: https://apex.{{HOMEPAGE_VAR_DOMAIN}}/icon.svg
+        href: https://apex.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Motorcycle routes for Google Maps
+        server: my-docker
+        container: apex
+
 - Library:
     - Radarr:
         icon: radarr.svg
@@ -54,6 +96,12 @@
           type: sonarr
           url: http://sonarr:8989
           key: "{{HOMEPAGE_VAR_SONARR_TOKEN}}"
+    - Bazarr:
+        icon: bazarr.svg
+        href: https://bazarr.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Subtitle downloader
+        server: my-docker
+        container: bazarr
     - Prowlarr:
         icon: prowlarr.svg
         href: https://prowlarr.{{HOMEPAGE_VAR_DOMAIN}}
@@ -63,88 +111,13 @@
           type: prowlarr
           url: http://prowlarr:9696
           key: "{{HOMEPAGE_VAR_PROWLARR_TOKEN}}"
-
-- Homegrown:
-    - SubDown:
-        icon: https://subs.{{HOMEPAGE_VAR_DOMAIN}}/icon.svg
-        href: https://subs.{{HOMEPAGE_VAR_DOMAIN}}
-        description: Subtitles by language, movie by movie
+    - Maintainerr:
+        icon: maintainerr.svg
+        href: https://maintainerr.{{HOMEPAGE_VAR_DOMAIN}}
         server: my-docker
-        container: subtitle-links
-    - Farnsworth:
-        icon: https://farnsworth.{{HOMEPAGE_VAR_DOMAIN}}/icon.svg
-        href: https://farnsworth.{{HOMEPAGE_VAR_DOMAIN}}
-        description: Acestream channels in your player
-        server: my-docker
-        container: farnsworth
-    - Baird:
-        icon: https://baird.{{HOMEPAGE_VAR_DOMAIN}}/icon.svg
-        href: https://baird.{{HOMEPAGE_VAR_DOMAIN}}
-        description: Acestream channels picked from pages and the engine
-        server: my-docker
-        container: baird
-    - bifrost:
-        icon: https://bifrost.{{HOMEPAGE_VAR_DOMAIN}}/favicon.svg
-        href: https://bifrost.{{HOMEPAGE_VAR_DOMAIN}}
-        description: Acestream channels, their state and what is playing
-        server: my-docker
-        container: bifrost
-    - sleipnir:
-        icon: https://sleipnir.{{HOMEPAGE_VAR_DOMAIN}}/icon.svg
-        href: https://sleipnir.{{HOMEPAGE_VAR_DOMAIN}}
-        description: VPN tunnels, where each one exits, and moving them
-        server: my-docker
-        container: sleipnir
-    - muninn:
-        icon: https://muninn.{{HOMEPAGE_VAR_DOMAIN}}/icon.svg
-        href: https://muninn.{{HOMEPAGE_VAR_DOMAIN}}
-        description: Who uses each bot, and how much traffic reaches it
-        server: my-docker
-        container: muninn
-    - Torrent drop:
-        icon: https://drop.{{HOMEPAGE_VAR_DOMAIN}}/icon.svg
-        href: https://drop.{{HOMEPAGE_VAR_DOMAIN}}
-        description: Drop a .torrent, cross-seed follows on its own
-        server: my-docker
-        container: torrent-drop
-    - Audio convert:
-        icon: https://audio.{{HOMEPAGE_VAR_DOMAIN}}/icon.svg
-        href: https://audio.{{HOMEPAGE_VAR_DOMAIN}}
-        description: Files a TV had re-encoded, and the button that fixes them
-        server: my-docker
-        container: audio-convert
-    - torre:
-        icon: https://torre.{{HOMEPAGE_VAR_DOMAIN}}/icon.svg
-        href: https://torre.{{HOMEPAGE_VAR_DOMAIN}}
-        description: AENA departures and arrivals, with flight alerts
-        server: my-docker
-        container: torre
-    - Apex:
-        icon: https://apex.{{HOMEPAGE_VAR_DOMAIN}}/icon.svg
-        href: https://apex.{{HOMEPAGE_VAR_DOMAIN}}
-        description: Motorcycle routes for Google Maps
-        server: my-docker
-        container: apex
-
-- Monitoring:
-    - Grafana:
-        icon: grafana.svg
-        href: https://grafana.{{HOMEPAGE_VAR_DOMAIN}}
-        server: my-docker
-        container: grafana
-    - VictoriaLogs:
-        icon: victoriametrics.svg
-        href: https://logs.{{HOMEPAGE_VAR_DOMAIN}}/select/vmui/
-        server: my-docker
-        container: victorialogs
+        container: maintainerr
 
 - Downloads:
-    - Bazarr:
-        icon: bazarr.svg
-        href: https://bazarr.{{HOMEPAGE_VAR_DOMAIN}}
-        description: Subtitle downloader
-        server: my-docker
-        container: bazarr
     - qBittorrent:
         icon: qbittorrent.svg
         href: https://torrent.{{HOMEPAGE_VAR_DOMAIN}}
@@ -155,10 +128,6 @@
           url: http://qbittorrent:8080
           username: admin
           password: "{{HOMEPAGE_VAR_QBIT_PASSWORD}}"
-    - FlareSolverr:
-        icon: flaresolverr.svg
-        server: my-docker
-        container: flaresolverr
     - autobrr:
         icon: autobrr.svg
         href: https://autobrr.{{HOMEPAGE_VAR_DOMAIN}}
@@ -169,27 +138,36 @@
           type: autobrr
           url: http://autobrr:7474
           key: "{{HOMEPAGE_VAR_AUTOBRR_KEY}}"
-    - qbit-manage:
-        icon: qbittorrent.svg
-        description: Tags torrents by tracker and hardlink state
+    - Torrent drop:
+        icon: https://drop.{{HOMEPAGE_VAR_DOMAIN}}/icon.svg
+        href: https://drop.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Drop a .torrent, cross-seed follows on its own
         server: my-docker
-        container: qbit-manage
-    - Maintainerr:
-        icon: maintainerr.svg
-        href: https://maintainerr.{{HOMEPAGE_VAR_DOMAIN}}
+        container: torrent-drop
+    - SubDown:
+        icon: https://subs.{{HOMEPAGE_VAR_DOMAIN}}/icon.svg
+        href: https://subs.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Subtitles by language, movie by movie
         server: my-docker
-        container: maintainerr
-    - Tautulli:
-        icon: tautulli.svg
-        href: https://tautulli.{{HOMEPAGE_VAR_DOMAIN}}
+        container: subtitle-links
+    - Audio convert:
+        icon: https://audio.{{HOMEPAGE_VAR_DOMAIN}}/icon.svg
+        href: https://audio.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Files a TV had re-encoded, and the button that fixes them
         server: my-docker
-        container: tautulli
-        widget:
-          type: tautulli
-          url: http://tautulli:8181
-          key: "{{HOMEPAGE_VAR_TAUTULLI_TOKEN}}"
+        container: audio-convert
 
-- Network:
+- System:
+    - Grafana:
+        icon: grafana.svg
+        href: https://grafana.{{HOMEPAGE_VAR_DOMAIN}}
+        server: my-docker
+        container: grafana
+    - VictoriaLogs:
+        icon: victoriametrics.svg
+        href: https://logs.{{HOMEPAGE_VAR_DOMAIN}}/select/vmui/
+        server: my-docker
+        container: victorialogs
     - Pi-hole:
         icon: pi-hole.svg
         href: https://pihole.{{HOMEPAGE_VAR_DOMAIN}}/admin
@@ -223,23 +201,27 @@
                 format:
                   type: number
                   suffix: " ms"
-
-- Services:
-    - Offers Bot:
-        icon: telegram.svg
-        description: Pol Academy Offers Hunter
+    - sleipnir:
+        icon: https://sleipnir.{{HOMEPAGE_VAR_DOMAIN}}/icon.svg
+        href: https://sleipnir.{{HOMEPAGE_VAR_DOMAIN}}
+        description: VPN tunnels, where each one exits, and moving them
         server: my-docker
-        container: pol-academy-offers-bot
-    - Fantasy:
-        icon: https://fantasy.{{HOMEPAGE_VAR_DOMAIN}}/assets/favicon.png
-        href: https://fantasy.{{HOMEPAGE_VAR_DOMAIN}}
+        container: sleipnir
+    - Tautulli:
+        icon: tautulli.svg
+        href: https://tautulli.{{HOMEPAGE_VAR_DOMAIN}}
         server: my-docker
-        container: laliga-fantasy
-        # /healthz answers 503 when the last refresh failed or the session is dying, so the
-        # dot on the card is the real state and not just "the container is up".
-        siteMonitor: http://laliga-fantasy:8000/healthz
-
-- Internals:
+        container: tautulli
+        widget:
+          type: tautulli
+          url: http://tautulli:8181
+          key: "{{HOMEPAGE_VAR_TAUTULLI_TOKEN}}"
+    - muninn:
+        icon: https://muninn.{{HOMEPAGE_VAR_DOMAIN}}/icon.svg
+        href: https://muninn.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Who uses each bot, and how much traffic reaches it
+        server: my-docker
+        container: muninn
     - Prometheus:
         icon: prometheus.svg
         href: https://prometheus.{{HOMEPAGE_VAR_DOMAIN}}
@@ -248,11 +230,6 @@
         widget:
             type: prometheus
             url: http://prometheus:9090
-    - Pushgateway:
-        icon: prometheus.svg
-        href: https://push.{{HOMEPAGE_VAR_DOMAIN}}
-        server: my-docker
-        container: pushgateway
 
 # The second node. Its own homepage is gone: everything it serves is linked from here, through this
 # node's Caddy over Tailscale. No container status, since that would need its Docker socket.
