@@ -90,7 +90,7 @@ const pageHTML = `<!doctype html>
   /* A phone has room for one column: the list of everything first, then what was picked, with a way back. */
   #back { display:none; }
   @media (max-width:52rem) {
-    .layout { grid-template-columns:1fr; }
+    .layout { grid-template-columns:minmax(0, 1fr); }
     .layout > nav { position:static !important; max-height:none !important; }
     .layout:not(.detail) > main, .layout.detail > nav { display:none; }
     #back { display:block; margin:0 0 .6rem; padding:.4rem 0; }
@@ -140,6 +140,7 @@ const pageHTML = `<!doctype html>
   .facts { color:var(--muted); margin:.4rem 0 0; }
   .actions { display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; margin:.9rem 0 .4rem; }
   .btn { background:var(--on); color:var(--on-ink); border:0; border-radius:.35rem; padding:.45rem .95rem; font-weight:600; cursor:pointer; }
+  .btn:disabled { opacity:.45; cursor:default; }
   .btn.quiet { background:transparent; color:var(--ink); border:1px solid var(--line); font-weight:500; }
   .label { font:600 1rem var(--head); margin:.9rem 0 .4rem; }
   .chips { display:flex; flex-wrap:wrap; gap:.35rem; }

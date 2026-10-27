@@ -50,6 +50,7 @@ const retroCSS = `
   .viewbtn.sel { background:#0a246a; color:#fff; border:2px inset #fff; }
   .viewbtn:active, .btn:active, .chip:active { border-style:inset; }
   .btn { padding:3px 10px; }
+  .btn:disabled { color:#808080; text-shadow:1px 1px 0 #fff; opacity:1; }
   .btn.quiet { background:#d4d0c8; border:2px outset #fff; font-weight:normal; }
   .more { color:#0000cc; text-decoration:underline; font:11px Verdana, sans-serif; padding:2px 0; }
   .note { font-size:10px; padding:2px 4px; }
