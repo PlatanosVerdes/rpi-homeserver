@@ -20,7 +20,7 @@ Every service has a profile of its own name, plus a group, plus `all`:
 | Group | Services |
 | :--- | :--- |
 | `essential` | caddy, homepage, pihole, speedtest |
-| `moni` | prometheus, grafana, pushgateway, node-exporter, cadvisor, blackbox-exporter, pi-metrics, qbittorrent-exporter, pihole-exporter, tailscale-metrics, victorialogs, vector, speedtest |
+| `moni` | prometheus, grafana, pushgateway, node-exporter, cadvisor, blackbox-exporter, pi-metrics, qbittorrent-exporter, pihole-exporter, tailscale-metrics, victorialogs, vector, speedtest, smokeping-prober |
 | `acestream` | jellyfin, gluetun, aceserve, kubo, bifrost, farnsworth, baird, plus prometheus, grafana, pushgateway |
 | `media` | plex, seerr, bazarr, maintainerr, tautulli, watch-next, subtitle-links, audio-convert, prowlarr, radarr, sonarr, qbittorrent, flaresolverr, unpackerr, qbit-manage, autobrr, tracker-control, cross-seed, torrent-drop |
 | `vpn` | sleipnir, docker-socket-proxy, gluetun-test, huginn |
@@ -32,7 +32,7 @@ The compose files are the source; this table is a summary. A node running a subs
 rather than groups, so it gets exactly what it names:
 
 ```bash
-COMPOSE_PROFILES=jellyfin,gluetun,aceserve,kubo,bifrost,sleipnir,docker-socket-proxy,speedtest,prometheus,pushgateway,node-exporter,cadvisor
+COMPOSE_PROFILES=jellyfin,gluetun,aceserve,kubo,bifrost,sleipnir,docker-socket-proxy,speedtest,smokeping-prober,prometheus,pushgateway,node-exporter,cadvisor
 COMPOSE_FILE=docker-compose.yml:overrides/secondary-node.yml
 ```
 
