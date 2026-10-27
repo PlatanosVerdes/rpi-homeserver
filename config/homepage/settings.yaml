@@ -2,7 +2,7 @@
 
 title: "RaspiHome"
 favicon: https://img.icons8.com/?size=100&id=12229&format=png&color=000000
-base: https://raspi.platanosverdes.com
+base: https://raspi.{{HOMEPAGE_VAR_DOMAIN}}
 
 #background:
 #  image: https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=2070&auto=format&fit=crop

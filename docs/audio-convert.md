@@ -1,7 +1,7 @@
 # Audio convert: fixing a re-encoded file from a page
 
 When Plex or Jellyfin has to re-encode a film's audio for a TV, the alert "Audio is being
-re-encoded" fires and the file lands on `https://audio.platanosverdes.com` (or `http://audio` on
+re-encoded" fires and the file lands on `https://audio.<domain>` (or `http://audio` on
 the LAN) with what it would take to stop it happening: which track an AC3 5.1 would be built from,
 how much bigger the file gets, and how long it takes. **Convert** runs the conversion there and
 then, with a progress bar and the time left; otherwise the nightly pass at 01:30 gets to it.

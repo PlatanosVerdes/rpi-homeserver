@@ -125,7 +125,7 @@ For deploys on push rather than every 30 minutes, set up the webhook and tunnel:
 
 ## 9. LAN short names
 
-Pi-hole answers `*.platanosverdes.com` for the tailnet on its own (written by the deploy from the
+Pi-hole answers `*.<domain>` for the tailnet on its own (written by the deploy from the
 Caddyfile); those go through Tailscale. At home use `http://<name>.pi` (`http://jellyfin.pi`): the
 deploy writes one per `http://<name>` site in Caddy, pointing at `STATIC_IP`, so it stays on the
 LAN and the Pi does not encrypt the video twice. For bare `http://jellyfin` names, `/etc/hosts`:

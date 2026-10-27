@@ -161,7 +161,7 @@ changes how it decides, and a subscription does not.
 
 ```bash
 # The pretty URL should bounce to the 192.168.x address, not proxy it
-curl -sk -o /dev/null -w '%{redirect_url}\n' https://plex.platanosverdes.com/
+curl -sk -o /dev/null -w '%{redirect_url}\n' https://plex.<domain>/
 
 # The LAN Networks preference is really set on the server
 sudo grep -o 'LanNetworksBandwidth="[^"]*"' \

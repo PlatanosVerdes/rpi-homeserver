@@ -165,7 +165,7 @@ services:
       #
       # Every link in a notification is built from the root URL, and Telegram silently refuses to
       # linkify the default localhost one, which reads as a broken alert rather than a missing setting.
-      - GF_SERVER_ROOT_URL=https://grafana.platanosverdes.com
+      - GF_SERVER_ROOT_URL=https://grafana.${DOMAIN:?set DOMAIN in .env}
       # The local Prometheus datasource's name, which is what a Node selector shows next to a
       # companion repo's datasources. Renaming an existing install needs the row renamed first:
       # provisioning matches by name and refuses a second datasource with the same uid.
@@ -209,7 +209,7 @@ services:
     memswap_limit: 128m
     profiles: [blackbox-exporter, moni, all]
     # Public resolvers, not Pi-hole: a public URL has to be probed the way the internet reaches it,
-    # and Pi-hole answers *.platanosverdes.com with the tailnet door instead. Container names still
+    # and Pi-hole answers *.$DOMAIN with the tailnet door instead. Container names still
     # resolve through Docker's own DNS, which only forwards the rest here.
     dns:
       - 1.1.1.1

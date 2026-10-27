@@ -23,7 +23,7 @@ notice, and what it adds (multi-tenancy, object storage) is worth nothing on one
 Two interfaces onto the same data:
 
 - **Grafana** → Explore → **VictoriaLogs** datasource.
-- **VictoriaLogs' own web UI** at `https://logs.platanosverdes.com/select/vmui/`, which shows the
+- **VictoriaLogs' own web UI** at `https://logs.<domain>/select/vmui/`, which shows the
   raw fields and is the better one for exploratory queries.
 
 Queries use a language called **LogsQL**. It is not PromQL (Prometheus) and not LogQL (Loki), so

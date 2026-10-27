@@ -1,6 +1,6 @@
 # sleipnir: the VPN tunnel panel
 
-`https://sleipnir.platanosverdes.com` lists every gluetun tunnel on this machine, found by the
+`https://sleipnir.<domain>` lists every gluetun tunnel on this machine, found by the
 `sleipnir.enable` label, and moves its exit to another country or server in place: whatever uses the
 tunnel carries on after a pause of a few seconds. It does not decide which container uses which
 tunnel; that stays in compose. sleipnir is its own app, pinned here as `SLEIPNIR_VERSION`; how a

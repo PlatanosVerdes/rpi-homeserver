@@ -8,7 +8,7 @@
 - Watch:
     - Jellyfin:
         icon: jellyfin.svg
-        href: https://jellyfin.platanosverdes.com
+        href: https://jellyfin.{{HOMEPAGE_VAR_DOMAIN}}
         server: my-docker
         container: jellyfin
         widget:
@@ -27,7 +27,7 @@
           key: "{{HOMEPAGE_VAR_PLEX_TOKEN}}" #https://www.plexopedia.com/plex-media-server/general/plex-token/
     - Seerr:
         icon: seerr.svg
-        href: https://seerr.platanosverdes.com
+        href: https://seerr.{{HOMEPAGE_VAR_DOMAIN}}
         server: my-docker
         container: seerr
         widget:
@@ -38,7 +38,7 @@
 - Library:
     - Radarr:
         icon: radarr.svg
-        href: https://radarr.platanosverdes.com
+        href: https://radarr.{{HOMEPAGE_VAR_DOMAIN}}
         server: my-docker
         container: radarr
         widget:
@@ -47,7 +47,7 @@
           key: "{{HOMEPAGE_VAR_RADARR_TOKEN}}"
     - Sonarr:
         icon: sonarr.svg
-        href: https://sonarr.platanosverdes.com
+        href: https://sonarr.{{HOMEPAGE_VAR_DOMAIN}}
         server: my-docker
         container: sonarr
         widget:
@@ -56,7 +56,7 @@
           key: "{{HOMEPAGE_VAR_SONARR_TOKEN}}"
     - Prowlarr:
         icon: prowlarr.svg
-        href: https://prowlarr.platanosverdes.com
+        href: https://prowlarr.{{HOMEPAGE_VAR_DOMAIN}}
         server: my-docker
         container: prowlarr
         widget:
@@ -66,62 +66,62 @@
 
 - Homegrown:
     - SubDown:
-        icon: https://subs.platanosverdes.com/icon.svg
-        href: https://subs.platanosverdes.com
+        icon: https://subs.{{HOMEPAGE_VAR_DOMAIN}}/icon.svg
+        href: https://subs.{{HOMEPAGE_VAR_DOMAIN}}
         description: Subtitles by language, movie by movie
         server: my-docker
         container: subtitle-links
     - Farnsworth:
-        icon: https://farnsworth.platanosverdes.com/icon.svg
-        href: https://farnsworth.platanosverdes.com
+        icon: https://farnsworth.{{HOMEPAGE_VAR_DOMAIN}}/icon.svg
+        href: https://farnsworth.{{HOMEPAGE_VAR_DOMAIN}}
         description: Acestream channels in your player
         server: my-docker
         container: farnsworth
     - Baird:
-        icon: https://baird.platanosverdes.com/icon.svg
-        href: https://baird.platanosverdes.com
+        icon: https://baird.{{HOMEPAGE_VAR_DOMAIN}}/icon.svg
+        href: https://baird.{{HOMEPAGE_VAR_DOMAIN}}
         description: Acestream channels picked from pages and the engine
         server: my-docker
         container: baird
     - bifrost:
-        icon: https://bifrost.platanosverdes.com/favicon.svg
-        href: https://bifrost.platanosverdes.com
+        icon: https://bifrost.{{HOMEPAGE_VAR_DOMAIN}}/favicon.svg
+        href: https://bifrost.{{HOMEPAGE_VAR_DOMAIN}}
         description: Acestream channels, their state and what is playing
         server: my-docker
         container: bifrost
     - sleipnir:
-        icon: https://sleipnir.platanosverdes.com/icon.svg
-        href: https://sleipnir.platanosverdes.com
+        icon: https://sleipnir.{{HOMEPAGE_VAR_DOMAIN}}/icon.svg
+        href: https://sleipnir.{{HOMEPAGE_VAR_DOMAIN}}
         description: VPN tunnels, where each one exits, and moving them
         server: my-docker
         container: sleipnir
     - muninn:
-        icon: https://muninn.platanosverdes.com/icon.svg
-        href: https://muninn.platanosverdes.com
+        icon: https://muninn.{{HOMEPAGE_VAR_DOMAIN}}/icon.svg
+        href: https://muninn.{{HOMEPAGE_VAR_DOMAIN}}
         description: Who uses each bot, and how much traffic reaches it
         server: my-docker
         container: muninn
     - Torrent drop:
-        icon: https://drop.platanosverdes.com/icon.svg
-        href: https://drop.platanosverdes.com
+        icon: https://drop.{{HOMEPAGE_VAR_DOMAIN}}/icon.svg
+        href: https://drop.{{HOMEPAGE_VAR_DOMAIN}}
         description: Drop a .torrent, cross-seed follows on its own
         server: my-docker
         container: torrent-drop
     - Audio convert:
-        icon: https://audio.platanosverdes.com/icon.svg
-        href: https://audio.platanosverdes.com
+        icon: https://audio.{{HOMEPAGE_VAR_DOMAIN}}/icon.svg
+        href: https://audio.{{HOMEPAGE_VAR_DOMAIN}}
         description: Files a TV had re-encoded, and the button that fixes them
         server: my-docker
         container: audio-convert
     - torre:
-        icon: https://torre.platanosverdes.com/icon.svg
-        href: https://torre.platanosverdes.com
+        icon: https://torre.{{HOMEPAGE_VAR_DOMAIN}}/icon.svg
+        href: https://torre.{{HOMEPAGE_VAR_DOMAIN}}
         description: AENA departures and arrivals, with flight alerts
         server: my-docker
         container: torre
     - Apex:
-        icon: https://apex.platanosverdes.com/icon.svg
-        href: https://apex.platanosverdes.com
+        icon: https://apex.{{HOMEPAGE_VAR_DOMAIN}}/icon.svg
+        href: https://apex.{{HOMEPAGE_VAR_DOMAIN}}
         description: Motorcycle routes for Google Maps
         server: my-docker
         container: apex
@@ -129,25 +129,25 @@
 - Monitoring:
     - Grafana:
         icon: grafana.svg
-        href: https://grafana.platanosverdes.com
+        href: https://grafana.{{HOMEPAGE_VAR_DOMAIN}}
         server: my-docker
         container: grafana
     - VictoriaLogs:
         icon: victoriametrics.svg
-        href: https://logs.platanosverdes.com/select/vmui/
+        href: https://logs.{{HOMEPAGE_VAR_DOMAIN}}/select/vmui/
         server: my-docker
         container: victorialogs
 
 - Downloads:
     - Bazarr:
         icon: bazarr.svg
-        href: https://bazarr.platanosverdes.com
+        href: https://bazarr.{{HOMEPAGE_VAR_DOMAIN}}
         description: Subtitle downloader
         server: my-docker
         container: bazarr
     - qBittorrent:
         icon: qbittorrent.svg
-        href: https://torrent.platanosverdes.com
+        href: https://torrent.{{HOMEPAGE_VAR_DOMAIN}}
         server: my-docker
         container: qbittorrent
         widget:
@@ -161,7 +161,7 @@
         container: flaresolverr
     - autobrr:
         icon: autobrr.svg
-        href: https://autobrr.platanosverdes.com
+        href: https://autobrr.{{HOMEPAGE_VAR_DOMAIN}}
         description: Grabs freeleech off the tracker's IRC announce
         server: my-docker
         container: autobrr
@@ -176,12 +176,12 @@
         container: qbit-manage
     - Maintainerr:
         icon: maintainerr.svg
-        href: https://maintainerr.platanosverdes.com
+        href: https://maintainerr.{{HOMEPAGE_VAR_DOMAIN}}
         server: my-docker
         container: maintainerr
     - Tautulli:
         icon: tautulli.svg
-        href: https://tautulli.platanosverdes.com
+        href: https://tautulli.{{HOMEPAGE_VAR_DOMAIN}}
         server: my-docker
         container: tautulli
         widget:
@@ -192,7 +192,7 @@
 - Network:
     - Pi-hole:
         icon: pi-hole.svg
-        href: https://pihole.platanosverdes.com/admin
+        href: https://pihole.{{HOMEPAGE_VAR_DOMAIN}}/admin
         server: my-docker
         container: pihole
         widget:
@@ -202,7 +202,7 @@
           key: "{{HOMEPAGE_VAR_PIHOLE_TOKEN}}"
     - Speedtest:
         icon: https://img.icons8.com/?size=100&id=12995&format=png&color=000000
-        href: https://grafana.platanosverdes.com/d/speedtest/speedtest
+        href: https://grafana.{{HOMEPAGE_VAR_DOMAIN}}/d/speedtest/speedtest
         server: my-docker
         container: speedtest
         widget:
@@ -231,8 +231,8 @@
         server: my-docker
         container: pol-academy-offers-bot
     - Fantasy:
-        icon: https://fantasy.platanosverdes.com/assets/favicon.png
-        href: https://fantasy.platanosverdes.com
+        icon: https://fantasy.{{HOMEPAGE_VAR_DOMAIN}}/assets/favicon.png
+        href: https://fantasy.{{HOMEPAGE_VAR_DOMAIN}}
         server: my-docker
         container: laliga-fantasy
         # /healthz answers 503 when the last refresh failed or the session is dying, so the
@@ -242,7 +242,7 @@
 - Internals:
     - Prometheus:
         icon: prometheus.svg
-        href: https://prometheus.platanosverdes.com
+        href: https://prometheus.{{HOMEPAGE_VAR_DOMAIN}}
         server: my-docker
         container: prometheus
         widget:
@@ -250,7 +250,7 @@
             url: http://prometheus:9090
     - Pushgateway:
         icon: prometheus.svg
-        href: https://push.platanosverdes.com
+        href: https://push.{{HOMEPAGE_VAR_DOMAIN}}
         server: my-docker
         container: pushgateway
 
@@ -259,16 +259,16 @@
 - streamhalla:
     - Jellyfin:
         icon: jellyfin.svg
-        href: https://jellyfin.streamhalla.platanosverdes.com
+        href: https://jellyfin.streamhalla.{{HOMEPAGE_VAR_DOMAIN}}
         description: The TV's Jellyfin, on streamhalla
     - bifrost:
-        icon: https://bifrost.platanosverdes.com/favicon.svg
-        href: https://bifrost.streamhalla.platanosverdes.com
+        icon: https://bifrost.{{HOMEPAGE_VAR_DOMAIN}}/favicon.svg
+        href: https://bifrost.streamhalla.{{HOMEPAGE_VAR_DOMAIN}}
         description: streamhalla's Acestream channels
     - Grafana:
         icon: grafana.svg
-        href: https://grafana.platanosverdes.com/d/acestream-monitor?var-datasource=prometheus-streamhalla
+        href: https://grafana.{{HOMEPAGE_VAR_DOMAIN}}/d/acestream-monitor?var-datasource=prometheus-streamhalla
         description: Its Acestream dashboard, on this Grafana
     - Prometheus:
         icon: prometheus.svg
-        href: https://prometheus.streamhalla.platanosverdes.com
+        href: https://prometheus.streamhalla.{{HOMEPAGE_VAR_DOMAIN}}

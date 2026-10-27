@@ -135,7 +135,7 @@ alive, which is the "Not probed" table on the same dashboard.
 **For rpi-services services:** edit `rpi-services/config/caddy/services.caddy` (or create a new `.caddy` file there — all `*.caddy` files are auto-imported).
 
 ```caddyfile
-https://filebrowser.platanosverdes.com {
+https://filebrowser.<domain> {
     import cf_tls
     reverse_proxy filebrowser:8080
 }
@@ -173,7 +173,7 @@ Edit `rpi-homeserver/config/homepage/services.yaml`:
 - Management:
     - Filebrowser:
         icon: filebrowser.png
-        href: https://filebrowser.platanosverdes.com
+        href: https://filebrowser.<domain>
         server: my-docker
         container: filebrowser
 ```

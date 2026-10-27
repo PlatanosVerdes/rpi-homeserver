@@ -1,11 +1,11 @@
 #!/bin/bash
-# Push every https://*.platanosverdes.com host declared in Caddy into Pi-hole's custom DNS.
+# Push every https://*.$DOMAIN host declared in Caddy into Pi-hole's custom DNS.
 #
 # The hostname list is derived from the Caddy config rather than kept here, so the two cannot
 # drift: this repo's Caddyfile, config/caddy/services/*.caddy, and rpi-services' fragment at
 # EXT_CADDY_PATH when that repo is present.
 #
-# Ours is a *.platanosverdes.com entry pointing at TAILSCALE_IP: those follow Caddy, written when a
+# Ours is a *.$DOMAIN entry pointing at TAILSCALE_IP: those follow Caddy, written when a
 # route appears, re-pointed when stale, deleted when the route is gone. So is a <name>.pi entry
 # pointing at STATIC_IP. Anything else (another IP, another domain) was added by hand and is never
 # touched.
@@ -20,8 +20,8 @@ set -a; source "$PROJECT_DIR/.env"; set +a
 
 PIHOLE_BASE="http://localhost:8081/api"
 
-if [[ -z "${TAILSCALE_IP:-}" || -z "${PIHOLE_TOKEN:-}" ]]; then
-    echo "sync-pihole-dns: TAILSCALE_IP or PIHOLE_TOKEN not set in .env, skipping" >&2
+if [[ -z "${TAILSCALE_IP:-}" || -z "${PIHOLE_TOKEN:-}" || -z "${DOMAIN:-}" ]]; then
+    echo "sync-pihole-dns: TAILSCALE_IP, PIHOLE_TOKEN or DOMAIN not set in .env, skipping" >&2
     exit 0
 fi
 
@@ -35,9 +35,12 @@ if [[ -n "${EXT_CADDY_PATH:-}" ]] && ! compgen -G "$EXT_CADDY_PATH/*.caddy" >/de
     prune=0
 fi
 
-wanted=$(grep -ohP '^https://\K[\w.-]+\.platanosverdes\.com(?=\s*\{)' "${sources[@]}" 2>/dev/null | sort -u)
+# This repo's Caddyfile names the domain as Caddy's {$DOMAIN}; a companion's may spell it out.
+domain_re=$(sed 's/[.]/\\./g' <<< "$DOMAIN")
+wanted=$(cat "${sources[@]}" 2>/dev/null | sed "s/{\$DOMAIN}/$DOMAIN/g" |
+    grep -oP "^https://\K[\w.-]+\.$domain_re(?=\s*\{)" | sort -u)
 if [[ -z "$wanted" ]]; then
-    echo "sync-pihole-dns: no *.platanosverdes.com hosts found in Caddy config, skipping" >&2
+    echo "sync-pihole-dns: no *.$DOMAIN hosts found in Caddy config, skipping" >&2
     exit 0
 fi
 
@@ -89,7 +92,7 @@ while IFS= read -r host; do
 done <<< "$wanted"
 
 # Each http://<name> site in Caddy is also <name>.pi at STATIC_IP: at home a browser reaches it on
-# the LAN by name, without going through Tailscale, which the *.platanosverdes.com names do.
+# the LAN by name, without going through Tailscale, which the *.$DOMAIN names do.
 lan_wanted=$(grep -ohP '^http://\K[a-z0-9-]+(?=[\s,{])' "${sources[@]}" 2>/dev/null | sort -u | sed 's/$/.pi/')
 lan=0
 if [[ -n "${STATIC_IP:-}" ]]; then
@@ -126,7 +129,7 @@ prune_stale() {
         sort -u | comm -23 - <(printf '%s\n' "$@" | awk 'NF' | sort -u))
 }
 if (( prune )); then
-    prune_stale "$TAILSCALE_IP" ".platanosverdes.com" "$wanted" "$public"
+    prune_stale "$TAILSCALE_IP" ".$DOMAIN" "$wanted" "$public"
     [[ -n "${STATIC_IP:-}" ]] && prune_stale "$STATIC_IP" ".pi" "$lan_wanted"
 fi
 
