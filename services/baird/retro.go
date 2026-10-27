@@ -24,13 +24,14 @@ const retroCSS = `
   .look nav { border:0; border-radius:0; gap:2px; background:none; }
   .look a { background:#d4d0c8; color:#000; border:2px outset #fff; padding:1px 8px; font:11px Tahoma, sans-serif; }
   .look a[aria-current] { background:#0a246a; color:#fff; border:2px inset #fff; }
-  .playlist { border-top:0; margin-top:8px; padding:0; font-size:11px; }
-  .playlist b { font:bold 11px Tahoma, sans-serif; color:#fff; background:linear-gradient(to right, #0a246a, #3a6ea5); padding:2px 5px; }
-  .playlist p { color:#000; font-size:10px; padding:0 4px; }
-  .playlist code { background:#fff; color:#000; border:2px inset #fff; border-radius:0; font:10px "Courier New", monospace; margin:0 4px 4px; }
-  .playlist .btn { margin:0 4px; }
 
-  .layout { gap:10px; padding:0 10px; grid-template-columns:250px minmax(0, 1fr); }
+  .layout { gap:10px; padding:0 10px; }
+  @media (min-width:52.01rem) { .layout { grid-template-columns:250px minmax(0, 1fr); } }
+  @media (max-width:52rem) {
+    .wrap { margin:0; border:0; box-shadow:none; }
+    .layout { padding:0 6px; }
+    #back { color:#0000cc; text-decoration:underline; font:bold 11px Tahoma, sans-serif; }
+  }
   .layout > nav { background:#fff; border:2px inset #fff; padding:4px; top:6px; }
   .navsec { margin-top:8px; }
   .navhead { background:linear-gradient(to right, #0a246a, #3a6ea5); color:#fff; border:0; padding:2px 5px; margin-bottom:2px; }
