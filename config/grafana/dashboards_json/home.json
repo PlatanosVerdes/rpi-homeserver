@@ -634,7 +634,7 @@
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "- 🌐 [Speedtest Tracker](/d/g7usvhZVk2/speedtest-tracker)\n- 🛡️ [Pi-hole](/d/edknpuskjzw1sc/pi-hole-ver6-stats)\n- 🔒 [Tailscale](/d/tailscale-bannet/tailscale-bannet)"
+        "content": "- 🌐 [Speedtest](/d/speedtest/speedtest)\n- 🛡️ [Pi-hole](/d/edknpuskjzw1sc/pi-hole-ver6-stats)\n- 🔒 [Tailscale](/d/tailscale-bannet/tailscale-bannet)"
       },
       "transparent": false
     },

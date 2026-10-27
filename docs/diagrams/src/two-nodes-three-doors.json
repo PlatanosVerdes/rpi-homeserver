@@ -646,7 +646,7 @@
       "items": [
         "Both run main and their own apply.sh cron; only the raspi has the webhook and the tunnel",
         "streamhalla lists services in COMPOSE_PROFILES and loads overrides/secondary-node.yml",
-        "streamhalla also runs gluetun, sleipnir (peer :8092), pushgateway, node-exporter, cAdvisor, speedtest-tracker"
+        "streamhalla also runs gluetun, sleipnir (peer :8092), pushgateway, node-exporter, cAdvisor, speedtest"
       ]
     }
   ]

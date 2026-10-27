@@ -481,7 +481,9 @@ docker exec qbittorrent curl -s \
   "http://localhost:8080/api/v2/sync/torrentPeers?hash=<hash>&rid=0" | grep -o '"flags":"[^"]*"'
 
 # a shareable speedtest, which trackers ask for
-docker exec speedtest-tracker speedtest --accept-license --accept-gdpr -f json
+docker exec speedtest speedtest --accept-license --accept-gdpr -f json
+# or the last scheduled one, its share link under result.url
+docker exec speedtest wget -qO- localhost:9798/last
 ```
 
 All flags without an `I` after a few minutes of seeding means the chain is broken: check the three

@@ -202,14 +202,27 @@
           key: "{{HOMEPAGE_VAR_PIHOLE_TOKEN}}"
     - Speedtest:
         icon: https://img.icons8.com/?size=100&id=12995&format=png&color=000000
-        href: https://speedtest.platanosverdes.com
+        href: https://grafana.platanosverdes.com/d/speedtest/speedtest
         server: my-docker
-        container: speedtest-tracker
+        container: speedtest
         widget:
-            type: speedtest
-            url: http://speedtest-tracker:80
-            key: "{{HOMEPAGE_VAR_SPEEDTEST_TOKEN}}"
-            bitratePrecision: 1
+            type: prometheusmetric
+            url: http://prometheus:9090
+            refreshInterval: 300000
+            metrics:
+              - label: Download
+                query: speedtest_download_bits_per_second
+                format:
+                  type: bitrate
+              - label: Upload
+                query: speedtest_upload_bits_per_second
+                format:
+                  type: bitrate
+              - label: Ping
+                query: speedtest_ping_ms
+                format:
+                  type: number
+                  suffix: " ms"
 
 - Services:
     - Offers Bot:
