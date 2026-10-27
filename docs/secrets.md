@@ -21,10 +21,15 @@ A private repository, e.g. `homelab-secrets`, cloned at `~/homelab-secrets` on e
 
 ```
 .sops.yaml                  which recipients each path is encrypted to
+common/rpi-homeserver.env   what every node's .env of this repo shares (optional)
 raspi/rpi-homeserver.env    this repo's .env on the node called raspi
 raspi/rpi-services.env      the companion repo's .env on the same node
 streamhalla/rpi-homeserver.env
 ```
+
+`common/` holds the values that are the same on every node, such as `DOMAIN` or `TZ`, so they are
+edited once. A node's own file wins when both define a name. Only put there what every node may
+read: it is encrypted to all of them.
 
 The directory is the node's **Tailscale name** (`tailscale status`, first label of its DNS name),
 falling back to `hostname -s`. Each directory is encrypted to that node's key and to the
@@ -36,6 +41,8 @@ creation_rules:
     age: age1<raspi>,age1<laptop>
   - path_regex: ^streamhalla/.*\.env$
     age: age1<streamhalla>,age1<laptop>
+  - path_regex: ^common/.*\.env$
+    age: age1<raspi>,age1<streamhalla>,age1<laptop>
 ```
 
 Why a private repo and not this one: the encrypted files would be fine to publish, but published is
@@ -48,8 +55,9 @@ At the start of `scripts/deploy/apply.sh`, before anything reads `.env`, when `~
 is a git checkout and `sops` is installed:
 
 1. `git pull --ff-only` in the secrets checkout (a failure is logged and the copy on disk is used).
-2. For this repo and the companion one, decrypt `<node>/<repo>.env` and replace `.env` (mode 600)
-   only if the result differs, logging `[secrets] … updated`.
+2. For this repo and the companion one, decrypt `common/<repo>.env` (if present) and
+   `<node>/<repo>.env`, the node's names winning, and replace `.env` (mode 600) only if the result
+   differs, logging `[secrets] … updated`.
 3. A file that does not decrypt is logged and the current `.env` is kept.
 
 The usual `up -d` then applies whatever changed: a secret edited in the private repo reaches the
