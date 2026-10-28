@@ -37,10 +37,13 @@ func TestPlanBuildsFromTheDefaultTrack(t *testing.T) {
 	if p.TargetCodec != "ac3" || p.TargetBitrate != 640 || p.TargetChannel != 6 {
 		t.Fatalf("wrong target: %+v", p)
 	}
-	if p.ExtraBytes != 80_000*7200 {
+	if len(p.Sources) != 2 || p.Sources[0].Index != 1 || p.Sources[1].Index != 2 {
+		t.Fatalf("wrong sources: %+v", p.Sources)
+	}
+	if p.ExtraBytes != 2*80_000*7200 {
 		t.Fatalf("extra bytes %d", p.ExtraBytes)
 	}
-	if p.Summary != "add AC3 5.1 from the English (DTS-HD MA 7.1) track; every track kept" {
+	if p.Summary != "add 2 AC3 tracks from the English (DTS-HD MA 7.1) and Spanish (DTS 5.1) track; every track kept" {
 		t.Fatalf("summary %q", p.Summary)
 	}
 	if f.Library != "films/A (2020)/a.mkv" || f.Title != "A film (2020)" {
@@ -185,5 +188,19 @@ func TestFixabilityFollowsTheMainTrack(t *testing.T) {
 				t.Fatal("no reason given")
 			}
 		})
+	}
+}
+
+func TestPlanAddsOnlyTheLanguagesTheTVCannotPlay(t *testing.T) {
+	f := onlyFile(t, withMedia(audioOnly("TV 2025", "truehd", "/data/films/M (2026)/m.mkv"), 60,
+		track{Index: 1, Codec: "ac3", Language: "fre", Channels: 6, Default: true},
+		track{Index: 2, Codec: "truehd", Language: "fre", Channels: 8},
+		track{Index: 3, Codec: "truehd", Language: "eng", Channels: 8},
+		track{Index: 4, Codec: "truehd", Language: "spa", Channels: 2, Comment: true}))
+	if !f.Actionable || f.Plan == nil || len(f.Plan.Sources) != 1 || f.Plan.Source.Index != 3 {
+		t.Fatalf("want the English track alone: %+v", f.Plan)
+	}
+	if f.Plan.Summary != "add AC3 5.1 from the eng TRUEHD 7.1 track; every track kept" {
+		t.Fatalf("summary %q", f.Plan.Summary)
 	}
 }

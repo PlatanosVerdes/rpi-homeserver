@@ -17,10 +17,13 @@ server refused for a real client that had allowed direct play, and the file it h
 appdata/pi-metrics/audio-recodes.json. A re-encode alone is not that: a client that turns direct
 play off gets a fallback that takes only AAC, and every other codec is re-encoded, the AC3 this adds
 included (services/pi-metrics/cause.go and recodes.go).
-A file is converted when its main track, the one flagged default (else the first), is in that set
-or in SEED, and nothing else in it would play in that track's place: a compatible track in the same
-language with as many channels, up to 5.1, and not a commentary. A stereo commentary or an MP3
-beside a DTS-X main mix is not what the TV plays, so it does not count. The files recorded
+Every language is looked at, not only the default one. Its main track is the one flagged default
+when that is in the language, else its first track that is not a commentary. A file is converted
+when one of those main tracks is in that set or in SEED, and nothing else in it would play in that
+track's place: a compatible track in the same language with as many channels, up to 5.1, and not a
+commentary. A stereo commentary or an MP3 beside a DTS-X main mix is not what the TV plays, so it
+does not count. A MULTi release with French and English both in TrueHD gets one AC3 per language:
+built from the default alone, picking English on the TV silently played the French AC3. The files recorded
 there go first, newest first, so the file that set off the alert is the first one the next run
 fixes. A codec no server has refused for a client yet is left alone. The hand-kept list this replaced
 counted EAC3 as playable, and the Plex app on a Samsung TV re-encodes it.
@@ -41,18 +44,20 @@ of the file.
 
 The source is never modified in place. A new file is written beside it, checked against the
 original for duration and for every stream it had, and only then does it take over the name. The
-old file is kept as .original; pruning those is a decision, not a timer.
+old file is kept as .original; pruning those is a decision, not a timer. When that name is taken,
+by a file converted before or by a release Radarr since replaced, it goes to .original.2 and up:
+nothing is ever renamed over.
 
 Silent unless something happened.
 
     audio-compat.py                       the nightly pass over the library
-    audio-compat.py --file PATH [--progress] [--allow-hardlinked] [--track N]
+    audio-compat.py --file PATH [--progress] [--allow-hardlinked] [--track N ...]
 
 `--file` converts one file through the same checks, remux, verify and rename, and is what
 services/audio-convert runs when its Play button is pressed. `--progress` makes it print one JSON
 object per line instead of prose: a plan, progress from ffmpeg's own -progress output, and a done or
-failed with the reason. `--track` builds the AC3 from the audio track the client played, as
-pi-metrics recorded it, instead of the default one. `--allow-hardlinked` is the page's explicit
+failed with the reason. `--track`, repeatable, builds the AC3 from the audio tracks pi-metrics
+planned, the one the client played among them, instead of the main track of every language. `--allow-hardlinked` is the page's explicit
 "convert it anyway" for a file still seeding. The rename keeps the old inode under .original, so the torrent's link survives and
 qbit-manage still counts 2; what it costs is the file's size again until the torrent is gone and
 .original pruned.
@@ -206,29 +211,44 @@ def stand_in(tracks, main, incompatible):
     return None
 
 
-def assess(info, incompatible, position=None):
-    """The audio position to build the AC3 from, and why not when there is nothing to do.
+def language_key(track):
+    return (tag(track, "language") or "und").lower()
+
+
+def main_tracks(tracks):
+    """Position of the main track of each language, the default one's language first."""
+    lead = default_audio_index(tracks)
+    mains = {language_key(tracks[lead]): lead}
+    for position, track in enumerate(tracks):
+        if not track.get("disposition", {}).get("comment"):
+            mains.setdefault(language_key(track), position)
+    return list(mains.values())
+
+
+def assess(info, incompatible, positions=None):
+    """The audio positions to build an AC3 from, and why not when there is nothing to do.
 
     The same rule is in services/pi-metrics/plan.go; change both together.
     """
     tracks = audio_streams(info)
     if not tracks:
-        return None, "it has no audio"
-    if position is None:
-        position = default_audio_index(tracks)
-    if not 0 <= position < len(tracks):
-        return None, f"it has no audio track {position}"
-    main = tracks[position]
-    if main.get("codec_name") not in incompatible:
-        return None, f"its main track is {describe(main)}, a codec no client has been refused"
-    other = stand_in(tracks, main, incompatible)
-    if other is not None:
-        return None, f"it already has {describe(other)}, which plays in place of the {describe(main)}"
-    return position, None
-
-
-def needs_work(info, incompatible):
-    return assess(info, incompatible)[1] is None
+        return [], "it has no audio"
+    for position in positions or ():
+        if not 0 <= position < len(tracks):
+            return [], f"it has no audio track {position}"
+    needed, reasons = [], []
+    for position in positions or main_tracks(tracks):
+        main = tracks[position]
+        other = stand_in(tracks, main, incompatible)
+        if main.get("codec_name") not in incompatible:
+            reasons.append(f"its main track is {describe(main)}, a codec no client has been refused")
+        elif other is not None:
+            reasons.append(f"it already has {describe(other)}, which plays in place of the {describe(main)}")
+        else:
+            needed.append(position)
+    if needed:
+        return needed, None
+    return [], reasons[0]
 
 
 def default_audio_index(tracks):
@@ -352,8 +372,8 @@ def target_title(target, channels):
     return f"{target.upper()} {LAYOUTS.get(out, f'{out}ch')} (compatible TV)"
 
 
-def remux(src, dst, info, source_position, channels, workdir, on_progress=None, target=TARGET):
-    """Prepend a target track built from one existing track, copying everything else untouched."""
+def remux(src, dst, info, sources, workdir, on_progress=None, target=TARGET):
+    """Prepend a target track built from each (position, channels) source, copying everything else untouched."""
     spec = TARGETS[target]
     covers, failure = cover_args(src, info, dst, workdir)
     if failure:
@@ -361,18 +381,21 @@ def remux(src, dst, info, source_position, channels, workdir, on_progress=None, 
     cmd = [
         "nice", "-n", "10", "ionice", "-c", "3",
         "ffmpeg", "-nostdin", "-y", "-nostats", "-progress", "pipe:1", "-i", str(src),
-        "-map", "0:V", "-map", f"0:a:{source_position}", "-map", "0:a",
+        "-map", "0:V", *(arg for position, _ in sources for arg in ("-map", f"0:a:{position}")), "-map", "0:a",
         "-map", "0:s?", "-map", "0:t?", *covers,
         "-c:v", "copy", "-c:s", "copy", "-c:t", "copy", "-c:a", "copy",
-        "-c:a:0", spec["codec"], "-b:a:0", spec["bitrate"],
     ]
-    if channels > spec["max_channels"]:
-        cmd += ["-ac:a:0", str(spec["max_channels"])]
-    cmd += [
-        "-disposition:a", "0", "-disposition:a:0", "default",
-        "-metadata:s:a:0", f"title={target_title(target, channels)}",
-        str(dst),
-    ]
+    for out, (_, channels) in enumerate(sources):
+        cmd += [f"-c:a:{out}", spec["codec"], f"-b:a:{out}", spec["bitrate"],
+                f"-metadata:s:a:{out}", f"title={target_title(target, channels)}"]
+        if channels > spec["max_channels"]:
+            cmd += [f"-ac:a:{out}", str(spec["max_channels"])]
+    if sources[0][0] == default_audio_index(audio_streams(info)):
+        cmd += ["-disposition:a", "0", "-disposition:a:0", "default"]
+    else:
+        # The default language already plays; the added ones must not take its place.
+        cmd += [arg for out in range(len(sources)) for arg in (f"-disposition:a:{out}", "0")]
+    cmd.append(str(dst))
     return run_ffmpeg(cmd, on_progress)
 
 
@@ -380,8 +403,8 @@ def kind(stream):
     return "cover" if is_cover(stream) else stream.get("codec_type")
 
 
-def verify(src_info, dst, target=TARGET):
-    """Reject the new file unless it carries the whole of the old one plus one audio track."""
+def verify(src_info, dst, added, target=TARGET):
+    """Reject the new file unless it carries the whole of the old one plus the added audio tracks."""
     info = probe(dst)
     if info is None:
         return "new file is unreadable"
@@ -397,12 +420,12 @@ def verify(src_info, dst, target=TARGET):
     for wanted in ("video", "cover", "audio", "subtitle"):
         was = sum(1 for s in src_info.get("streams", ()) if kind(s) == wanted)
         now = sum(1 for s in info.get("streams", ()) if kind(s) == wanted)
-        expected = was + 1 if wanted == "audio" else was
+        expected = was + added if wanted == "audio" else was
         if now != expected:
             return f"{wanted} streams: {was} -> {now}, expected {expected}"
 
-    if audio_streams(info)[0].get("codec_name") != TARGETS[target]["codec"]:
-        return f"first audio track is not the new {target.upper()}"
+    if any(t.get("codec_name") != TARGETS[target]["codec"] for t in audio_streams(info)[:added]):
+        return f"first {added} audio tracks are not the new {target.upper()}"
     return None
 
 
@@ -471,21 +494,30 @@ def record(mode, path, outcome):
         print(f"{HISTORY}: {err}", file=sys.stderr)
 
 
-def convert(path, info, position, mode, on_progress=None, target=TARGET):
+def free_original_name(path):
+    """.original, or .original.2 and up when an earlier conversion or release already holds that name."""
+    candidate, n = path.with_name(path.name + ".original"), 1
+    while candidate.exists():
+        n += 1
+        candidate = path.with_name(f"{path.name}.original.{n}")
+    return candidate
+
+
+def convert(path, info, positions, mode, on_progress=None, target=TARGET):
     """Remux, verify and swap one file in. Returns the outcome written to the history."""
     tracks = audio_streams(info)
-    source = tracks[position]
-    channels = int(source.get("channels") or AC3_MAX_CHANNELS)
+    source = tracks[positions[0]]
+    sources = [(p, int(tracks[p].get("channels") or AC3_MAX_CHANNELS)) for p in positions]
     duration = float(info.get("format", {}).get("duration") or 0)
     tmp = path.with_name(".audio-compat.in-progress" + path.suffix)
     tmp.unlink(missing_ok=True)
 
     started = time.monotonic()
     with tempfile.TemporaryDirectory(dir=path.parent, prefix=".audio-compat.") as workdir:
-        failure = (remux(path, tmp, info, position, channels, workdir, on_progress, target)
-                   or verify(info, tmp, target))
+        failure = (remux(path, tmp, info, sources, workdir, on_progress, target)
+                   or verify(info, tmp, len(sources), target))
     seconds = time.monotonic() - started
-    outcome = {"source_position": position, "source_codec": source.get("codec_name"), "target": target,
+    outcome = {"source_position": positions[0], "source_positions": positions, "source_codec": source.get("codec_name"), "target": target,
                "duration": duration, "seconds": round(seconds, 1),
                "speed": round(duration / seconds, 2) if seconds > 0 and duration > 0 else None}
     if failure:
@@ -493,7 +525,7 @@ def convert(path, info, position, mode, on_progress=None, target=TARGET):
         record(mode, path, {"result": "failed", "reason": failure, **outcome})
         return failure, outcome
 
-    path.rename(path.with_name(path.name + ".original"))
+    path.rename(free_original_name(path))
     tmp.rename(path)
     record(mode, path, {"result": "done", **outcome})
     return None, outcome
@@ -523,7 +555,7 @@ def main():
             info = probe(path)
             if info is None:
                 continue
-            position, why_not = assess(info, incompatible)
+            positions, why_not = assess(info, incompatible)
             if why_not:
                 entry = reported.get(path)
                 if entry and now - (entry.get("seen") or 0) < RECENT_SECONDS:
@@ -542,12 +574,12 @@ def main():
                 continue
 
             holding(path)
-            failure, outcome = convert(path, info, position, "nightly")
+            failure, outcome = convert(path, info, positions, "nightly")
             holding(None)
             if failure:
                 print(f"{path.name}: {failure}", file=sys.stderr)
                 continue
-            print(f"{path.name}: added AC3 from track {outcome['source_position']}, old file kept as .original")
+            print(f"{path.name}: added AC3 from {tracks_words(positions)}, .original kept")
             done += 1
 
     if deferred:
@@ -595,7 +627,16 @@ def resolve(given):
     return library_path(given) or path
 
 
-def convert_file(given, machine, allow_hardlinked, track=None, target=TARGET):
+def tracks_words(positions):
+    return f"track{'s' if len(positions) > 1 else ''} {', '.join(map(str, positions))}"
+
+
+def source_fields(track, position):
+    return {"position": position, "index": track.get("index"), "codec": track.get("codec_name"),
+            "channels": track.get("channels"), "language": tag(track, "language")}
+
+
+def convert_file(given, machine, allow_hardlinked, tracks=None, target=TARGET):
     out = Reporter(machine)
     path = resolve(given)
     if not path.is_file():
@@ -613,7 +654,7 @@ def convert_file(given, machine, allow_hardlinked, track=None, target=TARGET):
         if info is None:
             return out.failed(path, "ffprobe cannot read it")
         incompatible = incompatible_codecs(load_ledger())
-        position, why_not = assess(info, incompatible, track)
+        positions, why_not = assess(info, incompatible, tracks)
         if why_not:
             return out.failed(path, f"nothing to add: {why_not}")
 
@@ -624,22 +665,19 @@ def convert_file(given, machine, allow_hardlinked, track=None, target=TARGET):
             return out.failed(path, f"not enough free space: it needs {MIN_FREE_BYTES // 1024**3} GiB "
                                     f"left after a copy of the file")
 
-        tracks = audio_streams(info)
+        audio = audio_streams(info)
+        sources = [source_fields(audio[p], p) for p in positions]
         duration = float(info.get("format", {}).get("duration") or 0)
         out.emit("plan", path=str(path), duration=duration, size=stat.st_size, links=stat.st_nlink,
-                 source={"position": position, "index": tracks[position].get("index"),
-                         "codec": tracks[position].get("codec_name"),
-                         "channels": tracks[position].get("channels"),
-                         "language": tag(tracks[position], "language")}, target=target)
+                 source=sources[0], sources=sources, target=target)
         holding(path)
-        failure, outcome = convert(path, info, position, "app", out.progress(duration, frame_rate(info)), target)
+        failure, outcome = convert(path, info, positions, "app", out.progress(duration, frame_rate(info)), target)
     if failure:
         return out.failed(path, failure)
     if machine:
         out.emit("done", **outcome)
     else:
-        print(f"{path.name}: added {target.upper()} from track {outcome['source_position']}, "
-              f"old file kept as .original")
+        print(f"{path.name}: added {target.upper()} from {tracks_words(positions)}, .original kept")
     return 0
 
 
@@ -656,25 +694,26 @@ def scan():
         info = probe(path)
         if info is None:
             continue
-        position, why_not = assess(info, incompatible)
+        positions, why_not = assess(info, incompatible)
         if why_not:
             continue
-        main = audio_streams(info)[position]
+        audio = audio_streams(info)
+        main = audio[positions[0]]
         duration = float(info.get("format", {}).get("duration") or 0)
         relative = path.relative_to(DATA_ROOT)
         title = path.parent.name if relative.parts[0] == "films" else path.stem
-        channels = int(main.get("channels") or AC3_MAX_CHANNELS)
+        sources = [{"position": p, "codec": audio[p].get("codec_name"), "language": tag(audio[p], "language"),
+                    "channels": int(audio[p].get("channels") or AC3_MAX_CHANNELS),
+                    "default": bool(audio[p].get("disposition", {}).get("default")),
+                    "title": tag(audio[p], "title") or ""} for p in positions]
         found.append({
             "path": str(path), "library_path": relative.as_posix(), "title": title,
             "codec": main.get("codec_name"), "cause": "library", "actionable": True, "duration": duration,
             "plan": {
-                "source": {"position": position, "codec": main.get("codec_name"),
-                           "language": tag(main, "language"), "channels": channels,
-                           "default": bool(main.get("disposition", {}).get("default")),
-                           "title": tag(main, "title") or ""},
+                "source": sources[0], "sources": sources,
                 "target_codec": TARGET, "target_bitrate_kbps": bitrate,
-                "target_channels": min(channels, AC3_MAX_CHANNELS),
-                "extra_bytes": int(bitrate * 1000 / 8 * duration),
+                "target_channels": min(sources[0]["channels"], AC3_MAX_CHANNELS),
+                "extra_bytes": int(bitrate * 1000 / 8 * duration) * len(sources),
             },
         })
     targets = {name: {"codec": spec["codec"], "bitrate_kbps": int(spec["bitrate"].rstrip("k")),
@@ -692,8 +731,9 @@ if __name__ == "__main__":
                         help="with --file: the codec of the added track (default %(default)s)")
     parser.add_argument("--scan", action="store_true", help="list, as JSON, the files the nightly pass would "
                                                               "convert; converts nothing")
-    parser.add_argument("--track", type=int, help="with --file: the audio track (0:a:N) the client played, "
-                                                   "instead of the default one")
+    parser.add_argument("--track", type=int, action="append", help="with --file, repeatable: an audio track "
+                                                                    "(0:a:N) to build from, instead of the main "
+                                                                    "track of every language")
     args = parser.parse_args()
     if args.scan:
         if args.file:

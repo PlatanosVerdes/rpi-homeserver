@@ -28,21 +28,24 @@ type ledgerFile struct {
 	ReasonCode   string  `json:"reason_code"`
 	ReasonDetail string  `json:"reason_detail"`
 	Plan         *struct {
-		Source struct {
-			Position int    `json:"position"`
-			Codec    string `json:"codec"`
-			Language string `json:"language"`
-			Channels int    `json:"channels"`
-			Default  bool   `json:"default"`
-			Played   bool   `json:"played"`
-			Title    string `json:"title"`
-		} `json:"source"`
-		TargetCodec   string `json:"target_codec"`
-		TargetBitrate int    `json:"target_bitrate_kbps"`
-		TargetChannel int    `json:"target_channels"`
-		ExtraBytes    int64  `json:"extra_bytes"`
-		Summary       string `json:"summary"`
+		Source        planTrack   `json:"source"`
+		Sources       []planTrack `json:"sources"`
+		TargetCodec   string      `json:"target_codec"`
+		TargetBitrate int         `json:"target_bitrate_kbps"`
+		TargetChannel int         `json:"target_channels"`
+		ExtraBytes    int64       `json:"extra_bytes"`
+		Summary       string      `json:"summary"`
 	} `json:"plan"`
+}
+
+type planTrack struct {
+	Position int    `json:"position"`
+	Codec    string `json:"codec"`
+	Language string `json:"language"`
+	Channels int    `json:"channels"`
+	Default  bool   `json:"default"`
+	Played   bool   `json:"played"`
+	Title    string `json:"title"`
 }
 
 func readLedger(file string) ([]ledgerFile, error) {
