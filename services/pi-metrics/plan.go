@@ -49,12 +49,13 @@ const (
 )
 
 type plan struct {
-	Source        track  `json:"source"`
-	TargetCodec   string `json:"target_codec"`
-	TargetBitrate int    `json:"target_bitrate_kbps"`
-	TargetChannel int    `json:"target_channels"`
-	ExtraBytes    int64  `json:"extra_bytes"`
-	Summary       string `json:"summary"`
+	Source        track   `json:"source"`  // the first of Sources, for readers that predate it
+	Sources       []track `json:"sources"` // one per language the TV cannot play, each gets its own track
+	TargetCodec   string  `json:"target_codec"`
+	TargetBitrate int     `json:"target_bitrate_kbps"`
+	TargetChannel int     `json:"target_channels"`
+	ExtraBytes    int64   `json:"extra_bytes"`
+	Summary       string  `json:"summary"`
 }
 
 // mediaInfo is what a server says about the file a session plays.
@@ -120,6 +121,28 @@ func mainTrack(tracks []track) track {
 		}
 	}
 	return tracks[0]
+}
+
+func languageKey(t track) string {
+	if t.Language == "" {
+		return "und"
+	}
+	return strings.ToLower(t.Language)
+}
+
+// mainTracks is the main track of each language, the main track's language first, as audio-compat's
+// main_tracks.
+func mainTracks(tracks []track) []track {
+	lead := mainTrack(tracks)
+	mains := []track{lead}
+	seen := map[string]bool{languageKey(lead): true}
+	for _, t := range tracks {
+		if !t.Comment && !seen[languageKey(t)] {
+			seen[languageKey(t)] = true
+			mains = append(mains, t)
+		}
+	}
+	return mains
 }
 
 func sameLanguage(a, b string) bool {
@@ -201,31 +224,46 @@ func (f *fileSeen) decide(incompatible map[string]bool) {
 		f.Actionable = true
 		return
 	}
-	source := mainTrack(f.Tracks)
-	if !incompatible[source.Codec] {
-		f.ReasonCode, f.ReasonDetail = reasonMainPlayable, describe(source)
-		f.Reason = fmt.Sprintf("its main track is %s, a codec no client has been refused", describe(source))
+	var sources []track
+	for position, main := range mainTracks(f.Tracks) {
+		other, playable := standIn(f.Tracks, main, incompatible)
+		switch {
+		case incompatible[main.Codec] && !playable:
+			sources = append(sources, main)
+		case position > 0:
+		case !incompatible[main.Codec]:
+			f.ReasonCode, f.ReasonDetail = reasonMainPlayable, describe(main)
+			f.Reason = fmt.Sprintf("its main track is %s, a codec no client has been refused", describe(main))
+		default:
+			f.ReasonCode, f.ReasonDetail = reasonHasPlayable, describe(other)
+			f.Reason = fmt.Sprintf("it already has %s, which plays in place of the %s track; pick it in the player",
+				describe(other), describe(main))
+		}
+	}
+	if len(sources) == 0 {
 		return
 	}
-	if other, ok := standIn(f.Tracks, source, incompatible); ok {
-		f.ReasonCode, f.ReasonDetail = reasonHasPlayable, describe(other)
-		f.Reason = fmt.Sprintf("it already has %s, which plays in place of the %s track; pick it in the player",
-			describe(other), describe(source))
-		return
-	}
-	f.Actionable = true
+	f.Actionable, f.Reason, f.ReasonCode, f.ReasonDetail = true, "", "", ""
 
-	channels := source.Channels
+	channels := sources[0].Channels
 	if channels == 0 || channels > targetMaxChannels {
 		channels = targetMaxChannels
 	}
+	names := make([]string, len(sources))
+	for i, source := range sources {
+		names[i] = describe(source)
+	}
+	added := fmt.Sprintf("%s %s", strings.ToUpper(targetCodec), channelWords(channels))
+	if len(sources) > 1 {
+		added = fmt.Sprintf("%d %s tracks", len(sources), strings.ToUpper(targetCodec))
+	}
 	f.Plan = &plan{
-		Source:        source,
+		Source:        sources[0],
+		Sources:       sources,
 		TargetCodec:   targetCodec,
 		TargetBitrate: targetBitrateKbps,
 		TargetChannel: channels,
-		ExtraBytes:    int64(float64(targetBitrateKbps*1000/8) * f.Duration),
-		Summary: fmt.Sprintf("add %s %s from the %s track; every track kept",
-			strings.ToUpper(targetCodec), channelWords(channels), describe(source)),
+		ExtraBytes:    int64(float64(targetBitrateKbps*1000/8)*f.Duration) * int64(len(sources)),
+		Summary:       fmt.Sprintf("add %s from the %s track; every track kept", added, strings.Join(names, " and ")),
 	}
 }

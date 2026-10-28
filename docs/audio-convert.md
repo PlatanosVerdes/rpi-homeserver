@@ -30,13 +30,15 @@ client that is not a browser, with the video copied, it asks the server about th
 its duration and its audio tracks (Plex's `/library/metadata`, Jellyfin's `NowPlayingItem`). From
 that it works out the same thing `audio-compat.py` would:
 
-- **The source track** is the one the client was playing when the session says which (Plex's
-  selected stream, Jellyfin's `AudioStreamIndex`), else the one flagged default, else the first:
-  `default_audio_index` in the script. The default flag is what the release chose as its main mix,
-  which on a foreign film is the original language rather than a dub. The page passes that track
-  to the script as `--track`; the nightly pass always uses the default one.
-- **Whether it needs work at all** is decided by that main track alone: it must be in a refused
-  codec, and nothing else in the file may play in its place. A stand-in is a track in a codec
+- **The source tracks** are the main track of every language. The lead one is the track the client
+  was playing when the session says which (Plex's selected stream, Jellyfin's `AudioStreamIndex`),
+  else the one flagged default, else the first: `default_audio_index` in the script. The default
+  flag is what the release chose as its main mix, which on a foreign film is the original language
+  rather than a dub. Every other language adds its first track that is not a commentary. The page
+  passes them to the script as repeated `--track`; the nightly pass works them out the same way.
+- **Whether a language needs work** is decided by its main track: it must be in a refused codec,
+  and nothing else in the file may play in its place. A MULTi release with French and English both
+  in TrueHD gets an AC3 for each; with only the French one, picking English on the TV played French. A stand-in is a track in a codec
   nobody refused, in the same language, with as many channels (up to 5.1), and not flagged as a
   commentary. A DTS-X mix with an MP3 beside it, or a TrueHD one with a stereo AC3 commentary, still
   gets the AC3; a DTS 5.1 with an AC3 5.1 of the same mix does not. `assess` in the script and
@@ -53,7 +55,7 @@ would convert, from `audio-compat.py --scan`: the same rule, run over the librar
 converting anything. The page runs it on start, every `SCAN_INTERVAL` (6 h by default) and after
 each conversion, keeps the result in `appdata/audio-convert/library.json`, and leaves out files the
 ledger already lists. Those files can be converted from there too, ahead of the night run.
-- **The cost** is 640 kb/s times the duration, about 576 MB for two hours. On top of that, the old
+- **The cost** is 640 kb/s times the duration for each added track, about 576 MB for two hours. On top of that, the old
   file stays beside the new one as `.original` until someone deletes it.
 - **The time** is the duration divided by how fast conversions run. That starts at 20× realtime,
   measured on this Pi, and becomes the mean of the last five real conversions as they happen,
@@ -112,8 +114,8 @@ teaching no codec, and each entry carries a conversion plan worked out from the 
 of the file: which track the AC3 is built from, the extra size, the duration. That is what the page
 shows, and the alert links there.
 
-At 01:30 `audio-compat.py` reads that file. A library file is converted when its main track (flagged default,
-else the first) is in a codec recorded there or in its seed (DTS and TrueHD, what it converted
+At 01:30 `audio-compat.py` reads that file. A library file is converted when the main track of one
+of its languages (flagged default, else that language's first) is in a codec recorded there or in its seed (DTS and TrueHD, what it converted
 before anything was measured), and no other track would play in its place: one in a playable codec,
 the same language and as many channels up to 5.1, that is not a commentary. The recorded files go first, newest first, so the film that set off the alert is
 the first one fixed. What it does **not** do:
@@ -174,8 +176,10 @@ file does not fit.
 - **Forget.** An entry stays in the ledger until a hundred newer ones push it out. A file already
   converted shows as done; if a client then has it re-encoded again, it is listed again with a
   fresh plan.
-- **Pick a track for the client.** The added AC3 is marked default; a client that remembers another
-  choice keeps it.
+- **Pick a track for the client.** The AC3 built from the default track is marked default; one added
+  for another language leaves the default where it was. A client that remembers another choice keeps it.
+- **Overwrite an `.original`.** When one is already there, from an earlier conversion or a release
+  Radarr has since replaced, the old file goes to `.original.2` and up.
 
 ## Running it by hand
 

@@ -292,8 +292,13 @@ func (s *server) play(w http.ResponseWriter, r *http.Request) {
 	}
 	queued := job{Library: library, Title: title, AllowHardlinked: allowHardlinked, Target: chosen, Added: time.Now().Unix()}
 	if p := files[i].Plan; p != nil {
-		position := p.Source.Position
-		queued.Track = &position
+		sources := p.Sources
+		if len(sources) == 0 {
+			sources = []planTrack{p.Source}
+		}
+		for _, source := range sources {
+			queued.Tracks = append(queued.Tracks, source.Position)
+		}
 	}
 	if !s.enqueue(queued) {
 		writeJSON(w, http.StatusConflict, map[string]any{"error": "already queued"})

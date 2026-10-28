@@ -298,9 +298,16 @@ function details(it) {
   if (!it.actionable && it.reason) lines.push(["", it.reason.charAt(0).toUpperCase() + it.reason.slice(1) + ".", ""]);
   if (it.plan) {
     var p = it.plan;
-    lines.push(["Adds ", p.target_codec.toUpperCase() + " " + channels(p.target_channels) + " at " + p.target_bitrate_kbps + " kb/s",
-      " built from the " + trackName(p.source) + " track" + (p.source.played ? ", the one that was playing" :
-      p.source["default"] ? ", the default one" : "") + ". Every track is kept."]);
+    var sources = p.sources && p.sources.length ? p.sources : [p.source];
+    if (sources.length > 1) {
+      lines.push(["Adds ", sources.length + " " + p.target_codec.toUpperCase() + " tracks at " + p.target_bitrate_kbps + " kb/s each",
+        ", one per language the TV cannot play, built from the " + sources.map(trackName).join(" and ") +
+        " tracks. Every track is kept."]);
+    } else {
+      lines.push(["Adds ", p.target_codec.toUpperCase() + " " + channels(p.target_channels) + " at " + p.target_bitrate_kbps + " kb/s",
+        " built from the " + trackName(p.source) + " track" + (p.source.played ? ", the one that was playing" :
+        p.source["default"] ? ", the default one" : "") + ". Every track is kept."]);
+    }
   }
   if (it.actionable && it.exists && it.status !== "done") {
     lines.push(["Disk: ", human((it.plan ? it.plan.extra_bytes : 0) + it.size), " more while the .original is kept" +

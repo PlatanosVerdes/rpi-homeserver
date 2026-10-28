@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"syscall"
 	"testing"
@@ -150,7 +151,7 @@ func fixture(t *testing.T, script string) (*server, string) {
 func TestRunReadsProgressAndTheResult(t *testing.T) {
 	s, _ := fixture(t, `
 case "$*" in *--allow-hardlinked*) echo '{"event":"failed","reason":"wrong flag"}'; exit 1;; esac
-case "$*" in *"--track 3"*) echo '{"event":"failed","reason":"track 3"}'; exit 1;; esac
+case "$*" in *"--track 1 --track 3"*) echo '{"event":"failed","reason":"tracks 1 3"}'; exit 1;; esac
 echo '{"event":"plan","duration":600,"source":{"position":0}}'
 echo '{"event":"progress","seconds":300,"duration":600,"speed":25}'
 echo "file=$2" >&2
@@ -166,9 +167,8 @@ echo '{"event":"done","seconds":24}'
 		t.Fatalf("flag not passed through: %+v", result)
 	}
 
-	three := 3
-	if result, _ = s.run(job{Library: "films/A/a.mkv", Track: &three}); result.Reason != "track 3" {
-		t.Fatalf("track not passed through: %+v", result)
+	if result, _ = s.run(job{Library: "films/A/a.mkv", Tracks: []int{1, 3}}); result.Reason != "tracks 1 3" {
+		t.Fatalf("tracks not passed through: %+v", result)
 	}
 }
 
@@ -252,7 +252,7 @@ func TestPlayChecks(t *testing.T) {
 		}
 		return
 	}
-	if code != http.StatusOK || len(s.queue) != 1 || !s.queue[0].AllowHardlinked || s.queue[0].Track == nil || *s.queue[0].Track != 0 {
+	if code != http.StatusOK || len(s.queue) != 1 || !s.queue[0].AllowHardlinked || !slices.Equal(s.queue[0].Tracks, []int{0}) {
 		t.Errorf("confirmed file not queued: %d %v %+v", code, body, s.queue)
 	}
 }
