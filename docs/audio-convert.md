@@ -4,7 +4,7 @@ When Plex or Jellyfin has to re-encode a film's audio for a TV, the alert "Audio
 re-encoded" fires and the file lands on `https://audio.<domain>` (or `http://audio` on
 the LAN) with what it would take to stop it happening: which track an AC3 5.1 would be built from,
 how much bigger the file gets, and how long it takes. **Convert** runs the conversion there and
-then, with a progress bar and the time left; otherwise the nightly pass at 01:30 gets to it.
+then, with a progress bar and the time left; otherwise the nightly pass at 05:00 gets to it.
 
 The page is reachable from the tailnet only: Caddy serves it on the Tailscale address, it is not
 behind Cloudflare Access, and nothing publishes it.
@@ -114,7 +114,7 @@ teaching no codec, and each entry carries a conversion plan worked out from the 
 of the file: which track the AC3 is built from, the extra size, the duration. That is what the page
 shows, and the alert links there.
 
-At 01:30 `audio-compat.py` reads that file. A library file is converted when the main track of one
+At 05:00 `audio-compat.py` reads that file. A library file is converted when the main track of one
 of its languages (flagged default, else that language's first) is in a codec recorded there or in its seed (DTS and TrueHD, what it converted
 before anything was measured), and no other track would play in its place: one in a playable codec,
 the same language and as many channels up to 5.1, that is not a commentary. The recorded files go first, newest first, so the film that set off the alert is
@@ -135,7 +135,7 @@ the first one fixed. What it does **not** do:
 
 Adding a codec can put a lot of the library in the queue at once, and every conversion keeps the
 old file as `.original` beside the new one, so the disk pays for both until those are pruned.
-`RUN_SECONDS` spreads that out: the 01:30 pass converts one file after another and starts no new
+`RUN_SECONDS` spreads that out: the 05:00 pass converts one file after another and starts no new
 one after 07:00, and each file still needs 40 GiB free after its copy.
 
 ## A file that is still seeding
@@ -155,7 +155,7 @@ reads as "the library let go" (`noHL`).
 Both modes of `audio-compat.py` take an `flock` on `appdata/audio-convert/convert.lock` and write who
 holds it into that file. The page's queue runs one file at a time and waits while the lock is taken,
 showing "The nightly pass is converting X". The nightly pass, if it finds the page converting
-at 01:30, waits up to three hours for it and then gives up for the night, saying so in
+at 05:00, waits for it and starts nothing once 07:00 has passed, saying so in
 `audio-compat.log`.
 
 Every conversion either side attempts is appended to `appdata/audio-convert/history.jsonl`: which

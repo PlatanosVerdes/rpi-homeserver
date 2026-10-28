@@ -109,8 +109,8 @@ TARGETS = {
 AC3_BITRATE = TARGETS["ac3"]["bitrate"]
 AC3_MAX_CHANNELS = TARGETS["ac3"]["max_channels"]
 LAYOUTS = {1: "mono", 2: "stereo", 6: "5.1", 8: "7.1"}
-# Cron starts the nightly pass at 01:30; no conversion starts after 07:00. One takes about ten minutes.
-RUN_SECONDS = int(5.5 * 3600)
+# Cron starts the nightly pass at 05:00; no conversion starts after 07:00. One takes about ten minutes.
+RUN_SECONDS = 2 * 3600
 FFPROBE_TIMEOUT = 60
 # 20x realtime measured on this Pi, so a long film lands near ten minutes.
 FFMPEG_TIMEOUT = 3600

@@ -1572,7 +1572,7 @@ groups:
             it.{{ else }}Direct play was allowed and the client's profile
             refused {{ $labels.codec }}. Open https://audio.${DOMAIN}: the file is listed there
             with its plan (which track the AC3 5.1 is built from, the extra space, how long it takes),
-            and Play converts it now. Otherwise scripts/sync/audio-compat.py does it at 01:30, unless it
+            and Play converts it now. Otherwise scripts/sync/audio-compat.py does it at 05:00, unless it
             is still seeding or already has a track that plays in its place; the page says which.{{ end }}{{ else if eq $labels.cause "other" }}Jellyfin gave a reason
             other than the audio codec (its TranscodeReasons), so nothing was recorded and no file
             will be changed.{{ else }}Nothing says whether the client asked for direct play (for
