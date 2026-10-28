@@ -109,7 +109,8 @@ TARGETS = {
 AC3_BITRATE = TARGETS["ac3"]["bitrate"]
 AC3_MAX_CHANNELS = TARGETS["ac3"]["max_channels"]
 LAYOUTS = {1: "mono", 2: "stereo", 6: "5.1", 8: "7.1"}
-MAX_PER_RUN = 2
+# Cron starts the nightly pass at 01:30; no conversion starts after 07:00. One takes about ten minutes.
+RUN_SECONDS = int(5.5 * 3600)
 FFPROBE_TIMEOUT = 60
 # 20x realtime measured on this Pi, so a long film lands near ten minutes.
 FFMPEG_TIMEOUT = 3600
@@ -536,6 +537,7 @@ def main():
     incompatible = incompatible_codecs(ledger)
     reported = reported_files(ledger)
     now = time.time()
+    deadline = time.monotonic() + RUN_SECONDS
     done = 0
     deferred = []
 
@@ -549,7 +551,8 @@ def main():
 
         queue = chain((p for p in reported if p.is_file()), (p for p in candidates() if p not in reported))
         for path in queue:
-            if done >= MAX_PER_RUN:
+            if time.monotonic() >= deadline:
+                print(f"stopped after {done} at the end of the night window, the rest is left for tomorrow")
                 break
 
             info = probe(path)

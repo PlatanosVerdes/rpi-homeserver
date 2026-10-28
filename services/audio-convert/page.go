@@ -290,7 +290,7 @@ function details(it) {
     lines.push(["No client has played it yet. Its main track is ", codecName(it.codec),
       ", which the nightly pass treats as one the TV cannot play."]);
     lines.push(["", it.links > 1 ? "The nightly pass waits until it stops seeding" :
-      "The nightly pass converts it on its own, two files a night", "; Convert does it now."]);
+      "The nightly pass converts it on its own, between 01:30 and 07:00", "; Convert does it now."]);
   } else {
     var verb = it.cause === "codec" ? " refused " : " had its audio re-encoded from ";
     lines.push([it.client + " in " + appName(it.app) + verb, codecName(it.codec), " on " + when(it.seen) + "."]);

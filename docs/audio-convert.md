@@ -135,7 +135,8 @@ the first one fixed. What it does **not** do:
 
 Adding a codec can put a lot of the library in the queue at once, and every conversion keeps the
 old file as `.original` beside the new one, so the disk pays for both until those are pruned.
-`MAX_PER_RUN` (two a night) is what spreads that out.
+`RUN_SECONDS` spreads that out: the 01:30 pass converts one file after another and starts no new
+one after 07:00, and each file still needs 40 GiB free after its copy.
 
 ## A file that is still seeding
 
