@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "embed"
 	"log"
 	"net/http"
 )
@@ -18,19 +19,25 @@ func icon(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(iconSVG))
 }
 
+// iOS ignores SVG icons on the home screen, so it gets this PNG of icon.svg, its background squared
+// because iOS rounds the corners itself.
+//
+//go:generate sh -c "echo 'svg > rect:first-of-type { rx: 0; ry: 0 }' | rsvg-convert --width 180 --height 180 --stylesheet /dev/stdin icon.svg -o apple-touch-icon.png"
+//go:embed apple-touch-icon.png
+var touchIcon []byte
+
+func appleTouchIcon(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "image/png")
+	w.Header().Set("Cache-Control", "public, max-age=86400")
+	w.Write(touchIcon)
+}
+
 // A torrent on its way up to the cloud. Filled rather than stroked, because Homepage draws it at
 // 34 px and outlines close up at that size. Both circles end at y=36, the same line the bar ends
 // on, or the silhouette shows a notch.
-const iconSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="14" fill="#08201a"/>
-  <g fill="#34d399">
-    <circle cx="25" cy="25" r="11"/>
-    <circle cx="41" cy="27" r="9"/>
-    <rect x="14" y="27" width="36" height="9" rx="4.5"/>
-  </g>
-  <path d="M32 55 V42" stroke="#34d399" stroke-width="4.5" stroke-linecap="round" fill="none"/>
-  <path d="M25.5 48.5 L32 42 L38.5 48.5" stroke="#34d399" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-</svg>`
+//
+//go:embed icon.svg
+var iconSVG string
 
 const pageHTML = `<!doctype html>
 <html lang="es">
@@ -39,6 +46,7 @@ const pageHTML = `<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Torrent drop</title>
 <link rel="icon" href="/icon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <style>
   :root { color-scheme: dark; --bg:#0b1512; --card:#132420; --line:#1f3b33; --ink:#e6fff5; --dim:#8fb3a7; --accent:#34d399; --warn:#fbbf24; }
   * { box-sizing: border-box; }

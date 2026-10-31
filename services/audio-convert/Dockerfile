@@ -5,7 +5,7 @@ FROM golang:${GO_IMAGE} AS builder
 WORKDIR /src
 COPY go.mod ./
 RUN go mod download
-COPY *.go ./
+COPY *.go icon.svg apple-touch-icon.png ./
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /audio-convert .
 
 # python3 and ffmpeg run scripts/sync/audio-compat.py, which compose mounts from the repo rather

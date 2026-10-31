@@ -27,6 +27,7 @@ func main() {
 	http.HandleFunc("/all.m3u", s.all)
 	http.HandleFunc("/click/", s.click)
 	http.HandleFunc("/icon.svg", icon)
+	http.HandleFunc("/apple-touch-icon.png", appleTouchIcon)
 
 	log.Printf("farnsworth: %s, streams at %s, %d channels from %s",
 		listenAddr, streamBase, len(playlist.channels()), playlist.url)

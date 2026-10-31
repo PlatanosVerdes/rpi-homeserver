@@ -98,6 +98,7 @@ func main() {
 
 	http.HandleFunc("/", s.index)
 	http.HandleFunc("/icon.svg", icon)
+	http.HandleFunc("/apple-touch-icon.png", appleTouchIcon)
 	http.HandleFunc("/api/list", s.list)
 	http.HandleFunc("/api/add", s.add)
 	http.HandleFunc("/api/cross-seed", s.crossSeedNow)

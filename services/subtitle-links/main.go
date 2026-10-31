@@ -682,6 +682,7 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", indexHandler)
 	mux.HandleFunc("/icon.svg", iconHandler)
+	mux.HandleFunc("/apple-touch-icon.png", appleTouchIcon)
 	mux.HandleFunc("/api/items", apiHandler(cfg))
 	mux.HandleFunc("/image/", imageHandler(cfg))
 	mux.HandleFunc("/download/", downloadHandler(cfg))

@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "embed"
 	"html/template"
 	"log"
 	"net/http"
@@ -23,13 +24,23 @@ func icon(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(iconSVG))
 }
 
+// iOS ignores SVG icons on the home screen, so it gets this PNG of icon.svg, its background squared
+// because iOS rounds the corners itself.
+//
+//go:generate sh -c "echo 'svg > rect:first-of-type { rx: 0; ry: 0 }' | rsvg-convert --width 180 --height 180 --stylesheet /dev/stdin icon.svg -o apple-touch-icon.png"
+//go:embed apple-touch-icon.png
+var touchIcon []byte
+
+func appleTouchIcon(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "image/png")
+	w.Header().Set("Cache-Control", "public, max-age=86400")
+	w.Write(touchIcon)
+}
+
 // A cathode ray tube with an antenna, for the man who built the first one that worked.
-const iconSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="14" fill="#1a1024"/>
-  <path d="M22 16 L32 26 L42 16" stroke="#c084fc" stroke-width="3" fill="none" stroke-linecap="round"/>
-  <rect x="12" y="26" width="40" height="26" rx="5" fill="none" stroke="#c084fc" stroke-width="3"/>
-  <path d="M28 34 L38 39 L28 44 Z" fill="#c084fc"/>
-</svg>`
+//
+//go:embed icon.svg
+var iconSVG string
 
 var pageTmpl = template.Must(template.New("page").Parse(`<!doctype html>
 <html lang="es">
@@ -38,6 +49,7 @@ var pageTmpl = template.Must(template.New("page").Parse(`<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Farnsworth</title>
 <link rel="icon" href="/icon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <style>
   :root { color-scheme: dark; --bg:#140d1c; --card:#1f1630; --line:#332748; --ink:#ede9fe; --dim:#a99cc4; --accent:#c084fc; }
   * { box-sizing: border-box; }

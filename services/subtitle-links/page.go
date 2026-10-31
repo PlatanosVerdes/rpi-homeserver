@@ -1,6 +1,9 @@
 package main
 
-import "net/http"
+import (
+	_ "embed"
+	"net/http"
+)
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
@@ -17,14 +20,24 @@ func iconHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(iconSVG))
 }
 
+// iOS ignores SVG icons on the home screen, so it gets this PNG of icon.svg, its background squared
+// because iOS rounds the corners itself.
+//
+//go:generate sh -c "echo 'svg > rect:first-of-type { rx: 0; ry: 0 }' | rsvg-convert --width 180 --height 180 --stylesheet /dev/stdin icon.svg -o apple-touch-icon.png"
+//go:embed apple-touch-icon.png
+var touchIcon []byte
+
+func appleTouchIcon(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "image/png")
+	w.Header().Set("Cache-Control", "public, max-age=86400")
+	w.Write(touchIcon)
+}
+
 // A rounded-square glyph of two staggered subtitle lines over a play triangle, in the same teal
 // accent as the page itself, since none of Homepage's bundled icons fit a homegrown tool.
-const iconSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="14" fill="#0f2f2b"/>
-  <path d="M24 20 L44 32 L24 44 Z" fill="#2dd4bf" opacity="0.35"/>
-  <rect x="14" y="38" width="24" height="6" rx="3" fill="#2dd4bf"/>
-  <rect x="14" y="48" width="36" height="6" rx="3" fill="#2dd4bf"/>
-</svg>`
+//
+//go:embed icon.svg
+var iconSVG string
 
 const indexPage = `<!doctype html>
 <html lang="es">
@@ -33,6 +46,7 @@ const indexPage = `<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SubDown</title>
 <link rel="icon" href="/icon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <style>
   :root {
     --bg: #0b0d10;
