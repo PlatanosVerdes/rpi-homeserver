@@ -35,12 +35,17 @@ func icon(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(iconSVG))
 }
 
-// The PNG the Dockerfile renders from icon.svg, since iOS ignores SVG icons on the home screen.
-const touchIconPath = "/usr/local/share/baird/apple-touch-icon.png"
+// iOS ignores SVG icons on the home screen, so it gets this PNG of icon.svg, its background squared
+// because iOS rounds the corners itself.
+//
+//go:generate sh -c "echo 'svg > rect:first-of-type { rx: 0; ry: 0 }' | rsvg-convert --width 180 --height 180 --stylesheet /dev/stdin icon.svg -o apple-touch-icon.png"
+//go:embed apple-touch-icon.png
+var touchIcon []byte
 
 func appleTouchIcon(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "image/png")
 	w.Header().Set("Cache-Control", "public, max-age=86400")
-	http.ServeFile(w, r, touchIconPath)
+	w.Write(touchIcon)
 }
 
 // Baird's spinning Nipkow disc, the first television that showed a face.
