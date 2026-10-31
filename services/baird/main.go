@@ -44,6 +44,7 @@ func main() {
 	http.HandleFunc("/api/listchannels", a.choose(a.store.setListChannels))
 	http.HandleFunc("/api/pages", a.pages)
 	http.HandleFunc("/icon.svg", icon)
+	http.HandleFunc("/apple-touch-icon.png", appleTouchIcon)
 	http.HandleFunc("/logo", a.logo)
 
 	log.Printf("baird: %s, engine %s, files in %s, lists every %s, the rest every %s", listenAddr, a.engine.base, dir, listsEvery, refresh)

@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "embed"
 	"log"
 	"net/http"
 )
@@ -18,24 +19,19 @@ func icon(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(iconSVG))
 }
 
+// The PNG the Dockerfile renders from icon.svg, since iOS ignores SVG icons on the home screen.
+const touchIconPath = "/usr/local/share/audio-convert/apple-touch-icon.png"
+
+func appleTouchIcon(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "public, max-age=86400")
+	http.ServeFile(w, r, touchIconPath)
+}
+
 // A waveform whose bars light up from left to right: the audio before and after the conversion.
 // Thick rounded bars and no detail finer than 4 units, since Homepage draws it at 34 px.
-const iconSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1f2130"/><stop offset="1" stop-color="#121318"/></linearGradient>
-    <linearGradient id="lit" gradientUnits="userSpaceOnUse" x1="34" y1="0" x2="54" y2="0"><stop offset="0" stop-color="#7c84f3"/><stop offset="1" stop-color="#c084fc"/></linearGradient>
-  </defs>
-  <rect width="64" height="64" rx="15" fill="url(#bg)"/>
-  <rect x="0.5" y="0.5" width="63" height="63" rx="14.5" fill="none" stroke="#ffffff" stroke-opacity=".08"/>
-  <g stroke-linecap="round" stroke-width="5">
-    <g stroke="#4a4e5a">
-      <path d="M12 28v8M20 22v20M28 16v32"/>
-    </g>
-    <g stroke="url(#lit)">
-      <path d="M36 12v40M44 20v24M52 26v12"/>
-    </g>
-  </g>
-</svg>`
+//
+//go:embed icon.svg
+var iconSVG string
 
 const pageHTML = `<!doctype html>
 <html lang="en">
@@ -44,6 +40,7 @@ const pageHTML = `<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Audio convert</title>
 <link rel="icon" href="/icon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <style>
   :root {
     color-scheme: dark;

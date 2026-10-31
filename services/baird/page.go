@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "embed"
 	"net/http"
 	"strings"
 )
@@ -34,17 +35,18 @@ func icon(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(iconSVG))
 }
 
+// The PNG the Dockerfile renders from icon.svg, since iOS ignores SVG icons on the home screen.
+const touchIconPath = "/usr/local/share/baird/apple-touch-icon.png"
+
+func appleTouchIcon(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "public, max-age=86400")
+	http.ServeFile(w, r, touchIconPath)
+}
+
 // Baird's spinning Nipkow disc, the first television that showed a face.
-const iconSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="14" fill="#1f5c55"/>
-  <circle cx="32" cy="32" r="20" fill="none" stroke="#eef4f1" stroke-width="3"/>
-  <g fill="#eef4f1">
-    <circle cx="32" cy="15" r="2.4"/><circle cx="45" cy="21" r="2.4"/><circle cx="48" cy="35" r="2.4"/>
-    <circle cx="39" cy="46" r="2.4"/><circle cx="25" cy="46" r="2.4"/><circle cx="17" cy="35" r="2.4"/>
-    <circle cx="20" cy="21" r="2.4"/>
-  </g>
-  <circle cx="32" cy="32" r="4" fill="#eef4f1"/>
-</svg>`
+//
+//go:embed icon.svg
+var iconSVG string
 
 // An explorer: the left column is everything that can go in, with a switch and a count each; the
 // right shows what the one picked holds, so what is inside a group is one click away.
@@ -55,6 +57,7 @@ const pageHTML = `<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Baird</title>
 <link rel="icon" href="/icon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Semi+Condensed:wght@500;600;700&display=swap" rel="stylesheet">

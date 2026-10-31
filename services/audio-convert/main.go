@@ -90,6 +90,7 @@ func main() {
 
 	http.HandleFunc("/", s.index)
 	http.HandleFunc("/icon.svg", icon)
+	http.HandleFunc("/apple-touch-icon.png", appleTouchIcon)
 	http.HandleFunc("/api/state", s.state)
 	http.HandleFunc("/api/play", s.play)
 	http.HandleFunc("/api/cancel", s.cancel)
