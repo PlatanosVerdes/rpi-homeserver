@@ -196,8 +196,9 @@ services:
     labels:
       prometheus.probe: "http://bifrost:6879/healthz"
     restart: unless-stopped
-    mem_limit: 128m
-    memswap_limit: 128m
+    # About 20 MB idle; a viewer that lags may hold up to 96 MB of a channel (MACHINE_SIZE=small).
+    mem_limit: 320m
+    memswap_limit: 320m
     profiles: [bifrost, acestream, all]
     dns:
       - 1.1.1.1
