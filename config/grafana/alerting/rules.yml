@@ -1383,7 +1383,7 @@ groups:
         condition: C
         for: 15m
         labels:
-          severity: critical
+          severity: warning
         annotations:
           summary: The Wallapop session cannot mint a token any more
           description: >-
