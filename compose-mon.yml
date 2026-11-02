@@ -339,7 +339,8 @@ services:
     memswap_limit: 64m
     profiles: [tailscale-metrics, moni, all]
     volumes:
-      - /var/run/tailscale/tailscaled.sock:/var/run/tailscale/tailscaled.sock:ro
+      # The directory, not the socket file: tailscaled recreates the socket on every restart or update.
+      - /var/run/tailscale:/var/run/tailscale:ro
     environment:
       - TZ=${TZ}
       - TAILSCALE_API_KEY=${TAILSCALE_API_KEY}
