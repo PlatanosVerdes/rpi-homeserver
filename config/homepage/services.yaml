@@ -76,6 +76,13 @@
         description: Motorcycle routes for Google Maps
         server: my-docker
         container: apex
+    - pixelhub:
+        icon: https://pixelhub.{{HOMEPAGE_VAR_DOMAIN}}/favicon.svg
+        href: https://pixelhub.{{HOMEPAGE_VAR_DOMAIN}}
+        description: The Divoom pixel display, its modes, gallery and music
+        server: my-docker
+        container: pixelhub
+        siteMonitor: http://pixelhub:8000/healthz
 
 - Library:
     - Radarr:
