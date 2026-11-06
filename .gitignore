@@ -26,6 +26,7 @@ docker-compose.override.yml
 appdata/*
 config/homepage/*
 !config/homepage/*.yaml
+!config/homepage/icons/
 
 
 # Docker volumes and runtime data
