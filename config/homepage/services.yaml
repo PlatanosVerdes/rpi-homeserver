@@ -37,7 +37,7 @@
 
 - Live TV:
     - bifrost:
-        icon: https://bifrost.{{HOMEPAGE_VAR_DOMAIN}}/favicon.svg
+        icon: /icons/bifrost.svg
         href: https://bifrost.{{HOMEPAGE_VAR_DOMAIN}}
         description: Acestream channels, their state and what is playing
         server: my-docker
@@ -57,7 +57,7 @@
 
 - Apps:
     - Fantasy:
-        icon: https://fantasy.{{HOMEPAGE_VAR_DOMAIN}}/assets/favicon.png
+        icon: /icons/fantasy.png
         href: https://fantasy.{{HOMEPAGE_VAR_DOMAIN}}
         server: my-docker
         container: laliga-fantasy
@@ -246,7 +246,7 @@
         href: https://jellyfin.streamhalla.{{HOMEPAGE_VAR_DOMAIN}}
         description: The TV's Jellyfin, on streamhalla
     - bifrost:
-        icon: https://bifrost.{{HOMEPAGE_VAR_DOMAIN}}/favicon.svg
+        icon: /icons/bifrost.svg
         href: https://bifrost.streamhalla.{{HOMEPAGE_VAR_DOMAIN}}
         description: streamhalla's Acestream channels
     - Grafana:
