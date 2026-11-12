@@ -339,7 +339,7 @@ services:
     memswap_limit: 64m
     profiles: [tailscale-metrics, moni, all]
     volumes:
-      # The directory, not the socket file: tailscaled recreates the socket on every restart or update.
+      # The directory, not the socket file. Needs RuntimeDirectoryPreserve on tailscaled (host-setup.md).
       - /var/run/tailscale:/var/run/tailscale:ro
     environment:
       - TZ=${TZ}

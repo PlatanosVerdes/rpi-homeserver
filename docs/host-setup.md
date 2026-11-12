@@ -95,6 +95,16 @@ reaches the log that ends at a crash.
 - **Static IP:** reserve the Pi's address in the router's DHCP settings against its MAC, for wifi
   **and** cable, and put it in `STATIC_IP`. The Tailscale `/32` routes and Plex depend on those
   addresses not moving.
+- **Keep `/run/tailscale` across restarts.** systemd deletes and recreates a unit's
+  `RuntimeDirectory` on every restart, apt upgrades included, and `tailscale-metrics` keeps
+  pointing at the deleted directory until it is restarted. One drop-in keeps it:
+
+  ```bash
+  sudo mkdir -p /etc/systemd/system/tailscaled.service.d
+  printf '[Service]\nRuntimeDirectoryPreserve=yes\n' |
+      sudo tee /etc/systemd/system/tailscaled.service.d/preserve-runtime-dir.conf
+  sudo systemctl daemon-reload
+  ```
 
 ## 7. Directories the containers expect
 
