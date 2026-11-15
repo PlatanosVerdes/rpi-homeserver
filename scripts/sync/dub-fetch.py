@@ -198,7 +198,7 @@ class Qbit:
         request = urllib.request.Request(f"{self.base}/torrents/add", data=b"".join(parts),
                                          headers={"Content-Type": f"multipart/form-data; boundary={boundary}"})
         with self.opener.open(request, timeout=60) as r:
-            if r.read().strip() != b"Ok.":
+            if r.status != 204 and r.read().strip() != b"Ok.":
                 raise RuntimeError("qBittorrent did not take the torrent")
 
 
