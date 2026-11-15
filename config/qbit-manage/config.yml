@@ -70,6 +70,8 @@ tracker:
     tag: c411
   retrotoon:
     tag: retrotoon
+  nobs:
+    tag: nobs
   other:
     tag: other-tracker
 
@@ -210,10 +212,29 @@ share_limits:
     cleanup: true
     resume_torrent_after_change: false
 
+  # 96 h owed within 14 days of completing, and no ratio clears it, so a ratio limit would delete a
+  # torrent still owing hours. 168 h because their counter only adds announced time.
+  nobs:
+    priority: 7
+    include_all_tags:
+      - nobs
+    include_any_tags:
+      - noHL
+      - ratio
+      - cross-seed
+    exclude_any_tags:            # the manual override: this is what makes a tag protect a torrent
+      - keep
+      - keep-bonus
+    max_seeding_time: 168h
+    max_ratio: -1
+    min_last_active: 1d
+    cleanup: true
+    resume_torrent_after_change: false
+
   # 120 h owed, 180 here. Their site is the only source of truth for seed time and it runs behind
   # the client's by 9 to 23 h, so this is nearly triple the worst gap seen.
   digitalcore:
-    priority: 7
+    priority: 8
     include_all_tags:
       - digitalcore
     include_any_tags:
@@ -231,7 +252,7 @@ share_limits:
 
   # The floor, so a new site is covered from its first torrent until it earns its own numbers.
   private:
-    priority: 8
+    priority: 9
     include_all_tags:
       - private
     include_any_tags:
@@ -253,7 +274,7 @@ share_limits:
   # No noHL, no ratio and no min_last_active, deliberately: a public torrent is dropped even while
   # the library shares its file, because the point is leaving public swarms, not saving disk.
   public:
-    priority: 9
+    priority: 10
     exclude_any_tags:
       - private
       - keep

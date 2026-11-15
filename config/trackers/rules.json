@@ -143,5 +143,24 @@
     "_credit_note": "New accounts get 50 GB of upload credit that counts towards the ratio, so the 52.2 GB the site shows is 2.3 GB really uploaded plus the credit. Any headroom figure from this site is inflated by it and does not grow back.",
     "cross_seed": "explicitly allowed by the wiki",
     "_status_2026_08_24": "Searches go direct: the nordvpn SOCKS tag is off deliberately, because credentials that expire without warning produce a failure that reads like a ban. That leaves the ISP's match-night interception of Cloudflare addresses as an accepted outage, with scripts/ops/indexer-retry.py clearing Prowlarr's backoff within 15 min of the site answering again. The maintenance page it served on 2026-08-21 is gone, a search returns ~100 results. The account still cannot be read: the definition authenticates by API key, so there is no login for stats.py to reuse, and it exposes no freeleech facet either. See docs/private-trackers.md."
+  },
+  "nobs": {
+    "site": "https://nobs.rawsmoke.net",
+    "_rules_read": "2026-11-15, from the site's own H&R, Ratio and qBittorrent wiki pages",
+    "prowlarr_indexer": "NOBS",
+    "min_ratio": 0.4,
+    "_min_ratio_note": "Below 0.4 downloads are blocked; seeding still works and is the way out. The site's ratio includes the 50 GB signup credit, its 'ratio real' does not.",
+    "hit_and_run": {
+      "min_seed_hours": 96,
+      "min_ratio": null
+    },
+    "_hit_and_run_note": "96 h of seeding within 14 days, counted from completion, only once 50% or more was downloaded. Time is the only thing that clears it. Five H&R remove download rights. The site's Seedtime column (profile, 'Show more precision') is the truth and lags the client, which is why the nobs share_limits group seeds 168 h with no ratio limit.",
+    "tracker_hosts": [
+      "nobs.rawsmoke.net"
+    ],
+    "_tracker_hosts_note": "From the site's upload guide: https://nobs.rawsmoke.net/announce/<PID>.",
+    "signup_upload_credit_gb": 50,
+    "thanks_rule": "The bonus shop requires (thanks given / completed downloads) + (comments / 100) >= 1.0, so press thanks on every torrent downloaded.",
+    "client": "qBittorrent is the site's recommended client; it asks for queueing, ratio-stop and inactive-delete to be off, and none of them can stop a torrent here (no global limits; the queue has 100 upload slots)."
   }
 }

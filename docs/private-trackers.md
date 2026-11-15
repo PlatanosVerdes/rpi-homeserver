@@ -23,6 +23,7 @@ number everywhere:
 | DigitalCore | upload, plus a little for holding (leech bonus) | 120 h or 1:1, so it rotates faster than TorrentLeech |
 | C411 | upload only | their hit & run is disabled site-wide, so once quiet, past the margin |
 | retrotoon | seeding points, no ratio rule | their 72 h, then once quiet |
+| NOBS | upload, plus 50 GB signup credit | their 96 h, then once quiet; no ratio clears it |
 
 ## Three numbers, before touching anything
 
@@ -310,6 +311,23 @@ arrives **disabled** and is never joined; the network is updated at `PUT /api/ir
 | Account reading | by hand, in `config/trackers/readings.json` | the login sits behind Cloudflare Turnstile |
 | autobrr | indexer, passkey and IRC (`irc.retrotoon.world:6697`, bot mode) in place; filter **disabled** | cartoons only, and disk is the scarce thing. Enabling it is one toggle |
 
+## NOBS
+
+Spanish tracker, added for Castilian audio: nearly every release carries it.
+
+| Rule | Value |
+| :--- | :--- |
+| Seed time | **96 h per torrent, within 14 days** of completing; only once 50% or more was downloaded |
+| Minimum ratio | 0.4; below it downloads stop, seeding still counts |
+| Sanction | five hit & runs remove download rights |
+| Bonus shop | needs (thanks given / downloads) + (comments / 100) >= 1.0: press thanks on every download |
+
+| Configured here | Value | Why |
+| :--- | :--- | :--- |
+| Prowlarr | `NOBS` definition, API key, direct | no freeleech switch needed while the signup credit holds |
+| Seed goal | **168 h, no ratio limit**, on announce host `nobs.rawsmoke.net` | their counter adds only announced time; a ratio limit would delete a torrent still owing hours |
+| Account reading | none yet | the API key reaches torrents only; the site's Seedtime column is the truth |
+
 ## C411
 
 | Rule | Value |
@@ -491,7 +509,7 @@ places the port must agree ([media-policy.md](media-policy.md#the-bittorrent-por
 ## Indexers
 
 Eight public (1337x, The Pirate Bay, YTS, LimeTorrents, Knaben, NoNaMe Club, BigFANGroup, and Nyaa.si
-for anime) and four private (TorrentLeech, DigitalCore, C411, retrotoon.world).
+for anime) and five private (TorrentLeech, DigitalCore, C411, retrotoon.world, NOBS).
 
 Prowlarr's indexers live only in `appdata`: every one holds a passkey or an API key, and this repo is
 public. A backup of all of them, credentials included, is written to
