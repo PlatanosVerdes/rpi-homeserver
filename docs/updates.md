@@ -53,6 +53,13 @@ Caddy or audio-convert when a base version they take as a build arg changes.
   To lift the hold, drop the `allowedVersions` rule in `renovate.json` once the plugin ships a 12
   build, back up `appdata/jellyfin` on both nodes, and run a full library scan after the upgrade.
 
+- **qBittorrent stays on 5.2.x.** qbit_manage checks qBittorrent's version on every run and does
+  nothing when it is newer than the last one it supports, which its stable releases put at 5.2.4.
+  5.3.0 arrived through Renovate on 2026-10-23 and qbit_manage tagged and deleted nothing for three
+  weeks, while each run still reported success. To lift the hold, drop the `allowedVersions` rule
+  once a qbit_manage release lists 5.3 in its `SUPPORTED_VERSIONS.json` under `master`, and update
+  qbit_manage first.
+
 ## Adding a version line
 
 Put the annotation right above the line, with the image as compose names it:

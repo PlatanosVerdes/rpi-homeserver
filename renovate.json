@@ -35,6 +35,11 @@
       "allowedVersions": "/^10\\./"
     },
     {
+      "description": "Held on 5.2.x: qbit_manage refuses to run against a newer qBittorrent than it lists as supported, and its stable releases stop at 5.2.4",
+      "matchPackageNames": ["lscr.io/linuxserver/qbittorrent"],
+      "allowedVersions": "/^5\\.2\\./"
+    },
+    {
       "description": "Monitoring and CI only: a bad update here takes nothing at home down",
       "matchUpdateTypes": ["minor", "patch", "digest"],
       "matchPackageNames": [
