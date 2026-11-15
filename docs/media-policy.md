@@ -76,7 +76,7 @@ searched, because Castilian audio is worth +2000 and worth waiting for.
 
 | Tool | Job |
 | :--- | :--- |
-| Bazarr | Spanish subtitles for the whole library. `scripts/sync/bazarr-prune-subs.py` (05:40) removes the rows it keeps for files Radarr already replaced |
+| Bazarr | Spanish subtitles for the whole library. `scripts/sync/bazarr-prune-subs.py` (05:40) removes the rows it keeps for files Radarr already replaced, and asks Bazarr for Spanish when a file's embedded "Spanish" text track reads as another language. Bitmap tracks (PGS) cannot be read, so a file whose only Spanish is a PGS track with a wrong tag goes unnoticed |
 | Unpackerr | Extracts scene RAR releases, which the arrs cannot read and would leave in `importPending` forever. Archives stay so the torrent keeps seeding; the extracted copy is removed once imported |
 | Maintainerr | Deletes a watched film two days later ([lifecycle.md](lifecycle.md)) |
 | watch-next | Fetches the next episodes as you watch ([watch-next.md](watch-next.md)) |
