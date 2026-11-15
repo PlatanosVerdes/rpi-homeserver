@@ -54,3 +54,9 @@
 # Shares a lock with services/audio-convert, and waits for a conversion started from that page.
 # when: audio-convert
 0 5 * * * @PROJECT_DIR@/scripts/sync/audio-compat.py >> @PROJECT_DIR@/audio-compat.log 2>&1
+
+# 07:10, after audio-compat's 05:00-07:00 window: add-audio shares its lock and would only wait for it.
+# One film at a time: a new source is grabbed only when the last one has finished downloading, and
+# never past DUB_FETCH_BUDGET_GB of counted download. See docs/add-audio.md.
+# when: prowlarr
+10 7 * * * @PROJECT_DIR@/scripts/sync/dub-fetch.py >> @PROJECT_DIR@/dub-fetch.log 2>&1

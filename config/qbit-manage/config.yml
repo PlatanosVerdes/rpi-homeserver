@@ -46,11 +46,13 @@ directory:
   recycle_bin: /data/downloads/.RecycleBin
   orphaned_dir: /data/downloads/orphaned_data
 
-# Required as a list whenever tag_nohardlinks runs. Only radarr has torrents today; tv-sonarr is
-# listed so the day it does, it is covered.
+# Required as a list whenever tag_nohardlinks runs. tv-sonarr is listed so the day it has torrents,
+# it is covered. audio-source is dub-fetch's: never hardlinked, so noHL is what lets its tracker's group
+# seed it out and delete it.
 nohardlinks:
   - radarr
   - tv-sonarr
+  - audio-source
 
 # Every category qBittorrent holds has to be listed or the run refuses to start
 cat:
@@ -58,6 +60,7 @@ cat:
   tv-sonarr: /data/downloads
   prowlarr: /data/downloads
   manual: /data/downloads    # what torrent-drop adds, see the `manual` share_limits group below
+  audio-source: /data/downloads   # what dub-fetch grabs for its dub, see docs/add-audio.md
 
 tracker:
   torrentleech:
@@ -103,6 +106,9 @@ share_limits:
     priority: 1
     include_all_tags:
       - stalledDL
+    # NOBS counts a hit and run once half is downloaded, so a stall past 50% removed here is a strike.
+    exclude_any_tags:
+      - nobs
     max_last_active: 12h
     max_ratio: -1
     max_seeding_time: -1

@@ -38,7 +38,7 @@ and the everyday commands) is in [docs/overview.md](docs/overview.md).
 | | [lifecycle.md](docs/lifecycle.md) | One torrent from indexer to recycle bin, Maintainerr, orphans |
 | | [private-trackers.md](docs/private-trackers.md) | Per-site rules, the ratio loop, cross-seed, inbound, indexers |
 | | [audio-convert.md](docs/audio-convert.md) | Adding an AC3 track to files a client re-encodes |
-| | [add-audio.md](docs/add-audio.md) | Adding a dub from another release, synced |
+| | [add-audio.md](docs/add-audio.md) | Adding a dub from another release, synced, and fetching one each night |
 | | [watch-next.md](docs/watch-next.md) | Fetching the next episodes as you watch |
 | **Services** | [farnsworth.md](docs/farnsworth.md) | AceStream live TV, and handing a channel to VLC |
 | | [baird.md](docs/baird.md) | Which AceStream channels there are: the shared lists curated, plus pages and the engine catalogue |

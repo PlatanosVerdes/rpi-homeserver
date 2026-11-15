@@ -61,10 +61,43 @@ It re-runs itself in a systemd user scope capped at 1 GB, page cache included, w
 and the uptime probe called the Pi down for three minutes. It shares the conversion lock with
 `audio-compat.py` and the audio page, so it never runs alongside them.
 
+## Every night: dub-fetch.py
+
+`scripts/sync/dub-fetch.py` runs add-audio over the library without anyone picking films or sources,
+from cron at 07:10. Each pass:
+
+1. **Finished sources first.** A source it grabbed that has finished downloading goes through
+   add-audio. A refusal (no Castilian track, another cut) marks that release tried; the next pass
+   takes the next smallest one, up to three per film.
+2. **Then at most one grab**, and only when nothing it grabbed is still downloading. The film is the
+   newest Radarr import with no Spanish audio and an `.mkv` file; the release is the smallest live one
+   on the indexer (`NOBS`) for that IMDb id, freeleech first, at most 15 GB, never titled Latino. It goes
+   to qBittorrent in category and tag `audio-source`.
+3. **A week after a success**, the `.original` it left is deleted, but only once nothing else links
+   to it: while a torrent still seeds that inode, deleting it would free nothing and turn the
+   torrent noHL.
+
+What keeps it from costing the account anything:
+
+- **One film at a time**, so 58 missing films take 58 passes or more, never 58 downloads at once.
+- **A budget of counted download**, `DUB_FETCH_BUDGET_GB` (100 by default; freeleech counts zero).
+  NOBS stops downloads below a 0.4 ratio, and its 50 GB signup credit covers 125 GB of download
+  before anything has been uploaded. Past the budget it stops grabbing and says so; raise it once
+  the profile shows upload.
+- **It never removes a torrent.** `audio-source` is in qbit-manage's `nohardlinks` list, so a source
+  is tagged noHL, and the `nobs` share-limit group seeds it 168 h against the 96 h asked before
+  deleting it. A download stalled for five days is left in qBittorrent and the film moves on; the
+  `stalled` group skips `nobs`, because NOBS counts a hit and run once half is downloaded.
+- A film with no usable release is searched again after 30 days, at most five searches a pass.
+
+Everything it did goes to the alert Telegram chat and `appdata/dub-fetch/state.json`;
+`dub-fetch.py --status` prints it and `--dry-run` says what the next pass would grab. Radarr's own
+grabs from NOBS (it is an ordinary indexer there too) are not counted in its budget.
+
 ## Tests
 
 ```bash
-python3 -m unittest scripts/sync/test_add_audio.py
+python3 -m unittest scripts/sync/test_add_audio.py scripts/sync/test_dub_fetch.py
 ```
 
 The sync maths on synthetic loudness curves, track choice, and three whole runs on generated
