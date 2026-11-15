@@ -173,7 +173,8 @@ class Qbit:
                                         "password": env.get("QBIT_PASSWORD", "")}).encode()
         with self.opener.open(urllib.request.Request(f"{self.base}/auth/login", data=login,
                                                      headers={"Referer": self.base}), timeout=30) as r:
-            if r.read().strip() != b"Ok.":
+            # 5.2 answers 204 with no body, older versions 200 "Ok."; a refusal is 200 "Fails.".
+            if r.status != 204 and r.read().strip() != b"Ok.":
                 raise SystemExit("qBittorrent refused the login")
 
     def torrent(self, torrent_hash):
