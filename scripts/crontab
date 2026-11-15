@@ -26,8 +26,9 @@
 
 # Bazarr keeps the subtitle tracks of a file Radarr has already replaced, and a language it wrongly
 # believes is embedded is never searched for. Its own 04:00 index only inserts, so this runs after
-# it and takes the rows away. 05:40 and not inside apply.sh because a full pass is ~55s of ffprobe
-# over every media file, and Plex holds 02:00-05:00 on the same platters (docs/lifecycle.md).
+# it and takes the rows away; it also asks Bazarr for languages a file's mislabelled tracks hide. 05:40
+# and not inside apply.sh because a full pass is ~55s of ffprobe over every media file plus a sample
+# of each new file's text tracks, and Plex holds 02:00-05:00 on the same platters (docs/lifecycle.md).
 # when: bazarr
 40 5 * * * @PROJECT_DIR@/scripts/sync/bazarr-prune-subs.py >> @PROJECT_DIR@/bazarr-prune-subs.log 2>&1
 
