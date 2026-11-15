@@ -821,7 +821,7 @@ groups:
       #
       # The timestamp comes from its own run_end webhook (services/pi-metrics/qbm.go) and the
       # interval from the next_run it reports, so four missed runs is late without a threshold
-      # written here. The interval guard keeps a run that reported no next_run from reading as
+      # written here. A run that posts no counts (it stopped before its first command) is not a run. The interval guard keeps a run that reported no next_run from reading as
       # "overdue by four times zero".
       - uid: homelab-qbit-manage-overdue
         title: 'qbit-manage has stopped running'
