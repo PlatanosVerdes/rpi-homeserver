@@ -92,15 +92,16 @@ that gap, not a guess. Lower priority is evaluated first.
 
 | Group (priority) | The site asks | Configured | Why |
 | :--- | :--- | :--- | :--- |
-| stalled (1) | — | removed 12 h after the last byte moved | Before its tracker's group, which would wait forever. A download that finds a seeder leaves the group |
+| stalled (1) | — | removed 12 h after the last byte moved | Before its tracker's group, which would wait forever. A download that finds a seeder leaves the group. Never a `nobs` torrent: NOBS counts a hit and run from 50% downloaded |
 | cross-seed (2) | — | 15 d, no ratio limit | It downloaded nothing, so ratio is upload over zero and any limit fires on the first byte served. 15 d is the longest of the four sites |
 | manual (3) | nothing | 15 d, no ratio limit, **file never deleted** | `cleanup: false`: the term is served, qBittorrent stops the torrent, the file stays. Above `public`, which would take a manual public download after 2 h |
 | torrentleech (4) | 240 h or 1:1 | 15 d, ratio 1.2 | The widest clock gap measured |
 | retrotoon (5) | 72 h, no ratio rule | 120 h, no ratio limit | Only time clears there, so `max_ratio: -1` |
 | c411 (6) | 72 h, 24 h grace | 150 h, ratio 1.0 | Their H&R is disabled site-wide, so a thinner margin is affordable |
-| digitalcore (7) | 120 h from 10% progress | 180 h, ratio 1.0 | Nearly triple the worst gap on their own My Seeds page |
-| private (8) | — | 10 d, ratio 1.0 | The floor, so a new site is covered from its first torrent |
-| public (9) | — | 2 h, no ratio limit | Selected as "not tagged private". Dropped even while the library shares the file: the point is leaving public swarms |
+| nobs (7) | 96 h within 14 days, from 50% downloaded | 168 h, no ratio limit | Only time clears there, and five hit and runs end downloading |
+| digitalcore (8) | 120 h from 10% progress | 180 h, ratio 1.0 | Nearly triple the worst gap on their own My Seeds page |
+| private (9) | — | 10 d, ratio 1.0 | The floor, so a new site is covered from its first torrent |
+| public (10) | — | 2 h, no ratio limit | Selected as "not tagged private". Dropped even while the library shares the file: the point is leaving public swarms |
 
 `min_last_active: 1d` is the third condition on every private group: a torrent still moving bytes is
 still paying, and on a freeleech every byte up is profit. Anything that trickles is kept; what stops

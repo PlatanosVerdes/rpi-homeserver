@@ -103,6 +103,9 @@ share_limits:
     priority: 1
     include_all_tags:
       - stalledDL
+    # NOBS counts a hit and run once half is downloaded, so a stall past 50% removed here is a strike.
+    exclude_any_tags:
+      - nobs
     max_last_active: 12h
     max_ratio: -1
     max_seeding_time: -1
