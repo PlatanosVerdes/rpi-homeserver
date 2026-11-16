@@ -135,20 +135,26 @@ const pageHTML = `<!doctype html>
   .more.open { display:block; }
   .more b { color:var(--ink); font-weight:500; }
 
-  .picker { margin-top:1.25rem; padding:.85rem; border:1px solid var(--line); border-radius:8px; background:var(--panel); }
-  .picker .label { display:block; font-size:12px; font-weight:500; color:var(--dim); margin-bottom:.5rem; }
-  .combo { position:relative; }
-  .combo input { width:100%; font:inherit; font-size:15px; font-weight:500; color:var(--ink); background:var(--bg);
-                 border:1px solid var(--line); border-radius:6px; padding:.6rem 7.5rem .6rem .75rem; cursor:pointer; text-overflow:ellipsis; }
-  .combo input:hover { border-color:var(--faint); }
-  .combo input:focus { outline:none; border-color:var(--accent); cursor:text; }
-  .combo-count { position:absolute; right:2.1rem; top:50%; transform:translateY(-50%); color:var(--dim); font-size:12px;
+  .group.catalog { overflow:visible; }
+  .toolbar { display:flex; gap:.5rem; padding:.6rem .85rem; }
+  .toolbar input { height:2.25rem; font:inherit; font-size:13px; color:var(--ink); background:var(--bg);
+                   border:1px solid var(--line); border-radius:6px; }
+  .toolbar input:hover { border-color:var(--faint); }
+  .toolbar input:focus { outline:none; border-color:var(--accent); }
+  .toolnote { display:flex; gap:.75rem; padding:0 .85rem .45rem; color:var(--faint); font-size:12px; border-bottom:1px solid var(--line); }
+  .toolnote .when { margin-left:auto; }
+  .sr { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+  .combo { position:relative; flex:0 0 15rem; }
+  .combo input { width:100%; font-weight:500; padding:0 3.4rem 0 2.6rem; cursor:pointer; text-overflow:ellipsis; }
+  .combo input:focus { cursor:text; }
+  .combo-prefix { position:absolute; left:.7rem; top:50%; transform:translateY(-50%); color:var(--dim); pointer-events:none; }
+  .combo-count { position:absolute; right:1.9rem; top:50%; transform:translateY(-50%); color:var(--dim); font-size:12px;
                  pointer-events:none; white-space:nowrap; }
   .combo[data-open] .combo-count { display:none; }
-  .combo-caret { position:absolute; right:.9rem; top:50%; width:7px; height:7px; margin-top:-6px; pointer-events:none;
+  .combo-caret { position:absolute; right:.8rem; top:50%; width:7px; height:7px; margin-top:-6px; pointer-events:none;
                  border-right:1.5px solid var(--dim); border-bottom:1.5px solid var(--dim); transform:rotate(45deg); }
   .combo[data-open] .combo-caret { transform:rotate(-135deg); margin-top:-2px; }
-  .combo ul { position:absolute; z-index:10; left:0; right:0; top:calc(100% + 4px); max-height:min(21rem, 60vh); overflow-y:auto;
+  .combo ul { position:absolute; z-index:10; left:0; width:max(100%, 19rem); top:calc(100% + 4px); max-height:min(21rem, 60vh); overflow-y:auto;
               margin:0; padding:4px; list-style:none; background:var(--panel); border:1px solid var(--line); border-radius:8px;
               box-shadow:0 10px 30px rgba(0,0,0,.5); }
   .combo ul[hidden] { display:none; }
@@ -162,17 +168,10 @@ const pageHTML = `<!doctype html>
   .combo li[aria-selected=true] .name { color:var(--accent); }
   .combo li.head { padding:.45rem .6rem .2rem; font-size:11px; font-weight:500; color:var(--faint); }
   .combo li.nothing { padding:.6rem; color:var(--faint); }
-  input[type=search] { width:100%; font:inherit; font-size:14px; color:var(--ink); background:var(--bg); border:1px solid var(--line);
-                       border-radius:6px; padding:.55rem .7rem; }
-  input[type=search]:focus { outline:none; border-color:var(--faint); }
+  .toolbar input[type=search] { flex:1; min-width:0; padding:0 .7rem; }
   .group[hidden] { display:none; }
   .group h2 .when { margin-left:auto; color:var(--faint); font-weight:400; }
   #dub-jobs > .row:first-child, #dub-films > .row:first-child { border-top:0; }
-  .cardhead { display:flex; flex-wrap:wrap; align-items:center; gap:.4rem .6rem; min-height:2.6rem;
-              padding:.4rem .5rem .4rem .85rem; border-bottom:1px solid var(--line); }
-  .group .cardhead h2 { padding:0; border:0; }
-  .cardhead .when { color:var(--faint); font-size:12px; }
-  .cardhead input[type=search] { margin-left:auto; width:16rem; padding:.35rem .6rem; font-size:13px; }
   .acts { grid-column:4 / 7; display:flex; justify-content:flex-end; gap:.4rem; }
   .acts.narrow { grid-column:6 / 7; }
   .acts button { white-space:nowrap; }
@@ -200,10 +199,12 @@ const pageHTML = `<!doctype html>
     .meta .c { text-align:left; }
     .row > button { grid-column:3; grid-row:1 / span 2; }
     .row > .acts, .row > .acts.narrow { grid-column:2 / 4; justify-content:flex-start; margin-top:.4rem; }
-    .cardhead input[type=search] { flex:1 0 100%; width:auto; margin:0 0 .1rem; }
+    .toolbar { flex-direction:column; }
+    .combo, .toolbar input[type=search] { flex:none; }
+    .combo ul { width:100%; }
     .more { padding-left:calc(.85rem + 14px + .75rem); }
     .tabs { margin-left:0; flex:1 0 100%; }
-    .combo input, input[type=search], .cardhead input[type=search] { font-size:16px; }
+    .toolbar input { font-size:16px; height:2.5rem; }
     .tabs a { flex:1; justify-content:center; }
   }
   @media (prefers-reduced-motion: reduce) { .bar i { transition:none; } }
@@ -222,28 +223,25 @@ const pageHTML = `<!doctype html>
   <p id="msg"></p>
 
   <section class="view" id="view-add">
-    <div class="picker">
-      <label class="label" id="lang-label" for="lang-input">Language to add</label>
-      <div class="combo" id="lang-combo">
-        <input id="lang-input" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false"
-               aria-controls="lang-list" autocomplete="off" autocapitalize="off" spellcheck="false">
-        <span class="combo-count" id="lang-count"></span>
-        <span class="combo-caret" aria-hidden="true"></span>
-        <ul id="lang-list" role="listbox" aria-labelledby="lang-label" hidden></ul>
-      </div>
-    </div>
-
     <div class="group" id="dub-jobs-group" hidden>
       <h2>Requests <span class="n" id="dub-count"></span></h2>
       <div id="dub-jobs"></div>
     </div>
 
-    <div class="group">
-      <div class="cardhead">
-        <h2><span id="dub-title">Films</span> <span class="n" id="dub-films-count"></span></h2>
-        <span class="when" id="dub-when"></span>
+    <div class="group catalog">
+      <div class="toolbar">
+        <div class="combo" id="lang-combo">
+          <label class="sr" id="lang-label" for="lang-input">Language to add</label>
+          <span class="combo-prefix" aria-hidden="true">Add:</span>
+          <input id="lang-input" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false"
+                 aria-controls="lang-list" aria-describedby="lang-count" autocomplete="off" autocapitalize="off" spellcheck="false">
+          <span class="combo-count" id="lang-count"></span>
+          <span class="combo-caret" aria-hidden="true"></span>
+          <ul id="lang-list" role="listbox" aria-labelledby="lang-label" hidden></ul>
+        </div>
         <input type="search" id="dub-filter" placeholder="Search films" aria-label="Search films" autocomplete="off">
       </div>
+      <div class="toolnote"><span id="dub-matches"></span><span class="when" id="dub-when"></span></div>
       <div id="dub-films"></div>
     </div>
 
@@ -721,8 +719,6 @@ function comboEls() {
     list: document.getElementById("lang-list"), count: document.getElementById("lang-count") };
 }
 
-function filmsLabel(n) { return n ? n + (n === 1 ? " film" : " films") + " without it" : "none missing"; }
-
 // The options in display order: recent picks first (only before typing), then the rest with films to fix
 // by name, then the languages every film already has.
 function comboOptions(codes) {
@@ -739,7 +735,9 @@ function comboOptions(codes) {
 function renderCombo(codes) {
   var e = comboEls();
   e.input.disabled = !codes.length;
-  e.count.textContent = dubLang ? filmsLabel(missingCount(dubLang)) : "";
+  var missing = dubLang ? missingCount(dubLang) : 0;
+  e.count.textContent = dubLang ? String(missing) : "";
+  e.count.setAttribute("aria-label", plural(missing, "film", "films") + " without it");
   if (!combo.open) {
     var name = dubLang ? langName(dubLang) : "No languages yet";
     if (e.input.value !== name) e.input.value = name;
@@ -889,10 +887,8 @@ function renderDub() {
   var needle = fold(filter.value.trim());
   var missing = (dub.films || []).filter(function (f) { return (f.missing || []).indexOf(dubLang) >= 0; });
   var shown = missing.filter(function (f) { return !needle || fold(f.title).indexOf(needle) >= 0; });
-  filter.placeholder = missing.length ? "Search " + plural(missing.length, "film", "films") : "Search films";
-  document.getElementById("dub-title").textContent = dubLang ? "Without " + langName(dubLang) : "Films";
-  document.getElementById("dub-films-count").textContent = missing.length ?
-    (needle ? shown.length + " of " + missing.length : String(missing.length)) : "";
+  filter.placeholder = missing.length ? "Search " + plural(missing.length, "film", "films") + " without " + langName(dubLang) : "Search films";
+  document.getElementById("dub-matches").textContent = needle && missing.length ? shown.length + " of " + missing.length + " match" : "";
   document.getElementById("dub-when").textContent = dub.error ? dub.error : dub.time ? "listed " + when(dub.time) : "not listed yet";
   var films = document.getElementById("dub-films");
   films.textContent = "";
