@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 	"slices"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -240,10 +239,7 @@ func (s *server) run(j job) (outcome, bool) {
 	case last.Event == "failed":
 		return outcome{Time: now, Result: "failed", Reason: last.Reason}, false
 	}
-	reason := strings.TrimSpace(stderr.String())
-	if lines := strings.Split(reason, "\n"); len(lines) > 0 {
-		reason = lines[len(lines)-1]
-	}
+	reason := lastLine(stderr.String())
 	if reason == "" {
 		reason = fmt.Sprintf("audio-compat ended without a result (%v)", err)
 	}

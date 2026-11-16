@@ -228,3 +228,9 @@ func writeAtomic(file string, raw []byte) error {
 	}
 	return os.Rename(tmp.Name(), file)
 }
+
+// lastLine is the last line a script wrote to stderr: the exception, after a Python traceback.
+func lastLine(text string) string {
+	lines := strings.Split(strings.TrimSpace(text), "\n")
+	return strings.TrimSpace(lines[len(lines)-1])
+}

@@ -1,0 +1,18 @@
+{
+ "c411": {
+  "prowlarr_indexer": "C411",
+  "hit_and_run": {}
+ },
+ "nobs": {
+  "prowlarr_indexer": "NOBS",
+  "hit_and_run": {
+   "starts_at_progress": 0.5
+  }
+ },
+ "tl": {
+  "prowlarr_indexer": "TorrentLeech",
+  "hit_and_run": {
+   "min_seed_hours": 240
+  }
+ }
+}

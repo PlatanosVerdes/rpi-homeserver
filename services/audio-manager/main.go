@@ -1,8 +1,9 @@
 // audio-manager has two jobs. Re-encode lists the files a client had its audio re-encoded on, with
 // the plan pi-metrics worked out for each, and converts one when asked: pi-metrics does the thinking
 // (which track, what it costs, whether a file change can help at all), scripts/sync/audio-compat.py
-// does the work, the same script the night run uses. Add audio lists the films that lack a language
-// and requests a dub for one, which scripts/sync/dub-fetch.py fetches and adds from cron.
+// does the work, the same script the night run uses. Add audio lists the films Radarr holds that lack
+// a language, searches the indexers for a release with that dub, probes and downloads it through
+// qBittorrent, and hands it to scripts/sync/add-audio.py, which aligns the track and adds it.
 package main
 
 import (
@@ -49,7 +50,7 @@ type server struct {
 	running *progress
 	waiting map[string]any
 	wake    chan struct{}
-	dubMu   sync.Mutex // one add-audio request check-and-write at a time
+	dubs    *dubService
 
 	scanEvery time.Duration
 	rescan    chan struct{}
@@ -89,6 +90,11 @@ func main() {
 	}
 	s.load()
 	s.loadScan()
+	dubs, err := setupDubs(s)
+	if err != nil {
+		log.Fatalf("audio-manager: %v", err)
+	}
+	s.dubs = dubs
 
 	http.HandleFunc("/", s.index)
 	http.HandleFunc("/icon.svg", icon)
@@ -99,12 +105,29 @@ func main() {
 	http.HandleFunc("/api/add-audio", s.addAudio)
 	http.HandleFunc("/api/add-audio/cancel", s.cancelAddAudio)
 	http.HandleFunc("/api/add-audio/check", s.checkAddAudio)
+	http.HandleFunc("/api/add-audio/checks", s.checkProgress)
 
 	go s.worker()
 	go s.scanner()
+	s.dubs.start()
 
 	log.Printf("audio-manager: %s, ledger %s, library %s", listenAddr, s.ledgerFile, s.dataRoot)
 	log.Fatal(http.ListenAndServe(listenAddr, nil))
+}
+
+// setupDubs reads Add audio's configuration and languages, failing at start on a bad value.
+func setupDubs(s *server) (*dubService, error) {
+	cfg, err := dubConfigFromEnv(s.stateDir, s.dataRoot, s.python)
+	if err != nil {
+		return nil, err
+	}
+	langs, err := loadLanguages(cfg.languagesFile)
+	if err != nil {
+		return nil, err
+	}
+	d := newDubService(cfg, langs)
+	d.load()
+	return d, nil
 }
 
 func (s *server) index(w http.ResponseWriter, r *http.Request) {
@@ -240,7 +263,7 @@ func (s *server) state(w http.ResponseWriter, r *http.Request) {
 		"speed":     speed,
 		"free":      freeBytes(filepath.Join(s.dataRoot, libraries[0])),
 		"minFree":   minFreeBytes,
-		"add_audio": s.addAudioState(),
+		"add_audio": s.dubs.payload(),
 	}
 	if ledgerErr != nil {
 		payload["error"] = "pi-metrics' ledger is unreadable: " + ledgerErr.Error()

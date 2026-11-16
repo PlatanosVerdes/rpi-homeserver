@@ -1,0 +1,356 @@
+{
+ "_doc": "The languages a dub can be added in, read by add-audio.py and services/audio-manager. aliases: how files tag the track; words: how Radarr and release titles name it; locale: an indexer in that language is likelier to carry it; rejected: track or release titles of a variant that is not this one; preferred: track titles to pick first. Order is the order shown.",
+ "languages": {
+  "spa": {
+   "name": "Castellano",
+   "tag": "es-ES",
+   "locale": "es",
+   "aliases": [
+    "es",
+    "es-es",
+    "esp",
+    "spa"
+   ],
+   "words": [
+    "cast",
+    "castellano",
+    "esp",
+    "español",
+    "spanish"
+   ],
+   "rejected": "latin|\\blat\\b|m[eé]x|neutr",
+   "preferred": "castellano|espa[nñ]a|\\bcast\\b|europe"
+  },
+  "cat": {
+   "name": "Català",
+   "tag": "ca",
+   "locale": "ca",
+   "aliases": [
+    "ca",
+    "cat"
+   ],
+   "words": [
+    "catala",
+    "catalan",
+    "català"
+   ]
+  },
+  "eus": {
+   "name": "Euskara",
+   "tag": "eu",
+   "locale": "eu",
+   "aliases": [
+    "eu",
+    "eus"
+   ],
+   "words": [
+    "basque",
+    "euskara",
+    "euskera"
+   ]
+  },
+  "glg": {
+   "name": "Galego",
+   "tag": "gl",
+   "locale": "gl",
+   "aliases": [
+    "gl",
+    "glg"
+   ],
+   "words": [
+    "galego",
+    "galician",
+    "gallego"
+   ]
+  },
+  "eng": {
+   "name": "English",
+   "tag": "en",
+   "locale": "en",
+   "aliases": [
+    "en",
+    "eng"
+   ],
+   "words": [
+    "english"
+   ]
+  },
+  "fra": {
+   "name": "Français",
+   "tag": "fr",
+   "locale": "fr",
+   "aliases": [
+    "fr",
+    "fra",
+    "fre"
+   ],
+   "words": [
+    "francais",
+    "français",
+    "french",
+    "vff"
+   ],
+   "rejected": "qu[eé]bec|\\bvfq\\b|canad"
+  },
+  "ita": {
+   "name": "Italiano",
+   "tag": "it",
+   "locale": "it",
+   "aliases": [
+    "it",
+    "ita"
+   ],
+   "words": [
+    "italian",
+    "italiano"
+   ]
+  },
+  "deu": {
+   "name": "Deutsch",
+   "tag": "de",
+   "locale": "de",
+   "aliases": [
+    "de",
+    "deu",
+    "ger"
+   ],
+   "words": [
+    "deutsch",
+    "german"
+   ]
+  },
+  "por": {
+   "name": "Português",
+   "tag": "pt-PT",
+   "locale": "pt",
+   "aliases": [
+    "por",
+    "pt"
+   ],
+   "words": [
+    "portugues",
+    "portuguese",
+    "português"
+   ],
+   "rejected": "brasil|brazil|\\bpt-br\\b"
+  },
+  "nld": {
+   "name": "Nederlands",
+   "tag": "nl",
+   "locale": "nl",
+   "aliases": [
+    "dut",
+    "nl",
+    "nld"
+   ],
+   "words": [
+    "dutch",
+    "nederlands"
+   ]
+  },
+  "swe": {
+   "name": "Svenska",
+   "tag": "sv",
+   "locale": "sv",
+   "aliases": [
+    "sv",
+    "swe"
+   ],
+   "words": [
+    "svenska",
+    "swedish"
+   ]
+  },
+  "nor": {
+   "name": "Norsk",
+   "tag": "no",
+   "locale": "no",
+   "aliases": [
+    "no",
+    "nor"
+   ],
+   "words": [
+    "norsk",
+    "norwegian"
+   ]
+  },
+  "dan": {
+   "name": "Dansk",
+   "tag": "da",
+   "locale": "da",
+   "aliases": [
+    "da",
+    "dan"
+   ],
+   "words": [
+    "danish",
+    "dansk"
+   ]
+  },
+  "fin": {
+   "name": "Suomi",
+   "tag": "fi",
+   "locale": "fi",
+   "aliases": [
+    "fi",
+    "fin"
+   ],
+   "words": [
+    "finnish",
+    "suomi"
+   ]
+  },
+  "pol": {
+   "name": "Polski",
+   "tag": "pl",
+   "locale": "pl",
+   "aliases": [
+    "pl",
+    "pol"
+   ],
+   "words": [
+    "polish",
+    "polski"
+   ]
+  },
+  "ces": {
+   "name": "Čeština",
+   "tag": "cs",
+   "locale": "cs",
+   "aliases": [
+    "ces",
+    "cs",
+    "cze"
+   ],
+   "words": [
+    "czech",
+    "čeština"
+   ]
+  },
+  "hun": {
+   "name": "Magyar",
+   "tag": "hu",
+   "locale": "hu",
+   "aliases": [
+    "hu",
+    "hun"
+   ],
+   "words": [
+    "hungarian",
+    "magyar"
+   ]
+  },
+  "ell": {
+   "name": "Ελληνικά",
+   "tag": "el",
+   "locale": "el",
+   "aliases": [
+    "el",
+    "ell",
+    "gre"
+   ],
+   "words": [
+    "greek"
+   ]
+  },
+  "tur": {
+   "name": "Türkçe",
+   "tag": "tr",
+   "locale": "tr",
+   "aliases": [
+    "tr",
+    "tur"
+   ],
+   "words": [
+    "turkish",
+    "türkçe"
+   ]
+  },
+  "rus": {
+   "name": "Русский",
+   "tag": "ru",
+   "locale": "ru",
+   "aliases": [
+    "ru",
+    "rus"
+   ],
+   "words": [
+    "russian"
+   ]
+  },
+  "ukr": {
+   "name": "Українська",
+   "tag": "uk",
+   "locale": "uk",
+   "aliases": [
+    "uk",
+    "ukr"
+   ],
+   "words": [
+    "ukrainian"
+   ]
+  },
+  "ara": {
+   "name": "العربية",
+   "tag": "ar",
+   "locale": "ar",
+   "aliases": [
+    "ar",
+    "ara"
+   ],
+   "words": [
+    "arabic"
+   ]
+  },
+  "hin": {
+   "name": "हिन्दी",
+   "tag": "hi",
+   "locale": "hi",
+   "aliases": [
+    "hi",
+    "hin"
+   ],
+   "words": [
+    "hindi"
+   ]
+  },
+  "jpn": {
+   "name": "日本語",
+   "tag": "ja",
+   "locale": "ja",
+   "aliases": [
+    "ja",
+    "jpn"
+   ],
+   "words": [
+    "japanese"
+   ]
+  },
+  "kor": {
+   "name": "한국어",
+   "tag": "ko",
+   "locale": "ko",
+   "aliases": [
+    "ko",
+    "kor"
+   ],
+   "words": [
+    "korean"
+   ]
+  },
+  "zho": {
+   "name": "中文",
+   "tag": "zh",
+   "locale": "zh",
+   "aliases": [
+    "chi",
+    "zh",
+    "zho"
+   ],
+   "words": [
+    "chinese",
+    "mandarin"
+   ]
+  }
+ }
+}

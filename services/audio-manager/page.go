@@ -180,6 +180,7 @@ const pageHTML = `<!doctype html>
   .check .yes { color:var(--accent); font-weight:500; }
   .check .warn { color:var(--warn); }
   .check .age { color:var(--faint); }
+  .check .bar { flex:0 0 8rem; align-self:center; }
   .check button { padding:0; border:0; background:none; color:var(--dim); font-size:12px; text-decoration:underline dotted;
                   text-underline-offset:2px; }
   .check button:hover { color:var(--ink); }
@@ -246,9 +247,9 @@ const pageHTML = `<!doctype html>
     </div>
 
     <footer>
-      Add asks <code>dub-fetch.py</code> for that language. It runs every minute: it looks for a release with
-      the dub, checks the track, and adds it to the film beside the audio it already has. Cancel stops it at any point.
-      Check only asks the indexers what they have for that film, within a minute or so, and downloads nothing.
+      Add searches every indexer for a release with that dub, one film at a time: it reads the first megabytes of
+      each candidate to see its tracks, downloads the first that has the language, and adds it to the film beside the
+      audio it already has. Cancel stops it at any point. Check only asks the indexers what they have, and downloads nothing.
     </footer>
   </section>
 
@@ -543,7 +544,7 @@ function historyRow(h) {
   return row;
 }
 
-var DUB_STATUS = { requested: "Requested", cancelling: "Cancelling", queued: "Waiting for dub-fetch",
+var DUB_STATUS = { requested: "Requested", cancelling: "Cancelling", queued: "Waiting",
   trying: "Searching", probing: "Checking the dub", downloading: "Downloading", done: "Added",
   failed: "Failed", cancelled: "Cancelled" };
 
@@ -553,7 +554,7 @@ var dub = null, dubLang = "";
 
 function dubKey(id, lang) { return id + "-" + lang; }
 
-// What is under way for each film and language: a job dub-fetch runs, or a request it has not taken yet.
+// What is under way for each film and language: a job, or a request the service has not taken yet.
 function dubPending() {
   var out = {};
   (dub.jobs || []).forEach(function (j) { if (dubActive(j.status)) out[dubKey(j.movie_id, j.lang)] = j.status; });
@@ -628,6 +629,45 @@ function checkSummary(check, name) {
 
 var bestOpen = {};
 
+// A check under way: a thin bar of the indexers that answered, and what they found so far.
+function checkProgressLine(check) {
+  var line = el("div", "check");
+  if (check.status === "queued") {
+    line.appendChild(el("span", "", "Queued"));
+    return line;
+  }
+  var bar = el("div", "bar"), fill = el("i");
+  fill.style.width = (check.total ? Math.round(check.done / check.total * 100) : 0) + "%";
+  bar.appendChild(fill);
+  line.appendChild(bar);
+  line.appendChild(el("span", "", check.total ?
+    "Searching " + check.done + " of " + plural(check.total, "indexer", "indexers") + ", " +
+    plural(check.releases || 0, "release", "releases") + " so far" : "Searching the indexers"));
+  return line;
+}
+
+var checkTimer = null;
+
+function checksUnderway() {
+  var checks = (dub && dub.checks) || {};
+  return Object.keys(checks).some(function (k) { return checks[k].status === "queued" || checks[k].status === "running"; });
+}
+
+// While a check runs its progress is asked for every second, without waiting for the full refresh.
+function watchChecks() {
+  if (checkTimer || !checksUnderway()) return;
+  checkTimer = setTimeout(function () {
+    checkTimer = null;
+    if (document.hidden) { watchChecks(); return; }
+    fetch("/api/add-audio/checks").then(function (r) { return r.json(); }).then(function (d) {
+      dub.checks = dub.checks || {};
+      Object.keys(d.checks || {}).forEach(function (k) { dub.checks[k] = d.checks[k]; });
+      renderDub();
+      watchChecks();
+    }).catch(function () { setTimeout(watchChecks, 5000); });
+  }, 1000);
+}
+
 function checkLine(key, check) {
   var line = el("div", "check");
   var summary = checkSummary(check, langName(dubLang));
@@ -669,8 +709,9 @@ function dubFilmRow(f, pending) {
   if (status) meta.appendChild(el("div", "c span2", DUB_STATUS[status] || status));
   var acts = el("div", status ? "acts narrow" : "acts");
   if (!status) {
-    var checking = (dub.checking || []).indexOf(key) >= 0;
-    var check = el("button", "", checking ? "Checking…" : (dub.checks || {})[key] ? "Re-check" : "Check");
+    var result = (dub.checks || {})[key];
+    var checking = !!result && (result.status === "queued" || result.status === "running");
+    var check = el("button", "", checking ? "Checking…" : result ? "Re-check" : "Check");
     check.disabled = checking;
     check.title = "Ask the indexers what they have, without downloading";
     check.onclick = function () { dubPost("/api/add-audio/check", f.id, dubLang, check); };
@@ -683,8 +724,8 @@ function dubFilmRow(f, pending) {
   }
   if (acts.childNodes.length) row.appendChild(acts);
   frag.appendChild(row);
-  var result = (dub.checks || {})[key];
-  if (result) frag.appendChild(checkLine(key, result));
+  var found = (dub.checks || {})[key];
+  if (found) frag.appendChild(found.status === "queued" || found.status === "running" ? checkProgressLine(found) : checkLine(key, found));
   return frag;
 }
 
@@ -892,7 +933,7 @@ function renderDub() {
   document.getElementById("dub-when").textContent = dub.error ? dub.error : dub.time ? "listed " + when(dub.time) : "not listed yet";
   var films = document.getElementById("dub-films");
   films.textContent = "";
-  if (!shown.length) films.appendChild(el("p", "empty", !dub.time ? "dub-fetch has not listed the library yet." :
+  if (!shown.length) films.appendChild(el("p", "empty", !dub.time ? "Radarr has not listed the films yet." :
     needle ? "No title matches." : "Every film has this language."));
   else shown.forEach(function (f) { films.appendChild(dubFilmRow(f, pending)); });
 }
@@ -953,6 +994,7 @@ function refresh() {
 
     dub = d.add_audio || {};
     renderDub();
+    watchChecks();
 
     clearTimeout(timer);
     timer = setTimeout(tick, d.running || (d.queue && d.queue.length) ? 1000 : 10000);

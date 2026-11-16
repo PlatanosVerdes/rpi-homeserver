@@ -7,87 +7,11 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"sort"
 	"strconv"
 	"strings"
-	"time"
 )
 
-// Adding a dub is scripts/sync/dub-fetch.py's job, run by cron on the host. The page and the script
-// share nothing but the files in add-audio/: the script lists the films and its jobs, the page drops
-// one request file per film and language (to add it, or only to check what the indexers offer), and the
-// script consumes it.
-
-type dubFilm struct {
-	ID      int64    `json:"id"`
-	Title   string   `json:"title"`
-	Year    int      `json:"year"`
-	IMDb    string   `json:"imdb"`
-	Audio   string   `json:"audio"`
-	Missing []string `json:"missing"`
-}
-
-type dubFilms struct {
-	Time      float64           `json:"time"`
-	Languages map[string]string `json:"languages"`
-	Films     []dubFilm         `json:"films"`
-}
-
-// dubJob holds only what the page may show: dub-fetch's state also carries indexer URLs.
-type dubJob struct {
-	MovieID   int64       `json:"movie_id"`
-	Lang      string      `json:"lang"`
-	Title     string      `json:"title"`
-	Requested float64     `json:"requested"`
-	Status    string      `json:"status"`
-	Reason    string      `json:"reason"`
-	Updated   float64     `json:"updated"`
-	Downloads int         `json:"downloads"`
-	Tried     int         `json:"tried"`
-	Current   *dubRelease `json:"current"`
-}
-
-type dubRelease struct {
-	Title   string  `json:"title"`
-	Size    int64   `json:"size"`
-	Indexer string  `json:"indexer"`
-	Private bool    `json:"private"`
-	Stage   string  `json:"stage"`
-	Since   float64 `json:"since"`
-	Dub     string  `json:"dub"`
-}
-
-func (j dubJob) active() bool {
-	return j.Status != "done" && j.Status != "failed" && j.Status != "cancelled"
-}
-
-type dubRequest struct {
-	MovieID   int64  `json:"movie_id"`
-	Lang      string `json:"lang"`
-	Requested int64  `json:"requested"`
-	Cancel    bool   `json:"cancel,omitempty"`
-	Check     bool   `json:"check,omitempty"`
-}
-
-// dubCheck is what dub-fetch found on the indexers for one film and language, without adding anything.
-type dubCheck struct {
-	Time     float64 `json:"time"`
-	Releases int     `json:"releases"`
-	Named    int     `json:"named"`
-	OwnSite  int     `json:"own_site"`
-	Best     []struct {
-		Title   string `json:"title"`
-		Size    int64  `json:"size"`
-		Indexer string `json:"indexer"`
-		Private bool   `json:"private"`
-	} `json:"best"`
-	Error string `json:"error,omitempty"`
-}
-
-func dubKey(movieID int64, lang string) string { return fmt.Sprintf("%d-%s", movieID, lang) }
-
-func (s *server) addAudioDir() string   { return filepath.Join(s.stateDir, "add-audio") }
-func (s *server) dubRequestDir() string { return filepath.Join(s.addAudioDir(), "requests") }
+// The page's side of Add audio: what it shows, and the requests it makes of the service (dubs.go).
 
 // readJSON leaves out untouched when the file does not exist.
 func readJSON(file string, out any) error {
@@ -104,273 +28,91 @@ func readJSON(file string, out any) error {
 	return nil
 }
 
-func (s *server) readDubFilms() (dubFilms, error) {
-	var films dubFilms
-	err := readJSON(filepath.Join(s.addAudioDir(), "films.json"), &films)
-	return films, err
-}
-
-func (s *server) readDubJobs() (map[string]dubJob, int64, error) {
-	var state struct {
-		ChargedBytes int64 `json:"charged_bytes"`
-		Jobs         map[string]struct {
-			dubJob
-			Tried []json.RawMessage `json:"tried"`
-		} `json:"jobs"`
-	}
-	if err := readJSON(filepath.Join(s.addAudioDir(), "state.json"), &state); err != nil {
-		return nil, 0, err
-	}
-	jobs := make(map[string]dubJob, len(state.Jobs))
-	for key, raw := range state.Jobs {
-		job := raw.dubJob
-		job.Tried = len(raw.Tried)
-		jobs[key] = job
-	}
-	return jobs, state.ChargedBytes, nil
-}
-
-func (s *server) readDubRequests() ([]dubRequest, error) {
-	entries, err := os.ReadDir(s.dubRequestDir())
-	if errors.Is(err, os.ErrNotExist) {
-		return nil, nil
-	}
+func writeJSONFile(file string, payload any) error {
+	raw, err := json.MarshalIndent(payload, "", " ")
 	if err != nil {
-		return nil, err
+		return err
 	}
-	var out []dubRequest
-	for _, entry := range entries {
-		if entry.IsDir() || strings.HasPrefix(entry.Name(), ".") || filepath.Ext(entry.Name()) != ".json" {
-			continue
-		}
-		var request dubRequest
-		if err := readJSON(filepath.Join(s.dubRequestDir(), entry.Name()), &request); err == nil && request.Lang != "" {
-			out = append(out, request)
-		}
-	}
-	return out, nil
+	return writeAtomic(file, raw)
 }
 
-// dubRequestFile keeps a check apart from an add of the same film and language, so neither replaces the other.
-func (s *server) dubRequestFile(request dubRequest) string {
-	name := dubKey(request.MovieID, request.Lang)
-	if request.Check {
-		name += "-check"
-	}
-	return filepath.Join(s.dubRequestDir(), name+".json")
-}
-
-func (s *server) readDubChecks() (map[string]dubCheck, error) {
-	checks := map[string]dubCheck{}
-	err := readJSON(filepath.Join(s.addAudioDir(), "checks.json"), &checks)
-	return checks, err
-}
-
-// addAudioState is the add_audio object of /api/state.
-func (s *server) addAudioState() map[string]any {
-	films, filmsErr := s.readDubFilms()
-	jobs, charged, jobsErr := s.readDubJobs()
-	pending, requestsErr := s.readDubRequests()
-	allChecks, checksErr := s.readDubChecks()
-
-	list := make([]dubJob, 0, len(jobs))
-	for _, job := range jobs {
-		list = append(list, job)
-	}
-	sort.Slice(list, func(i, j int) bool {
-		if list[i].active() != list[j].active() {
-			return list[i].active()
-		}
-		return list[i].Updated > list[j].Updated
-	})
-	finished := 0
-	shown := list[:0]
-	for _, job := range list {
-		if !job.active() {
-			if finished++; finished > historyShown {
-				continue
-			}
-		}
-		shown = append(shown, job)
-	}
-
-	if films.Films == nil {
-		films.Films = []dubFilm{}
-	}
-	if films.Languages == nil {
-		films.Languages = map[string]string{}
-	}
-	requests, checking := []dubRequest{}, []string{}
-	for _, request := range pending {
-		if request.Check {
-			checking = append(checking, dubKey(request.MovieID, request.Lang))
-		} else {
-			requests = append(requests, request)
-		}
-	}
-	checks := map[string]dubCheck{}
-	for _, film := range films.Films {
-		for _, lang := range film.Missing {
-			if check, ok := allChecks[dubKey(film.ID, lang)]; ok {
-				checks[dubKey(film.ID, lang)] = check
-			}
-		}
-	}
-	out := map[string]any{
-		"time":          films.Time,
-		"languages":     films.Languages,
-		"films":         films.Films,
-		"jobs":          shown,
-		"requests":      requests,
-		"checks":        checks,
-		"checking":      checking,
-		"charged_bytes": charged,
-	}
-	if err := errors.Join(filmsErr, jobsErr, requestsErr, checksErr); err != nil {
-		out["error"] = "dub-fetch's files are unreadable: " + err.Error()
-	}
-	return out
-}
-
-// dubTarget reads and checks the movie_id and lang of a request against what dub-fetch listed.
-func (s *server) dubTarget(r *http.Request) (int64, string, int, error) {
+// dubTarget is the film and language a request names, checked against what Radarr listed.
+func (s *server) dubTarget(r *http.Request) (dubFilm, string, int, error) {
 	lang := strings.TrimSpace(r.FormValue("lang"))
 	movieID, err := strconv.ParseInt(strings.TrimSpace(r.FormValue("movie_id")), 10, 64)
 	if err != nil {
-		return 0, "", http.StatusBadRequest, errors.New("movie_id must be a number")
+		return dubFilm{}, "", http.StatusBadRequest, errors.New("movie_id must be a number")
 	}
-	films, err := s.readDubFilms()
-	if err != nil {
-		return 0, "", http.StatusInternalServerError, err
+	if _, ok := s.dubs.langs.byCode[lang]; !ok {
+		return dubFilm{}, "", http.StatusBadRequest, fmt.Errorf("unknown language %q", lang)
 	}
-	if _, ok := films.Languages[lang]; !ok {
-		return 0, "", http.StatusBadRequest, fmt.Errorf("unknown language %q", lang)
+	s.dubs.mu.Lock()
+	film, ok := s.dubs.film(movieID, lang)
+	s.dubs.mu.Unlock()
+	if !ok {
+		return dubFilm{}, "", http.StatusBadRequest, errors.New("that film is not listed as missing that language")
 	}
-	for _, film := range films.Films {
-		if film.ID == movieID {
-			for _, missing := range film.Missing {
-				if missing == lang {
-					return movieID, lang, 0, nil
-				}
-			}
-		}
-	}
-	return 0, "", http.StatusBadRequest, errors.New("that film is not listed as missing that language")
+	return film, lang, 0, nil
 }
 
-func (s *server) activeDubJob(movieID int64, lang string) (bool, error) {
-	jobs, _, err := s.readDubJobs()
-	if err != nil {
-		return false, err
+func postOnly(w http.ResponseWriter, r *http.Request) bool {
+	if r.Method != http.MethodPost {
+		http.Error(w, "POST only", http.StatusMethodNotAllowed)
+		return false
 	}
-	job, ok := jobs[dubKey(movieID, lang)]
-	return ok && job.active(), nil
-}
-
-func (s *server) writeDubRequest(request dubRequest) error {
-	if err := os.MkdirAll(s.dubRequestDir(), 0o755); err != nil {
-		return err
-	}
-	raw, err := json.Marshal(request)
-	if err != nil {
-		return err
-	}
-	return writeAtomic(s.dubRequestFile(request), raw)
+	return true
 }
 
 func (s *server) addAudio(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "POST only", http.StatusMethodNotAllowed)
+	if !postOnly(w, r) {
 		return
 	}
-	movieID, lang, code, err := s.dubTarget(r)
+	film, lang, code, err := s.dubTarget(r)
+	if err == nil {
+		code, err = s.dubs.requestAdd(film.ID, lang)
+	}
 	if err != nil {
 		writeJSON(w, code, map[string]any{"error": err.Error()})
-		return
-	}
-
-	s.dubMu.Lock()
-	defer s.dubMu.Unlock()
-	active, err := s.activeDubJob(movieID, lang)
-	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
-		return
-	}
-	if active {
-		writeJSON(w, http.StatusConflict, map[string]any{"error": "already being added"})
-		return
-	}
-	if _, err := os.Stat(s.dubRequestFile(dubRequest{MovieID: movieID, Lang: lang})); err == nil {
-		writeJSON(w, http.StatusConflict, map[string]any{"error": "already requested"})
-		return
-	}
-	if err := s.writeDubRequest(dubRequest{MovieID: movieID, Lang: lang, Requested: time.Now().Unix()}); err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": "could not write the request: " + err.Error()})
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"requested": true})
 }
 
 func (s *server) cancelAddAudio(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "POST only", http.StatusMethodNotAllowed)
+	if !postOnly(w, r) {
 		return
 	}
 	lang := strings.TrimSpace(r.FormValue("lang"))
 	movieID, err := strconv.ParseInt(strings.TrimSpace(r.FormValue("movie_id")), 10, 64)
-	if err != nil || lang == "" || strings.ContainsAny(lang, `/\.`) {
+	if err != nil || lang == "" {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "movie_id and lang are required"})
 		return
 	}
-
-	s.dubMu.Lock()
-	defer s.dubMu.Unlock()
-	active, err := s.activeDubJob(movieID, lang)
-	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
-		return
-	}
-	if active {
-		if err := s.writeDubRequest(dubRequest{MovieID: movieID, Lang: lang, Requested: time.Now().Unix(), Cancel: true}); err != nil {
-			writeJSON(w, http.StatusInternalServerError, map[string]any{"error": "could not write the request: " + err.Error()})
-			return
-		}
-		writeJSON(w, http.StatusOK, map[string]any{"ok": true})
-		return
-	}
-	// dub-fetch has not taken the request yet, so dropping the file is the whole cancel.
-	if err := os.Remove(s.dubRequestFile(dubRequest{MovieID: movieID, Lang: lang})); err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			writeJSON(w, http.StatusNotFound, map[string]any{"error": "nothing to cancel"})
-			return
-		}
-		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+	if code, err := s.dubs.requestCancel(movieID, lang); err != nil {
+		writeJSON(w, code, map[string]any{"error": err.Error()})
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
 func (s *server) checkAddAudio(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "POST only", http.StatusMethodNotAllowed)
+	if !postOnly(w, r) {
 		return
 	}
-	movieID, lang, code, err := s.dubTarget(r)
+	film, lang, code, err := s.dubTarget(r)
 	if err != nil {
 		writeJSON(w, code, map[string]any{"error": err.Error()})
 		return
 	}
-
-	s.dubMu.Lock()
-	defer s.dubMu.Unlock()
-	request := dubRequest{MovieID: movieID, Lang: lang, Requested: time.Now().Unix(), Check: true}
-	if _, err := os.Stat(s.dubRequestFile(request)); err == nil {
+	if !s.dubs.checks.start(checkJob{key: dubKey(film.ID, lang), imdb: film.IMDb, title: film.Title, lang: lang}) {
 		writeJSON(w, http.StatusConflict, map[string]any{"error": "already being checked"})
 		return
 	}
-	if err := s.writeDubRequest(request); err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": "could not write the request: " + err.Error()})
-		return
-	}
 	writeJSON(w, http.StatusOK, map[string]any{"checking": true})
+}
+
+// checkProgress is what the page polls every second while a check is queued or running.
+func (s *server) checkProgress(w http.ResponseWriter, r *http.Request) {
+	checks, _ := s.dubs.checks.snapshot()
+	writeJSON(w, http.StatusOK, map[string]any{"checks": checks})
 }
