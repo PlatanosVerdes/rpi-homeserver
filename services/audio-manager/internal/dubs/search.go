@@ -8,10 +8,12 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 // Every indexer Prowlarr has is searched; a release is only tried where taking a few MB and deleting
@@ -104,8 +106,8 @@ func (rules trackerRules) startsAt(indexer string) float64 {
 }
 
 // probeAllowed says whether a few MB of this release can be taken and deleted without owing its site anything.
-func probeAllowed(r clients.Release, private bool, rules trackerRules) bool {
-	if !private {
+func probeAllowed(r found, rules trackerRules) bool {
+	if !r.Private {
 		return true
 	}
 	if rules.find(r.Indexer) == nil {
@@ -135,30 +137,60 @@ func withoutKey(link, prowlarr string) string {
 	return parts.String()
 }
 
-// candidates are the releases worth probing, those most likely to carry the language first, then
-// public before private, freeleech before counted, smaller first. A release without an IMDb id is
-// kept: some sites leave it out, and add-audio refuses another film anyway.
-func candidates(results []clients.Release, imdb string, lang *language, tried map[string]bool, indexers map[int]clients.Indexer,
-	rules trackerRules, prowlarr string) []candidate {
+// found is a release a search returned that a probe could take whatever the language: a live
+// torrent of this film, of a size worth probing. It is what the search cache keeps.
+type found struct {
+	GUID         string `json:"guid"`
+	Title        string `json:"title"`
+	Size         int64  `json:"size"`
+	Seeders      int    `json:"seeders"`
+	Imdb         int64  `json:"imdb"`
+	IndexerID    int    `json:"indexer_id"`
+	Indexer      string `json:"indexer"`
+	Private      bool   `json:"private"`
+	SiteLanguage string `json:"site_language"`
+	Freeleech    bool   `json:"freeleech"`
+	// Never cached: a job searches again for links that still work.
+	url string
+}
+
+// eligible keeps the releases worth ranking for any language. A release without an IMDb id is kept:
+// some sites leave it out, and add-audio refuses another film anyway.
+func eligible(results []clients.Release, imdb string, indexers map[int]clients.Indexer, prowlarr string) []found {
 	number, _ := strconv.ParseInt(strings.TrimLeft(imdb, "t"), 10, 64)
-	var fits []candidate
+	out := []found{}
 	for _, r := range results {
 		site, known := indexers[r.IndexerID]
 		imdbID := int64(r.ImdbID)
 		if imdbID == 0 {
 			imdbID = number
 		}
-		if !known || imdbID != number || r.Seeders <= 0 || r.Size <= 0 || r.Size > maxSizeBytes || tried[r.GUID] ||
-			r.Protocol != "torrent" || r.DownloadURL == "" ||
-			(lang.rejectedTitle != nil && lang.rejectedTitle.MatchString(r.Title)) || !probeAllowed(r, site.Private, rules) {
+		if !known || imdbID != number || r.Seeders <= 0 || r.Size <= 0 || r.Size > maxSizeBytes ||
+			r.Protocol != "torrent" || r.DownloadURL == "" {
 			continue
 		}
-		locale, _, _ := strings.Cut(site.Language, "-")
+		out = append(out, found{GUID: r.GUID, Title: r.Title, Size: r.Size, Seeders: r.Seeders, Imdb: int64(r.ImdbID),
+			IndexerID: r.IndexerID, Indexer: r.Indexer, Private: site.Private, SiteLanguage: site.Language,
+			Freeleech: r.Freeleech(), url: withoutKey(r.DownloadURL, prowlarr)})
+	}
+	return out
+}
+
+// candidates are the releases worth probing for a language, those most likely to carry it first,
+// then public before private, freeleech before counted, smaller first.
+func candidates(releases []found, lang *language, tried map[string]bool, rules trackerRules) []candidate {
+	var fits []candidate
+	for _, r := range releases {
+		if tried[r.GUID] || (lang.rejectedTitle != nil && lang.rejectedTitle.MatchString(r.Title)) ||
+			!probeAllowed(r, rules) {
+			continue
+		}
+		locale, _, _ := strings.Cut(r.SiteLanguage, "-")
 		ownSite := locale == lang.Locale
 		// MULTi on a French site is French plus the original; it only hints on a site of ours or English.
 		multi := multiAudio.MatchString(r.Title) && (ownSite || locale == "en")
 		fits = append(fits, candidate{GUID: r.GUID, Title: r.Title, Size: r.Size, Indexer: r.Indexer,
-			Private: site.Private, Freeleech: r.Freeleech(), URL: withoutKey(r.DownloadURL, prowlarr),
+			Private: r.Private, Freeleech: r.Freeleech, URL: r.url,
 			Named: lang.hint.MatchString(r.Title), OwnSite: ownSite, Multi: multi})
 	}
 	sort.SliceStable(fits, func(i, j int) bool { return lessCandidate(fits[i], fits[j]) })
@@ -182,22 +214,16 @@ type indexerClient interface {
 	SearchIndexer(ctx context.Context, id int, imdb, title string) ([]clients.Release, error)
 }
 
-// searchProgress is told about each indexer as it answers.
-type searchProgress func(indexer string, done, total, releases int, err error)
-
-// find searches every enabled indexer at once and ranks what they found.
-func (d *Service) find(ctx context.Context, imdb, title, lang string, tried []string, progress searchProgress) ([]candidate, error) {
-	known, ok := d.langs.byCode[lang]
-	if !ok {
-		return nil, fmt.Errorf("unknown language %q", lang)
-	}
+// searchFilm asks every enabled indexer at once for one film, and keeps what any language could use.
+func (d *Service) searchFilm(ctx context.Context, job searchJob, progress searchProgress) (filmSearch, error) {
 	indexers, err := d.indexers.Indexers(ctx)
 	if err != nil {
-		return nil, err
+		return filmSearch{}, err
 	}
 	var (
 		mu      sync.Mutex
 		results []clients.Release
+		failed  []string
 		seen    = map[string]bool{}
 		done    int
 		wg      sync.WaitGroup
@@ -208,25 +234,39 @@ func (d *Service) find(ctx context.Context, imdb, title, lang string, tried []st
 		go func() {
 			defer wg.Done()
 			slots <- struct{}{}
-			found, err := d.indexers.SearchIndexer(ctx, id, imdb, title)
+			answer, err := d.indexers.SearchIndexer(ctx, id, job.imdb, job.title)
 			<-slots
 			mu.Lock()
 			defer mu.Unlock()
-			for _, r := range found {
+			for _, r := range answer {
 				if !seen[r.GUID] {
 					seen[r.GUID] = true
 					results = append(results, r)
 				}
 			}
+			if err != nil {
+				failed = append(failed, site.Name+": "+err.Error())
+			}
 			done++
 			if progress != nil {
-				progress(site.Name, done, len(indexers), len(found), err)
+				progress(site.Name, done, len(indexers), len(answer), err)
 			}
 		}()
 	}
 	wg.Wait()
 	if err := ctx.Err(); err != nil {
-		return nil, err
+		return filmSearch{}, err
+	}
+	slices.Sort(failed)
+	return filmSearch{Time: time.Now().Unix(), Indexers: len(indexers), Errors: failed,
+		Releases: eligible(results, job.imdb, indexers, d.cfg.ProwlarrURL)}, nil
+}
+
+// rank is a search's releases in the order to probe them for a language.
+func (d *Service) rank(search filmSearch, lang string, tried []string) ([]candidate, error) {
+	known, ok := d.langs.byCode[lang]
+	if !ok {
+		return nil, fmt.Errorf("unknown language %q", lang)
 	}
 	rules, err := loadTrackerRules(d.cfg.RulesFile)
 	if err != nil {
@@ -236,5 +276,5 @@ func (d *Service) find(ctx context.Context, imdb, title, lang string, tried []st
 	for _, guid := range tried {
 		skip[guid] = true
 	}
-	return candidates(results, imdb, known, skip, indexers, rules, d.cfg.ProwlarrURL), nil
+	return candidates(search.Releases, known, skip, rules), nil
 }

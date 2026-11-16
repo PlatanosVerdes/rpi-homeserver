@@ -63,24 +63,24 @@ func (d *Service) ServeCancel(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
+// ServeCheck searches the film now, ahead of the sweep; every language is ranked from what it finds.
 func (d *Service) ServeCheck(w http.ResponseWriter, r *http.Request) {
 	if !httpx.PostOnly(w, r) {
 		return
 	}
-	film, lang, code, err := d.target(r)
+	film, _, code, err := d.target(r)
 	if err != nil {
 		httpx.WriteJSON(w, code, map[string]any{"error": err.Error()})
 		return
 	}
-	if !d.checks.start(checkJob{key: dubKey(film.ID, lang), imdb: film.IMDb, title: film.Title, lang: lang}) {
-		httpx.WriteJSON(w, http.StatusConflict, map[string]any{"error": "already being checked"})
+	if !d.searches.start(searchJob{id: film.ID, imdb: film.IMDb, title: film.Title}) {
+		httpx.WriteJSON(w, http.StatusConflict, map[string]any{"error": "already being searched"})
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, map[string]any{"checking": true})
 }
 
-// ServeChecks is what the page polls every second while a check is queued or running.
+// ServeChecks is what the page polls every second while a search is queued or running.
 func (d *Service) ServeChecks(w http.ResponseWriter, r *http.Request) {
-	checks, _ := d.checks.snapshot()
-	httpx.WriteJSON(w, http.StatusOK, map[string]any{"checks": checks})
+	httpx.WriteJSON(w, http.StatusOK, map[string]any{"searching": d.searches.underway()})
 }

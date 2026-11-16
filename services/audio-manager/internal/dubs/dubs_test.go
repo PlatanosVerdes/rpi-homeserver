@@ -45,7 +45,8 @@ func dubFixture(t *testing.T) *Service {
 	t.Helper()
 	dir := t.TempDir()
 	cfg := Config{StateDir: filepath.Join(dir, "state", "add-audio"), DataRoot: filepath.Join(dir, "data"), RulesFile: "testdata/rules.json",
-		ProwlarrURL: "http://127.0.0.1:9696", Budget: 100 * gb}
+		ProwlarrURL: "http://127.0.0.1:9696", Budget: 100 * gb,
+		SweepEvery: 5 * time.Minute, SweepRefresh: 7 * 24 * time.Hour}
 	os.MkdirAll(filepath.Join(cfg.DataRoot, "films", "A"), 0o755)
 	os.WriteFile(filepath.Join(cfg.DataRoot, "films", "A", "a.mkv"), []byte("x"), 0o644)
 	d := newService(cfg, testLanguages(t))
@@ -71,7 +72,7 @@ func dubFixture(t *testing.T) *Service {
 func addAudioPayload(t *testing.T, d *Service) (map[string]any, string) {
 	t.Helper()
 	w := httptest.NewRecorder()
-	httpx.WriteJSON(w, http.StatusOK, d.Payload())
+	httpx.WriteJSON(w, http.StatusOK, d.Payload("spa"))
 	var body map[string]any
 	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
 		t.Fatal(err)
@@ -178,7 +179,8 @@ func pick(t *testing.T, results []clients.Release, tried ...string) []string {
 		skip[guid] = true
 	}
 	var guids []string
-	for _, c := range candidates(results, "tt0000001", testLanguages(t).byCode["spa"], skip, testIndexers, testRules(t), "http://127.0.0.1:9696") {
+	releases := eligible(results, "tt0000001", testIndexers, "http://127.0.0.1:9696")
+	for _, c := range candidates(releases, testLanguages(t).byCode["spa"], skip, testRules(t)) {
 		guids = append(guids, c.GUID)
 	}
 	return guids
@@ -224,7 +226,8 @@ func TestCandidates(t *testing.T) {
 
 func TestCandidatesNeverKeepProwlarrsAPIKey(t *testing.T) {
 	t.Parallel()
-	found := candidates([]clients.Release{testRelease("a", 2)}, "tt0000001", testLanguages(t).byCode["spa"], nil, testIndexers, testRules(t), "http://127.0.0.1:9696")
+	releases := eligible([]clients.Release{testRelease("a", 2)}, "tt0000001", testIndexers, "http://127.0.0.1:9696")
+	found := candidates(releases, testLanguages(t).byCode["spa"], nil, testRules(t))
 	if link := found[0].URL; strings.Contains(link, "secret") || !strings.HasPrefix(link, "http://127.0.0.1:9696/1/download?link=abc") {
 		t.Errorf("url %s", link)
 	}
@@ -438,7 +441,7 @@ func (f fakeIndexers) SearchIndexer(_ context.Context, id int, _, _ string) ([]c
 	return f.results[id], f.fail[id]
 }
 
-func TestCheckReportsEachIndexerThenWhatItFound(t *testing.T) {
+func TestSearchReportsEachIndexerThenWhatItFound(t *testing.T) {
 	t.Parallel()
 	d := dubFixture(t)
 	d.indexers = fakeIndexers{
@@ -450,7 +453,7 @@ func TestCheckReportsEachIndexerThenWhatItFound(t *testing.T) {
 	var mu sync.Mutex
 	var done []int
 	errorsSeen := 0
-	result, err := d.check(context.Background(), checkJob{imdb: "tt0000001", title: "Film", lang: "spa"},
+	search, err := d.searchFilm(context.Background(), searchJob{id: 11, imdb: "tt0000001", title: "Film"},
 		func(_ string, n, total, _ int, err error) {
 			mu.Lock()
 			defer mu.Unlock()
@@ -469,6 +472,10 @@ func TestCheckReportsEachIndexerThenWhatItFound(t *testing.T) {
 	if !slices.Equal(done, []int{1, 2, 3}) || errorsSeen != 1 {
 		t.Errorf("progress %v, %d errors", done, errorsSeen)
 	}
+	if search.Indexers != 3 || len(search.Errors) != 1 || !strings.HasPrefix(search.Errors[0], "Unknown private: timed out") {
+		t.Errorf("indexers %d, errors %q", search.Indexers, search.Errors)
+	}
+	result := availabilityOf(search, testLanguages(t).byCode["spa"], testRules(t))
 	if result.Releases != 3 || result.Named != 1 || result.OwnSite != 1 || result.Best[0].Title != "Film 2000 Castellano" {
 		t.Errorf("result %+v", result)
 	}

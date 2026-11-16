@@ -69,16 +69,19 @@ and the uptime probe called the Pi down for three minutes. It shares the convers
 ## From the page: audio-manager
 
 The **Add audio** view of the audio manager page (`https://audio.<domain>`,
-[audio-manager.md](audio-manager.md)) lists the films that lack a language, from Radarr, with Check
-and Add per film. Nothing is fetched unless Add is pressed. The `services/audio-manager` service does
+[audio-manager.md](audio-manager.md)) lists the films that lack a language, from Radarr, and for each
+one whether a release in that language is out there. Nothing is downloaded unless Add is pressed. The `services/audio-manager` service does
 all of it in Go, one film at a time; the only Python it runs is `add-audio.py` itself, as it runs
 `audio-compat.py` for Re-encode.
 
-**Check** answers first whether a release in that language exists at all, downloading nothing. It runs
-in the background, two at a time, and the row fills in as each indexer answers; the result says how
-many releases were found, how many name the language in their title and how many come from a site in
-that language, and is kept in `checks.json`. A title that names it is likely; the rest can only be
-known by probing, which Add does.
+**Availability** comes from a search the service runs in the background, one film every
+`SWEEP_EVERY` (5 min), never-searched films first, each film again after `SWEEP_REFRESH` (7 days). A
+search returns the same releases whatever the language, so each film is searched once and every
+language is ranked from that result: the row says how many releases name the language in their title,
+how many come from a site in that language, and how many could only be known by probing. The
+Available filter keeps the films where the first two are not zero. **Search again** on a row searches
+that film now, with each indexer shown as it answers. A title that names the language is likely; the
+rest can only be known by probing, which Add does. About 50 films take 4 to 5 hours the first time.
 
 1. **Search.** Prowlarr is asked on every enabled indexer, by IMDb id and by title (NOBS answers
    nothing by IMDb id, and a title match only counts with the same IMDb id). Releases go in order of
@@ -111,7 +114,7 @@ What keeps a probe from costing an account anything:
 
 The page shows each request's state and why it ended; the alert Telegram chat gets each download
 and result. Its state is in `appdata/audio-manager/add-audio/`: `state.json` for the jobs and
-`checks.json` for the checks.
+`searches.json` for the searches, without download links (Add searches again when it starts).
 
 `add-audio.py` runs inside the container here, so the container's own 1 GB memory limit is what caps
 it, page cache included; it has no systemd scope there and says so in its output.

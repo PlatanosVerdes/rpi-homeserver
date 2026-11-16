@@ -335,62 +335,85 @@ function dubJobRow(j, pending) {
 
 function plural(n, one, many) { return n + " " + (n === 1 ? one : many); }
 
-// What a check found, worded from the strongest sign down: a title naming the language, a site in it, any release.
-function checkSummary(check, name) {
-  if (check.error) return ["warn", "Check failed: " + check.error];
-  if (check.named) return ["yes", plural(check.named, "release names ", "releases name ") + name];
-  if (check.own_site) return ["", check.own_site + " from " + name + "-language sites, to be probed"];
-  if (check.releases) return ["", "No release names " + name + "; " + check.releases + " could still carry it"];
+function until(epoch) {
+  var seconds = epoch - Date.now() / 1000;
+  if (seconds < 60) return "in under a minute";
+  if (seconds < 3600) return "in " + Math.round(seconds / 60) + " min";
+  if (seconds < 86400) return "in " + Math.round(seconds / 3600) + " h";
+  return "in " + Math.round(seconds / 86400) + " d";
+}
+
+// The availability the state holds is for the language it was asked for, which a pick may have changed since.
+function availabilityOf(id) { return dub.lang === dubLang ? (dub.availability || {})[id] : undefined; }
+
+function isAvailable(a) { return !!a && (a.named > 0 || a.own_site > 0); }
+
+// What a film's last search means for the language, from the strongest sign down: a title naming it,
+// a site in it, any release a probe could take.
+function availabilitySummary(a, name) {
+  if (!a.time) return ["warn", "Search failed: " + a.error];
+  if (a.named) return ["pill yes", plural(a.named, "release names ", "releases name ") + name];
+  if (a.own_site) return ["pill soft", a.own_site === 1 ? "1 from a " + name + "-language site" : a.own_site + " from " + name + "-language sites"];
+  if (a.releases) return ["", "None named, " + a.releases + " to probe"];
   return ["", "Nothing found"];
 }
 
 var bestOpen = {};
 
-// A check under way: a thin bar of the indexers that answered, and what they found so far.
-function checkProgressLine(check) {
+// A search under way: a thin bar of the indexers that answered, and what they found so far.
+function searchProgressLine(search) {
   var line = el("div", "check");
-  if (check.status === "queued") {
-    line.appendChild(el("span", "", "Queued"));
+  if (search.status === "queued") {
+    line.appendChild(el("span", "", "Waiting to search"));
     return line;
   }
   var bar = el("div", "bar"), fill = el("i");
-  fill.style.width = (check.total ? Math.round(check.done / check.total * 100) : 0) + "%";
+  fill.style.width = (search.total ? Math.round(search.done / search.total * 100) : 0) + "%";
   bar.appendChild(fill);
   line.appendChild(bar);
-  line.appendChild(el("span", "", check.total ?
-    "Searching " + check.done + " of " + plural(check.total, "indexer", "indexers") + ", " +
-    plural(check.releases || 0, "release", "releases") + " so far" : "Searching the indexers"));
+  line.appendChild(el("span", "", search.total ?
+    "Searching " + search.done + " of " + plural(search.total, "indexer", "indexers") + ", " +
+    plural(search.releases || 0, "release", "releases") + " so far" : "Searching the indexers"));
   return line;
 }
 
-var checkTimer = null;
+var searchTimer = null;
 
-function checksUnderway() {
-  var checks = (dub && dub.checks) || {};
-  return Object.keys(checks).some(function (k) { return checks[k].status === "queued" || checks[k].status === "running"; });
-}
+function searchesUnderway() { return Object.keys((dub && dub.searching) || {}).length > 0; }
 
-// While a check runs its progress is asked for every second, without waiting for the full refresh.
-function watchChecks() {
-  if (checkTimer || !checksUnderway()) return;
-  checkTimer = setTimeout(function () {
-    checkTimer = null;
-    if (document.hidden) { watchChecks(); return; }
+// While a search runs its progress is asked for every second; once one ends, the whole state is, for its result.
+function watchSearches() {
+  if (searchTimer || !searchesUnderway()) return;
+  searchTimer = setTimeout(function () {
+    searchTimer = null;
+    if (document.hidden) { watchSearches(); return; }
     fetch("/api/add-audio/checks").then(function (r) { return r.json(); }).then(function (d) {
-      dub.checks = dub.checks || {};
-      Object.keys(d.checks || {}).forEach(function (k) { dub.checks[k] = d.checks[k]; });
+      var now = d.searching || {};
+      var ended = Object.keys(dub.searching || {}).some(function (id) { return !now[id]; });
+      dub.searching = now;
+      if (ended) { refresh(); return; }
       renderDub();
-      watchChecks();
-    }).catch(function () { setTimeout(watchChecks, 5000); });
+      watchSearches();
+    }).catch(function () { setTimeout(watchSearches, 5000); });
   }, 1000);
 }
 
-function checkLine(key, check) {
+function availabilityLine(id, a) {
   var line = el("div", "check");
-  var summary = checkSummary(check, langName(dubLang));
+  if (!a) {
+    if (dub.lang !== dubLang) return null;
+    line.appendChild(el("span", "", "Not searched yet"));
+    return line;
+  }
+  var summary = availabilitySummary(a, langName(dubLang));
   line.appendChild(el("span", summary[0], summary[1]));
-  line.appendChild(el("span", "age", "checked " + ago(check.time)));
-  var best = check.best || [];
+  if (a.time) {
+    var age = "searched " + ago(a.time);
+    if (a.indexers_failed) age += ", " + a.indexers_failed + " of " + plural(a.indexers_total, "indexer", "indexers") + " failed";
+    line.appendChild(el("span", "age", age));
+    if (a.error) line.appendChild(el("span", "warn", "a newer search failed"));
+  }
+  var key = dubKey(id, dubLang), best = a.best || [];
   if (best.length) {
     var toggle = el("button", "", (bestOpen[key] ? "Hide" : "Show") + " the best " + (best.length === 1 ? "one" : best.length));
     toggle.type = "button";
@@ -413,9 +436,8 @@ function checkLine(key, check) {
 
 function dubFilmRow(f, pending) {
   var frag = document.createDocumentFragment();
-  var key = dubKey(f.id, dubLang);
   var row = el("div", "row");
-  var status = pending[key];
+  var status = pending[dubKey(f.id, dubLang)];
   row.appendChild(el("span", status ? "dot" : "dot idle"));
   var title = el("div", "title", f.title);
   if (f.year) title.appendChild(el("small", "", String(f.year)));
@@ -424,15 +446,14 @@ function dubFilmRow(f, pending) {
   row.appendChild(meta);
   meta.appendChild(el("div", "c", f.audio ? language(f.audio) + " audio" : ""));
   if (status) meta.appendChild(el("div", "c span2", DUB_STATUS[status] || status));
+  var search = (dub.searching || {})[f.id], found = availabilityOf(f.id);
   var acts = el("div", status ? "acts narrow" : "acts");
   if (!status) {
-    var result = (dub.checks || {})[key];
-    var checking = !!result && (result.status === "queued" || result.status === "running");
-    var check = el("button", "", checking ? "Checking…" : result ? "Re-check" : "Check");
-    check.disabled = checking;
-    check.title = "Ask the indexers what they have, without downloading";
-    check.onclick = function () { dubPost("/api/add-audio/check", f.id, dubLang, check); };
-    acts.appendChild(check);
+    var again = el("button", "quiet", search ? "Searching…" : found ? "Search again" : "Search now");
+    again.disabled = !!search;
+    again.title = "Ask the indexers now what they have for this film, without downloading";
+    again.onclick = function () { dubPost("/api/add-audio/check", f.id, dubLang, again); };
+    acts.appendChild(again);
     var add = el("button", "primary", "Add " + langName(dubLang));
     add.onclick = function () { dubPost("/api/add-audio", f.id, dubLang, add); };
     acts.appendChild(add);
@@ -441,8 +462,8 @@ function dubFilmRow(f, pending) {
   }
   if (acts.childNodes.length) row.appendChild(acts);
   frag.appendChild(row);
-  var found = (dub.checks || {})[key];
-  if (found) frag.appendChild(found.status === "queued" || found.status === "running" ? checkProgressLine(found) : checkLine(key, found));
+  var line = search ? searchProgressLine(search) : availabilityLine(f.id, found);
+  if (line) frag.appendChild(line);
   return frag;
 }
 
@@ -514,6 +535,8 @@ function renderCombo(codes) {
       li.setAttribute("aria-selected", String(code === dubLang));
       li.appendChild(el("span", "name", langName(code)));
       li.appendChild(el("span", "code", code));
+      var hits = (dub.available_counts || {})[code];
+      if (hits) li.appendChild(el("span", "hits", hits + " available")).title = plural(hits, "film has", "films have") + " a release in it";
       li.appendChild(el("span", "n", String(n)));
       li.onclick = function () { chooseLang(code); };
       e.list.appendChild(li);
@@ -578,6 +601,7 @@ function chooseLang(code) {
   store(RECENT_KEY, JSON.stringify([code].concat(recentLangs().filter(function (c) { return c !== code; })).slice(0, 3)));
   closeCombo();
   renderDub();
+  refresh();
 }
 
 (function () {
@@ -644,18 +668,51 @@ function renderDub() {
   var filter = document.getElementById("dub-filter");
   var needle = fold(filter.value.trim());
   var missing = (dub.films || []).filter(function (f) { return (f.missing || []).indexOf(dubLang) >= 0; });
-  var shown = missing.filter(function (f) { return !needle || fold(f.title).indexOf(needle) >= 0; });
+  var availableCount = missing.filter(function (f) { return isAvailable(availabilityOf(f.id)); }).length;
+  var onlyAvailable = showAvailable && dub.lang === dubLang;
+  var shown = missing.filter(function (f) {
+    return (!needle || fold(f.title).indexOf(needle) >= 0) && (!onlyAvailable || isAvailable(availabilityOf(f.id)));
+  });
+  // Named first, then from a site in the language, then the rest, each in Radarr's order.
+  var rankOf = function (f) { var a = availabilityOf(f.id); return a && a.named ? 0 : a && a.own_site ? 1 : 2; };
+  shown = shown.map(function (f, i) { return [rankOf(f), i, f]; })
+    .sort(function (a, b) { return a[0] - b[0] || a[1] - b[1]; }).map(function (x) { return x[2]; });
+  document.getElementById("show-available").lastChild.textContent = dub.lang === dubLang ? String(availableCount) : "";
+  ["all", "available"].forEach(function (name) {
+    document.getElementById("show-" + name).setAttribute("aria-pressed", String((name === "available") === showAvailable));
+  });
   filter.placeholder = missing.length ? "Search " + plural(missing.length, "film", "films") + " without " + langName(dubLang) : "Search films";
-  document.getElementById("dub-matches").textContent = needle && missing.length ? shown.length + " of " + missing.length + " match" : "";
+  document.getElementById("dub-matches").textContent = (needle || onlyAvailable) && missing.length ? shown.length + " of " + missing.length + " shown" : "";
   document.getElementById("dub-when").textContent = dub.error ? dub.error : dub.time ? "listed " + when(dub.time) : "not listed yet";
+  document.getElementById("dub-sweep").textContent = sweepLine(dub.sweep);
   var films = document.getElementById("dub-films");
   films.textContent = "";
   if (!shown.length) films.appendChild(el("p", "empty", !dub.time ? "Radarr has not listed the films yet." :
-    needle ? "No title matches." : "Every film has this language."));
+    needle ? "No title matches." : onlyAvailable && missing.length ? "No film has a release in " + langName(dubLang) + " yet." :
+    "Every film has this language."));
   else shown.forEach(function (f) { films.appendChild(dubFilmRow(f, pending)); });
 }
 
 document.getElementById("dub-filter").oninput = renderDub;
+
+var SHOW_KEY = "audio-manager.show", showAvailable = stored(SHOW_KEY) === "available";
+
+["all", "available"].forEach(function (name) {
+  document.getElementById("show-" + name).onclick = function () {
+    showAvailable = name === "available";
+    store(SHOW_KEY, name);
+    renderDub();
+  };
+});
+
+function sweepLine(sweep) {
+  if (!sweep || !sweep.total) return "";
+  var line = "Searched " + sweep.searched + " of " + plural(sweep.total, "film", "films");
+  var sweeping = Object.keys(dub.searching || {}).filter(function (id) { return dub.searching[id].sweep; })[0];
+  if (sweeping) return line + ", searching one now";
+  if (sweep.next_at) line += ", next " + until(sweep.next_at);
+  return line;
+}
 
 function route() {
   var view = location.hash === "#reencode" ? "reencode" : "add";
@@ -671,7 +728,8 @@ route();
 var timer = null;
 
 function refresh() {
-  return fetch("/api/state").then(function (r) { return r.json(); }).then(function (d) {
+  var lang = dubLang || stored(LANG_KEY);
+  return fetch("/api/state" + (lang ? "?lang=" + encodeURIComponent(lang) : "")).then(function (r) { return r.json(); }).then(function (d) {
     if (d.error) say(d.error);
     targets = (d.library && d.library.targets) || {};
     defaultTarget = (d.library && d.library.default_target) || "ac3";
@@ -711,7 +769,9 @@ function refresh() {
 
     dub = d.add_audio || {};
     renderDub();
-    watchChecks();
+    // The first load asks before the page knows its language; ask again for the one it picked.
+    if (dubLang && dub.lang !== dubLang) { refresh(); return; }
+    watchSearches();
 
     clearTimeout(timer);
     timer = setTimeout(tick, d.running || (d.queue && d.queue.length) ? 1000 : 10000);

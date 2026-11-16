@@ -17,10 +17,12 @@ func TestLoadConfig(t *testing.T) {
 		{"a negative budget", map[string]string{"DUB_BUDGET_GB": "-1"}, "DUB_BUDGET_GB"},
 		{"a URL without a host", map[string]string{"RADARR_URL": "radarr:7878"}, "RADARR_URL"},
 		{"a qBittorrent URL without a scheme", map[string]string{"QBIT_URL": "qbittorrent"}, "QBIT_URL"},
+		{"a sweep interval that is not a duration", map[string]string{"SWEEP_EVERY": "5"}, "SWEEP_EVERY"},
+		{"a refresh of zero", map[string]string{"SWEEP_REFRESH": "0s"}, "SWEEP_REFRESH"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			for _, key := range []string{"DUB_BUDGET_GB", "RADARR_URL", "PROWLARR_URL", "QBIT_URL", "SCAN_INTERVAL", "AUDIO_MANAGER_STATE"} {
+			for _, key := range []string{"DUB_BUDGET_GB", "RADARR_URL", "PROWLARR_URL", "QBIT_URL", "SCAN_INTERVAL", "AUDIO_MANAGER_STATE", "SWEEP_EVERY", "SWEEP_REFRESH"} {
 				t.Setenv(key, c.env[key])
 			}
 			cfg, err := loadConfig()
@@ -33,7 +35,8 @@ func TestLoadConfig(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if cfg.reencode.ScanEvery != 6*time.Hour || cfg.dubs.Budget != 100<<30 || cfg.dubs.StateDir != "/state/add-audio" {
+			if cfg.reencode.ScanEvery != 6*time.Hour || cfg.dubs.Budget != 100<<30 || cfg.dubs.StateDir != "/state/add-audio" ||
+				cfg.dubs.SweepEvery != 5*time.Minute || cfg.dubs.SweepRefresh != 7*24*time.Hour {
 				t.Errorf("defaults: %+v", cfg)
 			}
 		})
