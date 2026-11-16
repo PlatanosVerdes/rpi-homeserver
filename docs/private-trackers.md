@@ -147,7 +147,8 @@ matches, so it is silent except at a crossing, and every change goes to Telegram
 - **How each site is read.** TorrentLeech's login comes from Prowlarr, which already holds it.
   DigitalCore and C411 are API-key indexers with no login to reuse: DigitalCore reads with a session
   cookie seeded from a browser (2FA), C411 with `C411_USER`/`C411_PASSWORD` from `.env` (Prowlarr only
-  as a fallback). retrotoon's login sits behind Cloudflare
+  as a fallback). NOBS runs UNIT3D (`"software": "unit3d"` in `rules.json`), whose `/api/user` takes
+  the API key, so it is read with `NOBS_APIKEY` and no login. retrotoon's login sits behind Cloudflare
   Turnstile, so it stays hand-read in `config/trackers/readings.json`, which is also every site's
   fallback. Session cookies live in `appdata/tracker-stats/`, so a site sees about one login a day.
 
@@ -326,7 +327,8 @@ Spanish tracker, added for Castilian audio: nearly every release carries it.
 | :--- | :--- | :--- |
 | Prowlarr | `NOBS` definition, API key, direct | no freeleech switch needed while the signup credit holds |
 | Seed goal | **168 h, no ratio limit**, on announce host `nobs.rawsmoke.net` | their counter adds only announced time; a ratio limit would delete a torrent still owing hours |
-| Account reading | none yet | the API key reaches torrents only; the site's Seedtime column is the truth |
+| cross-seed | included, indexer 18 | not named in the rules (read 2026-11-16), but they ask for the site's own .torrent unmodified, which is what cross-seed injects, and a cross-seed downloads nothing, so it never reaches the 50% that starts a hit and run |
+| Account reading | tracker-control, `/api/user` with `NOBS_APIKEY` (in homelab-secrets) | UNIT3D answers it to the API key, so the account's 2FA does not matter; per-torrent seed time is still only on the site |
 
 ## C411
 

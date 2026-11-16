@@ -53,7 +53,7 @@ var units = map[string]float64{
 var (
 	scriptTag = regexp.MustCompile(`(?s)<script.*?</script>`)
 	anyTag    = regexp.MustCompile(`<[^>]+>`)
-	sizeText  = regexp.MustCompile(`(?i)^([\d.,]+)\s*([KMGTP]?[BO])\b`)
+	sizeText  = regexp.MustCompile(`(?i)^([\d.,]+)\s*([KMGTP]?)i?([BO])\b`)
 	floatText = regexp.MustCompile(`^-?[\d.]+`)
 )
 
@@ -155,7 +155,7 @@ func toBytes(text string) (float64, bool) {
 	if err != nil {
 		return 0, false
 	}
-	return value * units[strings.ToUpper(match[2])], true
+	return value * units[strings.ToUpper(match[2]+match[3])], true
 }
 
 func toFloat(text string) (float64, bool) {
@@ -182,9 +182,11 @@ func fetchAccount(tracker string, config map[string]any) (profile, error) {
 		return fetchDigitalCore(tracker, config)
 	case "c411":
 		return fetchC411(tracker, config)
-	default:
-		return fetchProfile(tracker, config)
 	}
+	if str(config, "software") == "unit3d" {
+		return fetchUNIT3D(tracker, config)
+	}
+	return fetchProfile(tracker, config)
 }
 
 // fetchProfile logs in only when the stored cookie has stopped working.

@@ -13,6 +13,7 @@ const privateIndexers = {
     16: "DigitalCore",
     9: "C411",
     12: "retrotoon (generic torznab)",
+    18: "NOBS",
 };
 
 module.exports = {
