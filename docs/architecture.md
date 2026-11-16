@@ -96,6 +96,7 @@ compose file and no `.env` captures it, so without this a lost disk silently los
 | `scripts/sync/qbit-config.sh` | every deploy | qBittorrent | `config/qbittorrent/preferences.json` + `QBIT_BT_PORT` |
 | `scripts/sync/plex-prefs.sh` | every deploy | Plex | `PLEX_LAN_NETWORKS`, 95% threshold |
 | `scripts/sync/arr-links.sh` | every deploy | Seerr, Bazarr | `config/seerr-links.json` |
+| `scripts/sync/dub-fetch.py` | every 10 min | qBittorrent (category `audio-source`), library files | requests from the audio-manager page, one film at a time within a download budget |
 | `scripts/sync/bazarr-prune-subs.py` | 05:40 daily | Bazarr's database and its wanted searches | the subtitle tracks the media files actually have, and what their text reads as |
 | `scripts/sync/pihole-dns.sh` | every deploy | Pi-hole | the Caddy config; only its own entries |
 | `scripts/setup/install-crontab.sh` | every deploy | host crontab | both repos' `scripts/crontab` |
@@ -158,6 +159,7 @@ schedule), `ci/` (GitHub Actions). The cron lines are in `scripts/crontab`.
 | `recovery/recovery-status.sh` | After a rebuild, what no API can do: the Plex claim and Jellyfin's wizard, plus a check that Grafana's database is in WAL mode |
 | `sync/arr-config.sh` | Custom formats then quality profiles, in that order: profiles score formats by name and the id only exists once the format does |
 | `sync/arr-links.sh` | Seerr and Bazarr's connection to the arrs. Bazarr publishes no port, so its call is proxied through the network |
+| `sync/dub-fetch.py` | Fetches a dub the audio-manager page asked for: probes each release's track list from its first MB before downloading it, then runs add-audio; a whole download goes to qbit-manage to seed out ([add-audio.md](add-audio.md)) |
 | `sync/bazarr-prune-subs.py` | Bazarr keeps the embedded tracks of a file Radarr already replaced, so it stops searching for a language the new release does not have. Deletes only rows the file disproves. A file whose text tracks read as another language than their tag (shifted tags in some YTS releases) has every profile language without a trustworthy track asked of Bazarr directly; verdicts in `appdata/bazarr-prune-subs/` |
 | `sync/pihole-dns.sh` | Caddy's hosts as local DNS: a `*.<domain>` entry at `TAILSCALE_IP` is added, re-pointed and removed with its route; any other entry is never touched |
 | `sync/plex-prefs.sh` | LAN networks, so tailnet clients are not billed as remote, and the played threshold at 95% |

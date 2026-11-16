@@ -17,7 +17,7 @@ Plex runs on the Pi, which cannot transcode video in real time, so files must **
 | :--- | :--- |
 | Direct-plays | H.264, HEVC, 4K, HDR10, EAC3/AC3 audio |
 | Fails: it cannot decode it and the Pi cannot transcode it in time ("Not enough CPU") | **AV1**, **VC-1** |
-| Audio-only transcode, which the Pi handles | DTS, TrueHD ([audio-convert.md](audio-convert.md) adds an AC3 track for those) |
+| Audio-only transcode, which the Pi handles | DTS, TrueHD ([audio-manager.md](audio-manager.md) adds an AC3 track for those) |
 
 Rule of thumb for smooth playback: 1080p, x264/H.264, AAC or EAC3/AC3, text subtitles (SRT / mov_text).
 

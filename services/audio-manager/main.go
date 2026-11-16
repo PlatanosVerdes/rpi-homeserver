@@ -1,7 +1,8 @@
-// audio-convert lists the files a client had its audio re-encoded on, with the plan pi-metrics
-// worked out for each, and converts one when asked. pi-metrics does the thinking (which track, what
-// it costs, whether a file change can help at all); scripts/sync/audio-compat.py does the work, the
-// same script the night run uses; this page only joins the two and shows the progress.
+// audio-manager has two jobs. Re-encode lists the files a client had its audio re-encoded on, with
+// the plan pi-metrics worked out for each, and converts one when asked: pi-metrics does the thinking
+// (which track, what it costs, whether a file change can help at all), scripts/sync/audio-compat.py
+// does the work, the same script the night run uses. Add audio lists the films that lack a language
+// and requests a dub for one, which scripts/sync/dub-fetch.py fetches and adds from cron.
 package main
 
 import (
@@ -48,6 +49,7 @@ type server struct {
 	running *progress
 	waiting map[string]any
 	wake    chan struct{}
+	dubMu   sync.Mutex // one add-audio request check-and-write at a time
 
 	scanEvery time.Duration
 	rescan    chan struct{}
@@ -55,7 +57,7 @@ type server struct {
 }
 
 func newServer() *server {
-	stateDir := env("AUDIO_CONVERT_STATE", "/state")
+	stateDir := env("AUDIO_MANAGER_STATE", "/state")
 	return &server{
 		ledgerFile: env("AUDIO_RECODES", "/ledger/audio-recodes.json"),
 		stateDir:   stateDir,
@@ -83,7 +85,7 @@ func scanInterval() time.Duration {
 func main() {
 	s := newServer()
 	if err := os.MkdirAll(s.stateDir, 0o755); err != nil {
-		log.Fatalf("audio-convert: %v", err)
+		log.Fatalf("audio-manager: %v", err)
 	}
 	s.load()
 	s.loadScan()
@@ -94,11 +96,13 @@ func main() {
 	http.HandleFunc("/api/state", s.state)
 	http.HandleFunc("/api/play", s.play)
 	http.HandleFunc("/api/cancel", s.cancel)
+	http.HandleFunc("/api/add-audio", s.addAudio)
+	http.HandleFunc("/api/add-audio/cancel", s.cancelAddAudio)
 
 	go s.worker()
 	go s.scanner()
 
-	log.Printf("audio-convert: %s, ledger %s, library %s", listenAddr, s.ledgerFile, s.dataRoot)
+	log.Printf("audio-manager: %s, ledger %s, library %s", listenAddr, s.ledgerFile, s.dataRoot)
 	log.Fatal(http.ListenAndServe(listenAddr, nil))
 }
 
@@ -226,15 +230,16 @@ func (s *server) state(w http.ResponseWriter, r *http.Request) {
 	}
 
 	payload := map[string]any{
-		"items":   listed,
-		"library": library,
-		"queue":   queue,
-		"running": runningView,
-		"holder":  holder,
-		"history": recent,
-		"speed":   speed,
-		"free":    freeBytes(filepath.Join(s.dataRoot, libraries[0])),
-		"minFree": minFreeBytes,
+		"items":     listed,
+		"library":   library,
+		"queue":     queue,
+		"running":   runningView,
+		"holder":    holder,
+		"history":   recent,
+		"speed":     speed,
+		"free":      freeBytes(filepath.Join(s.dataRoot, libraries[0])),
+		"minFree":   minFreeBytes,
+		"add_audio": s.addAudioState(),
 	}
 	if ledgerErr != nil {
 		payload["error"] = "pi-metrics' ledger is unreadable: " + ledgerErr.Error()

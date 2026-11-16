@@ -9,7 +9,7 @@ import (
 func render(w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if _, err := w.Write([]byte(pageHTML)); err != nil {
-		log.Printf("audio-convert: render failed: %v", err)
+		log.Printf("audio-manager: render failed: %v", err)
 	}
 }
 
@@ -43,7 +43,7 @@ const pageHTML = `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Audio convert</title>
+<title>Audio manager</title>
 <link rel="icon" href="/icon.svg">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <style>
@@ -124,6 +124,16 @@ const pageHTML = `<!doctype html>
   .more.open { display:block; }
   .more b { color:var(--ink); font-weight:500; }
 
+  .section { margin:2rem 0 0; font-size:13px; font-weight:600; }
+  .tools { display:flex; gap:.6rem; align-items:center; margin-top:.75rem; }
+  .tools select { border-color:var(--line); }
+  input[type=search] { flex:1; min-width:0; font:inherit; color:var(--ink); background:var(--panel); border:1px solid var(--line);
+                       border-radius:6px; padding:.35rem .6rem; }
+  input[type=search]:focus { outline:none; border-color:var(--faint); }
+  .group h2 .when { margin-left:auto; color:var(--faint); font-weight:400; }
+  #dub-jobs > .row:first-child, #dub-films > .row:first-child { border-top:0; }
+  button.wide { grid-column:5 / 7; white-space:nowrap; }
+
   footer { margin-top:1.5rem; color:var(--faint); font-size:12px; max-width:44rem; }
   code { font:11px ui-monospace, SFMono-Regular, Menlo, monospace; color:var(--dim); }
 
@@ -144,11 +154,12 @@ const pageHTML = `<!doctype html>
 <div class="page">
   <div class="top">
     <img src="/icon.svg" alt="">
-    <h1>Audio convert</h1>
+    <h1>Audio manager</h1>
     <div class="facts" id="facts"></div>
   </div>
   <p id="msg"></p>
 
+  <h2 class="section">Re-encode</h2>
   <div class="group">
     <h2>Files <span class="n" id="count"></span></h2>
     <div id="list"></div>
@@ -164,11 +175,29 @@ const pageHTML = `<!doctype html>
     <div id="library"></div>
   </details>
 
+  <h2 class="section">Add audio</h2>
+  <div class="tools">
+    <select id="dub-lang" aria-label="Language to add"></select>
+    <input type="search" id="dub-filter" placeholder="Filter titles" aria-label="Filter titles">
+  </div>
+
+  <div class="group">
+    <h2>Requests <span class="n" id="dub-count"></span></h2>
+    <div id="dub-jobs"></div>
+  </div>
+
+  <div class="group">
+    <h2><span id="dub-title">Films</span> <span class="n" id="dub-films-count"></span><span class="when" id="dub-when"></span></h2>
+    <div id="dub-films"></div>
+  </div>
+
   <footer>
-    Runs <code>audio-compat.py --file</code>, the same script as the 05:00 pass: an AC3 track goes first, every
-    other track stays, and the previous file is kept beside it as <code>.original</code>. One at a time; the
+    Re-encode runs <code>audio-compat.py --file</code>, the same script as the 05:00 pass: an AC3 track goes first,
+    every other track stays, and the previous file is kept beside it as <code>.original</code>. One at a time; the
     queue waits while the nightly pass works. "In the library" lists what the same rule would convert before
     any client has played it. Click a file for its details.
+    Add audio leaves a request for <code>dub-fetch.py</code>, which runs every 10 minutes: it looks for a release
+    with that dub, checks the track and adds it to the film.
   </footer>
 </div>
 
@@ -428,6 +457,144 @@ function historyRow(h) {
   return row;
 }
 
+var DUB_STATUS = { requested: "Requested", cancelling: "Cancelling", queued: "Waiting for dub-fetch",
+  trying: "Searching", probing: "Checking the dub", downloading: "Downloading", done: "Added",
+  failed: "Failed", cancelled: "Cancelled" };
+
+function dubActive(status) { return status !== "done" && status !== "failed" && status !== "cancelled"; }
+
+var dub = null, dubLang = "";
+
+function dubKey(id, lang) { return id + "-" + lang; }
+
+// What is under way for each film and language: a job dub-fetch runs, or a request it has not taken yet.
+function dubPending() {
+  var out = {};
+  (dub.jobs || []).forEach(function (j) { if (dubActive(j.status)) out[dubKey(j.movie_id, j.lang)] = j.status; });
+  (dub.requests || []).forEach(function (r) { out[dubKey(r.movie_id, r.lang)] = r.cancel ? "cancelling" : "requested"; });
+  return out;
+}
+
+function langName(code) { return (dub.languages || {})[code] || language(code); }
+
+function dubPost(url, id, lang, button) {
+  button.disabled = true;
+  post(url, { movie_id: id, lang: lang }).then(function (d) {
+    if (d.error) { say(d.error); button.disabled = false; return; }
+    say("");
+    refresh();
+  });
+}
+
+function dubCancel(id, lang) {
+  var b = el("button", "", "Cancel");
+  b.onclick = function () { dubPost("/api/add-audio/cancel", id, lang, b); };
+  return b;
+}
+
+function dubJobRow(j, pending) {
+  var frag = document.createDocumentFragment();
+  var status = pending[dubKey(j.movie_id, j.lang)] === "cancelling" ? "cancelling" : j.status;
+  var row = el("div", "row" + (dubActive(j.status) ? "" : " off"));
+  row.appendChild(el("span", "dot" + (j.status === "done" ? " ok" : j.status === "failed" ? " bad" :
+    j.status === "cancelled" ? " idle" : "")));
+  var title = el("div", "title", j.title || String(j.movie_id));
+  title.appendChild(el("small", "", langName(j.lang)));
+  row.appendChild(title);
+  var meta = el("div", "meta");
+  row.appendChild(meta);
+  meta.appendChild(el("div", "c", DUB_STATUS[status] || status));
+  meta.appendChild(el("div", "c r span2", j.updated ? when(j.updated) : ""));
+  if (dubActive(j.status) && status !== "cancelling") row.appendChild(dubCancel(j.movie_id, j.lang));
+  frag.appendChild(row);
+
+  var lines = [];
+  var c = j.current;
+  if (c && dubActive(j.status)) {
+    lines.push(["Release: ", c.title, " (" + [human(c.size), c.indexer + (c.private ? ", private" : "")].filter(Boolean).join(", ") + ")"]);
+    if (c.dub) lines.push(["Dub: ", c.dub, ""]);
+  }
+  if (j.reason && !(c && dubActive(j.status))) lines.push(["", j.reason, ""]);
+  if (lines.length) {
+    var more = el("div", "more open");
+    lines.forEach(function (l) {
+      var p = el("div");
+      p.appendChild(document.createTextNode(l[0]));
+      p.appendChild(el("b", "", l[1]));
+      p.appendChild(document.createTextNode(l[2]));
+      more.appendChild(p);
+    });
+    frag.appendChild(more);
+  }
+  return frag;
+}
+
+function dubFilmRow(f, pending) {
+  var row = el("div", "row");
+  var status = pending[dubKey(f.id, dubLang)];
+  row.appendChild(el("span", status ? "dot" : "dot idle"));
+  var title = el("div", "title", f.title);
+  if (f.year) title.appendChild(el("small", "", String(f.year)));
+  row.appendChild(title);
+  var meta = el("div", "meta");
+  row.appendChild(meta);
+  meta.appendChild(el("div", "c", f.audio ? language(f.audio) + " audio" : ""));
+  if (status) meta.appendChild(el("div", "c span2", DUB_STATUS[status] || status));
+  if (!status) {
+    var add = el("button", "primary wide", "Add " + langName(dubLang));
+    add.onclick = function () { dubPost("/api/add-audio", f.id, dubLang, add); };
+    row.appendChild(add);
+  } else if (status !== "cancelling") {
+    row.appendChild(dubCancel(f.id, dubLang));
+  }
+  return row;
+}
+
+function renderDub() {
+  if (!dub) return;
+  var select = document.getElementById("dub-lang"), codes = Object.keys(dub.languages || {}).sort();
+  if (codes.indexOf(dubLang) < 0) dubLang = codes.indexOf("spa") >= 0 ? "spa" : (codes[0] || "");
+  if (select.options.length !== codes.length || codes.some(function (c, i) { return select.options[i].value !== c; })) {
+    select.textContent = "";
+    codes.forEach(function (c) { var o = el("option", "", langName(c)); o.value = c; select.appendChild(o); });
+  }
+  select.value = dubLang;
+  select.disabled = !codes.length;
+
+  var pending = dubPending();
+  var jobs = document.getElementById("dub-jobs"), list = dub.jobs || [];
+  jobs.textContent = "";
+  var running = list.filter(function (j) { return dubActive(j.status); }).length +
+    (dub.requests || []).filter(function (r) { return !r.cancel; }).length;
+  document.getElementById("dub-count").textContent = running ? running + " under way" : "";
+  var requestedOnly = (dub.requests || []).filter(function (r) {
+    return !r.cancel && !list.some(function (j) { return j.movie_id === r.movie_id && j.lang === r.lang && dubActive(j.status); });
+  });
+  requestedOnly.forEach(function (r) {
+    var film = (dub.films || []).filter(function (f) { return f.id === r.movie_id; })[0];
+    jobs.appendChild(dubJobRow({ movie_id: r.movie_id, lang: r.lang, status: "requested", updated: r.requested,
+      title: film ? film.title + (film.year ? " (" + film.year + ")" : "") : "" }, pending));
+  });
+  list.forEach(function (j) { jobs.appendChild(dubJobRow(j, pending)); });
+  if (!jobs.childNodes.length) jobs.appendChild(el("p", "empty", "Nothing requested yet."));
+
+  var needle = document.getElementById("dub-filter").value.trim().toLowerCase();
+  var missing = (dub.films || []).filter(function (f) { return (f.missing || []).indexOf(dubLang) >= 0; });
+  var shown = missing.filter(function (f) { return !needle || (f.title || "").toLowerCase().indexOf(needle) >= 0; });
+  document.getElementById("dub-title").textContent = dubLang ? "Without " + langName(dubLang) : "Films";
+  document.getElementById("dub-films-count").textContent = missing.length ?
+    (needle ? shown.length + " of " + missing.length : String(missing.length)) : "";
+  document.getElementById("dub-when").textContent = dub.error ? dub.error : dub.time ? "listed " + when(dub.time) : "not listed yet";
+  var films = document.getElementById("dub-films");
+  films.textContent = "";
+  if (!shown.length) films.appendChild(el("p", "empty", !dub.time ? "dub-fetch has not listed the library yet." :
+    needle ? "No title matches." : "Every film has this language."));
+  else shown.forEach(function (f) { films.appendChild(dubFilmRow(f, pending)); });
+}
+
+document.getElementById("dub-lang").onchange = function (e) { dubLang = e.target.value; e.target.blur(); renderDub(); };
+document.getElementById("dub-filter").oninput = renderDub;
+
 var timer = null;
 
 function refresh() {
@@ -467,6 +634,9 @@ function refresh() {
     hist.textContent = "";
     if (!d.history || !d.history.length) hist.appendChild(el("p", "empty", "Nothing converted yet."));
     else d.history.forEach(function (h) { hist.appendChild(historyRow(h)); });
+
+    dub = d.add_audio || {};
+    renderDub();
 
     clearTimeout(timer);
     timer = setTimeout(tick, d.running || (d.queue && d.queue.length) ? 1000 : 10000);

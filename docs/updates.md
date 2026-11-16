@@ -16,7 +16,7 @@ Compose files are not read: every `image:` there is a `${VARIABLE}`, which Renov
 so `versions.env` carries the image name itself. A version line without the annotation is ignored.
 That is on purpose for the apps with their own repos (bifrost, sleipnir, muninn), which their
 releases pin through "Deploy app", and for the `*_IMAGE_TAG` lines, which the Service images
-workflow writes. The ffmpeg and python versions for audio-convert are Alpine packages, not images,
+workflow writes. The ffmpeg and python versions for audio-manager are Alpine packages, not images,
 and stay manual.
 
 Images without version tags (aceserve, the qBittorrent and Pi-hole exporters) are pinned by the
@@ -42,7 +42,7 @@ get their own versioning rule, so an `-ls` rebuild counts as an update and an Ub
   schedule or the three days.
 
 Its pull requests run the same checks as anyone's: Host ports, and Service images, which builds
-Caddy or audio-convert when a base version they take as a build arg changes.
+Caddy or audio-manager when a base version they take as a build arg changes.
 
 ## Held back
 

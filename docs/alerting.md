@@ -234,7 +234,7 @@ Both rules wait `for: 5m`, so a re-encode that lasts a few frames while a client
 one seek, is not a message.
 
 Which audio codecs get converted, and why `cause` decides it, is in
-[audio-convert.md](audio-convert.md#which-codecs-get-converted-is-learned).
+[audio-manager.md](audio-manager.md#which-codecs-get-converted-is-learned).
 
 ## The *arrs notify on their own
 

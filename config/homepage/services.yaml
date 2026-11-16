@@ -157,12 +157,12 @@
         description: Subtitles by language, movie by movie
         server: my-docker
         container: subtitle-links
-    - Audio convert:
+    - Audio manager:
         icon: https://audio.{{HOMEPAGE_VAR_DOMAIN}}/icon.svg
         href: https://audio.{{HOMEPAGE_VAR_DOMAIN}}
-        description: Files a TV had re-encoded, and the button that fixes them
+        description: Re-encoded files to fix, and dubs to add
         server: my-docker
-        container: audio-convert
+        container: audio-manager
 
 - System:
     - Grafana:

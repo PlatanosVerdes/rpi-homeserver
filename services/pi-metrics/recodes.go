@@ -22,7 +22,7 @@ import (
 // re-encodes aac that way every day, and learning from it would mark the codec every client plays.
 //
 // The file list also keeps sessions whose client turned direct play off. They teach no codec and
-// are marked not actionable, so services/audio-convert can say why converting would not help.
+// are marked not actionable, so services/audio-manager can say why converting would not help.
 //
 // Nothing here forgets a codec on its own. One that a client update fixed is removed from the file
 // by hand and the container restarted, since what is in memory is written back on the next change.
@@ -40,7 +40,7 @@ type fileSeen struct {
 	Client string `json:"client"`
 	Seen   int64  `json:"seen"`
 
-	// What services/audio-convert lists: the cause, what the server says about the file, and
+	// What services/audio-manager lists: the cause, what the server says about the file, and
 	// whether adding a track can fix it (plan.go). audio-compat reads only the fields above, and
 	// only from entries whose cause is codec.
 	Cause        string  `json:"cause"`
