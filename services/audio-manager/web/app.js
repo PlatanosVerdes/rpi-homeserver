@@ -172,10 +172,13 @@ function item(it, state) {
   row.appendChild(dot);
 
   var title = el("div", "title", it.title || it.library_path || it.path);
+  var source = it.cause === "library" ? "found in the library" : it.client ? "played on " + it.client : "";
+  title.appendChild(el("small", "", source));
   row.appendChild(title);
 
   var meta = el("div", "meta");
   row.appendChild(meta);
+  if (source) meta.appendChild(el("div", "c source", source));
   if (!it.actionable) {
     meta.appendChild(el("div", "c span4", it.reason_code === "no_direct_play" || it.cause === "no_direct_play"
       ? "Client setting: turn on Force Direct Play" : (it.reason || "Nothing to fix in the file")));
@@ -243,6 +246,50 @@ function item(it, state) {
   return frag;
 }
 
+var STATUS_ORDER = { converting: 0, queued: 1, ready: 2, failed: 3, done: 4, missing: 5 };
+
+function toConvert(it) { return it.status !== "done" && it.status !== "missing"; }
+
+// One list of what can be converted, from the clients' ledger and the library scan alike; what only a
+// client setting fixes goes below it, and the history last.
+function renderReencode(d) {
+  var lib = d.library || {}, seen = {}, actionable = [], nofix = [];
+  (d.items || []).concat(lib.items || []).forEach(function (it, i) {
+    if (seen[it.library_path]) return;
+    seen[it.library_path] = true;
+    (it.actionable ? actionable : nofix).push([it, i]);
+  });
+  actionable.sort(function (a, b) {
+    return (STATUS_ORDER[a[0].status] || 0) - (STATUS_ORDER[b[0].status] || 0) || a[1] - b[1];
+  });
+
+  var list = document.getElementById("list");
+  list.textContent = "";
+  var todo = actionable.filter(function (x) { return toConvert(x[0]); }).length;
+  document.getElementById("count").textContent = todo ? String(todo) : "";
+  document.getElementById("badge-reencode").textContent = todo ? String(todo) : "";
+  document.getElementById("library-when").textContent = lib.error ? lib.error :
+    lib.time ? "library scanned " + when(lib.time) : "library not scanned yet";
+  if (!actionable.length) list.appendChild(el("p", "empty",
+    "Nothing to convert. A file shows up here when a client has its audio re-encoded or the nightly scan finds one."));
+  else actionable.forEach(function (x) { list.appendChild(item(x[0], d)); });
+
+  var quiet = document.getElementById("nofix");
+  quiet.textContent = "";
+  nofix.forEach(function (x) { quiet.appendChild(item(x[0], d)); });
+  document.getElementById("nofix-count").textContent = String(nofix.length);
+  document.getElementById("nofix-group").hidden = !nofix.length;
+
+  var hist = document.getElementById("history"), history = d.history || [];
+  hist.textContent = "";
+  var failed = history.filter(function (h) { return h.result !== "done"; }).length;
+  var count = document.getElementById("history-count");
+  count.textContent = history.length ? String(history.length) + (failed ? ", " : "") : "";
+  if (failed) count.appendChild(el("span", "bad", failed + " failed"));
+  if (!history.length) hist.appendChild(el("p", "empty", "Nothing converted yet."));
+  else history.forEach(function (h) { hist.appendChild(historyRow(h)); });
+}
+
 function historyRow(h) {
   var ok = h.result === "done";
   var row = el("div", "row" + (ok ? "" : " off"));
@@ -255,7 +302,7 @@ function historyRow(h) {
     meta.appendChild(el("div", "c r", h.seconds ? clock(h.seconds) : ""));
     meta.appendChild(el("div", "c r", h.speed ? h.speed.toFixed(0) + "×" : ""));
   } else {
-    meta.appendChild(el("div", "c span2", h.reason || "failed"));
+    meta.appendChild(el("div", "c span2", h.reason || "failed")).title = h.reason || "";
   }
   meta.appendChild(el("div", "c r", when(h.time)));
   return row;
@@ -743,29 +790,7 @@ function refresh() {
     facts.appendChild(el("span", "", human(d.free) + " free"));
     facts.appendChild(el("span", "", d.speed.toFixed(0) + "× realtime"));
 
-    var list = document.getElementById("list"), items = d.items || [];
-    list.textContent = "";
-    var todo = items.filter(function (it) { return it.actionable && it.status !== "done" && it.status !== "missing"; }).length;
-    document.getElementById("count").textContent = todo ? todo + " to convert" : "";
-    document.getElementById("badge-reencode").textContent = todo ? String(todo) : "";
-    if (!items.length) list.appendChild(el("p", "empty", "Nothing yet. A file shows up here when a client has its audio re-encoded."));
-    else items.forEach(function (it) { list.appendChild(item(it, d)); });
-
-    var lib = d.library || {}, libItems = lib.items || [];
-    var libList = document.getElementById("library");
-    libList.textContent = "";
-    var pendingLib = libItems.filter(function (it) { return it.status !== "done" && it.status !== "missing"; }).length;
-    document.getElementById("library-count").textContent = pendingLib ? pendingLib + " would be converted" : "";
-    document.getElementById("library-when").textContent = lib.error ? lib.error :
-      lib.time ? "checked " + when(lib.time) : "not checked yet";
-    if (!libItems.length) libList.appendChild(el("p", "empty", lib.time ? "Every file in the library has audio the TV plays." :
-      "The first check of the library runs when the app starts."));
-    else libItems.forEach(function (it) { libList.appendChild(item(it, d)); });
-
-    var hist = document.getElementById("history");
-    hist.textContent = "";
-    if (!d.history || !d.history.length) hist.appendChild(el("p", "empty", "Nothing converted yet."));
-    else d.history.forEach(function (h) { hist.appendChild(historyRow(h)); });
+    renderReencode(d);
 
     dub = d.add_audio || {};
     renderDub();
