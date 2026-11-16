@@ -49,6 +49,21 @@ APPDATA="${APP_CONFIG_PATH:-./appdata}"
 SERVICES_DIR="${SERVICES_DIR:-$HOME/rpi-services}"
 SERVICES_APPDATA="$SERVICES_DIR/appdata"
 
+# Data the companion repo keeps outside its appdata, one absolute path per line in its backup-paths
+EXTRA_PATHS=()
+if [[ -f "$SERVICES_DIR/backup-paths" ]]; then
+    while IFS= read -r path || [[ -n "$path" ]]; do
+        path="${path%%#*}"
+        path="${path%"${path##*[![:space:]]}"}"
+        [[ -z "$path" ]] && continue
+        if [[ -e "$path" ]]; then
+            EXTRA_PATHS+=("$path")
+        else
+            log "backup-paths: $path does not exist, skipped"
+        fi
+    done < "$SERVICES_DIR/backup-paths"
+fi
+
 DEST="${BACKUP_DEST:-${DATA_ROOT}/backups/appdata}"
 RETENTION="${BACKUP_RETENTION:-7}"
 
@@ -71,7 +86,8 @@ sudo tar \
     --exclude='*/logs/*' \
     --exclude='*.log' \
     --exclude='*.sock' \
-    -czf "$ARCHIVE" -C "$HOME" "${APPDATA#$HOME/}" $([ -d "$SERVICES_APPDATA" ] && echo "${SERVICES_APPDATA#$HOME/}") || tar_rc=$?
+    -czf "$ARCHIVE" -C "$HOME" "${APPDATA#$HOME/}" $([ -d "$SERVICES_APPDATA" ] && echo "${SERVICES_APPDATA#$HOME/}") \
+    "${EXTRA_PATHS[@]}" || tar_rc=$?
 
 # tar exit 1 = some files changed/vanished mid-read (benign for live caches); >1 = fatal
 if [ "$tar_rc" -gt 1 ]; then
@@ -82,7 +98,7 @@ fi
 SIZE=$(stat -c%s "$ARCHIVE" 2>/dev/null || echo 0)
 # Only directories that exist: du still prints a total when one is missing but exits non-zero, and
 # the `|| echo 0` then appended a second number that broke the arithmetic below.
-APPDATA_SIZE=$(sudo du -scb "$APPDATA" $([ -d "$SERVICES_APPDATA" ] && echo "$SERVICES_APPDATA") 2>/dev/null |
+APPDATA_SIZE=$(sudo du -scb "$APPDATA" $([ -d "$SERVICES_APPDATA" ] && echo "$SERVICES_APPDATA") "${EXTRA_PATHS[@]}" 2>/dev/null |
     tail -1 | cut -f1)
 APPDATA_SIZE=${APPDATA_SIZE:-0}
 log "Archive created ($((SIZE / 1024 / 1024)) MiB); appdata on disk: $((APPDATA_SIZE / 1024 / 1024)) MiB"
