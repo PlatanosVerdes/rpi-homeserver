@@ -137,13 +137,31 @@ const pageHTML = `<!doctype html>
 
   .picker { margin-top:1.25rem; padding:.85rem; border:1px solid var(--line); border-radius:8px; background:var(--panel); }
   .picker .label { display:block; font-size:12px; font-weight:500; color:var(--dim); margin-bottom:.5rem; }
-  .chips { display:flex; flex-wrap:wrap; gap:.4rem; }
-  .chips button { justify-self:auto; display:flex; align-items:center; gap:.45rem; padding:.5rem .8rem; font-size:13px;
-                  background:var(--bg); }
-  .chips button .n { color:var(--faint); font-weight:400; }
-  .chips button[aria-checked=true] { background:var(--accent); border-color:var(--accent); color:#fff; }
-  .chips button[aria-checked=true] .n { color:rgba(255,255,255,.75); }
-  .chips .empty { padding:0; }
+  .combo { position:relative; }
+  .combo input { width:100%; font:inherit; font-size:15px; font-weight:500; color:var(--ink); background:var(--bg);
+                 border:1px solid var(--line); border-radius:6px; padding:.6rem 7.5rem .6rem .75rem; cursor:pointer; text-overflow:ellipsis; }
+  .combo input:hover { border-color:var(--faint); }
+  .combo input:focus { outline:none; border-color:var(--accent); cursor:text; }
+  .combo-count { position:absolute; right:2.1rem; top:50%; transform:translateY(-50%); color:var(--dim); font-size:12px;
+                 pointer-events:none; white-space:nowrap; }
+  .combo[data-open] .combo-count { display:none; }
+  .combo-caret { position:absolute; right:.9rem; top:50%; width:7px; height:7px; margin-top:-6px; pointer-events:none;
+                 border-right:1.5px solid var(--dim); border-bottom:1.5px solid var(--dim); transform:rotate(45deg); }
+  .combo[data-open] .combo-caret { transform:rotate(-135deg); margin-top:-2px; }
+  .combo ul { position:absolute; z-index:10; left:0; right:0; top:calc(100% + 4px); max-height:min(21rem, 60vh); overflow-y:auto;
+              margin:0; padding:4px; list-style:none; background:var(--panel); border:1px solid var(--line); border-radius:8px;
+              box-shadow:0 10px 30px rgba(0,0,0,.5); }
+  .combo ul[hidden] { display:none; }
+  .combo li[role=option] { display:flex; align-items:baseline; gap:.75rem; padding:.5rem .6rem; border-radius:5px; cursor:pointer; }
+  .combo li[role=option] .name { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .combo li[role=option] .code { color:var(--faint); font-size:11px; }
+  .combo li[role=option] .n { color:var(--dim); min-width:2.5rem; text-align:right; }
+  .combo li.none { color:var(--faint); }
+  .combo li.none .n { color:var(--faint); }
+  .combo li.active { background:var(--hover); box-shadow:inset 0 0 0 1px var(--line); }
+  .combo li[aria-selected=true] .name { color:var(--accent); }
+  .combo li.head { padding:.45rem .6rem .2rem; font-size:11px; font-weight:500; color:var(--faint); }
+  .combo li.nothing { padding:.6rem; color:var(--faint); }
   .search { margin-top:.85rem; }
   input[type=search] { width:100%; font:inherit; font-size:14px; color:var(--ink); background:var(--bg); border:1px solid var(--line);
                        border-radius:6px; padding:.55rem .7rem; }
@@ -165,6 +183,7 @@ const pageHTML = `<!doctype html>
     .row > button { grid-column:3; grid-row:1 / span 2; }
     .more { padding-left:calc(.85rem + 14px + .75rem); }
     .tabs { margin-left:0; flex:1 0 100%; }
+    .combo input, input[type=search] { font-size:16px; }
     .tabs a { flex:1; justify-content:center; }
   }
   @media (prefers-reduced-motion: reduce) { .bar i { transition:none; } }
@@ -184,8 +203,14 @@ const pageHTML = `<!doctype html>
 
   <section class="view" id="view-add">
     <div class="picker">
-      <span class="label" id="dub-lang-label">Language to add</span>
-      <div class="chips" id="dub-lang" role="radiogroup" aria-labelledby="dub-lang-label"></div>
+      <label class="label" id="lang-label" for="lang-input">Language to add</label>
+      <div class="combo" id="lang-combo">
+        <input id="lang-input" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false"
+               aria-controls="lang-list" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <span class="combo-count" id="lang-count"></span>
+        <span class="combo-caret" aria-hidden="true"></span>
+        <ul id="lang-list" role="listbox" aria-labelledby="lang-label" hidden></ul>
+      </div>
       <div class="search">
         <input type="search" id="dub-filter" placeholder="Search films" aria-label="Search films" autocomplete="off">
       </div>
@@ -583,50 +608,182 @@ function dubFilmRow(f, pending) {
   return row;
 }
 
-var LANG_KEY = "audio-manager.lang";
+var LANG_KEY = "audio-manager.lang", RECENT_KEY = "audio-manager.recent-langs";
 
-function remembered() { try { return localStorage.getItem(LANG_KEY) || ""; } catch (e) { return ""; } }
+function stored(key) { try { return localStorage.getItem(key) || ""; } catch (e) { return ""; } }
 
-function remember(code) { try { localStorage.setItem(LANG_KEY, code); } catch (e) {} }
+function store(key, value) { try { localStorage.setItem(key, value); } catch (e) {} }
+
+function recentLangs() { try { return JSON.parse(stored(RECENT_KEY) || "[]").slice(0, 3); } catch (e) { return []; } }
 
 function missingCount(code) {
   return (dub.films || []).filter(function (f) { return (f.missing || []).indexOf(code) >= 0; }).length;
 }
 
-function chooseLang(code) { dubLang = code; remember(code); renderDub(); }
+// The other ISO 639-2 spelling of each code, so "ger" finds deu and "fra" finds fre.
+var ALIASES = { fre: "fra", ger: "deu", dut: "nld", chi: "zho", cze: "ces", gre: "ell", per: "fas", rum: "ron",
+  slo: "slk", wel: "cym", arm: "hye", baq: "eus", geo: "kat", ice: "isl", mac: "mkd", may: "msa", alb: "sqi",
+  bur: "mya", tib: "bod", mao: "mri" };
+Object.keys(ALIASES).forEach(function (k) { ALIASES[ALIASES[k]] = k; });
 
-// Rebuilt only when the languages change, so a poll never takes the focus off a chip.
-function renderChips(codes) {
-  var chips = document.getElementById("dub-lang");
-  if (chips.dataset.codes !== codes.join(",")) {
-    chips.dataset.codes = codes.join(",");
-    chips.textContent = "";
-    codes.forEach(function (code) {
-      var b = el("button");
-      b.type = "button";
-      b.setAttribute("role", "radio");
-      b.dataset.code = code;
-      b.appendChild(el("span", "", langName(code)));
-      b.appendChild(el("span", "n"));
-      b.onclick = function () { chooseLang(code); };
-      chips.appendChild(b);
-    });
-    if (!codes.length) chips.appendChild(el("p", "empty", "No languages yet: dub-fetch lists them with the films."));
-  }
-  Array.prototype.forEach.call(chips.querySelectorAll("button"), function (b) {
-    b.setAttribute("aria-checked", String(b.dataset.code === dubLang));
-    b.querySelector(".n").textContent = String(missingCount(b.dataset.code));
-  });
+function fold(text) { return String(text || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase(); }
+
+function langMatches(code, query) {
+  return fold([langName(code), code, ALIASES[code] || "", language(code)].join(" ")).indexOf(query) >= 0;
 }
+
+var combo = { open: false, query: "", active: "" };
+
+function comboEls() {
+  return { box: document.getElementById("lang-combo"), input: document.getElementById("lang-input"),
+    list: document.getElementById("lang-list"), count: document.getElementById("lang-count") };
+}
+
+function filmsLabel(n) { return n ? n + (n === 1 ? " film" : " films") + " without it" : "none missing"; }
+
+// The options in display order: recent picks first (only before typing), then the rest with films to fix
+// by name, then the languages every film already has.
+function comboOptions(codes) {
+  var query = fold(combo.query.trim());
+  var counts = {};
+  codes.forEach(function (c) { counts[c] = missingCount(c); });
+  var byUse = function (a, b) { return (counts[b] > 0) - (counts[a] > 0) || langName(a).localeCompare(langName(b)); };
+  if (query) return { counts: counts, groups: [{ codes: codes.filter(function (c) { return langMatches(c, query); }).sort(byUse) }] };
+  var recent = recentLangs().filter(function (c) { return codes.indexOf(c) >= 0; });
+  var rest = codes.filter(function (c) { return recent.indexOf(c) < 0; }).sort(byUse);
+  return { counts: counts, groups: recent.length ? [{ head: "Recent", codes: recent }, { head: "All languages", codes: rest }] : [{ codes: rest }] };
+}
+
+function renderCombo(codes) {
+  var e = comboEls();
+  e.input.disabled = !codes.length;
+  e.count.textContent = dubLang ? filmsLabel(missingCount(dubLang)) : "";
+  if (!combo.open) {
+    var name = dubLang ? langName(dubLang) : "No languages yet";
+    if (e.input.value !== name) e.input.value = name;
+    return;
+  }
+  var options = comboOptions(codes), order = [];
+  var scroll = e.list.scrollTop;
+  e.list.textContent = "";
+  options.groups.forEach(function (g) {
+    if (g.head && g.codes.length) e.list.appendChild(el("li", "head", g.head)).setAttribute("role", "presentation");
+    g.codes.forEach(function (code) {
+      var n = options.counts[code];
+      var li = el("li", n ? "" : "none");
+      li.id = "lang-opt-" + code;
+      li.setAttribute("role", "option");
+      li.setAttribute("aria-selected", String(code === dubLang));
+      li.appendChild(el("span", "name", langName(code)));
+      li.appendChild(el("span", "code", code));
+      li.appendChild(el("span", "n", String(n)));
+      li.onclick = function () { chooseLang(code); };
+      e.list.appendChild(li);
+      order.push(code);
+    });
+  });
+  if (!order.length) e.list.appendChild(el("li", "nothing", "No language matches."));
+  if (order.indexOf(combo.active) < 0) combo.active = order[0] || "";
+  combo.order = order;
+  e.list.scrollTop = scroll;
+  markActive(false);
+}
+
+// reveal scrolls the active option into view; a poll must not, or it undoes the user's own scrolling.
+function markActive(reveal) {
+  var e = comboEls();
+  Array.prototype.forEach.call(e.list.querySelectorAll("li[role=option]"), function (li) {
+    li.classList.toggle("active", li.id === "lang-opt-" + combo.active);
+  });
+  var active = combo.active && document.getElementById("lang-opt-" + combo.active);
+  if (active) {
+    e.input.setAttribute("aria-activedescendant", active.id);
+    if (!reveal) return;
+    var top = active.offsetTop, bottom = top + active.offsetHeight;
+    if (top < e.list.scrollTop) e.list.scrollTop = top - 4;
+    else if (bottom > e.list.scrollTop + e.list.clientHeight) e.list.scrollTop = bottom - e.list.clientHeight + 4;
+  } else {
+    e.input.removeAttribute("aria-activedescendant");
+  }
+}
+
+function openCombo() {
+  if (combo.open || !dub) return;
+  var e = comboEls();
+  combo.open = true;
+  combo.query = "";
+  combo.active = dubLang;
+  e.box.setAttribute("data-open", "");
+  e.input.setAttribute("aria-expanded", "true");
+  e.list.hidden = false;
+  e.list.scrollTop = 0;
+  e.input.select();
+  renderDub();
+  markActive(true);
+}
+
+function closeCombo() {
+  if (!combo.open) return;
+  var e = comboEls();
+  combo.open = false;
+  combo.query = "";
+  e.box.removeAttribute("data-open");
+  e.input.setAttribute("aria-expanded", "false");
+  e.input.removeAttribute("aria-activedescendant");
+  e.list.hidden = true;
+  renderDub();
+}
+
+function chooseLang(code) {
+  dubLang = code;
+  store(LANG_KEY, code);
+  store(RECENT_KEY, JSON.stringify([code].concat(recentLangs().filter(function (c) { return c !== code; })).slice(0, 3)));
+  closeCombo();
+  renderDub();
+}
+
+(function () {
+  var e = comboEls();
+  e.input.addEventListener("focus", openCombo);
+  e.input.addEventListener("click", openCombo);
+  e.input.addEventListener("blur", closeCombo);
+  // Keeps the focus in the input, so a click on an option or the list's scrollbar does not close it first.
+  e.list.addEventListener("mousedown", function (ev) { ev.preventDefault(); });
+  e.input.addEventListener("input", function () {
+    if (!combo.open) openCombo();
+    combo.query = e.input.value;
+    combo.active = "";
+    e.list.scrollTop = 0;
+    renderDub();
+  });
+  e.input.addEventListener("keydown", function (ev) {
+    var order = combo.order || [], i = order.indexOf(combo.active);
+    var step = { ArrowDown: i + 1, ArrowUp: i - 1, Home: 0, End: order.length - 1 }[ev.key];
+    if (step !== undefined && (combo.open || ev.key.indexOf("Arrow") === 0)) {
+      ev.preventDefault();
+      if (!combo.open) { openCombo(); return; }
+      if (!order.length) return;
+      combo.active = order[Math.max(0, Math.min(order.length - 1, step))];
+      markActive(true);
+    } else if (ev.key === "Enter") {
+      if (combo.open && combo.active) { ev.preventDefault(); chooseLang(combo.active); }
+      else if (!combo.open) { ev.preventDefault(); openCombo(); }
+    } else if (ev.key === "Escape") {
+      if (combo.open) { ev.preventDefault(); closeCombo(); }
+    } else if (ev.key === "Tab") {
+      closeCombo();
+    }
+  });
+})();
 
 function renderDub() {
   if (!dub) return;
   var codes = Object.keys(dub.languages || {}).sort(function (a, b) { return langName(a).localeCompare(langName(b)); });
   if (codes.indexOf(dubLang) < 0) {
-    var saved = remembered();
+    var saved = stored(LANG_KEY);
     dubLang = codes.indexOf(saved) >= 0 ? saved : codes.indexOf("spa") >= 0 ? "spa" : (codes[0] || "");
   }
-  renderChips(codes);
+  renderCombo(codes);
 
   var pending = dubPending();
   var jobs = document.getElementById("dub-jobs"), list = dub.jobs || [];

@@ -49,22 +49,50 @@ MIN_GOOD_WINDOWS = 0.6
 MAX_RESIDUAL_SECONDS = 0.045
 SAME_SPEED = 2e-5
 TARGET_CODEC = "ac3"
-# The languages a dub can be added in, and the only place to add one. aliases: how a file tags the track;
-# words: how Radarr and release titles name it; locale: an indexer in that language is likelier to carry
-# it; rejected: track titles of a variant that is not this one (Latin American Spanish).
+# The languages a dub can be added in, and the only place to add one: ISO 639-2 code, the ISO 639-1 code
+# files also tag with, the name shown, and the words Radarr and release titles use for it.
+_LANGUAGES = [
+    ("spa", "es", "Castellano", "spanish español castellano cast esp"),
+    ("cat", "ca", "Català", "catalan català catala"),
+    ("eus", "eu", "Euskara", "basque euskara euskera"),
+    ("glg", "gl", "Galego", "galician galego gallego"),
+    ("eng", "en", "English", "english"),
+    ("fra", "fr", "Français", "french français francais vff"),
+    ("ita", "it", "Italiano", "italian italiano"),
+    ("deu", "de", "Deutsch", "german deutsch"),
+    ("por", "pt", "Português", "portuguese português portugues"),
+    ("nld", "nl", "Nederlands", "dutch nederlands"),
+    ("swe", "sv", "Svenska", "swedish svenska"),
+    ("nor", "no", "Norsk", "norwegian norsk"),
+    ("dan", "da", "Dansk", "danish dansk"),
+    ("fin", "fi", "Suomi", "finnish suomi"),
+    ("pol", "pl", "Polski", "polish polski"),
+    ("ces", "cs", "Čeština", "czech čeština"),
+    ("hun", "hu", "Magyar", "hungarian magyar"),
+    ("ell", "el", "Ελληνικά", "greek"),
+    ("tur", "tr", "Türkçe", "turkish türkçe"),
+    ("rus", "ru", "Русский", "russian"),
+    ("ukr", "uk", "Українська", "ukrainian"),
+    ("ara", "ar", "العربية", "arabic"),
+    ("hin", "hi", "हिन्दी", "hindi"),
+    ("jpn", "ja", "日本語", "japanese"),
+    ("kor", "ko", "한국어", "korean"),
+    ("zho", "zh", "中文", "chinese mandarin"),
+]
+# The bibliographic codes older files carry next to the ones above.
+_OLD_CODES = {"fra": "fre", "deu": "ger", "nld": "dut", "ces": "cze", "ell": "gre", "zho": "chi"}
+# Track titles of a variant that is not the one asked for.
+_VARIANTS = {"spa": r"latin|\blat\b|m[eé]x|neutr", "fra": r"qu[eé]bec|\bvfq\b|canad",
+             "por": r"brasil|brazil|\bpt-br\b"}
 LANGUAGES = {
-    "spa": {"name": "Castellano", "tag": "es-ES", "aliases": {"spa", "es", "esp", "es-es"},
-            "words": {"spanish", "español", "castellano", "cast"}, "locale": "es",
-            "rejected": r"latin|\blat\b|m[eé]x|neutr", "preferred": r"castellano|espa[nñ]a|\bcast\b|europe"},
-    "cat": {"name": "Català", "tag": "ca", "aliases": {"cat", "ca"}, "words": {"catalan", "català", "catala"},
-            "locale": "ca"},
-    "eng": {"name": "English", "tag": "en", "aliases": {"eng", "en"}, "words": {"english"}, "locale": "en"},
-    "fra": {"name": "Français", "tag": "fr", "aliases": {"fra", "fre", "fr"}, "words": {"french", "français", "vff", "vf"},
-            "locale": "fr", "rejected": r"qu[eé]bec|\bvfq\b|canad"},
-    "ita": {"name": "Italiano", "tag": "it", "aliases": {"ita", "it"}, "words": {"italian", "italiano"}, "locale": "it"},
-    "deu": {"name": "Deutsch", "tag": "de", "aliases": {"deu", "ger", "de"}, "words": {"german", "deutsch"},
-            "locale": "de"},
+    code: {"name": name, "tag": short, "locale": short, "words": set(words.split()),
+           "aliases": {code, short} | ({_OLD_CODES[code]} if code in _OLD_CODES else set()),
+           **({"rejected": _VARIANTS[code]} if code in _VARIANTS else {})}
+    for code, short, name, words in _LANGUAGES
 }
+LANGUAGES["spa"].update(tag="es-ES", preferred=r"castellano|espa[nñ]a|\bcast\b|europe")
+LANGUAGES["spa"]["aliases"] |= {"esp", "es-es"}
+LANGUAGES["por"].update(tag="pt-PT")
 LANGUAGE_ALIASES = {code: lang["aliases"] for code, lang in LANGUAGES.items()}
 LANGUAGE_TAGS = {code: lang["tag"] for code, lang in LANGUAGES.items()}
 TRACK_NAMES = {code: lang["name"] for code, lang in LANGUAGES.items()}

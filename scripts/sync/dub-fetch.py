@@ -59,8 +59,6 @@ PROWLARR = "http://127.0.0.1:9696"
 CATEGORY = "audio-source"
 KEEP_TAG = "keep"
 SAVE_PATH = "/data/downloads"
-# Language codes that are also ordinary words in a release title ("De", "Cat People").
-AMBIGUOUS_WORDS = {"es", "en", "it", "de", "ca", "fr", "cat"}
 MULTI_AUDIO = re.compile(r"\bmulti|\bdual\b", re.I)
 GB = 1024**3
 MB = 1024**2
@@ -166,8 +164,8 @@ def candidates(results, imdb, lang, tried, indexers, rules):
     number = int(imdb.lstrip("t") or 0)
     known = add_audio.LANGUAGES[lang]
     # What makes a release worth probing early: its title names the language, or its site speaks it.
-    hint = re.compile(r"\b(" + "|".join(map(re.escape, sorted(language_words(lang) - AMBIGUOUS_WORDS)))
-                      + r")\b", re.I)
+    # Words only: language codes are ordinary words in titles too ("De", "Cat People", "No").
+    hint = re.compile(r"\b(" + "|".join(map(re.escape, sorted(known["words"]))) + r")\b", re.I)
     rejected = re.compile(known["rejected"], re.I) if known.get("rejected") else None
     fits = []
     for r in results:
