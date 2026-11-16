@@ -204,6 +204,10 @@ func TestCandidates(t *testing.T) {
 				testRelease("french-multi", 0.5, onIndexer(5), withTitle("Film 2000 MULTI VFF")),
 				testRelease("spanish-site", 3, onIndexer(2)), testRelease("named", 4, onIndexer(3), withTitle("Film 2000 Castellano"))},
 			nil, []string{"named", "spanish-site", "multi", "plain", "french-multi"}},
+		{"a site in a third language goes last, even when its title names the language",
+			[]clients.Release{testRelease("foreign", 1, onIndexer(5), withTitle("Film 2000 Castellano MULTi")),
+				testRelease("private", 6, onIndexer(3)), testRelease("public", 9)},
+			nil, []string{"public", "private", "foreign"}},
 		{"a release without an IMDb id is kept", []clients.Release{testRelease("a", 2, withImdb(0))}, nil, []string{"a"}},
 		{"dead, tried, oversized, Latin or another film are skipped",
 			[]clients.Release{testRelease("a", 2, withSeeders(0)), testRelease("b", 2), testRelease("c", 40), testRelease("d", 2, withImdb(2)),
@@ -626,6 +630,16 @@ func TestJobProbesDownloadsAndAddsTheDub(t *testing.T) {
 	}
 	if !strings.Contains(job.Current.Dub, "spa") {
 		t.Errorf("dub %q", job.Current.Dub)
+	}
+	var probes []string
+	for _, probe := range job.Probes {
+		probes = append(probes, fmt.Sprintf("%s %s %d", probe.Title, probe.Outcome, probe.MB))
+	}
+	if want := []string{"The Others 2001 Castellano no Castellano: eng 10", "The Others 2001 MULTi has Castellano 10"}; !slices.Equal(probes, want) {
+		t.Errorf("probes %q, want %q", probes, want)
+	}
+	if _, raw := addAudioPayload(t, d); !strings.Contains(raw, `"outcome":"no Castellano: eng"`) {
+		t.Errorf("the page does not get the probes: %s", raw)
 	}
 
 	d.tick()

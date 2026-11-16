@@ -48,6 +48,8 @@ type candidate struct {
 	Named   bool `json:"named"`
 	OwnSite bool `json:"own_site"`
 	Multi   bool `json:"multi"`
+	// A site in a third language, whose MULTi is that language plus the original: tried last.
+	Foreign bool `json:"foreign,omitempty"`
 }
 
 func (c candidate) charged() int64 {
@@ -187,11 +189,12 @@ func candidates(releases []found, lang *language, tried map[string]bool, rules t
 		}
 		locale, _, _ := strings.Cut(r.SiteLanguage, "-")
 		ownSite := locale == lang.Locale
+		foreign := locale != "" && !ownSite && locale != "en"
 		// MULTi on a French site is French plus the original; it only hints on a site of ours or English.
 		multi := multiAudio.MatchString(r.Title) && (ownSite || locale == "en")
 		fits = append(fits, candidate{GUID: r.GUID, Title: r.Title, Size: r.Size, Indexer: r.Indexer,
 			Private: r.Private, Freeleech: r.Freeleech, URL: r.url,
-			Named: lang.hint.MatchString(r.Title), OwnSite: ownSite, Multi: multi})
+			Named: lang.hint.MatchString(r.Title), OwnSite: ownSite, Multi: multi, Foreign: foreign})
 	}
 	sort.SliceStable(fits, func(i, j int) bool { return lessCandidate(fits[i], fits[j]) })
 	return fits
@@ -199,7 +202,7 @@ func candidates(releases []found, lang *language, tried map[string]bool, rules t
 
 func lessCandidate(a, b candidate) bool {
 	// false sorts before true, as in the Python tuple this was.
-	for _, pair := range [][2]bool{{!a.Named, !b.Named}, {!a.OwnSite, !b.OwnSite}, {!a.Multi, !b.Multi},
+	for _, pair := range [][2]bool{{a.Foreign, b.Foreign}, {!a.Named, !b.Named}, {!a.OwnSite, !b.OwnSite}, {!a.Multi, !b.Multi},
 		{a.Private, b.Private}, {!a.Freeleech, !b.Freeleech}} {
 		if pair[0] != pair[1] {
 			return !pair[0]

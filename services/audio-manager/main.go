@@ -56,7 +56,7 @@ func loadConfig() (config, error) {
 	if d, err := time.ParseDuration(os.Getenv("SCAN_INTERVAL")); err == nil && d > 0 {
 		scanEvery = d
 	}
-	sweepEvery, err := duration("SWEEP_EVERY", 5*time.Minute)
+	sweepEvery, err := duration("SWEEP_EVERY", time.Minute)
 	if err != nil {
 		return config{}, err
 	}

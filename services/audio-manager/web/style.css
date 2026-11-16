@@ -26,6 +26,7 @@
   .view[hidden] { display:none; }
   #msg { color:var(--warn); margin:.25rem 0 0; }
   #msg:empty { display:none; }
+  #msg.quiet { color:var(--faint); }
 
   .group { margin-top:1.25rem; border:1px solid var(--line); border-radius:8px; background:var(--panel); overflow:hidden; }
   .group h2 { margin:0; padding:.55rem .85rem; font-size:12px; font-weight:500; color:var(--dim);
@@ -158,6 +159,8 @@
   .check li { display:flex; gap:.6rem; min-width:0; }
   .check li .t { color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
   .check li .s { color:var(--faint); white-space:nowrap; }
+  .check li .o { color:var(--dim); white-space:nowrap; }
+  .check li .o.yes { color:var(--accent); }
 
   footer { margin-top:1.5rem; color:var(--faint); font-size:12px; max-width:44rem; }
   code { font:11px ui-monospace, SFMono-Regular, Menlo, monospace; color:var(--dim); }
@@ -178,6 +181,8 @@
     .more { padding-left:calc(.85rem + 14px + .75rem); }
     .tabs { margin-left:0; flex:1 0 100%; }
     .toolbar input { font-size:16px; height:2.5rem; }
+    .check ul.probes li { flex-wrap:wrap; gap:0 .6rem; margin-bottom:.35rem; line-height:1.45; }
+    .check ul.probes .t { flex:1 0 100%; }
     .toolnote .when { margin-left:0; flex:1 0 100%; align-items:flex-start; text-align:left; }
     .tabs a { flex:1; justify-content:center; }
   }
