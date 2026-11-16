@@ -83,7 +83,7 @@ What the rules cover, by group:
 | Deploy and backup | deploy failing, backup failed, no recent backup, backup archive grew sharply |
 | Services | Prometheus target down, service not answering, public route behind Access broken, pi-metrics / tracker-control / qbit-manage overdue |
 | Torrents | a requested download stalled, torrents in error, seeding to nobody, a tracker warning about to be re-checked, a torrent nothing will clean up, download nothing can import, data nothing owns |
-| Trackers | almost no paid downloads left, ratio under the line, hit & run with the clock stopped, tracker numbers not being read |
+| Trackers | almost no paid downloads left, ratio under the line, hit & run with the clock stopped, a hit & run on the account, tracker numbers not being read |
 | Indexers | every indexer down, an indexer down, an indexer failing its searches |
 | Media | video re-encoded, audio re-encoded; AceStream source URLs failing, channel list frozen |
 | Companion repo | One Pace downloads failing, the Wallapop session and pass |
