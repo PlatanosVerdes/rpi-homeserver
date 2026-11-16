@@ -71,19 +71,30 @@ type dubRequest struct {
 // jobState is one film and language being fetched; it is kept whole in state.json and never shown
 // whole, since its download links lead to private sites.
 type jobState struct {
-	MovieID    int64       `json:"movie_id"`
-	Lang       string      `json:"lang"`
-	Title      string      `json:"title"`
-	Name       string      `json:"name"`
-	IMDb       string      `json:"imdb"`
-	Requested  int64       `json:"requested"`
-	Tried      []string    `json:"tried"`
-	Downloads  int         `json:"downloads"`
-	Status     string      `json:"status"` // queued, trying, probing, downloading, done, failed, cancelled
-	Reason     string      `json:"reason"`
-	Updated    int64       `json:"updated"`
-	Candidates []candidate `json:"candidates,omitempty"`
-	Current    *torrentRef `json:"current"`
+	MovieID    int64         `json:"movie_id"`
+	Lang       string        `json:"lang"`
+	Title      string        `json:"title"`
+	Name       string        `json:"name"`
+	IMDb       string        `json:"imdb"`
+	Requested  int64         `json:"requested"`
+	Tried      []string      `json:"tried"`
+	Downloads  int           `json:"downloads"`
+	Status     string        `json:"status"` // queued, trying, probing, downloading, done, failed, cancelled
+	Reason     string        `json:"reason"`
+	Updated    int64         `json:"updated"`
+	Candidates []candidate   `json:"candidates,omitempty"`
+	Current    *torrentRef   `json:"current"`
+	Probes     []probeRecord `json:"probes,omitempty"`
+}
+
+// probeRecord is what one probe of a job found, kept so a failed job shows why.
+type probeRecord struct {
+	Title   string `json:"title"`
+	Indexer string `json:"indexer"`
+	Private bool   `json:"private"`
+	MB      int64  `json:"mb"`
+	Outcome string `json:"outcome"`
+	Time    int64  `json:"time"`
 }
 
 type torrentRef struct {
@@ -102,6 +113,7 @@ func (j *jobState) clone() *jobState {
 	c := *j
 	c.Tried = slices.Clone(j.Tried)
 	c.Candidates = slices.Clone(j.Candidates)
+	c.Probes = slices.Clone(j.Probes)
 	if j.Current != nil {
 		current := *j.Current
 		c.Current = &current
@@ -410,16 +422,17 @@ func (d *Service) tick() {
 
 // view is what the page sees of a job.
 type dubJobView struct {
-	MovieID   int64        `json:"movie_id"`
-	Lang      string       `json:"lang"`
-	Title     string       `json:"title"`
-	Requested int64        `json:"requested"`
-	Status    string       `json:"status"`
-	Reason    string       `json:"reason"`
-	Updated   int64        `json:"updated"`
-	Downloads int          `json:"downloads"`
-	Tried     int          `json:"tried"`
-	Current   *releaseView `json:"current"`
+	MovieID   int64         `json:"movie_id"`
+	Lang      string        `json:"lang"`
+	Title     string        `json:"title"`
+	Requested int64         `json:"requested"`
+	Status    string        `json:"status"`
+	Reason    string        `json:"reason"`
+	Updated   int64         `json:"updated"`
+	Downloads int           `json:"downloads"`
+	Tried     int           `json:"tried"`
+	Current   *releaseView  `json:"current"`
+	Probes    []probeRecord `json:"probes,omitempty"`
 }
 
 type releaseView struct {
@@ -434,7 +447,7 @@ type releaseView struct {
 
 func (j *jobState) view() dubJobView {
 	v := dubJobView{MovieID: j.MovieID, Lang: j.Lang, Title: j.Title, Requested: j.Requested, Status: j.Status,
-		Reason: j.Reason, Updated: j.Updated, Downloads: j.Downloads, Tried: len(j.Tried)}
+		Reason: j.Reason, Updated: j.Updated, Downloads: j.Downloads, Tried: len(j.Tried), Probes: j.Probes}
 	if c := j.Current; c != nil {
 		v.Current = &releaseView{Title: c.Title, Size: c.Size, Indexer: c.Indexer, Private: c.Private, Stage: c.Stage, Since: c.Since, Dub: c.Dub}
 	}

@@ -75,25 +75,28 @@ all of it in Go, one film at a time; the only Python it runs is `add-audio.py` i
 `audio-compat.py` for Re-encode.
 
 **Availability** comes from a search the service runs in the background, one film every
-`SWEEP_EVERY` (5 min), never-searched films first, each film again after `SWEEP_REFRESH` (7 days). A
+`SWEEP_EVERY` (1 min), never-searched films first, each film again after `SWEEP_REFRESH` (7 days). A
 search returns the same releases whatever the language, so each film is searched once and every
 language is ranked from that result: the row says how many releases name the language in their title,
 how many come from a site in that language, and how many could only be known by probing. The
 Available filter keeps the films where the first two are not zero. **Search again** on a row searches
 that film now, with each indexer shown as it answers. A title that names the language is likely; the
-rest can only be known by probing, which Add does. About 50 films take 4 to 5 hours the first time.
+rest can only be known by probing, which Add does. About 60 films take an hour the first time. Each search is two queries per indexer, so at one a
+minute a tracker sees at most one query every 30 s, less than Radarr's own RSS.
 
 1. **Search.** Prowlarr is asked on every enabled indexer, by IMDb id and by title (NOBS answers
    nothing by IMDb id, and a title match only counts with the same IMDb id). Releases go in order of
    how likely they are to carry the language: a title that names it, then a site in that language,
    then MULTi/DUAL (not on a site in a third language: on C411 that means French), then public before
-   private, freeleech before counted, smaller first. At most 15 GB, never titled Latino.
+   private, freeleech before counted, smaller first. A site in a third language goes last: on Split,
+   C411's MULTi VFF releases were probed first and carried French and English only. At most 15 GB, never titled Latino.
 2. **Probe before downloading.** A Matroska file lists its tracks in its first few hundred KB. The
    release is added stopped, with only its largest `.mkv` wanted, sequential and capped at 2 MB/s,
    then watched every 3 s: once 2 MB from the file's start are in, ffprobe reads the track list and
    the torrent is stopped. No track in the language (add-audio's own pick: not Latino, not commentary)
    and it is deleted after a few MB; measured on a YTS release, 12.8 MB. A release that shows no
    track list within 64 MB is given up the same way.
+   Each probe is listed under its request: the release, how many MB it took and which tracks it had.
 3. **Download and add.** A release with the track is downloaded whole and handed to add-audio, which
    still measures the sync and refuses another cut. A refusal or a download stalled for 48 h moves to
    the next release, up to two whole downloads and eight probes per film.

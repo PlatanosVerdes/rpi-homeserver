@@ -172,7 +172,7 @@ func (p *pass) tryNext(job *jobState) error {
 	charged := p.d.state.ChargedBytes
 	p.d.mu.Unlock()
 	if charged+next.charged() > p.d.cfg.Budget {
-		job.set("trying", next.Title+" would pass the download budget")
+		p.rejected(job, next, 0, "over budget")
 		return nil
 	}
 	torrent, err := p.d.prowlarr().DownloadTorrent(p.ctx, next.URL)
@@ -181,7 +181,7 @@ func (p *pass) tryNext(job *jobState) error {
 	}
 	hash, err := infohash(torrent)
 	if err != nil {
-		job.set("trying", next.Title+": "+err.Error())
+		p.rejected(job, next, 0, err.Error())
 		return nil
 	}
 	q, err := p.qbit()
@@ -191,7 +191,7 @@ func (p *pass) tryNext(job *jobState) error {
 	if existing, err := q.Torrent(p.ctx, hash); err != nil {
 		return err
 	} else if existing != nil {
-		job.set("trying", next.Title+" is already in qBittorrent")
+		p.rejected(job, next, 0, "already in qBittorrent")
 		return nil
 	}
 	if err := q.EnsureCategory(p.ctx); err != nil {
@@ -220,7 +220,7 @@ func (p *pass) tryNext(job *jobState) error {
 		if err := q.Delete(p.ctx, hash); err != nil {
 			return err
 		}
-		job.set("trying", next.Title+" has no .mkv")
+		p.rejected(job, next, 0, "no .mkv")
 		return nil
 	}
 	var others []string
@@ -268,7 +268,7 @@ func (p *pass) checkProbe(job *jobState) (int64, error) {
 	}
 	if torrent == nil {
 		job.Current = nil
-		job.set("trying", "the probe left qBittorrent")
+		p.rejected(job, current.candidate, 0, "left qBittorrent")
 		return 0, nil
 	}
 	files, err := q.Files(p.ctx, current.Hash)
@@ -344,12 +344,12 @@ func (p *pass) checkProbe(job *jobState) (int64, error) {
 			if err := p.dropTorrent(job); err != nil {
 				return 0, err
 			}
-			job.set("trying", fmt.Sprintf("%s: no track list in %d MB", current.Title, downloaded/mb))
+			p.rejected(job, current.candidate, downloaded, fmt.Sprintf("no track list in %d MB", downloaded/mb))
 		case time.Now().Unix()-current.Since > probeHours*3600:
 			if err := p.dropTorrent(job); err != nil {
 				return 0, err
 			}
-			job.set("trying", fmt.Sprintf("%s: no data after %d h", current.Title, probeHours))
+			p.rejected(job, current.candidate, downloaded, fmt.Sprintf("no data after %d h", probeHours))
 		}
 		return 0, nil
 	}
@@ -358,12 +358,18 @@ func (p *pass) checkProbe(job *jobState) (int64, error) {
 	if dub == nil {
 		var found []string
 		for _, s := range info.audio() {
-			found = append(found, s.describe())
+			code := s.language()
+			if code == "" {
+				code = "?"
+			}
+			if !slices.Contains(found, code) {
+				found = append(found, code)
+			}
 		}
 		if err := p.dropTorrent(job); err != nil {
 			return 0, err
 		}
-		job.set("trying", fmt.Sprintf("%s: no %s track (%s)", current.Title, lang.Name, strings.Join(found, ", ")))
+		p.rejected(job, current.candidate, downloaded, fmt.Sprintf("no %s: %s", lang.Name, strings.Join(found, ", ")))
 		return 0, nil
 	}
 	for _, step := range []func() error{
@@ -379,11 +385,25 @@ func (p *pass) checkProbe(job *jobState) (int64, error) {
 			return 0, err
 		}
 	}
+	p.probed(job, current.candidate, downloaded, "has "+lang.Name)
 	current.Stage, current.Since, current.Dub = "downloading", time.Now().Unix(), dub.describe()
 	job.Downloads++
 	job.set("downloading", fmt.Sprintf("%s, %.1f GB", current.Title, float64(current.Size)/gb))
 	p.say(job, fmt.Sprintf("downloading %s (%.1f GB): %s", current.Title, float64(current.Size)/gb, current.Dub))
 	return current.charged(), nil
+}
+
+// probed records what a probe of a release found, on the job and in the log.
+func (p *pass) probed(job *jobState, release candidate, downloaded int64, outcome string) {
+	job.Probes = append(job.Probes, probeRecord{Title: release.Title, Indexer: release.Indexer, Private: release.Private,
+		MB: downloaded / mb, Outcome: outcome, Time: time.Now().Unix()})
+	log.Printf("audio-manager: %s: probe %s (%s): %s, %d MB", job.Title, release.Title, release.Indexer, outcome, downloaded/mb)
+}
+
+// rejected records a release that will not do, and moves the job on to the next.
+func (p *pass) rejected(job *jobState, release candidate, downloaded int64, outcome string) {
+	p.probed(job, release, downloaded, outcome)
+	job.set("trying", release.Title+": "+outcome)
 }
 
 func (p *pass) checkDownload(job *jobState) error {

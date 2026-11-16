@@ -53,10 +53,36 @@ function el(tag, cls, text) {
 
 function say(text) { document.getElementById("msg").textContent = text || ""; }
 
+// A restart answers nothing, or half a body; either way it is the same as no answer.
+function readJSON(response) {
+  return response.text().then(function (text) {
+    try { return JSON.parse(text); } catch (e) { throw new Error("HTTP " + response.status); }
+  });
+}
+
+function getJSON(url) { return fetch(url).then(readJSON); }
+
 function post(url, data) {
   var body = new URLSearchParams();
   Object.keys(data).forEach(function (k) { body.set(k, data[k]); });
-  return fetch(url, { method: "POST", body: body }).then(function (r) { return r.json(); });
+  return fetch(url, { method: "POST", body: body }).then(readJSON).catch(function () {
+    return { error: "The service did not answer; try again in a moment." };
+  });
+}
+
+// Polls that fail keep the last state on screen; only a gap longer than this says so.
+var lastAnswer = Date.now(), reconnecting = false;
+
+function answered() {
+  lastAnswer = Date.now();
+  if (reconnecting) { reconnecting = false; say(""); document.getElementById("msg").classList.remove("quiet"); }
+}
+
+function unanswered() {
+  if (Date.now() - lastAnswer < 10000) return;
+  reconnecting = true;
+  say("Reconnecting…");
+  document.getElementById("msg").classList.add("quiet");
 }
 
 // What --target takes, from audio-compat.py's last library scan; empty until the first one.
@@ -377,7 +403,33 @@ function dubJobRow(j, pending) {
     });
     frag.appendChild(more);
   }
+  var probes = j.probes || [];
+  if (probes.length) frag.appendChild(probeList(dubKey(j.movie_id, j.lang), probes));
   return frag;
+}
+
+var probesOpen = {};
+
+// What each probe of a job found, one compact line each, behind a toggle.
+function probeList(key, probes) {
+  var line = el("div", "check");
+  var toggle = el("button", "", (probesOpen[key] ? "Hide the " : "") + plural(probes.length, "release", "releases") + " probed");
+  toggle.type = "button";
+  toggle.setAttribute("aria-expanded", String(!!probesOpen[key]));
+  toggle.onclick = function () { probesOpen[key] = !probesOpen[key]; renderDub(); };
+  line.appendChild(toggle);
+  if (probesOpen[key]) {
+    var list = el("ul", "probes");
+    probes.forEach(function (p) {
+      var li = el("li");
+      li.appendChild(el("span", "t", p.title)).title = p.title;
+      li.appendChild(el("span", p.outcome.indexOf("has ") === 0 ? "o yes" : "o", p.outcome));
+      li.appendChild(el("span", "s", [p.mb ? p.mb + " MB" : "", p.indexer + (p.private ? ", private" : "")].filter(Boolean).join(", ")));
+      list.appendChild(li);
+    });
+    line.appendChild(list);
+  }
+  return line;
 }
 
 function plural(n, one, many) { return n + " " + (n === 1 ? one : many); }
@@ -434,7 +486,7 @@ function watchSearches() {
   searchTimer = setTimeout(function () {
     searchTimer = null;
     if (document.hidden) { watchSearches(); return; }
-    fetch("/api/add-audio/checks").then(function (r) { return r.json(); }).then(function (d) {
+    getJSON("/api/add-audio/checks").then(function (d) {
       var now = d.searching || {};
       var ended = Object.keys(dub.searching || {}).some(function (id) { return !now[id]; });
       dub.searching = now;
@@ -776,7 +828,8 @@ var timer = null;
 
 function refresh() {
   var lang = dubLang || stored(LANG_KEY);
-  return fetch("/api/state" + (lang ? "?lang=" + encodeURIComponent(lang) : "")).then(function (r) { return r.json(); }).then(function (d) {
+  return getJSON("/api/state" + (lang ? "?lang=" + encodeURIComponent(lang) : "")).then(function (d) {
+    answered();
     if (d.error) say(d.error);
     targets = (d.library && d.library.targets) || {};
     defaultTarget = (d.library && d.library.default_target) || "ac3";
@@ -800,7 +853,7 @@ function refresh() {
 
     clearTimeout(timer);
     timer = setTimeout(tick, d.running || (d.queue && d.queue.length) ? 1000 : 10000);
-  }).catch(function (e) { say(String(e)); clearTimeout(timer); timer = setTimeout(tick, 5000); });
+  }).catch(function () { unanswered(); clearTimeout(timer); timer = setTimeout(tick, 5000); });
 }
 
 function tick() { if (document.hidden) { timer = setTimeout(tick, 2000); return; } refresh(); }
