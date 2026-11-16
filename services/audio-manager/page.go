@@ -58,10 +58,21 @@ const pageHTML = `<!doctype html>
          font-variant-numeric:tabular-nums; -webkit-font-smoothing:antialiased; }
   .page { max-width:60rem; margin:0 auto; padding:1.25rem 1rem 3rem; }
 
-  .top { display:flex; align-items:center; gap:.6rem; height:2.5rem; }
+  .top { display:flex; align-items:center; flex-wrap:wrap; gap:.6rem; min-height:2.5rem; }
   .top img { width:18px; height:18px; border-radius:4px; }
   .top h1 { font-size:13px; font-weight:600; margin:0; }
-  .top .facts { margin-left:auto; color:var(--dim); display:flex; gap:1rem; }
+  .tabs { margin-left:auto; display:flex; padding:2px; gap:2px; background:var(--panel); border:1px solid var(--line); border-radius:8px; }
+  .tabs a { display:flex; align-items:center; gap:.45rem; padding:.35rem .8rem; border-radius:6px; color:var(--dim);
+            text-decoration:none; font-weight:500; white-space:nowrap; }
+  .tabs a:hover { color:var(--ink); }
+  .tabs a[aria-current=page] { background:var(--hover); color:var(--ink); box-shadow:inset 0 0 0 1px var(--line); }
+  .tabs a:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+  .badge { min-width:1.15rem; padding:0 .3rem; border-radius:9px; background:var(--accent); color:#fff; font-size:11px;
+           line-height:1.15rem; text-align:center; }
+  .badge:empty { display:none; }
+  .facts { color:var(--dim); display:flex; flex-wrap:wrap; gap:.25rem 1rem; margin-top:1rem; }
+  .facts:empty { display:none; }
+  .view[hidden] { display:none; }
   #msg { color:var(--warn); margin:.25rem 0 0; }
   #msg:empty { display:none; }
 
@@ -120,16 +131,24 @@ const pageHTML = `<!doctype html>
   button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
   button[disabled] { opacity:.4; cursor:default; filter:none; }
 
-  .more { display:none; padding:.1rem .85rem .8rem calc(.85rem + 14px + .75rem); color:var(--dim); line-height:1.6; }
+  .more { display:none; padding:.1rem .85rem .8rem calc(.85rem + 14px + .75rem); color:var(--dim); line-height:1.6; overflow-wrap:anywhere; }
   .more.open { display:block; }
   .more b { color:var(--ink); font-weight:500; }
 
-  .section { margin:2rem 0 0; font-size:13px; font-weight:600; }
-  .tools { display:flex; gap:.6rem; align-items:center; margin-top:.75rem; }
-  .tools select { border-color:var(--line); }
-  input[type=search] { flex:1; min-width:0; font:inherit; color:var(--ink); background:var(--panel); border:1px solid var(--line);
-                       border-radius:6px; padding:.35rem .6rem; }
+  .picker { margin-top:1.25rem; padding:.85rem; border:1px solid var(--line); border-radius:8px; background:var(--panel); }
+  .picker .label { display:block; font-size:12px; font-weight:500; color:var(--dim); margin-bottom:.5rem; }
+  .chips { display:flex; flex-wrap:wrap; gap:.4rem; }
+  .chips button { justify-self:auto; display:flex; align-items:center; gap:.45rem; padding:.5rem .8rem; font-size:13px;
+                  background:var(--bg); }
+  .chips button .n { color:var(--faint); font-weight:400; }
+  .chips button[aria-checked=true] { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .chips button[aria-checked=true] .n { color:rgba(255,255,255,.75); }
+  .chips .empty { padding:0; }
+  .search { margin-top:.85rem; }
+  input[type=search] { width:100%; font:inherit; font-size:14px; color:var(--ink); background:var(--bg); border:1px solid var(--line);
+                       border-radius:6px; padding:.55rem .7rem; }
   input[type=search]:focus { outline:none; border-color:var(--faint); }
+  .group[hidden] { display:none; }
   .group h2 .when { margin-left:auto; color:var(--faint); font-weight:400; }
   #dub-jobs > .row:first-child, #dub-films > .row:first-child { border-top:0; }
   button.wide { grid-column:5 / 7; white-space:nowrap; }
@@ -145,7 +164,8 @@ const pageHTML = `<!doctype html>
     .meta .c { text-align:left; }
     .row > button { grid-column:3; grid-row:1 / span 2; }
     .more { padding-left:calc(.85rem + 14px + .75rem); }
-    .top .facts { display:none; }
+    .tabs { margin-left:0; flex:1 0 100%; }
+    .tabs a { flex:1; justify-content:center; }
   }
   @media (prefers-reduced-motion: reduce) { .bar i { transition:none; } }
 </style>
@@ -155,50 +175,63 @@ const pageHTML = `<!doctype html>
   <div class="top">
     <img src="/icon.svg" alt="">
     <h1>Audio manager</h1>
-    <div class="facts" id="facts"></div>
+    <nav class="tabs" aria-label="Views">
+      <a href="#add" data-view="add">Add audio <span class="badge" id="badge-add"></span></a>
+      <a href="#reencode" data-view="reencode">Re-encode <span class="badge" id="badge-reencode"></span></a>
+    </nav>
   </div>
   <p id="msg"></p>
 
-  <h2 class="section">Re-encode</h2>
-  <div class="group">
-    <h2>Files <span class="n" id="count"></span></h2>
-    <div id="list"></div>
-  </div>
+  <section class="view" id="view-add">
+    <div class="picker">
+      <span class="label" id="dub-lang-label">Language to add</span>
+      <div class="chips" id="dub-lang" role="radiogroup" aria-labelledby="dub-lang-label"></div>
+      <div class="search">
+        <input type="search" id="dub-filter" placeholder="Search films" aria-label="Search films" autocomplete="off">
+      </div>
+    </div>
 
-  <div class="group">
-    <h2>History</h2>
-    <div id="history"></div>
-  </div>
+    <div class="group" id="dub-jobs-group" hidden>
+      <h2>Requests <span class="n" id="dub-count"></span></h2>
+      <div id="dub-jobs"></div>
+    </div>
 
-  <details class="group" id="library-group">
-    <summary>In the library <span class="n" id="library-count"></span><span class="when" id="library-when"></span></summary>
-    <div id="library"></div>
-  </details>
+    <div class="group">
+      <h2><span id="dub-title">Films</span> <span class="n" id="dub-films-count"></span><span class="when" id="dub-when"></span></h2>
+      <div id="dub-films"></div>
+    </div>
 
-  <h2 class="section">Add audio</h2>
-  <div class="tools">
-    <select id="dub-lang" aria-label="Language to add"></select>
-    <input type="search" id="dub-filter" placeholder="Filter titles" aria-label="Filter titles">
-  </div>
+    <footer>
+      Add asks <code>dub-fetch.py</code> for that language. It runs every 10 minutes: it looks for a release with
+      the dub, checks the track, and adds it to the film beside the audio it already has. Cancel stops it at any point.
+    </footer>
+  </section>
 
-  <div class="group">
-    <h2>Requests <span class="n" id="dub-count"></span></h2>
-    <div id="dub-jobs"></div>
-  </div>
+  <section class="view" id="view-reencode" hidden>
+    <div class="facts" id="facts"></div>
 
-  <div class="group">
-    <h2><span id="dub-title">Films</span> <span class="n" id="dub-films-count"></span><span class="when" id="dub-when"></span></h2>
-    <div id="dub-films"></div>
-  </div>
+    <div class="group">
+      <h2>Files <span class="n" id="count"></span></h2>
+      <div id="list"></div>
+    </div>
 
-  <footer>
-    Re-encode runs <code>audio-compat.py --file</code>, the same script as the 05:00 pass: an AC3 track goes first,
-    every other track stays, and the previous file is kept beside it as <code>.original</code>. One at a time; the
-    queue waits while the nightly pass works. "In the library" lists what the same rule would convert before
-    any client has played it. Click a file for its details.
-    Add audio leaves a request for <code>dub-fetch.py</code>, which runs every 10 minutes: it looks for a release
-    with that dub, checks the track and adds it to the film.
-  </footer>
+    <div class="group">
+      <h2>History</h2>
+      <div id="history"></div>
+    </div>
+
+    <details class="group" id="library-group">
+      <summary>In the library <span class="n" id="library-count"></span><span class="when" id="library-when"></span></summary>
+      <div id="library"></div>
+    </details>
+
+    <footer>
+      Runs <code>audio-compat.py --file</code>, the same script as the 05:00 pass: an AC3 track goes first, every
+      other track stays, and the previous file is kept beside it as <code>.original</code>. One at a time; the
+      queue waits while the nightly pass works. "In the library" lists what the same rule would convert before
+      any client has played it. Click a file for its details.
+    </footer>
+  </section>
 </div>
 
 <script>
@@ -550,16 +583,50 @@ function dubFilmRow(f, pending) {
   return row;
 }
 
+var LANG_KEY = "audio-manager.lang";
+
+function remembered() { try { return localStorage.getItem(LANG_KEY) || ""; } catch (e) { return ""; } }
+
+function remember(code) { try { localStorage.setItem(LANG_KEY, code); } catch (e) {} }
+
+function missingCount(code) {
+  return (dub.films || []).filter(function (f) { return (f.missing || []).indexOf(code) >= 0; }).length;
+}
+
+function chooseLang(code) { dubLang = code; remember(code); renderDub(); }
+
+// Rebuilt only when the languages change, so a poll never takes the focus off a chip.
+function renderChips(codes) {
+  var chips = document.getElementById("dub-lang");
+  if (chips.dataset.codes !== codes.join(",")) {
+    chips.dataset.codes = codes.join(",");
+    chips.textContent = "";
+    codes.forEach(function (code) {
+      var b = el("button");
+      b.type = "button";
+      b.setAttribute("role", "radio");
+      b.dataset.code = code;
+      b.appendChild(el("span", "", langName(code)));
+      b.appendChild(el("span", "n"));
+      b.onclick = function () { chooseLang(code); };
+      chips.appendChild(b);
+    });
+    if (!codes.length) chips.appendChild(el("p", "empty", "No languages yet: dub-fetch lists them with the films."));
+  }
+  Array.prototype.forEach.call(chips.querySelectorAll("button"), function (b) {
+    b.setAttribute("aria-checked", String(b.dataset.code === dubLang));
+    b.querySelector(".n").textContent = String(missingCount(b.dataset.code));
+  });
+}
+
 function renderDub() {
   if (!dub) return;
-  var select = document.getElementById("dub-lang"), codes = Object.keys(dub.languages || {}).sort();
-  if (codes.indexOf(dubLang) < 0) dubLang = codes.indexOf("spa") >= 0 ? "spa" : (codes[0] || "");
-  if (select.options.length !== codes.length || codes.some(function (c, i) { return select.options[i].value !== c; })) {
-    select.textContent = "";
-    codes.forEach(function (c) { var o = el("option", "", langName(c)); o.value = c; select.appendChild(o); });
+  var codes = Object.keys(dub.languages || {}).sort(function (a, b) { return langName(a).localeCompare(langName(b)); });
+  if (codes.indexOf(dubLang) < 0) {
+    var saved = remembered();
+    dubLang = codes.indexOf(saved) >= 0 ? saved : codes.indexOf("spa") >= 0 ? "spa" : (codes[0] || "");
   }
-  select.value = dubLang;
-  select.disabled = !codes.length;
+  renderChips(codes);
 
   var pending = dubPending();
   var jobs = document.getElementById("dub-jobs"), list = dub.jobs || [];
@@ -567,6 +634,7 @@ function renderDub() {
   var running = list.filter(function (j) { return dubActive(j.status); }).length +
     (dub.requests || []).filter(function (r) { return !r.cancel; }).length;
   document.getElementById("dub-count").textContent = running ? running + " under way" : "";
+  document.getElementById("badge-add").textContent = running ? String(running) : "";
   var requestedOnly = (dub.requests || []).filter(function (r) {
     return !r.cancel && !list.some(function (j) { return j.movie_id === r.movie_id && j.lang === r.lang && dubActive(j.status); });
   });
@@ -576,11 +644,13 @@ function renderDub() {
       title: film ? film.title + (film.year ? " (" + film.year + ")" : "") : "" }, pending));
   });
   list.forEach(function (j) { jobs.appendChild(dubJobRow(j, pending)); });
-  if (!jobs.childNodes.length) jobs.appendChild(el("p", "empty", "Nothing requested yet."));
+  document.getElementById("dub-jobs-group").hidden = !jobs.childNodes.length;
 
-  var needle = document.getElementById("dub-filter").value.trim().toLowerCase();
+  var filter = document.getElementById("dub-filter");
+  var needle = filter.value.trim().toLowerCase();
   var missing = (dub.films || []).filter(function (f) { return (f.missing || []).indexOf(dubLang) >= 0; });
   var shown = missing.filter(function (f) { return !needle || (f.title || "").toLowerCase().indexOf(needle) >= 0; });
+  filter.placeholder = dubLang ? "Search " + missing.length + " films without " + langName(dubLang) : "Search films";
   document.getElementById("dub-title").textContent = dubLang ? "Without " + langName(dubLang) : "Films";
   document.getElementById("dub-films-count").textContent = missing.length ?
     (needle ? shown.length + " of " + missing.length : String(missing.length)) : "";
@@ -592,8 +662,18 @@ function renderDub() {
   else shown.forEach(function (f) { films.appendChild(dubFilmRow(f, pending)); });
 }
 
-document.getElementById("dub-lang").onchange = function (e) { dubLang = e.target.value; e.target.blur(); renderDub(); };
 document.getElementById("dub-filter").oninput = renderDub;
+
+function route() {
+  var view = location.hash === "#reencode" ? "reencode" : "add";
+  ["add", "reencode"].forEach(function (name) { document.getElementById("view-" + name).hidden = name !== view; });
+  Array.prototype.forEach.call(document.querySelectorAll(".tabs a"), function (a) {
+    if (a.dataset.view === view) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
+  });
+}
+
+window.addEventListener("hashchange", route);
+route();
 
 var timer = null;
 
@@ -616,6 +696,7 @@ function refresh() {
     list.textContent = "";
     var todo = items.filter(function (it) { return it.actionable && it.status !== "done" && it.status !== "missing"; }).length;
     document.getElementById("count").textContent = todo ? todo + " to convert" : "";
+    document.getElementById("badge-reencode").textContent = todo ? String(todo) : "";
     if (!items.length) list.appendChild(el("p", "empty", "Nothing yet. A file shows up here when a client has its audio re-encoded."));
     else items.forEach(function (it) { list.appendChild(item(it, d)); });
 

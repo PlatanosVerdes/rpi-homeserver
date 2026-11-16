@@ -44,7 +44,8 @@ class Films(unittest.TestCase):
     def test_lists_mkv_films_with_the_languages_they_lack(self):
         listed = df.films([movie(1, "eng"), movie(2, "eng/spa"), movie(3, "Spanish / English"),
                            movie(4, "eng", path="/data/films/B/b.mp4"), {**movie(5, "eng"), "hasFile": False}])
-        self.assertEqual([(f["id"], f["missing"]) for f in listed], [(1, ["spa"]), (2, []), (3, [])])
+        self.assertEqual([(f["id"], "spa" in f["missing"], "eng" in f["missing"]) for f in listed],
+                         [(1, True, False), (2, False, False), (3, False, False)])
 
     def test_maps_container_paths_to_the_host(self):
         self.assertEqual(df.host_path("/data/films/A/a.mkv"), df.DATA_ROOT / "films/A/a.mkv")

@@ -59,12 +59,9 @@ PROWLARR = "http://127.0.0.1:9696"
 CATEGORY = "audio-source"
 KEEP_TAG = "keep"
 SAVE_PATH = "/data/downloads"
-LANGUAGE_WORDS = {"spa": {"spa", "spanish", "es", "esp", "español", "castellano"}}
-# What makes a release worth probing early: its title names the language, or its site speaks it.
-TITLE_HINTS = {"spa": re.compile(r"castellano|spanish|espa[nñ]ol|\b(spa|esp|cast)\b", re.I)}
-SITE_LOCALES = {"spa": "es"}
+# Language codes that are also ordinary words in a release title ("De", "Cat People").
+AMBIGUOUS_WORDS = {"es", "en", "it", "de", "ca", "fr", "cat"}
 MULTI_AUDIO = re.compile(r"\bmulti|\bdual\b", re.I)
-REJECTED_RELEASES = re.compile(r"latin|\blat\b|m[eé]x", re.I)
 GB = 1024**3
 MB = 1024**2
 BUDGET_GB = 100
@@ -122,9 +119,14 @@ def host_path(container_path):
     return Path(path)
 
 
+def language_words(lang):
+    known = add_audio.LANGUAGES[lang]
+    return known["aliases"] | known["words"]
+
+
 def has_language(audio_languages, lang):
     words = {w.strip().lower() for w in re.split(r"[/,]", audio_languages or "")}
-    return bool(words & LANGUAGE_WORDS.get(lang, {lang}))
+    return bool(words & language_words(lang))
 
 
 def films(movies):
@@ -135,6 +137,7 @@ def films(movies):
         if not movie.get("hasFile") or not movie.get("imdbId") or not file.get("path", "").endswith(".mkv"):
             continue
         audio = (file.get("mediaInfo") or {}).get("audioLanguages") or ""
+        audio = "/".join(dict.fromkeys(w.strip() for w in audio.split("/") if w.strip()))
         out.append({"id": movie["id"], "title": movie["title"], "year": movie.get("year"), "imdb": movie["imdbId"],
                     "path": file["path"], "audio": audio,
                     "missing": [lang for lang in add_audio.TRACK_NAMES if not has_language(audio, lang)]})
@@ -161,18 +164,22 @@ def candidates(results, imdb, lang, tried, indexers, rules):
     private, freeleech before counted, smaller first. A release without an IMDb id is kept: some
     sites leave it out, and add-audio refuses another film anyway."""
     number = int(imdb.lstrip("t") or 0)
-    hint = TITLE_HINTS.get(lang, re.compile(rf"\b{lang}\b", re.I))
+    known = add_audio.LANGUAGES[lang]
+    # What makes a release worth probing early: its title names the language, or its site speaks it.
+    hint = re.compile(r"\b(" + "|".join(map(re.escape, sorted(language_words(lang) - AMBIGUOUS_WORDS)))
+                      + r")\b", re.I)
+    rejected = re.compile(known["rejected"], re.I) if known.get("rejected") else None
     fits = []
     for r in results:
         site = indexers.get(r.get("indexerId"))
         if (site is None or int(r.get("imdbId") or number) != number or (r.get("seeders") or 0) <= 0
                 or not 0 < r.get("size", 0) <= MAX_SIZE_GB * GB or r.get("guid") in tried
                 or r.get("protocol") != "torrent" or not r.get("downloadUrl")
-                or REJECTED_RELEASES.search(r.get("title", "")) or not probe_allowed(r, site["private"], rules)):
+                or (rejected and rejected.search(r.get("title", ""))) or not probe_allowed(r, site["private"], rules)):
             continue
         title = r["title"]
         locale = (site["language"] or "").split("-")[0]
-        own_site = locale == SITE_LOCALES.get(lang)
+        own_site = locale == known["locale"]
         # MULTi on a French site is French plus the original; it only hints here on a site of ours or English.
         multi = MULTI_AUDIO.search(title) and (own_site or locale == "en")
         likely = (not hint.search(title), not own_site, not multi)

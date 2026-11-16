@@ -49,6 +49,11 @@ Leaving that out once measured 80 ms wrong.
   in AC3, and the new track measured against the dub it came from (the mapping must hold inside
   the new file). The old file is kept as `.original`, as [audio-manager.md](audio-manager.md) does.
 
+The languages it can add are the `LANGUAGES` table at the top of `add-audio.py`: Castellano (the
+default), Català, English, Français, Italiano and Deutsch, each with how files tag it, how titles name
+it, and the variant that is not it (Latin American Spanish, Québécois French). Adding a language is
+one entry there; the page and dub-fetch read the same table.
+
 Which dub track it picks: a `spa` track whose title does not say Latino, Mexican, neutral or
 commentary, preferring one titled Castellano, then AC3, then more channels. A track mislabelled by
 its release (Latin-American tagged `spa` with no title) cannot be told apart; `--track N` names one.

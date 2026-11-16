@@ -49,11 +49,28 @@ MIN_GOOD_WINDOWS = 0.6
 MAX_RESIDUAL_SECONDS = 0.045
 SAME_SPEED = 2e-5
 TARGET_CODEC = "ac3"
-LANGUAGE_ALIASES = {"spa": {"spa", "es", "esp", "es-es"}}
-LANGUAGE_TAGS = {"spa": "es-ES"}
-TRACK_NAMES = {"spa": "Castellano"}
-REJECTED_TITLES = {"spa": re.compile(r"latin|\blat\b|m[eé]x|neutr|commentary|comentario", re.I)}
-PREFERRED_TITLES = {"spa": re.compile(r"castellano|espa[nñ]a|\bcast\b|europe", re.I)}
+# The languages a dub can be added in, and the only place to add one. aliases: how a file tags the track;
+# words: how Radarr and release titles name it; locale: an indexer in that language is likelier to carry
+# it; rejected: track titles of a variant that is not this one (Latin American Spanish).
+LANGUAGES = {
+    "spa": {"name": "Castellano", "tag": "es-ES", "aliases": {"spa", "es", "esp", "es-es"},
+            "words": {"spanish", "español", "castellano", "cast"}, "locale": "es",
+            "rejected": r"latin|\blat\b|m[eé]x|neutr", "preferred": r"castellano|espa[nñ]a|\bcast\b|europe"},
+    "cat": {"name": "Català", "tag": "ca", "aliases": {"cat", "ca"}, "words": {"catalan", "català", "catala"},
+            "locale": "ca"},
+    "eng": {"name": "English", "tag": "en", "aliases": {"eng", "en"}, "words": {"english"}, "locale": "en"},
+    "fra": {"name": "Français", "tag": "fr", "aliases": {"fra", "fre", "fr"}, "words": {"french", "français", "vff", "vf"},
+            "locale": "fr", "rejected": r"qu[eé]bec|\bvfq\b|canad"},
+    "ita": {"name": "Italiano", "tag": "it", "aliases": {"ita", "it"}, "words": {"italian", "italiano"}, "locale": "it"},
+    "deu": {"name": "Deutsch", "tag": "de", "aliases": {"deu", "ger", "de"}, "words": {"german", "deutsch"},
+            "locale": "de"},
+}
+LANGUAGE_ALIASES = {code: lang["aliases"] for code, lang in LANGUAGES.items()}
+LANGUAGE_TAGS = {code: lang["tag"] for code, lang in LANGUAGES.items()}
+TRACK_NAMES = {code: lang["name"] for code, lang in LANGUAGES.items()}
+REJECTED_TITLES = {code: re.compile("|".join(filter(None, (lang.get("rejected"), r"commentary|comentario"))), re.I)
+                   for code, lang in LANGUAGES.items()}
+PREFERRED_TITLES = {code: re.compile(lang["preferred"], re.I) for code, lang in LANGUAGES.items() if "preferred" in lang}
 ANY_COMMENTARY = re.compile(r"commentary|comentario", re.I)
 SCOPE = ["systemd-run", "--user", "--scope", "--quiet", "-p", "MemoryHigh=700M", "-p", "MemoryMax=1G",
          "-p", "MemorySwapMax=0", "-p", "CPUWeight=1"]
