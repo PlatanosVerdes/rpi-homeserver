@@ -55,9 +55,3 @@
 # when: audio-manager
 0 5 * * * @PROJECT_DIR@/scripts/sync/audio-compat.py >> @PROJECT_DIR@/audio-compat.log 2>&1
 
-# Dubs and availability checks asked for on the audio-manager page. Every minute so a check answers
-# quickly; a pass with no request reads Radarr's film list at most every ten minutes and nothing else.
-# One film at a time, probed before it is downloaded; add-audio shares audio-compat's lock and waits
-# for it. See docs/add-audio.md.
-# when: audio-manager
-* * * * * @PROJECT_DIR@/scripts/sync/dub-fetch.py >> @PROJECT_DIR@/dub-fetch.log 2>&1

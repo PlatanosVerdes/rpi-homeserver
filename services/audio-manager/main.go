@@ -1,29 +1,26 @@
-// audio-manager has two jobs. Re-encode lists the files a client had its audio re-encoded on, with
-// the plan pi-metrics worked out for each, and converts one when asked: pi-metrics does the thinking
-// (which track, what it costs, whether a file change can help at all), scripts/sync/audio-compat.py
-// does the work, the same script the night run uses. Add audio lists the films that lack a language
-// and requests a dub for one, which scripts/sync/dub-fetch.py fetches and adds from cron.
+// audio-manager has two jobs. Re-encode (internal/reencode) converts a file whose audio a client had
+// re-encoded, the way the night run does. Add audio (internal/dubs) fetches a dub for a library film
+// in a language it lacks and adds the track.
 package main
 
 import (
-	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
-	"slices"
-	"sort"
+	"strconv"
 	"strings"
-	"sync"
 	"time"
+
+	"audio-manager/internal/dubs"
+	"audio-manager/internal/httpx"
+	"audio-manager/internal/reencode"
+	"audio-manager/web"
 )
 
-const (
-	listenAddr = ":8088"
-	// audio-compat's MIN_FREE_BYTES: what must be left after a copy of the file.
-	minFreeBytes = 40 << 30
-	historyShown = 15
-)
+const listenAddr = ":8088"
 
 func env(key, fallback string) string {
 	if v := os.Getenv(key); v != "" {
@@ -32,296 +29,90 @@ func env(key, fallback string) string {
 	return fallback
 }
 
-type server struct {
-	ledgerFile string
-	stateDir   string
-	stateFile  string
-	lockFile   string
-	history    string
-	dataRoot   string
-	python     string
-	script     string
-	retry      time.Duration
-
-	mu      sync.Mutex
-	queue   []job
-	results map[string]outcome
-	running *progress
-	waiting map[string]any
-	wake    chan struct{}
-	dubMu   sync.Mutex // one add-audio request check-and-write at a time
-
-	scanEvery time.Duration
-	rescan    chan struct{}
-	library   libraryScan
+type config struct {
+	reencode reencode.Config
+	dubs     dubs.Config
 }
 
-func newServer() *server {
+// loadConfig reads every setting from the environment, failing on a bad value.
+func loadConfig() (config, error) {
 	stateDir := env("AUDIO_MANAGER_STATE", "/state")
-	return &server{
-		ledgerFile: env("AUDIO_RECODES", "/ledger/audio-recodes.json"),
-		stateDir:   stateDir,
-		stateFile:  defaultStateFile(stateDir),
-		lockFile:   filepath.Join(stateDir, "convert.lock"),
-		history:    filepath.Join(stateDir, "history.jsonl"),
-		dataRoot:   env("DATA_ROOT", "/mnt/data"),
-		python:     env("PYTHON", "python3"),
-		script:     env("AUDIO_COMPAT", "/scripts/audio-compat.py"),
-		retry:      30 * time.Second,
-		results:    map[string]outcome{},
-		wake:       make(chan struct{}, 1),
-		scanEvery:  scanInterval(),
-		rescan:     make(chan struct{}, 1),
-	}
-}
-
-func scanInterval() time.Duration {
+	dataRoot := env("DATA_ROOT", "/mnt/data")
+	python := env("PYTHON", "python3")
+	scanEvery := 6 * time.Hour
 	if d, err := time.ParseDuration(os.Getenv("SCAN_INTERVAL")); err == nil && d > 0 {
-		return d
+		scanEvery = d
 	}
-	return 6 * time.Hour
+	budgetGB, err := strconv.ParseFloat(env("DUB_BUDGET_GB", "100"), 64)
+	if err != nil || budgetGB < 0 {
+		return config{}, fmt.Errorf("DUB_BUDGET_GB %q is not a number of GB", os.Getenv("DUB_BUDGET_GB"))
+	}
+	cfg := config{
+		reencode: reencode.Config{
+			LedgerFile: env("AUDIO_RECODES", "/ledger/audio-recodes.json"),
+			StateDir:   stateDir,
+			DataRoot:   dataRoot,
+			Python:     python,
+			Script:     env("AUDIO_COMPAT", "/scripts/audio-compat.py"),
+			ScanEvery:  scanEvery,
+		},
+		dubs: dubs.Config{
+			RadarrURL:     strings.TrimRight(env("RADARR_URL", "http://radarr:7878"), "/"),
+			RadarrKey:     os.Getenv("RADARR_API_KEY"),
+			ProwlarrURL:   strings.TrimRight(env("PROWLARR_URL", "http://prowlarr:9696"), "/"),
+			ProwlarrKey:   os.Getenv("PROWLARR_API_KEY"),
+			QbitURL:       env("QBIT_URL", "http://qbittorrent:8080"),
+			QbitUser:      os.Getenv("QBIT_USER"),
+			QbitPassword:  os.Getenv("QBIT_PASSWORD"),
+			RulesFile:     env("TRACKER_RULES", "/trackers/rules.json"),
+			LanguagesFile: env("LANGUAGES_FILE", "/scripts/languages.json"),
+			AddAudio:      env("ADD_AUDIO", "/scripts/add-audio.py"),
+			Python:        python,
+			DataRoot:      dataRoot,
+			StateDir:      filepath.Join(stateDir, "add-audio"),
+			Budget:        int64(budgetGB * (1 << 30)),
+			TelegramToken: os.Getenv("TELEGRAM_ALERT_BOT_TOKEN"),
+			TelegramChat:  os.Getenv("TELEGRAM_ALERT_CHAT_ID"),
+		},
+	}
+	for name, value := range map[string]string{"RADARR_URL": cfg.dubs.RadarrURL, "PROWLARR_URL": cfg.dubs.ProwlarrURL, "QBIT_URL": cfg.dubs.QbitURL} {
+		if u, err := url.Parse(value); err != nil || u.Scheme == "" || u.Host == "" {
+			return config{}, fmt.Errorf("%s %q is not a URL", name, value)
+		}
+	}
+	return cfg, nil
 }
 
 func main() {
-	s := newServer()
-	if err := os.MkdirAll(s.stateDir, 0o755); err != nil {
+	cfg, err := loadConfig()
+	if err != nil {
 		log.Fatalf("audio-manager: %v", err)
 	}
-	s.load()
-	s.loadScan()
-
-	http.HandleFunc("/", s.index)
-	http.HandleFunc("/icon.svg", icon)
-	http.HandleFunc("/apple-touch-icon.png", appleTouchIcon)
-	http.HandleFunc("/api/state", s.state)
-	http.HandleFunc("/api/play", s.play)
-	http.HandleFunc("/api/cancel", s.cancel)
-	http.HandleFunc("/api/add-audio", s.addAudio)
-	http.HandleFunc("/api/add-audio/cancel", s.cancelAddAudio)
-	http.HandleFunc("/api/add-audio/check", s.checkAddAudio)
-
-	go s.worker()
-	go s.scanner()
-
-	log.Printf("audio-manager: %s, ledger %s, library %s", listenAddr, s.ledgerFile, s.dataRoot)
-	log.Fatal(http.ListenAndServe(listenAddr, nil))
-}
-
-func (s *server) index(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
-		http.NotFound(w, r)
-		return
+	if err := os.MkdirAll(cfg.reencode.StateDir, 0o755); err != nil {
+		log.Fatalf("audio-manager: %v", err)
 	}
-	render(w)
-}
-
-func writeJSON(w http.ResponseWriter, status int, payload any) {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(payload)
-}
-
-type item struct {
-	ledgerFile
-	Exists      bool     `json:"exists"`
-	Size        int64    `json:"size"`
-	Links       uint64   `json:"links"`
-	EnoughSpace bool     `json:"enough_space"`
-	ETA         float64  `json:"eta"`
-	Status      string   `json:"status"` // ready, queued, converting, done, failed, missing, info
-	Outcome     *outcome `json:"outcome,omitempty"`
-}
-
-func (s *server) items(files []ledgerFile, history []historyEntry, speed float64) []item {
-	converted := map[string]historyEntry{}
-	for _, entry := range history {
-		if entry.Result == "done" {
-			converted[libraryPath(entry.Path)] = entry
-		}
-	}
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	out := make([]item, 0, len(files))
-	for _, f := range files {
-		it := item{ledgerFile: f, Status: "info"}
-		if full, ok := insideLibrary(s.dataRoot, f.Library); ok {
-			facts := inspect(full)
-			it.Exists, it.Size, it.Links = facts.exists, facts.size, facts.links
-			it.EnoughSpace = facts.exists && facts.free >= uint64(facts.size)+minFreeBytes
-		}
-		it.ETA = eta(f.Duration, 0, speed)
-		if f.Actionable {
-			it.Status = s.status(&it, converted)
-		}
-		out = append(out, it)
-	}
-	sort.SliceStable(out, func(i, j int) bool {
-		if out[i].Actionable != out[j].Actionable {
-			return out[i].Actionable
-		}
-		return out[i].Seen > out[j].Seen
-	})
-	return out
-}
-
-// status is called with s.mu held.
-func (s *server) status(it *item, converted map[string]historyEntry) string {
-	if s.running != nil && s.running.Library == it.Library {
-		return "converting"
-	}
-	if slices.ContainsFunc(s.queue, func(q job) bool { return q.Library == it.Library }) {
-		return "queued"
-	}
-	if done, ok := converted[it.Library]; ok && done.Time >= it.Seen {
-		it.Outcome = &outcome{Time: done.Time, Result: "done", Mode: done.Mode}
-		return "done"
-	}
-	if last, ok := s.results[it.Library]; ok && last.Time >= it.Seen {
-		it.Outcome = &last
-		if last.Result == "done" {
-			return "done"
-		}
-		return "failed"
-	}
-	if !it.Exists {
-		return "missing"
-	}
-	return "ready"
-}
-
-func (s *server) state(w http.ResponseWriter, r *http.Request) {
-	files, ledgerErr := readLedger(s.ledgerFile)
-	history, _ := readHistory(s.history)
-	speed := averageSpeed(history)
-	listed := s.items(files, history, speed)
-	scanned, libraryOnly := s.libraryFiles(files)
-	library := map[string]any{"time": scanned.Time, "items": s.items(libraryOnly, history, speed),
-		"targets": scanned.Targets, "default_target": scanned.DefaultTarget}
-	if scanned.Error != "" {
-		library["error"] = scanned.Error
-	}
-
-	recent := make([]historyEntry, 0, historyShown)
-	for i := len(history) - 1; i >= 0 && len(recent) < historyShown; i-- {
-		recent = append(recent, history[i])
-	}
-
-	s.mu.Lock()
-	running := s.running
-	var runningView map[string]any
-	if running != nil {
-		current := *running
-		if current.Speed <= 0 {
-			current.Speed = speed
-		}
-		runningView = map[string]any{
-			"job": current, "eta": eta(current.Duration, current.Seconds, current.Speed),
-		}
-	}
-	queue := slices.Clone(s.queue)
-	waiting := s.waiting
-	s.mu.Unlock()
-
-	// The lock is ours while our own conversion runs, so it only says something about the night
-	// run when nothing here is converting.
-	holder := waiting
-	if running == nil && holder == nil {
-		holder, _ = lockHolder(s.lockFile)
-	}
-
-	payload := map[string]any{
-		"items":     listed,
-		"library":   library,
-		"queue":     queue,
-		"running":   runningView,
-		"holder":    holder,
-		"history":   recent,
-		"speed":     speed,
-		"free":      freeBytes(filepath.Join(s.dataRoot, libraries[0])),
-		"minFree":   minFreeBytes,
-		"add_audio": s.addAudioState(),
-	}
-	if ledgerErr != nil {
-		payload["error"] = "pi-metrics' ledger is unreadable: " + ledgerErr.Error()
-	}
-	writeJSON(w, http.StatusOK, payload)
-}
-
-func (s *server) play(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "POST only", http.StatusMethodNotAllowed)
-		return
-	}
-	library := strings.TrimSpace(r.FormValue("library_path"))
-	allowHardlinked := r.FormValue("allow_hardlinked") != ""
-	chosen := strings.TrimSpace(r.FormValue("target"))
-	if chosen != "" && !s.validTarget(chosen) {
-		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "unknown target codec " + chosen})
-		return
-	}
-
-	// Only what pi-metrics listed as fixable, or the library scan found, can be queued, so this is
-	// no way to remux any path.
-	files, err := readLedger(s.ledgerFile)
+	recodes := reencode.New(cfg.reencode)
+	adds, err := dubs.Open(cfg.dubs)
 	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
-		return
-	}
-	_, scanned := s.libraryFiles(files)
-	files = append(files, scanned...)
-	i := slices.IndexFunc(files, func(f ledgerFile) bool { return f.Library == library })
-	if i < 0 || !files[i].Actionable {
-		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "that file is not listed as fixable"})
-		return
-	}
-	full, ok := insideLibrary(s.dataRoot, library)
-	if !ok {
-		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "not a path inside the library"})
-		return
-	}
-	facts := inspect(full)
-	switch {
-	case !facts.exists:
-		writeJSON(w, http.StatusNotFound, map[string]any{"error": "the file is gone; it may have been replaced"})
-		return
-	case facts.links > 1 && !allowHardlinked:
-		writeJSON(w, http.StatusConflict, map[string]any{"error": "still seeding (hardlinked); confirm to convert it anyway", "confirm": true})
-		return
-	case facts.free < uint64(facts.size)+minFreeBytes:
-		writeJSON(w, http.StatusConflict, map[string]any{"error": "not enough free space: 40 GiB must be left after a copy of the file"})
-		return
+		log.Fatalf("audio-manager: %v", err)
 	}
 
-	title := files[i].Title
-	if title == "" {
-		title = filepath.Base(full)
-	}
-	queued := job{Library: library, Title: title, AllowHardlinked: allowHardlinked, Target: chosen, Added: time.Now().Unix()}
-	if p := files[i].Plan; p != nil {
-		sources := p.Sources
-		if len(sources) == 0 {
-			sources = []planTrack{p.Source}
-		}
-		for _, source := range sources {
-			queued.Tracks = append(queued.Tracks, source.Position)
-		}
-	}
-	if !s.enqueue(queued) {
-		writeJSON(w, http.StatusConflict, map[string]any{"error": "already queued"})
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"queued": true})
-}
+	http.Handle("/", web.Handler())
+	http.HandleFunc("/api/state", func(w http.ResponseWriter, r *http.Request) {
+		payload := recodes.State()
+		payload["add_audio"] = adds.Payload()
+		httpx.WriteJSON(w, http.StatusOK, payload)
+	})
+	http.HandleFunc("/api/play", recodes.ServePlay)
+	http.HandleFunc("/api/cancel", recodes.ServeCancel)
+	http.HandleFunc("/api/add-audio", adds.ServeAdd)
+	http.HandleFunc("/api/add-audio/cancel", adds.ServeCancel)
+	http.HandleFunc("/api/add-audio/check", adds.ServeCheck)
+	http.HandleFunc("/api/add-audio/checks", adds.ServeChecks)
 
-func (s *server) cancel(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "POST only", http.StatusMethodNotAllowed)
-		return
-	}
-	if !s.dequeue(strings.TrimSpace(r.FormValue("library_path"))) {
-		writeJSON(w, http.StatusNotFound, map[string]any{"error": "not in the queue (or already started)"})
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+	recodes.Start()
+	adds.Start()
+
+	log.Printf("audio-manager: %s, ledger %s, library %s", listenAddr, cfg.reencode.LedgerFile, cfg.reencode.DataRoot)
+	log.Fatal(http.ListenAndServe(listenAddr, nil))
 }

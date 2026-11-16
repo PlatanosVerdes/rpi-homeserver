@@ -1,4 +1,4 @@
-package main
+package reencode
 
 import (
 	"bufio"
@@ -206,25 +206,4 @@ func insideLibrary(root, library string) (string, bool) {
 		return "", false
 	}
 	return filepath.Join(root, filepath.FromSlash(clean)), true
-}
-
-// writeAtomic replaces file in one rename, so a reader never sees half of it.
-func writeAtomic(file string, raw []byte) error {
-	tmp, err := os.CreateTemp(filepath.Dir(file), "."+filepath.Base(file)+".*.tmp")
-	if err != nil {
-		return err
-	}
-	defer os.Remove(tmp.Name())
-	if _, err := tmp.Write(raw); err != nil {
-		tmp.Close()
-		return err
-	}
-	if err := tmp.Chmod(0o644); err != nil {
-		tmp.Close()
-		return err
-	}
-	if err := tmp.Close(); err != nil {
-		return err
-	}
-	return os.Rename(tmp.Name(), file)
 }

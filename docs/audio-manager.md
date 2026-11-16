@@ -2,7 +2,7 @@
 
 The audio manager page (`https://audio.<domain>`, or `http://audio` on the LAN) has two sections.
 **Add audio** lists the films without a language and fetches a dub for one when asked; that part is
-[add-audio.md](add-audio.md#from-the-page-dub-fetchpy). The rest of this guide is **Re-encode**.
+[add-audio.md](add-audio.md#from-the-page-audio-manager). The rest of this guide is **Re-encode**.
 
 ## Re-encode
 
@@ -23,7 +23,7 @@ Three pieces, and each one does a single job:
 | :--- | :--- |
 | `services/pi-metrics` (`recodes.go`, `plan.go`) | Watches the sessions, decides whether a file change can help, and writes the plan into `appdata/pi-metrics/audio-recodes.json` |
 | `scripts/sync/audio-compat.py` | The only code that converts: remux, verify, rename. Nightly over the library, `--file` for one, `--scan` to list what the nightly pass would convert |
-| `services/audio-manager` | The page: lists the plans and the library scan, queues a file, runs `audio-compat.py --file`, shows its progress. Its Add audio section only reads and writes files that `dub-fetch.py` acts on |
+| `services/audio-manager` | The page: lists the plans and the library scan, queues a file, runs `audio-compat.py --file`, shows its progress. Its Add audio view is the same service: search, probe, download and `add-audio.py` ([add-audio.md](add-audio.md#from-the-page-audio-manager)) |
 
 The page never touches ffmpeg itself. The container carries Python and ffmpeg and runs the very
 same script the cron runs, mounted from `scripts/sync/` rather than copied into the image, so a

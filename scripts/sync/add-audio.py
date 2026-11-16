@@ -21,6 +21,7 @@ priority: decoding a film twice and writing a 10 GB copy once pushed every other
 
 import argparse
 import importlib.util
+import json
 import os
 import re
 import shutil
@@ -49,50 +50,9 @@ MIN_GOOD_WINDOWS = 0.6
 MAX_RESIDUAL_SECONDS = 0.045
 SAME_SPEED = 2e-5
 TARGET_CODEC = "ac3"
-# The languages a dub can be added in, and the only place to add one: ISO 639-2 code, the ISO 639-1 code
-# files also tag with, the name shown, and the words Radarr and release titles use for it.
-_LANGUAGES = [
-    ("spa", "es", "Castellano", "spanish español castellano cast esp"),
-    ("cat", "ca", "Català", "catalan català catala"),
-    ("eus", "eu", "Euskara", "basque euskara euskera"),
-    ("glg", "gl", "Galego", "galician galego gallego"),
-    ("eng", "en", "English", "english"),
-    ("fra", "fr", "Français", "french français francais vff"),
-    ("ita", "it", "Italiano", "italian italiano"),
-    ("deu", "de", "Deutsch", "german deutsch"),
-    ("por", "pt", "Português", "portuguese português portugues"),
-    ("nld", "nl", "Nederlands", "dutch nederlands"),
-    ("swe", "sv", "Svenska", "swedish svenska"),
-    ("nor", "no", "Norsk", "norwegian norsk"),
-    ("dan", "da", "Dansk", "danish dansk"),
-    ("fin", "fi", "Suomi", "finnish suomi"),
-    ("pol", "pl", "Polski", "polish polski"),
-    ("ces", "cs", "Čeština", "czech čeština"),
-    ("hun", "hu", "Magyar", "hungarian magyar"),
-    ("ell", "el", "Ελληνικά", "greek"),
-    ("tur", "tr", "Türkçe", "turkish türkçe"),
-    ("rus", "ru", "Русский", "russian"),
-    ("ukr", "uk", "Українська", "ukrainian"),
-    ("ara", "ar", "العربية", "arabic"),
-    ("hin", "hi", "हिन्दी", "hindi"),
-    ("jpn", "ja", "日本語", "japanese"),
-    ("kor", "ko", "한국어", "korean"),
-    ("zho", "zh", "中文", "chinese mandarin"),
-]
-# The bibliographic codes older files carry next to the ones above.
-_OLD_CODES = {"fra": "fre", "deu": "ger", "nld": "dut", "ces": "cze", "ell": "gre", "zho": "chi"}
-# Track titles of a variant that is not the one asked for.
-_VARIANTS = {"spa": r"latin|\blat\b|m[eé]x|neutr", "fra": r"qu[eé]bec|\bvfq\b|canad",
-             "por": r"brasil|brazil|\bpt-br\b"}
-LANGUAGES = {
-    code: {"name": name, "tag": short, "locale": short, "words": set(words.split()),
-           "aliases": {code, short} | ({_OLD_CODES[code]} if code in _OLD_CODES else set()),
-           **({"rejected": _VARIANTS[code]} if code in _VARIANTS else {})}
-    for code, short, name, words in _LANGUAGES
-}
-LANGUAGES["spa"].update(tag="es-ES", preferred=r"castellano|espa[nñ]a|\bcast\b|europe")
-LANGUAGES["spa"]["aliases"] |= {"esp", "es-es"}
-LANGUAGES["por"].update(tag="pt-PT")
+# Shared with services/audio-manager, which lists and searches the same languages.
+LANGUAGES = {code: {**lang, "aliases": set(lang["aliases"]), "words": set(lang["words"])}
+             for code, lang in json.loads(Path(__file__).with_name("languages.json").read_text())["languages"].items()}
 LANGUAGE_ALIASES = {code: lang["aliases"] for code, lang in LANGUAGES.items()}
 LANGUAGE_TAGS = {code: lang["tag"] for code, lang in LANGUAGES.items()}
 TRACK_NAMES = {code: lang["name"] for code, lang in LANGUAGES.items()}
