@@ -88,6 +88,7 @@ services:
     container_name: prometheus
     labels:
       prometheus.probe: "http://prometheus:9090/-/healthy"
+      homeserver.restart-on-config-change: "true"
     restart: unless-stopped
     profiles: [prometheus, moni, acestream, all]
     user: "root"
@@ -202,6 +203,8 @@ services:
   blackbox-exporter:
     image: prom/blackbox-exporter:${BLACKBOX_EXPORTER_VERSION}
     container_name: blackbox-exporter
+    labels:
+      homeserver.restart-on-config-change: "true"
     restart: unless-stopped
     mem_limit: 128m
     memswap_limit: 128m
@@ -371,6 +374,8 @@ services:
   vector:
     image: timberio/vector:${VECTOR_VERSION}
     container_name: vector
+    labels:
+      homeserver.restart-on-config-change: "true"
     restart: unless-stopped
     mem_limit: 256m
     memswap_limit: 256m

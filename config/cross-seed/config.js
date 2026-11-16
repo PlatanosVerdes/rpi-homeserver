@@ -65,7 +65,8 @@ module.exports = {
     excludeOlder: "180d",
     excludeRecentSearch: "45d",
 
-    apiAuth: false,
+    // v6 always asks for a key on its API; torrent-drop's webhook sends this one.
+    apiKey: process.env.CROSS_SEED_API_KEY,
     port: 2468,
     host: "0.0.0.0",
     verbose: false,

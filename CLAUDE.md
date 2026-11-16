@@ -87,8 +87,9 @@ How the pass works, step by step: [docs/deploy.md](docs/deploy.md). The rules th
   `BUILDX_NO_DEFAULT_ATTESTATIONS=1`. A recreate cuts Caddy's connections and the stream Jellyfin
   reads from bifrost.
 - **A route change is a `caddy reload`, never a rebuild or restart.** Config read once at startup
-  (Grafana alerting, Homepage `settings.yaml`, Vector, Prometheus, blackbox) is restarted by the pass
-  when the pull touched it; a new file of that kind needs the same treatment in `apply.sh`.
+  is restarted by the pass when the pull touched it: label the service
+  `homeserver.restart-on-config-change: "true"` (Grafana alerting and Homepage `settings.yaml` keep
+  their own blocks in `apply.sh`, since the rest of their config reloads live).
 - **`apply.sh` re-execs itself** when a pull changes it, because bash reads the file as it runs.
 - **Sync scripts run after compose** (the apps must be up) and before the metrics push. Config that
   lives only in an app's database is pushed from git (`scripts/sync/`) unless a wrong push would
