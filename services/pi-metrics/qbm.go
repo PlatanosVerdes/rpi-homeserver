@@ -91,22 +91,37 @@ func qbmHook(w http.ResponseWriter, r *http.Request) {
 		qbm.Errored = now
 		log.Printf("qbit-manage reported an error: %s", cut(str(payload, "body"), 200))
 	default:
+		stats := qbmStats(payload)
+		if len(stats) == 0 {
+			// A run that stops before its first command (qBittorrent newer than it supports, login
+			// refused) still posts run_end, with no counts: counted as a run, it hid three weeks idle.
+			qbm.Errored = now
+			log.Printf("qbit-manage ended a run without doing anything: %s", cut(str(payload, "body"), 200))
+			break
+		}
 		qbm.Received = now
 		qbm.RunTime = qbmDuration(str(payload, "run_time"))
-		qbm.Interval = qbmInterval(str(payload, "end_time"), str(payload, "next_run"))
-		qbm.Stats = map[string]any{}
-		for key, value := range payload {
-			// Every number it reports, without naming them here: a counter added upstream shows up
-			// without a code change.
-			if number, ok := value.(float64); ok {
-				qbm.Stats[key] = number
-			}
+		if interval := qbmInterval(str(payload, "end_time"), str(payload, "next_run")); interval > 0 {
+			qbm.Interval = interval
 		}
+		qbm.Stats = stats
 	}
 	qbmSave()
 	qbmMu.Unlock()
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// Every number it reports, without naming them here: a counter added upstream shows up without a
+// code change.
+func qbmStats(payload map[string]any) map[string]any {
+	stats := map[string]any{}
+	for key, value := range payload {
+		if number, ok := value.(float64); ok {
+			stats[key] = number
+		}
+	}
+	return stats
 }
 
 // "0:00:09", and occasionally "1 day, 0:00:09".

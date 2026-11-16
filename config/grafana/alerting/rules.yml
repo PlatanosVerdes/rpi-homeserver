@@ -821,7 +821,7 @@ groups:
       #
       # The timestamp comes from its own run_end webhook (services/pi-metrics/qbm.go) and the
       # interval from the next_run it reports, so four missed runs is late without a threshold
-      # written here. The interval guard keeps a run that reported no next_run from reading as
+      # written here. A run that posts no counts (it stopped before its first command) is not a run. The interval guard keeps a run that reported no next_run from reading as
       # "overdue by four times zero".
       - uid: homelab-qbit-manage-overdue
         title: 'qbit-manage has stopped running'
@@ -847,6 +847,42 @@ groups:
               instant: true
               editorMode: code
               expr: '((time() - qbit_manage_last_run_timestamp_seconds) > bool (4 * qbit_manage_interval_seconds)) * (qbit_manage_interval_seconds > bool 0)'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+
+      # The error hook, and a run that stops before its first command (qBittorrent newer than it
+      # supports, login refused), set this timestamp in pi-metrics. Fires on the first one, not after
+      # four missed intervals; clears an hour after the last.
+      - uid: homelab-qbit-manage-error
+        title: 'qbit-manage is failing'
+        condition: C
+        for: 0s
+        labels:
+          severity: critical
+        annotations:
+          summary: 'qbit-manage reported an error or ended a run without doing anything'
+          description: >-
+            Nothing is being tagged, share-limited or deleted while this lasts. The reason is in
+            `docker logs qbit-manage` and in pi-metrics' log ("qbit-manage ended a run without doing
+            anything"). On 2026-10-23 it was a qBittorrent update newer than qbit-manage supports.
+        noDataState: OK
+        execErrState: KeepLast
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: '(time() - qbit_manage_last_error_timestamp_seconds) < bool 3600'
           - refId: C
             datasourceUid: __expr__
             model:
