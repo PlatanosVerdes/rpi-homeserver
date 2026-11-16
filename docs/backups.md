@@ -9,6 +9,11 @@ Storage note: the media/data volume `/mnt/data` is a **mergerfs pool** of two di
 (`/mnt/disk1` + `/mnt/disk2`); backups land on the pool, which is a different physical device
 from the SD card where `appdata` actually lives, so a card failure never takes the backups too.
 
+Data the companion repo keeps outside its `appdata`, typically on the data disk to spare the SD
+card, is listed in its `backup-paths` file: one absolute path per line, `#` for comments. Paths that
+do not exist are logged and skipped. Those copies sit on the same pool as the data itself, so they
+cover mistakes and corruption, not a dead disk; only `BACKUP_RCLONE_REMOTE` covers that.
+
 ## What is backed up
 
 Everything under `appdata/` **except** regenerable or huge data:
@@ -56,6 +61,9 @@ sudo tar -xzf /mnt/data/backups/appdata/appdata-YYYYMMDD-HHMMSS.tar.gz -C /home/
 docker compose up -d
 bash scripts/recovery/recovery-status.sh    # what no archive can put back
 ```
+
+A `backup-paths` entry is stored without its leading `/` (`mnt/data/db/torre`), so restore it on
+its own with `-C /`, naming the member: `sudo tar -xzf <archive> -C / mnt/data/db/torre`.
 
 **The archive is a hot copy.** It is taken at 04:00 while every container runs: `prowlarr.db`,
 `radarr.db`, `sonarr.db`, `autobrr.db`, `maintainerr.sqlite`, `grafana.db` and the rest are SQLite
