@@ -46,9 +46,10 @@ const (
 var (
 	qbitURL      = env("QBIT_URL", "http://qbittorrent:8080")
 	crossSeedURL = env("CROSS_SEED_URL", "http://cross-seed:2468")
+	crossSeedKey = env("CROSS_SEED_API_KEY", "")
 
 	client = &http.Client{Timeout: 30 * time.Second}
-	// A search walks the four private indexers with cross-seed's own 30s delay between them and
+	// A search walks the private indexers with cross-seed's own 30s delay between them and
 	// the webhook only answers when it is done, so this one cannot share the timeout above.
 	searchClient = &http.Client{Timeout: 5 * time.Minute}
 
@@ -361,8 +362,13 @@ func askCrossSeed(hash string) error {
 		"ignoreExcludeOlder":        {"true"},
 		"ignoreExcludeRecentSearch": {"true"},
 	}
-	resp, err := searchClient.Post(crossSeedURL+"/api/webhook",
-		"application/x-www-form-urlencoded", strings.NewReader(form.Encode()))
+	request, err := http.NewRequest("POST", crossSeedURL+"/api/webhook", strings.NewReader(form.Encode()))
+	if err != nil {
+		return err
+	}
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	request.Header.Set("X-Api-Key", crossSeedKey)
+	resp, err := searchClient.Do(request)
 	if err != nil {
 		return err
 	}

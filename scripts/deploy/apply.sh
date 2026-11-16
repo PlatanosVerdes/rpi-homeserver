@@ -300,6 +300,27 @@ for name, service in sorted((config.get("services") or {}).items()):
 ' <<<"$config"
 }
 
+# Restarts every running container labelled homeserver.restart-on-config-change whose bind mount
+# from this repo (the working directory) holds a changed path. Changed paths come one per line.
+restart_on_config_change() {
+    local label=$1 changed=$2 container source relative
+    [[ -n "$changed" ]] || return 0
+    for container in $(docker ps --filter label=homeserver.restart-on-config-change=true --format '{{.Names}}'); do
+        while read -r source; do
+            [[ "$source" == "$PWD/"* ]] || continue
+            relative=${source#"$PWD/"}
+            if awk -v prefix="$relative" '$0 == prefix || index($0, prefix "/") == 1 { found = 1 } END { exit !found }' <<<"$changed"; then
+                if docker restart "$container" >/dev/null 2>&1; then
+                    log "[$label] $relative changed, $container restarted to load it"
+                else
+                    log "[$label] WARNING: $relative changed but $container would not restart"
+                fi
+                break
+            fi
+        done < <(docker inspect -f '{{range .Mounts}}{{if eq .Type "bind"}}{{println .Source}}{{end}}{{end}}' "$container")
+    done
+}
+
 deploy_repo() {
     local dir=$1
     local label=$2
@@ -432,9 +453,7 @@ for svc in (doc.get("services") or {}).values():
         fi
     fi
 
-    # Five config files are bind mounts read once at startup, so committing a change to any of them
-    # does nothing until its container is told. Grafana: dashboards reload on their own, alert rules
-    # do not.
+    # Grafana: dashboards reload on their own, alert rules do not.
     if [[ "$label" == "homeserver" && "$before" != "$after" ]] &&
         git diff --name-only "$before" "$after" | grep -q '^config/grafana/alerting/' &&
         docker ps --format '{{.Names}}' | grep -qx grafana; then
@@ -470,39 +489,11 @@ for svc in (doc.get("services") or {}).values():
         fi
     fi
 
-    # A restart and not a reload: git replaces the file rather than editing it, so a single-file
-    # bind mount keeps the old inode and the container never sees the new content.
-    if [[ "$label" == "homeserver" && "$before" != "$after" ]] &&
-        git diff --name-only "$before" "$after" | grep -q '^config/vector/' &&
-        docker ps --format '{{.Names}}' | grep -qx vector; then
-        if docker restart vector >/dev/null 2>&1; then
-            log "[$label] vector config changed, restarted to load it"
-        else
-            log "[$label] WARNING: vector config changed but it would not restart"
-        fi
-    fi
-
-    # Restart and not SIGHUP, same inode reason as Vector above: both of these answer a signal with
-    # "no changes detected" while still reading the file they started with.
-    if [[ "$label" == "homeserver" && "$before" != "$after" ]]; then
-        local changed_config
-        changed_config=$(git diff --name-only "$before" "$after")
-        if grep -q '^config/prometheus/' <<<"$changed_config" &&
-            docker ps --format '{{.Names}}' | grep -qx prometheus; then
-            if docker restart prometheus >/dev/null 2>&1; then
-                log "[$label] prometheus.yml changed, Prometheus restarted to load it"
-            else
-                log "[$label] WARNING: prometheus.yml changed but Prometheus would not restart"
-            fi
-        fi
-        if grep -q '^config/blackbox/' <<<"$changed_config" &&
-            docker ps --format '{{.Names}}' | grep -qx blackbox-exporter; then
-            if docker restart blackbox-exporter >/dev/null 2>&1; then
-                log "[$label] blackbox modules changed, exporter restarted to load them"
-            else
-                log "[$label] WARNING: blackbox config changed but the exporter would not restart"
-            fi
-        fi
+    # A restart and not a reload or SIGHUP: git replaces a file rather than editing it, so a
+    # single-file bind mount keeps the old inode, and these answer a signal still reading it.
+    # Opt-in by label, because a restart cuts what a container serves (bifrost's streams).
+    if [[ "$before" != "$after" ]]; then
+        restart_on_config_change "$label" "$(git diff --name-only "$before" "$after")"
     fi
 
     # A build that failed has to be remembered, because by the next pass the commit that caused it
