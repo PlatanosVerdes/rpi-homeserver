@@ -210,6 +210,8 @@ services:
       - DIGITALCORE_PASSWORD=${DIGITALCORE_PASSWORD:-}
       - C411_USER=${C411_USER:-}
       - C411_PASSWORD=${C411_PASSWORD:-}
+      # UNIT3D sites are read with the account's API key instead, see "software" in rules.json.
+      - NOBS_APIKEY=${NOBS_APIKEY:-}
       # While anything plays on Jellyfin, qBittorrent runs on these limits (docs/private-trackers.md#quiet-while-watching)
       - JELLYFIN_API_KEY=${JELLYFIN_API_KEY:-}
       - QUIET_DOWN_KIB=${QUIET_DOWN_KIB:-3072}
