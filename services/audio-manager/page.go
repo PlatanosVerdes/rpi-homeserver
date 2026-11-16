@@ -162,14 +162,32 @@ const pageHTML = `<!doctype html>
   .combo li[aria-selected=true] .name { color:var(--accent); }
   .combo li.head { padding:.45rem .6rem .2rem; font-size:11px; font-weight:500; color:var(--faint); }
   .combo li.nothing { padding:.6rem; color:var(--faint); }
-  .search { margin-top:.85rem; }
   input[type=search] { width:100%; font:inherit; font-size:14px; color:var(--ink); background:var(--bg); border:1px solid var(--line);
                        border-radius:6px; padding:.55rem .7rem; }
   input[type=search]:focus { outline:none; border-color:var(--faint); }
   .group[hidden] { display:none; }
   .group h2 .when { margin-left:auto; color:var(--faint); font-weight:400; }
   #dub-jobs > .row:first-child, #dub-films > .row:first-child { border-top:0; }
-  button.wide { grid-column:5 / 7; white-space:nowrap; }
+  .cardhead { display:flex; flex-wrap:wrap; align-items:center; gap:.4rem .6rem; min-height:2.6rem;
+              padding:.4rem .5rem .4rem .85rem; border-bottom:1px solid var(--line); }
+  .group .cardhead h2 { padding:0; border:0; }
+  .cardhead .when { color:var(--faint); font-size:12px; }
+  .cardhead input[type=search] { margin-left:auto; width:16rem; padding:.35rem .6rem; font-size:13px; }
+  .acts { grid-column:4 / 7; display:flex; justify-content:flex-end; gap:.4rem; }
+  .acts.narrow { grid-column:6 / 7; }
+  .acts button { white-space:nowrap; }
+  .check { display:flex; flex-wrap:wrap; align-items:baseline; gap:.15rem .75rem; margin-top:-.4rem;
+           padding:0 .85rem .65rem calc(.85rem + 14px + .75rem); color:var(--dim); font-size:12px; }
+  .check .yes { color:var(--accent); font-weight:500; }
+  .check .warn { color:var(--warn); }
+  .check .age { color:var(--faint); }
+  .check button { padding:0; border:0; background:none; color:var(--dim); font-size:12px; text-decoration:underline dotted;
+                  text-underline-offset:2px; }
+  .check button:hover { color:var(--ink); }
+  .check ul { flex:1 0 100%; min-width:0; margin:.25rem 0 0; padding:0; list-style:none; line-height:1.7; }
+  .check li { display:flex; gap:.6rem; min-width:0; }
+  .check li .t { color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+  .check li .s { color:var(--faint); white-space:nowrap; }
 
   footer { margin-top:1.5rem; color:var(--faint); font-size:12px; max-width:44rem; }
   code { font:11px ui-monospace, SFMono-Regular, Menlo, monospace; color:var(--dim); }
@@ -181,9 +199,11 @@ const pageHTML = `<!doctype html>
     .meta .bar { flex:1 0 100%; margin:.3rem 0 .1rem; }
     .meta .c { text-align:left; }
     .row > button { grid-column:3; grid-row:1 / span 2; }
+    .row > .acts, .row > .acts.narrow { grid-column:2 / 4; justify-content:flex-start; margin-top:.4rem; }
+    .cardhead input[type=search] { flex:1 0 100%; width:auto; margin:0 0 .1rem; }
     .more { padding-left:calc(.85rem + 14px + .75rem); }
     .tabs { margin-left:0; flex:1 0 100%; }
-    .combo input, input[type=search] { font-size:16px; }
+    .combo input, input[type=search], .cardhead input[type=search] { font-size:16px; }
     .tabs a { flex:1; justify-content:center; }
   }
   @media (prefers-reduced-motion: reduce) { .bar i { transition:none; } }
@@ -211,9 +231,6 @@ const pageHTML = `<!doctype html>
         <span class="combo-caret" aria-hidden="true"></span>
         <ul id="lang-list" role="listbox" aria-labelledby="lang-label" hidden></ul>
       </div>
-      <div class="search">
-        <input type="search" id="dub-filter" placeholder="Search films" aria-label="Search films" autocomplete="off">
-      </div>
     </div>
 
     <div class="group" id="dub-jobs-group" hidden>
@@ -222,13 +239,18 @@ const pageHTML = `<!doctype html>
     </div>
 
     <div class="group">
-      <h2><span id="dub-title">Films</span> <span class="n" id="dub-films-count"></span><span class="when" id="dub-when"></span></h2>
+      <div class="cardhead">
+        <h2><span id="dub-title">Films</span> <span class="n" id="dub-films-count"></span></h2>
+        <span class="when" id="dub-when"></span>
+        <input type="search" id="dub-filter" placeholder="Search films" aria-label="Search films" autocomplete="off">
+      </div>
       <div id="dub-films"></div>
     </div>
 
     <footer>
-      Add asks <code>dub-fetch.py</code> for that language. It runs every 10 minutes: it looks for a release with
+      Add asks <code>dub-fetch.py</code> for that language. It runs every minute: it looks for a release with
       the dub, checks the track, and adds it to the film beside the audio it already has. Cancel stops it at any point.
+      Check only asks the indexers what they have for that film, within a minute or so, and downloads nothing.
     </footer>
   </section>
 
@@ -273,6 +295,14 @@ function clock(seconds) {
   var m = Math.floor(seconds / 60);
   if (m < 60) return m + " min";
   return Math.floor(m / 60) + " h " + (m % 60) + " min";
+}
+
+function ago(epoch) {
+  var seconds = Date.now() / 1000 - epoch;
+  if (seconds < 60) return "just now";
+  if (seconds < 3600) return Math.floor(seconds / 60) + " min ago";
+  if (seconds < 86400) return Math.floor(seconds / 3600) + " h ago";
+  return when(epoch);
 }
 
 function when(epoch) {
@@ -587,9 +617,50 @@ function dubJobRow(j, pending) {
   return frag;
 }
 
+function plural(n, one, many) { return n + " " + (n === 1 ? one : many); }
+
+// What a check found, worded from the strongest sign down: a title naming the language, a site in it, any release.
+function checkSummary(check, name) {
+  if (check.error) return ["warn", "Check failed: " + check.error];
+  if (check.named) return ["yes", plural(check.named, "release names ", "releases name ") + name];
+  if (check.own_site) return ["", check.own_site + " from " + name + "-language sites, to be probed"];
+  if (check.releases) return ["", "No release names " + name + "; " + check.releases + " could still carry it"];
+  return ["", "Nothing found"];
+}
+
+var bestOpen = {};
+
+function checkLine(key, check) {
+  var line = el("div", "check");
+  var summary = checkSummary(check, langName(dubLang));
+  line.appendChild(el("span", summary[0], summary[1]));
+  line.appendChild(el("span", "age", "checked " + ago(check.time)));
+  var best = check.best || [];
+  if (best.length) {
+    var toggle = el("button", "", (bestOpen[key] ? "Hide" : "Show") + " the best " + (best.length === 1 ? "one" : best.length));
+    toggle.type = "button";
+    toggle.setAttribute("aria-expanded", String(!!bestOpen[key]));
+    toggle.onclick = function () { bestOpen[key] = !bestOpen[key]; renderDub(); };
+    line.appendChild(toggle);
+    if (bestOpen[key]) {
+      var list = el("ul");
+      best.forEach(function (b) {
+        var li = el("li");
+        li.appendChild(el("span", "t", b.title));
+        li.appendChild(el("span", "s", [human(b.size), b.indexer + (b.private ? ", private" : "")].join(", ")));
+        list.appendChild(li);
+      });
+      line.appendChild(list);
+    }
+  }
+  return line;
+}
+
 function dubFilmRow(f, pending) {
+  var frag = document.createDocumentFragment();
+  var key = dubKey(f.id, dubLang);
   var row = el("div", "row");
-  var status = pending[dubKey(f.id, dubLang)];
+  var status = pending[key];
   row.appendChild(el("span", status ? "dot" : "dot idle"));
   var title = el("div", "title", f.title);
   if (f.year) title.appendChild(el("small", "", String(f.year)));
@@ -598,14 +669,25 @@ function dubFilmRow(f, pending) {
   row.appendChild(meta);
   meta.appendChild(el("div", "c", f.audio ? language(f.audio) + " audio" : ""));
   if (status) meta.appendChild(el("div", "c span2", DUB_STATUS[status] || status));
+  var acts = el("div", status ? "acts narrow" : "acts");
   if (!status) {
-    var add = el("button", "primary wide", "Add " + langName(dubLang));
+    var checking = (dub.checking || []).indexOf(key) >= 0;
+    var check = el("button", "", checking ? "Checking…" : (dub.checks || {})[key] ? "Re-check" : "Check");
+    check.disabled = checking;
+    check.title = "Ask the indexers what they have, without downloading";
+    check.onclick = function () { dubPost("/api/add-audio/check", f.id, dubLang, check); };
+    acts.appendChild(check);
+    var add = el("button", "primary", "Add " + langName(dubLang));
     add.onclick = function () { dubPost("/api/add-audio", f.id, dubLang, add); };
-    row.appendChild(add);
+    acts.appendChild(add);
   } else if (status !== "cancelling") {
-    row.appendChild(dubCancel(f.id, dubLang));
+    acts.appendChild(dubCancel(f.id, dubLang));
   }
-  return row;
+  if (acts.childNodes.length) row.appendChild(acts);
+  frag.appendChild(row);
+  var result = (dub.checks || {})[key];
+  if (result) frag.appendChild(checkLine(key, result));
+  return frag;
 }
 
 var LANG_KEY = "audio-manager.lang", RECENT_KEY = "audio-manager.recent-langs";
@@ -804,10 +886,10 @@ function renderDub() {
   document.getElementById("dub-jobs-group").hidden = !jobs.childNodes.length;
 
   var filter = document.getElementById("dub-filter");
-  var needle = filter.value.trim().toLowerCase();
+  var needle = fold(filter.value.trim());
   var missing = (dub.films || []).filter(function (f) { return (f.missing || []).indexOf(dubLang) >= 0; });
-  var shown = missing.filter(function (f) { return !needle || (f.title || "").toLowerCase().indexOf(needle) >= 0; });
-  filter.placeholder = dubLang ? "Search " + missing.length + " films without " + langName(dubLang) : "Search films";
+  var shown = missing.filter(function (f) { return !needle || fold(f.title).indexOf(needle) >= 0; });
+  filter.placeholder = missing.length ? "Search " + plural(missing.length, "film", "films") : "Search films";
   document.getElementById("dub-title").textContent = dubLang ? "Without " + langName(dubLang) : "Films";
   document.getElementById("dub-films-count").textContent = missing.length ?
     (needle ? shown.length + " of " + missing.length : String(missing.length)) : "";

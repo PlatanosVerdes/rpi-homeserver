@@ -126,6 +126,32 @@ class Requests(unittest.TestCase):
         self.assertEqual(self.run.state["jobs"]["1-spa"]["status"], "cancelled")
 
 
+class Checks(unittest.TestCase):
+    def setUp(self):
+        self.dir = tempfile.TemporaryDirectory()
+        df.REQUESTS_DIR = Path(self.dir.name) / "requests"
+        df.REQUESTS_DIR.mkdir()
+        df.CHECKS_FILE = Path(self.dir.name) / "checks.json"
+        self.run = df.Pass({}, {"jobs": {}, "charged_bytes": 0})
+        self.listed = {str(f["id"]): f for f in df.films([movie(1, "eng")])}
+        results = [release("named", 2, title="Film 2000 Castellano"), release("site", 3, indexer=2), release("plain", 1)]
+        self.run.find = lambda imdb, name, lang, tried=(): df.candidates(results, imdb, lang, set(tried), INDEXERS, RULES)
+
+    def tearDown(self):
+        self.dir.cleanup()
+
+    def test_a_check_reports_what_a_search_finds_and_starts_no_job(self):
+        (df.REQUESTS_DIR / "1-spa-check.json").write_text(json.dumps({"movie_id": 1, "lang": "spa", "check": True}))
+        self.run.take_requests(self.listed)
+        self.assertEqual(self.run.state["jobs"], {})
+        self.run.run_checks(self.listed)
+        check = json.loads(df.CHECKS_FILE.read_text())["1-spa"]
+        self.assertEqual((check["releases"], check["named"], check["own_site"]), (3, 1, 1))
+        self.assertEqual(check["best"][0]["title"], "Film 2000 Castellano")
+        self.assertNotIn("url", check["best"][0])
+        self.assertEqual(list(df.REQUESTS_DIR.iterdir()), [])
+
+
 class Torrent(unittest.TestCase):
     def test_infohash_is_the_sha1_of_the_info_dict(self):
         info = b"d6:lengthi5e4:name5:a.mkv12:piece lengthi16384e6:pieces20:" + b"x" * 20 + b"e"

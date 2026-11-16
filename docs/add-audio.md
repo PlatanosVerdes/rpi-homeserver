@@ -71,7 +71,12 @@ and the uptime probe called the Pi down for three minutes. It shares the convers
 The **Add audio** section of the audio manager page (`https://audio.<domain>`,
 [audio-manager.md](audio-manager.md)) lists the films that lack a language, with a button per film.
 Nothing is fetched unless that button is pressed: it leaves a request file, and
-`scripts/sync/dub-fetch.py`, from cron every ten minutes, does the rest one film at a time.
+`scripts/sync/dub-fetch.py`, from cron every minute, does the rest one film at a time.
+
+**Check** beside a film answers first whether a release in that language exists at all, downloading
+nothing: within a minute the row says how many releases were found, how many name the language in
+their title and how many come from a site in that language. A title that names it is likely; the
+rest can only be known by probing, which Add does.
 
 1. **Search.** Prowlarr is asked on every enabled indexer, by IMDb id and by title (NOBS answers
    nothing by IMDb id, and a title match only counts with the same IMDb id). Releases go in order of

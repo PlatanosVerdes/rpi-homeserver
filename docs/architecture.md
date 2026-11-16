@@ -96,7 +96,7 @@ compose file and no `.env` captures it, so without this a lost disk silently los
 | `scripts/sync/qbit-config.sh` | every deploy | qBittorrent | `config/qbittorrent/preferences.json` + `QBIT_BT_PORT` |
 | `scripts/sync/plex-prefs.sh` | every deploy | Plex | `PLEX_LAN_NETWORKS`, 95% threshold |
 | `scripts/sync/arr-links.sh` | every deploy | Seerr, Bazarr | `config/seerr-links.json` |
-| `scripts/sync/dub-fetch.py` | every 10 min | qBittorrent (category `audio-source`), library files | requests from the audio-manager page, one film at a time within a download budget |
+| `scripts/sync/dub-fetch.py` | every minute | qBittorrent (category `audio-source`), library files | requests from the audio-manager page, one film at a time within a download budget |
 | `scripts/sync/bazarr-prune-subs.py` | 05:40 daily | Bazarr's database and its wanted searches | the subtitle tracks the media files actually have, and what their text reads as |
 | `scripts/sync/pihole-dns.sh` | every deploy | Pi-hole | the Caddy config; only its own entries |
 | `scripts/setup/install-crontab.sh` | every deploy | host crontab | both repos' `scripts/crontab` |

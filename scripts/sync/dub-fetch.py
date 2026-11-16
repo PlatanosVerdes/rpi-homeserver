@@ -5,11 +5,12 @@
     scripts/sync/dub-fetch.py --status    # the jobs and the budget
     scripts/sync/dub-fetch.py --candidates RADARR_ID   # what it would probe for that film, touching nothing
 
-Nothing is fetched unless asked. Each pass, from cron every ten minutes:
+Nothing is fetched unless asked. Each pass, from cron every minute:
 
-1. Writes films.json: every .mkv film in Radarr and the languages it lacks, for the page to list.
-2. Turns the page's request files into jobs, one film at a time, oldest first.
-3. Advances the job. Every indexer Prowlarr has is searched; a release is only tried where taking a
+1. Writes films.json, at most every ten minutes: every .mkv film in Radarr and the languages it lacks.
+2. Answers availability checks: what a search finds for a film in a language, downloading nothing.
+3. Turns the page's request files into jobs, one film at a time, oldest first.
+4. Advances the job. Every indexer Prowlarr has is searched; a release is only tried where taking a
    few MB and deleting it owes nothing (public, or private with a hit & run rule in
    config/trackers/rules.json that starts well above that). Each candidate is probed before it is
    downloaded: the first pieces of its .mkv hold the track list, so a release without the language
@@ -52,6 +53,8 @@ JOBS_DIR = add_audio.compat.STATE_DIR / "add-audio"
 REQUESTS_DIR = JOBS_DIR / "requests"
 FILMS_FILE = JOBS_DIR / "films.json"
 STATE_FILE = JOBS_DIR / "state.json"
+CHECKS_FILE = JOBS_DIR / "checks.json"
+FILMS_EVERY = 600
 DATA_ROOT = Path(os.environ.get("DATA_ROOT", "/mnt/data"))
 CONTAINER_DATA = "/data"
 RADARR = "http://127.0.0.1:7878"
@@ -336,12 +339,49 @@ class Pass:
         job.update(status=status, reason=reason, updated=int(time.time()))
 
     def list_films(self):
-        listed = films(http_json(f"{RADARR}/api/v3/movie", self.radarr) or [])
-        write_json(FILMS_FILE, {"time": int(time.time()), "languages": add_audio.TRACK_NAMES, "films": listed})
+        """Radarr's films, asked again every FILMS_EVERY seconds or when a request is waiting."""
+        try:
+            cached = json.loads(FILMS_FILE.read_text())
+        except (OSError, ValueError):
+            cached = None
+        fresh = cached and cached.get("languages") == add_audio.TRACK_NAMES and time.time() - cached["time"] < FILMS_EVERY
+        if fresh and not any(REQUESTS_DIR.glob("*.json")):
+            listed = cached["films"]
+        else:
+            listed = films(http_json(f"{RADARR}/api/v3/movie", self.radarr) or [])
+            write_json(FILMS_FILE, {"time": int(time.time()), "languages": add_audio.TRACK_NAMES, "films": listed})
         return {str(f["id"]): f for f in listed}
+
+    def run_checks(self, listed):
+        """Answers the page's "is there a release in this language" without downloading anything."""
+        try:
+            checks = json.loads(CHECKS_FILE.read_text())
+        except (OSError, ValueError):
+            checks = {}
+        for request_file in sorted(REQUESTS_DIR.glob("*-check.json")):
+            try:
+                request = json.loads(request_file.read_text())
+                key, film = f"{int(request['movie_id'])}-{request['lang']}", listed.get(str(request["movie_id"]))
+            except (OSError, ValueError, KeyError):
+                request_file.unlink(missing_ok=True)
+                continue
+            if film and request["lang"] in film["missing"]:
+                try:
+                    found = self.find(film["imdb"], film["title"], request["lang"])
+                    checks[key] = {"time": int(time.time()), "releases": len(found),
+                                   "named": sum(not c["rank"][0] for c in found),
+                                   "own_site": sum(c["rank"][0] and not c["rank"][1] for c in found),
+                                   "best": [{k: c[k] for k in ("title", "size", "indexer", "private")} for c in found[:3]]}
+                except (OSError, ValueError) as err:
+                    checks[key] = {"time": int(time.time()), "releases": 0, "named": 0, "own_site": 0, "best": [],
+                                   "error": str(err)}
+            request_file.unlink(missing_ok=True)
+            write_json(CHECKS_FILE, checks)
 
     def take_requests(self, listed):
         for request_file in sorted(REQUESTS_DIR.glob("*.json")):
+            if request_file.name.endswith("-check.json"):
+                continue
             try:
                 request = json.loads(request_file.read_text())
                 key = f"{int(request['movie_id'])}-{request['lang']}"
@@ -621,6 +661,14 @@ def main():
         status(load_state(), float(env.get("DUB_FETCH_BUDGET_GB") or BUDGET_GB) * GB)
         return
 
+    # Checks and jobs hold separate locks, so a check is answered while a job probes or add-audio runs.
+    with open(JOBS_DIR / "check.lock", "w") as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            Pass(env, {"jobs": {}}).run_checks(Pass(env, {"jobs": {}}).list_films())
+        except BlockingIOError:
+            pass
+
     with open(JOBS_DIR / "run.lock", "w") as lock:
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -629,7 +677,11 @@ def main():
         state = load_state()
         run = Pass(env, state)
         try:
-            run.take_requests(run.list_films())
+            try:
+                listed = {str(f["id"]): f for f in json.loads(FILMS_FILE.read_text())["films"]}
+            except (OSError, ValueError):
+                listed = run.list_films()
+            run.take_requests(listed)
             active = sorted((j for j in state["jobs"].values() if j["status"] not in DONE), key=lambda j: j["requested"])
             if active:
                 write_json(STATE_FILE, state)

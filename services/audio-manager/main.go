@@ -98,6 +98,7 @@ func main() {
 	http.HandleFunc("/api/cancel", s.cancel)
 	http.HandleFunc("/api/add-audio", s.addAudio)
 	http.HandleFunc("/api/add-audio/cancel", s.cancelAddAudio)
+	http.HandleFunc("/api/add-audio/check", s.checkAddAudio)
 
 	go s.worker()
 	go s.scanner()
