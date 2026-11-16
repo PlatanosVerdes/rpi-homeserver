@@ -275,6 +275,23 @@ def tag(stream, name):
     return None
 
 
+def extract_cover(src, stream, name, image):
+    # mkvextract reads the attachment from the header; ffmpeg's demuxer took over a minute on a 26 GB file.
+    if src.suffix.lower() == ".mkv" and shutil.which("mkvextract"):
+        listing = subprocess.run(["mkvmerge", "-J", str(src)], capture_output=True, text=True,
+                                 timeout=FFPROBE_TIMEOUT, check=True)
+        for attachment in json.loads(listing.stdout).get("attachments", ()):
+            if attachment.get("file_name") == name:
+                subprocess.run(["mkvextract", str(src), "attachments", f"{attachment['id']}:{image}"],
+                               capture_output=True, text=True, timeout=FFPROBE_TIMEOUT, check=True)
+                return
+    subprocess.run(
+        ["ffmpeg", "-nostdin", "-y", "-v", "error", "-i", str(src),
+         "-map", f"0:{stream['index']}", "-c", "copy", "-frames:v", "1",
+         "-f", "image2", str(image)],
+        capture_output=True, text=True, timeout=FFPROBE_TIMEOUT, check=True)
+
+
 def cover_args(src, info, dst, workdir):
     """The arguments that carry every cover across as a cover, or a failure."""
     covers = [s for s in info.get("streams", ()) if is_cover(s)]
@@ -289,12 +306,8 @@ def cover_args(src, info, dst, workdir):
         name = tag(stream, "filename") or f"cover{position}"
         image = Path(workdir) / f"{position}-{Path(name).name}"
         try:
-            subprocess.run(
-                ["ffmpeg", "-nostdin", "-y", "-v", "error", "-i", str(src),
-                 "-map", f"0:{stream['index']}", "-c", "copy", "-frames:v", "1",
-                 "-f", "image2", str(image)],
-                capture_output=True, text=True, timeout=FFPROBE_TIMEOUT, check=True)
-        except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError) as err:
+            extract_cover(src, stream, name, image)
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError, ValueError) as err:
             return None, f"cover {name} could not be extracted: {err}"
         output = attachments + position
         args += ["-attach", str(image), f"-metadata:s:t:{output}", f"filename={name}"]
