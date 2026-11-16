@@ -1,4 +1,4 @@
-package main
+package clients
 
 import (
 	"bytes"
@@ -12,6 +12,7 @@ import (
 	"net/http/cookiejar"
 	"net/url"
 	"strings"
+	"time"
 )
 
 // Seeding and deletion stay qbit-manage's: the category audio-source is never hardlinked, so it is
@@ -26,27 +27,27 @@ const (
 
 var errQbitNotFound = errors.New("qBittorrent does not know it")
 
-type qbit struct {
+type Qbit struct {
 	base   string
 	client *http.Client
 }
 
-type qbitTorrent struct {
+type QbitTorrent struct {
 	Downloaded   int64   `json:"downloaded"`
 	Progress     float64 `json:"progress"`
 	SavePath     string  `json:"save_path"`
 	DownloadPath string  `json:"download_path"`
 }
 
-type qbitFile struct {
+type QbitFile struct {
 	Name       string `json:"name"`
 	Size       int64  `json:"size"`
 	PieceRange []int  `json:"piece_range"`
 }
 
-func loginQbit(ctx context.Context, base, user, password string) (*qbit, error) {
+func LoginQbit(ctx context.Context, base, user, password string, timeout time.Duration) (*Qbit, error) {
 	jar, _ := cookiejar.New(nil)
-	q := &qbit{base: strings.TrimRight(base, "/") + "/api/v2", client: &http.Client{Jar: jar, Timeout: dubHTTPTimeout}}
+	q := &Qbit{base: strings.TrimRight(base, "/") + "/api/v2", client: &http.Client{Jar: jar, Timeout: timeout}}
 	form := url.Values{"username": {user}, "password": {password}}
 	request, err := http.NewRequestWithContext(ctx, http.MethodPost, q.base+"/auth/login", strings.NewReader(form.Encode()))
 	if err != nil {
@@ -69,7 +70,7 @@ func loginQbit(ctx context.Context, base, user, password string) (*qbit, error) 
 
 // get decodes an answer, or errQbitNotFound for a torrent qBittorrent does not know (yet: an add
 // takes a moment to register).
-func (q *qbit) get(ctx context.Context, path string, params url.Values, out any) error {
+func (q *Qbit) get(ctx context.Context, path string, params url.Values, out any) error {
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, q.base+"/"+path+"?"+params.Encode(), nil)
 	if err != nil {
 		return err
@@ -92,7 +93,7 @@ func (q *qbit) get(ctx context.Context, path string, params url.Values, out any)
 	return json.Unmarshal(raw, out)
 }
 
-func (q *qbit) post(ctx context.Context, path string, fields url.Values) error {
+func (q *Qbit) Post(ctx context.Context, path string, fields url.Values) error {
 	request, err := http.NewRequestWithContext(ctx, http.MethodPost, q.base+"/"+path, strings.NewReader(fields.Encode()))
 	if err != nil {
 		return err
@@ -113,9 +114,9 @@ func (q *qbit) post(ctx context.Context, path string, fields url.Values) error {
 	return nil
 }
 
-// torrent is nil for a torrent qBittorrent does not have.
-func (q *qbit) torrent(ctx context.Context, hash string) (*qbitTorrent, error) {
-	var found []qbitTorrent
+// Torrent is nil for a torrent qBittorrent does not have.
+func (q *Qbit) Torrent(ctx context.Context, hash string) (*QbitTorrent, error) {
+	var found []QbitTorrent
 	if err := q.get(ctx, "torrents/info", url.Values{"hashes": {hash}}, &found); err != nil && !errors.Is(err, errQbitNotFound) {
 		return nil, err
 	}
@@ -125,8 +126,8 @@ func (q *qbit) torrent(ctx context.Context, hash string) (*qbitTorrent, error) {
 	return &found[0], nil
 }
 
-func (q *qbit) files(ctx context.Context, hash string) ([]qbitFile, error) {
-	var files []qbitFile
+func (q *Qbit) Files(ctx context.Context, hash string) ([]QbitFile, error) {
+	var files []QbitFile
 	err := q.get(ctx, "torrents/files", url.Values{"hash": {hash}}, &files)
 	if errors.Is(err, errQbitNotFound) {
 		return nil, nil
@@ -134,7 +135,7 @@ func (q *qbit) files(ctx context.Context, hash string) ([]qbitFile, error) {
 	return files, err
 }
 
-func (q *qbit) pieceStates(ctx context.Context, hash string) ([]int, error) {
+func (q *Qbit) PieceStates(ctx context.Context, hash string) ([]int, error) {
 	var states []int
 	err := q.get(ctx, "torrents/pieceStates", url.Values{"hash": {hash}}, &states)
 	if errors.Is(err, errQbitNotFound) {
@@ -143,7 +144,7 @@ func (q *qbit) pieceStates(ctx context.Context, hash string) ([]int, error) {
 	return states, err
 }
 
-func (q *qbit) pieceSize(ctx context.Context, hash string) (int64, error) {
+func (q *Qbit) PieceSize(ctx context.Context, hash string) (int64, error) {
 	var properties struct {
 		PieceSize int64 `json:"piece_size"`
 	}
@@ -151,7 +152,7 @@ func (q *qbit) pieceSize(ctx context.Context, hash string) (int64, error) {
 	return properties.PieceSize, err
 }
 
-func (q *qbit) ensureCategory(ctx context.Context) error {
+func (q *Qbit) EnsureCategory(ctx context.Context) error {
 	categories := map[string]any{}
 	if err := q.get(ctx, "torrents/categories", nil, &categories); err != nil && !errors.Is(err, errQbitNotFound) {
 		return err
@@ -159,10 +160,10 @@ func (q *qbit) ensureCategory(ctx context.Context) error {
 	if _, ok := categories[qbitCategory]; ok {
 		return nil
 	}
-	return q.post(ctx, "torrents/createCategory", url.Values{"category": {qbitCategory}, "savePath": {qbitSavePath}})
+	return q.Post(ctx, "torrents/createCategory", url.Values{"category": {qbitCategory}, "savePath": {qbitSavePath}})
 }
 
-func (q *qbit) addStopped(ctx context.Context, torrent []byte, name string) error {
+func (q *Qbit) AddStopped(ctx context.Context, torrent []byte, name string) error {
 	var body bytes.Buffer
 	form := multipart.NewWriter(&body)
 	// stopped is 5.x's name, paused 4.x's; each ignores the other.
@@ -194,28 +195,28 @@ func (q *qbit) addStopped(ctx context.Context, torrent []byte, name string) erro
 	return nil
 }
 
-func (q *qbit) start(ctx context.Context, hash string) error {
+func (q *Qbit) Start(ctx context.Context, hash string) error {
 	return q.either(ctx, "torrents/start", "torrents/resume", hash)
 }
 
-func (q *qbit) stop(ctx context.Context, hash string) error {
+func (q *Qbit) Stop(ctx context.Context, hash string) error {
 	return q.either(ctx, "torrents/stop", "torrents/pause", hash)
 }
 
 // either tries 5.x's name first: it renamed resume and pause to start and stop.
-func (q *qbit) either(ctx context.Context, current, older, hash string) error {
-	err := q.post(ctx, current, url.Values{"hashes": {hash}})
+func (q *Qbit) either(ctx context.Context, current, older, hash string) error {
+	err := q.Post(ctx, current, url.Values{"hashes": {hash}})
 	if errors.Is(err, errQbitNotFound) {
-		return q.post(ctx, older, url.Values{"hashes": {hash}})
+		return q.Post(ctx, older, url.Values{"hashes": {hash}})
 	}
 	return err
 }
 
-func (q *qbit) delete(ctx context.Context, hash string) error {
-	return q.post(ctx, "torrents/delete", url.Values{"hashes": {hash}, "deleteFiles": {"true"}})
+func (q *Qbit) Delete(ctx context.Context, hash string) error {
+	return q.Post(ctx, "torrents/delete", url.Values{"hashes": {hash}, "deleteFiles": {"true"}})
 }
 
-// release hands the torrent to qbit-manage's share limits.
-func (q *qbit) release(ctx context.Context, hash string) error {
-	return q.post(ctx, "torrents/removeTags", url.Values{"hashes": {hash}, "tags": {qbitKeepTag}})
+// Release hands the torrent to qbit-manage's share limits.
+func (q *Qbit) Release(ctx context.Context, hash string) error {
+	return q.Post(ctx, "torrents/removeTags", url.Values{"hashes": {hash}, "tags": {qbitKeepTag}})
 }

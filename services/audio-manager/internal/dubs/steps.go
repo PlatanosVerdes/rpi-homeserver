@@ -1,6 +1,8 @@
-package main
+package dubs
 
 import (
+	"audio-manager/internal/clients"
+	"audio-manager/internal/script"
 	"bytes"
 	"context"
 	"crypto/sha1"
@@ -10,7 +12,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
@@ -28,15 +29,15 @@ const probeRate = 2 * mb
 // pass is one tick of the worker: it logs into qBittorrent when first needed and sends what happened
 // to Telegram at the end.
 type pass struct {
-	d      *dubService
+	d      *Service
 	ctx    context.Context
-	q      *qbit
+	q      *clients.Qbit
 	events []string
 }
 
-func (p *pass) qbit() (*qbit, error) {
+func (p *pass) qbit() (*clients.Qbit, error) {
 	if p.q == nil {
-		q, err := loginQbit(p.ctx, p.d.cfg.qbitURL, p.d.cfg.qbitUser, p.d.cfg.qbitPassword)
+		q, err := clients.LoginQbit(p.ctx, p.d.cfg.QbitURL, p.d.cfg.QbitUser, p.d.cfg.QbitPassword, dubHTTPTimeout)
 		if err != nil {
 			return nil, err
 		}
@@ -163,11 +164,11 @@ func (p *pass) tryNext(job *jobState) error {
 	p.d.mu.Lock()
 	charged := p.d.state.ChargedBytes
 	p.d.mu.Unlock()
-	if charged+next.charged() > p.d.cfg.budget {
+	if charged+next.charged() > p.d.cfg.Budget {
 		job.set("trying", next.Title+" would pass the download budget")
 		return nil
 	}
-	torrent, err := p.d.downloadTorrent(p.ctx, next.URL)
+	torrent, err := p.d.prowlarr().DownloadTorrent(p.ctx, next.URL)
 	if err != nil {
 		return err
 	}
@@ -180,21 +181,21 @@ func (p *pass) tryNext(job *jobState) error {
 	if err != nil {
 		return err
 	}
-	if existing, err := q.torrent(p.ctx, hash); err != nil {
+	if existing, err := q.Torrent(p.ctx, hash); err != nil {
 		return err
 	} else if existing != nil {
 		job.set("trying", next.Title+" is already in qBittorrent")
 		return nil
 	}
-	if err := q.ensureCategory(p.ctx); err != nil {
+	if err := q.EnsureCategory(p.ctx); err != nil {
 		return err
 	}
-	if err := q.addStopped(p.ctx, torrent, job.Title); err != nil {
+	if err := q.AddStopped(p.ctx, torrent, job.Title); err != nil {
 		return err
 	}
-	var files []qbitFile
+	var files []clients.QbitFile
 	for range 10 {
-		if files, err = q.files(p.ctx, hash); err != nil {
+		if files, err = q.Files(p.ctx, hash); err != nil {
 			return err
 		}
 		if len(files) > 0 {
@@ -209,7 +210,7 @@ func (p *pass) tryNext(job *jobState) error {
 		}
 	}
 	if video < 0 {
-		if err := q.delete(p.ctx, hash); err != nil {
+		if err := q.Delete(p.ctx, hash); err != nil {
 			return err
 		}
 		job.set("trying", next.Title+" has no .mkv")
@@ -222,19 +223,19 @@ func (p *pass) tryNext(job *jobState) error {
 		}
 	}
 	if len(others) > 0 {
-		if err := q.post(p.ctx, "torrents/filePrio", url.Values{"hash": {hash}, "id": {strings.Join(others, "|")}, "priority": {"0"}}); err != nil {
+		if err := q.Post(p.ctx, "torrents/filePrio", url.Values{"hash": {hash}, "id": {strings.Join(others, "|")}, "priority": {"0"}}); err != nil {
 			return err
 		}
 	}
-	if err := q.post(p.ctx, "torrents/toggleSequentialDownload", url.Values{"hashes": {hash}}); err != nil {
+	if err := q.Post(p.ctx, "torrents/toggleSequentialDownload", url.Values{"hashes": {hash}}); err != nil {
 		return err
 	}
-	if err := q.post(p.ctx, "torrents/setDownloadLimit", url.Values{"hashes": {hash}, "limit": {strconv.Itoa(probeRate)}}); err != nil {
+	if err := q.Post(p.ctx, "torrents/setDownloadLimit", url.Values{"hashes": {hash}, "limit": {strconv.Itoa(probeRate)}}); err != nil {
 		return err
 	}
 	startsAt := 1.0
 	if next.Private {
-		rules, err := loadTrackerRules(p.d.cfg.rulesFile)
+		rules, err := loadTrackerRules(p.d.cfg.RulesFile)
 		if err != nil {
 			return err
 		}
@@ -246,24 +247,6 @@ func (p *pass) tryNext(job *jobState) error {
 	return nil
 }
 
-// downloadTorrent fetches the .torrent through Prowlarr, its API key in a header.
-func (d *dubService) downloadTorrent(ctx context.Context, link string) ([]byte, error) {
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, link, nil)
-	if err != nil {
-		return nil, err
-	}
-	request.Header.Set("X-Api-Key", d.cfg.prowlarrKey)
-	response, err := d.http.Do(request)
-	if err != nil {
-		return nil, err
-	}
-	defer response.Body.Close()
-	if response.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("the .torrent: %s", response.Status)
-	}
-	return io.ReadAll(io.LimitReader(response.Body, 32<<20))
-}
-
 // checkProbe watches a probe until the head of its .mkv shows the track list, then keeps it for a
 // download if one track is in the language, or drops it. It returns the bytes the download charges.
 func (p *pass) checkProbe(job *jobState) (int64, error) {
@@ -272,7 +255,7 @@ func (p *pass) checkProbe(job *jobState) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	torrent, err := q.torrent(p.ctx, current.Hash)
+	torrent, err := q.Torrent(p.ctx, current.Hash)
 	if err != nil {
 		return 0, err
 	}
@@ -281,7 +264,7 @@ func (p *pass) checkProbe(job *jobState) (int64, error) {
 		job.set("trying", "the probe left qBittorrent")
 		return 0, nil
 	}
-	files, err := q.files(p.ctx, current.Hash)
+	files, err := q.Files(p.ctx, current.Hash)
 	if err != nil {
 		return 0, err
 	}
@@ -293,7 +276,7 @@ func (p *pass) checkProbe(job *jobState) (int64, error) {
 	for _, f := range files[:current.File] {
 		offset += f.Size
 	}
-	pieceSize, err := q.pieceSize(p.ctx, current.Hash)
+	pieceSize, err := q.PieceSize(p.ctx, current.Hash)
 	if err != nil {
 		return 0, err
 	}
@@ -307,7 +290,7 @@ func (p *pass) checkProbe(job *jobState) (int64, error) {
 		budget = min(budget, current.DeleteBelow/probeMargin)
 	}
 
-	if err := q.start(p.ctx, current.Hash); err != nil {
+	if err := q.Start(p.ctx, current.Hash); err != nil {
 		return 0, err
 	}
 	var info *probeInfo
@@ -315,7 +298,7 @@ func (p *pass) checkProbe(job *jobState) (int64, error) {
 	watchErr := func() error {
 		deadline := time.Now().Add(p.d.watchFor)
 		for time.Now().Before(deadline) && !p.d.cancelWaiting(dubKey(job.MovieID, job.Lang)) {
-			states, err := q.pieceStates(p.ctx, current.Hash)
+			states, err := q.PieceStates(p.ctx, current.Hash)
 			if err != nil {
 				return err
 			}
@@ -326,7 +309,7 @@ func (p *pass) checkProbe(job *jobState) (int64, error) {
 					return nil
 				}
 			}
-			now, err := q.torrent(p.ctx, current.Hash)
+			now, err := q.Torrent(p.ctx, current.Hash)
 			if err != nil {
 				return err
 			}
@@ -337,13 +320,13 @@ func (p *pass) checkProbe(job *jobState) (int64, error) {
 		}
 		return nil
 	}()
-	stopErr := q.stop(p.ctx, current.Hash)
+	stopErr := q.Stop(p.ctx, current.Hash)
 	if err := errors.Join(watchErr, stopErr); err != nil {
 		return 0, err
 	}
 
 	var downloaded int64
-	if now, err := q.torrent(p.ctx, current.Hash); err != nil {
+	if now, err := q.Torrent(p.ctx, current.Hash); err != nil {
 		return 0, err
 	} else if now != nil {
 		downloaded = now.Downloaded
@@ -378,12 +361,12 @@ func (p *pass) checkProbe(job *jobState) (int64, error) {
 	}
 	for _, step := range []func() error{
 		func() error {
-			return q.post(p.ctx, "torrents/toggleSequentialDownload", url.Values{"hashes": {current.Hash}})
+			return q.Post(p.ctx, "torrents/toggleSequentialDownload", url.Values{"hashes": {current.Hash}})
 		},
 		func() error {
-			return q.post(p.ctx, "torrents/setDownloadLimit", url.Values{"hashes": {current.Hash}, "limit": {"0"}})
+			return q.Post(p.ctx, "torrents/setDownloadLimit", url.Values{"hashes": {current.Hash}, "limit": {"0"}})
 		},
-		func() error { return q.start(p.ctx, current.Hash) },
+		func() error { return q.Start(p.ctx, current.Hash) },
 	} {
 		if err := step(); err != nil {
 			return 0, err
@@ -402,7 +385,7 @@ func (p *pass) checkDownload(job *jobState) error {
 	if err != nil {
 		return err
 	}
-	torrent, err := q.torrent(p.ctx, current.Hash)
+	torrent, err := q.Torrent(p.ctx, current.Hash)
 	if err != nil {
 		return err
 	}
@@ -420,7 +403,7 @@ func (p *pass) checkDownload(job *jobState) error {
 		}
 		return nil
 	}
-	movie, err := p.d.radarrMovie(p.ctx, job.MovieID)
+	movie, err := p.d.radarr().Movie(p.ctx, job.MovieID)
 	if err != nil {
 		return err
 	}
@@ -428,7 +411,7 @@ func (p *pass) checkDownload(job *jobState) error {
 	if movie.MovieFile != nil {
 		target = p.d.hostPath(movie.MovieFile.Path)
 	}
-	files, err := q.files(p.ctx, current.Hash)
+	files, err := q.Files(p.ctx, current.Hash)
 	if err != nil {
 		return err
 	}
@@ -480,16 +463,16 @@ func (p *pass) dropTorrent(job *jobState) error {
 	if err != nil {
 		return err
 	}
-	torrent, err := q.torrent(p.ctx, current.Hash)
+	torrent, err := q.Torrent(p.ctx, current.Hash)
 	if err != nil {
 		return err
 	}
 	if torrent != nil {
 		safe := !current.Private || float64(torrent.Downloaded)*probeMargin < current.DeleteBelow
 		if current.Stage == "probing" && safe {
-			err = q.delete(p.ctx, current.Hash)
+			err = q.Delete(p.ctx, current.Hash)
 		} else {
-			err = q.release(p.ctx, current.Hash)
+			err = q.Release(p.ctx, current.Hash)
 		}
 		if err != nil {
 			return err
@@ -500,7 +483,7 @@ func (p *pass) dropTorrent(job *jobState) error {
 }
 
 func (p *pass) notify() {
-	token, chat := p.d.cfg.telegramToken, p.d.cfg.telegramChat
+	token, chat := p.d.cfg.TelegramToken, p.d.cfg.TelegramChat
 	if len(p.events) == 0 || token == "" || chat == "" {
 		return
 	}
@@ -518,9 +501,9 @@ func redactToken(err error, token string) string {
 }
 
 // hostPath maps where Radarr and qBittorrent see a file (/data, DATA_ROOT on the host) to this container.
-func (d *dubService) hostPath(containerPath string) string {
+func (d *Service) hostPath(containerPath string) string {
 	if containerPath == "/data" || strings.HasPrefix(containerPath, "/data/") {
-		return filepath.Join(d.cfg.dataRoot, filepath.FromSlash(strings.TrimPrefix(containerPath, "/data")))
+		return filepath.Join(d.cfg.DataRoot, filepath.FromSlash(strings.TrimPrefix(containerPath, "/data")))
 	}
 	return containerPath
 }
@@ -657,7 +640,7 @@ func pickDub(info *probeInfo, lang *language) *probeStream {
 }
 
 // ffprobeHead is ffprobe's view of the first bytes of a partial download, or nil.
-func (d *dubService) ffprobeHead(path string, size int64) *probeInfo {
+func (d *Service) ffprobeHead(path string, size int64) *probeInfo {
 	source, err := os.Open(path)
 	if err != nil {
 		log.Printf("audio-manager: probe of %s failed: %v", path, err)
@@ -690,10 +673,10 @@ func (d *dubService) ffprobeHead(path string, size int64) *probeInfo {
 }
 
 // addAudioScript runs add-audio.py and returns the last line it wrote and its exit code.
-func (d *dubService) addAudioScript(target, source, lang string) (string, int) {
+func (d *Service) addAudioScript(target, source, lang string) (string, int) {
 	ctx, cancel := context.WithTimeout(context.Background(), addAudioTimeout)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, d.cfg.python, d.cfg.addAudio, target, source, "--lang", lang)
+	cmd := exec.CommandContext(ctx, d.cfg.Python, d.cfg.AddAudio, target, source, "--lang", lang)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	err := cmd.Run()
@@ -712,5 +695,5 @@ func (d *dubService) addAudioScript(target, source, lang string) (string, int) {
 	if output == "" {
 		return fmt.Sprintf("exit %d", code), code
 	}
-	return lastLine(output), code
+	return script.LastLine(output), code
 }

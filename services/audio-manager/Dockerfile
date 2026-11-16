@@ -1,11 +1,12 @@
-ARG GO_IMAGE
-ARG ALPINE_VERSION
+# compose passes both from versions.env; the defaults only exist to fail loudly when it does not.
+ARG GO_IMAGE=set-in-versions-env
+ARG ALPINE_VERSION=set-in-versions-env
 
 FROM golang:${GO_IMAGE} AS builder
 WORKDIR /src
 COPY go.mod ./
 RUN go mod download
-COPY *.go icon.svg apple-touch-icon.png ./
+COPY . .
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /audio-manager .
 
 # python3 and ffmpeg run scripts/sync/audio-compat.py, which compose mounts from the repo rather

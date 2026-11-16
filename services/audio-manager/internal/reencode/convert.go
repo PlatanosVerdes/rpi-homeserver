@@ -1,4 +1,4 @@
-package main
+package reencode
 
 import (
 	"bufio"
@@ -9,10 +9,12 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"slices"
 	"strconv"
 	"time"
+
+	"audio-manager/internal/script"
+	"audio-manager/internal/store"
 )
 
 // The conversion itself is scripts/sync/audio-compat.py --file, the same remux, verify and rename
@@ -68,7 +70,7 @@ type persisted struct {
 	Results map[string]outcome `json:"results"`
 }
 
-func (s *server) load() {
+func (s *Server) load() {
 	raw, err := os.ReadFile(s.stateFile)
 	if err != nil {
 		return
@@ -85,17 +87,17 @@ func (s *server) load() {
 }
 
 // save is called with s.mu held.
-func (s *server) save() {
+func (s *Server) save() {
 	raw, err := json.MarshalIndent(persisted{Queue: s.queue, Results: s.results}, "", "  ")
 	if err != nil {
 		return
 	}
-	if err := writeAtomic(s.stateFile, raw); err != nil {
+	if err := store.WriteAtomic(s.stateFile, raw); err != nil {
 		log.Printf("audio-manager: %v", err)
 	}
 }
 
-func (s *server) enqueue(j job) bool {
+func (s *Server) enqueue(j job) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if (s.running != nil && s.running.Library == j.Library) ||
@@ -111,7 +113,7 @@ func (s *server) enqueue(j job) bool {
 	return true
 }
 
-func (s *server) dequeue(library string) bool {
+func (s *Server) dequeue(library string) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	before := len(s.queue)
@@ -125,7 +127,7 @@ func (s *server) dequeue(library string) bool {
 
 // worker runs the queue one file at a time, forever. A file the night run is busy with, or any file
 // while it runs, stays at the head of the queue until the lock is free.
-func (s *server) worker() {
+func (s *Server) worker() {
 	for {
 		s.mu.Lock()
 		var next *job
@@ -170,14 +172,14 @@ func (s *server) worker() {
 	}
 }
 
-func (s *server) setWaiting(holder map[string]any) {
+func (s *Server) setWaiting(holder map[string]any) {
 	s.mu.Lock()
 	s.waiting = holder
 	s.mu.Unlock()
 }
 
 // run converts one file and says how it went, or busy when the night run took the lock first.
-func (s *server) run(j job) (outcome, bool) {
+func (s *Server) run(j job) (outcome, bool) {
 	file, ok := insideLibrary(s.dataRoot, j.Library)
 	if !ok {
 		return outcome{Time: time.Now().Unix(), Result: "failed", Reason: "not a library path"}, false
@@ -239,11 +241,9 @@ func (s *server) run(j job) (outcome, bool) {
 	case last.Event == "failed":
 		return outcome{Time: now, Result: "failed", Reason: last.Reason}, false
 	}
-	reason := lastLine(stderr.String())
+	reason := script.LastLine(stderr.String())
 	if reason == "" {
 		reason = fmt.Sprintf("audio-compat ended without a result (%v)", err)
 	}
 	return outcome{Time: now, Result: "failed", Reason: reason}, false
 }
-
-func defaultStateFile(dir string) string { return filepath.Join(dir, "audio-manager.json") }

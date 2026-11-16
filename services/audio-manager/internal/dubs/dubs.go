@@ -1,25 +1,26 @@
-package main
+// Package dubs is the Add audio view: it fetches a dub for a library film when the page asks for
+// one. One film at a time, oldest first: every indexer is searched, each candidate is probed before
+// it is downloaded (the first pieces of its .mkv hold the track list, so a release without the
+// language is deleted after a few MB), and one that has it is downloaded and handed to add-audio.py.
+// See docs/add-audio.md.
+package dubs
 
 import (
+	"audio-manager/internal/clients"
+	"audio-manager/internal/httpx"
+	"audio-manager/internal/store"
 	"context"
 	"fmt"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"slices"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
 )
-
-// Add audio fetches a dub for a library film when the page asks for one. One film at a time, oldest
-// first: every indexer is searched, each candidate is probed before it is downloaded (the first pieces
-// of its .mkv hold the track list, so a release without the language is deleted after a few MB), and
-// one that has it is downloaded and handed to add-audio.py. See docs/add-audio.md.
 
 const (
 	filmsEvery      = 10 * time.Minute
@@ -33,42 +34,18 @@ const (
 	addAudioTimeout = 4 * time.Hour
 )
 
-type dubConfig struct {
-	radarrURL, radarrKey     string
-	prowlarrURL, prowlarrKey string
-	qbitURL, qbitUser        string
-	qbitPassword             string
-	rulesFile                string
-	languagesFile            string
-	addAudio, python         string
-	dataRoot, stateDir       string
-	budget                   int64
-	telegramToken            string
-	telegramChat             string
-}
-
-func dubConfigFromEnv(stateDir, dataRoot, python string) (dubConfig, error) {
-	budgetGB, err := strconv.ParseFloat(env("DUB_BUDGET_GB", "100"), 64)
-	if err != nil || budgetGB < 0 {
-		return dubConfig{}, fmt.Errorf("DUB_BUDGET_GB %q is not a number of GB", os.Getenv("DUB_BUDGET_GB"))
-	}
-	cfg := dubConfig{
-		radarrURL: strings.TrimRight(env("RADARR_URL", "http://radarr:7878"), "/"), radarrKey: os.Getenv("RADARR_API_KEY"),
-		prowlarrURL: strings.TrimRight(env("PROWLARR_URL", "http://prowlarr:9696"), "/"), prowlarrKey: os.Getenv("PROWLARR_API_KEY"),
-		qbitURL: env("QBIT_URL", "http://qbittorrent:8080"), qbitUser: os.Getenv("QBIT_USER"), qbitPassword: os.Getenv("QBIT_PASSWORD"),
-		rulesFile:     env("TRACKER_RULES", "/trackers/rules.json"),
-		languagesFile: env("LANGUAGES_FILE", "/scripts/languages.json"),
-		addAudio:      env("ADD_AUDIO", "/scripts/add-audio.py"), python: python,
-		dataRoot: dataRoot, stateDir: filepath.Join(stateDir, "add-audio"),
-		budget:        int64(budgetGB * gb),
-		telegramToken: os.Getenv("TELEGRAM_ALERT_BOT_TOKEN"), telegramChat: os.Getenv("TELEGRAM_ALERT_CHAT_ID"),
-	}
-	for name, value := range map[string]string{"RADARR_URL": cfg.radarrURL, "PROWLARR_URL": cfg.prowlarrURL, "QBIT_URL": cfg.qbitURL} {
-		if u, err := url.Parse(value); err != nil || u.Scheme == "" || u.Host == "" {
-			return dubConfig{}, fmt.Errorf("%s %q is not a URL", name, value)
-		}
-	}
-	return cfg, nil
+type Config struct {
+	RadarrURL, RadarrKey     string
+	ProwlarrURL, ProwlarrKey string
+	QbitURL, QbitUser        string
+	QbitPassword             string
+	RulesFile                string
+	LanguagesFile            string
+	AddAudio, Python         string
+	DataRoot, StateDir       string
+	Budget                   int64
+	TelegramToken            string
+	TelegramChat             string
 }
 
 type dubFilm struct {
@@ -139,8 +116,8 @@ type dubState struct {
 	Requests     []dubRequest         `json:"requests"`
 }
 
-type dubService struct {
-	cfg        dubConfig
+type Service struct {
+	cfg        Config
 	langs      *languages
 	http       *http.Client
 	searchHTTP *http.Client
@@ -162,8 +139,8 @@ type dubService struct {
 	wake      chan struct{}
 }
 
-func newDubService(cfg dubConfig, langs *languages) *dubService {
-	d := &dubService{
+func newService(cfg Config, langs *languages) *Service {
+	d := &Service{
 		cfg:        cfg,
 		langs:      langs,
 		http:       &http.Client{Timeout: dubHTTPTimeout},
@@ -174,30 +151,49 @@ func newDubService(cfg dubConfig, langs *languages) *dubService {
 		refresh:    make(chan struct{}, 1),
 		wake:       make(chan struct{}, 1),
 	}
-	d.indexers = prowlarr{base: cfg.prowlarrURL, key: cfg.prowlarrKey, service: d}
+	d.indexers = d.prowlarr()
 	d.probeHead = d.ffprobeHead
 	d.runAddAudio = d.addAudioScript
-	d.checks = newChecker(filepath.Join(cfg.stateDir, "checks.json"), d.check)
+	d.checks = newChecker(filepath.Join(cfg.StateDir, "checks.json"), d.check)
 	return d
 }
 
-func (d *dubService) filmsFile() string { return filepath.Join(d.cfg.stateDir, "films.json") }
-func (d *dubService) stateFile() string { return filepath.Join(d.cfg.stateDir, "state.json") }
+// Open loads the languages and what the last run left in cfg.StateDir, failing on a bad file.
+func Open(cfg Config) (*Service, error) {
+	langs, err := loadLanguages(cfg.LanguagesFile)
+	if err != nil {
+		return nil, err
+	}
+	d := newService(cfg, langs)
+	d.load()
+	return d, nil
+}
+
+func (d *Service) radarr() clients.Radarr {
+	return clients.Radarr{Base: d.cfg.RadarrURL, Key: d.cfg.RadarrKey, HTTP: d.http}
+}
+
+func (d *Service) prowlarr() clients.Prowlarr {
+	return clients.Prowlarr{Base: d.cfg.ProwlarrURL, Key: d.cfg.ProwlarrKey, HTTP: d.http, SearchHTTP: d.searchHTTP}
+}
+
+func (d *Service) filmsFile() string { return filepath.Join(d.cfg.StateDir, "films.json") }
+func (d *Service) stateFile() string { return filepath.Join(d.cfg.StateDir, "state.json") }
 
 // load reads what the last run left: the films as Radarr last listed them, the jobs and the checks.
-func (d *dubService) load() {
-	if err := os.MkdirAll(d.cfg.stateDir, 0o755); err != nil {
+func (d *Service) load() {
+	if err := os.MkdirAll(d.cfg.StateDir, 0o755); err != nil {
 		log.Printf("audio-manager: %v", err)
 	}
 	var films struct {
 		Time  int64     `json:"time"`
 		Films []dubFilm `json:"films"`
 	}
-	if err := readJSON(d.filmsFile(), &films); err != nil {
+	if err := store.ReadJSON(d.filmsFile(), &films); err != nil {
 		log.Printf("audio-manager: %v", err)
 	}
 	state := dubState{}
-	err := readJSON(d.stateFile(), &state)
+	err := store.ReadJSON(d.stateFile(), &state)
 	d.mu.Lock()
 	d.films, d.filmsTime = films.Films, films.Time
 	if err != nil {
@@ -211,13 +207,14 @@ func (d *dubService) load() {
 }
 
 // saveState is called with d.mu held.
-func (d *dubService) saveState() {
-	if err := writeJSONFile(d.stateFile(), d.state); err != nil {
+func (d *Service) saveState() {
+	if err := store.WriteJSON(d.stateFile(), d.state); err != nil {
 		log.Printf("audio-manager: saving %s: %v", d.stateFile(), err)
 	}
 }
 
-func (d *dubService) start() {
+// Start runs the Radarr listing and the job worker in the background.
+func (d *Service) Start() {
 	go d.filmsLoop()
 	go d.worker()
 }
@@ -230,7 +227,7 @@ func poke(ch chan struct{}) {
 }
 
 // filmsLoop asks Radarr again every filmsEvery and whenever a request asks for it.
-func (d *dubService) filmsLoop() {
+func (d *Service) filmsLoop() {
 	timer := time.NewTimer(0)
 	for {
 		select {
@@ -243,10 +240,10 @@ func (d *dubService) filmsLoop() {
 	}
 }
 
-func (d *dubService) listFilms() {
+func (d *Service) listFilms() {
 	ctx, cancel := context.WithTimeout(context.Background(), dubHTTPTimeout)
 	defer cancel()
-	movies, err := d.radarrMovies(ctx)
+	movies, err := d.radarr().Movies(ctx)
 	if err != nil {
 		log.Printf("audio-manager: Radarr: %v", err)
 		d.mu.Lock()
@@ -260,13 +257,13 @@ func (d *dubService) listFilms() {
 	d.films, d.filmsTime, d.filmsErr = films, now, ""
 	d.mu.Unlock()
 	payload := map[string]any{"time": now, "languages": d.langs.names(), "films": films}
-	if err := writeJSONFile(d.filmsFile(), payload); err != nil {
+	if err := store.WriteJSON(d.filmsFile(), payload); err != nil {
 		log.Printf("audio-manager: %v", err)
 	}
 }
 
 // film is the listed film when it lacks that language; called with d.mu held.
-func (d *dubService) film(movieID int64, lang string) (dubFilm, bool) {
+func (d *Service) film(movieID int64, lang string) (dubFilm, bool) {
 	for _, f := range d.films {
 		if f.ID == movieID && slices.Contains(f.Missing, lang) {
 			return f, true
@@ -275,19 +272,19 @@ func (d *dubService) film(movieID int64, lang string) (dubFilm, bool) {
 	return dubFilm{}, false
 }
 
-func (d *dubService) pendingIndex(movieID int64, lang string, cancel bool) int {
+func (d *Service) pendingIndex(movieID int64, lang string, cancel bool) int {
 	return slices.IndexFunc(d.state.Requests, func(r dubRequest) bool {
 		return r.MovieID == movieID && r.Lang == lang && r.Cancel == cancel
 	})
 }
 
-func (d *dubService) activeJob(movieID int64, lang string) bool {
+func (d *Service) activeJob(movieID int64, lang string) bool {
 	job, ok := d.state.Jobs[dubKey(movieID, lang)]
 	return ok && !job.finished()
 }
 
 // requestAdd queues an add for the worker; the error says why it was refused.
-func (d *dubService) requestAdd(movieID int64, lang string) (int, error) {
+func (d *Service) requestAdd(movieID int64, lang string) (int, error) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	if _, ok := d.film(movieID, lang); !ok {
@@ -307,7 +304,7 @@ func (d *dubService) requestAdd(movieID int64, lang string) (int, error) {
 }
 
 // requestCancel drops a request not taken yet, or asks the worker to stop the job.
-func (d *dubService) requestCancel(movieID int64, lang string) (int, error) {
+func (d *Service) requestCancel(movieID int64, lang string) (int, error) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	if i := d.pendingIndex(movieID, lang, false); i >= 0 && !d.activeJob(movieID, lang) {
@@ -327,14 +324,14 @@ func (d *dubService) requestCancel(movieID int64, lang string) (int, error) {
 }
 
 // cancelWaiting says whether the page asked to cancel this job, so a probe can stop watching.
-func (d *dubService) cancelWaiting(key string) bool {
+func (d *Service) cancelWaiting(key string) bool {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	return slices.ContainsFunc(d.state.Requests, func(r dubRequest) bool { return r.Cancel && dubKey(r.MovieID, r.Lang) == key })
 }
 
 // commit stores the worker's copy of a job, and the money it charged.
-func (d *dubService) commit(key string, job *jobState, charged int64) {
+func (d *Service) commit(key string, job *jobState, charged int64) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	d.state.Jobs[key] = job.clone()
@@ -342,7 +339,7 @@ func (d *dubService) commit(key string, job *jobState, charged int64) {
 	d.saveState()
 }
 
-func (d *dubService) worker() {
+func (d *Service) worker() {
 	ticker := time.NewTicker(jobTick)
 	defer ticker.Stop()
 	for {
@@ -355,7 +352,7 @@ func (d *dubService) worker() {
 }
 
 // tick is one pass: take the page's requests, then advance the oldest active job as far as it goes.
-func (d *dubService) tick() {
+func (d *Service) tick() {
 	p := &pass{d: d, ctx: context.Background()}
 	defer p.notify()
 	d.mu.Lock()
@@ -428,8 +425,8 @@ func (j *jobState) view() dubJobView {
 	return v
 }
 
-// payload is the add_audio object of /api/state.
-func (d *dubService) payload() map[string]any {
+// Payload is the add_audio object of /api/state.
+func (d *Service) Payload() map[string]any {
 	checks, checksErr := d.checks.snapshot()
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -447,7 +444,7 @@ func (d *dubService) payload() map[string]any {
 	shown, finished := []dubJobView{}, 0
 	for _, job := range jobs {
 		if isFinished(job.Status) {
-			if finished++; finished > historyShown {
+			if finished++; finished > httpx.HistoryShown {
 				continue
 			}
 		}
@@ -477,7 +474,7 @@ func (d *dubService) payload() map[string]any {
 		"requests":      requests,
 		"checks":        listed,
 		"charged_bytes": d.state.ChargedBytes,
-		"budget_bytes":  d.cfg.budget,
+		"budget_bytes":  d.cfg.Budget,
 	}
 	var problems []string
 	for _, problem := range []string{d.filmsErr, d.stateErr} {

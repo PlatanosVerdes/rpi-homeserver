@@ -1,4 +1,4 @@
-package main
+package dubs
 
 import (
 	"context"
@@ -211,42 +211,42 @@ func TestAddAudioCheck(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
-			s := dubFixture(t)
-			s.dubs.checks.search = newGatedSearch().search
-			if code, body := dubPost(s.checkAddAudio, c.movieID, c.lang); code != c.want {
+			d := dubFixture(t)
+			d.checks.search = newGatedSearch().search
+			if code, body := dubPost(d.ServeCheck, c.movieID, c.lang); code != c.want {
 				t.Fatalf("code %d, want %d: %v", code, c.want, body)
 			}
 		})
 	}
 
-	s := dubFixture(t)
+	d := dubFixture(t)
 	search := newGatedSearch("11-spa")
 	search.result = dubCheck{Releases: 4, Named: 2}
 	var asked checkJob
-	s.dubs.checks.search = func(ctx context.Context, job checkJob, progress searchProgress) (dubCheck, error) {
+	d.checks.search = func(ctx context.Context, job checkJob, progress searchProgress) (dubCheck, error) {
 		asked = job
 		return search.search(ctx, job, progress)
 	}
-	if code, body := dubPost(s.checkAddAudio, "11", "spa"); code != http.StatusOK {
+	if code, body := dubPost(d.ServeCheck, "11", "spa"); code != http.StatusOK {
 		t.Fatalf("%d %v", code, body)
 	}
-	if code, _ := dubPost(s.checkAddAudio, "11", "spa"); code != http.StatusConflict {
+	if code, _ := dubPost(d.ServeCheck, "11", "spa"); code != http.StatusConflict {
 		t.Errorf("a second check of the same film and language: %d", code)
 	}
-	waitFor(t, s.dubs.checks, "11-spa", func(c dubCheck) bool { return c.Done == 1 })
+	waitFor(t, d.checks, "11-spa", func(c dubCheck) bool { return c.Done == 1 })
 	if asked != (checkJob{key: "11-spa", imdb: "tt0230600", title: "The Others", lang: "spa"}) {
 		t.Errorf("searched for %+v", asked)
 	}
 
 	w := httptest.NewRecorder()
-	s.checkProgress(w, httptest.NewRequest("GET", "/api/add-audio/checks", nil))
+	d.ServeChecks(w, httptest.NewRequest("GET", "/api/add-audio/checks", nil))
 	if !strings.Contains(w.Body.String(), `"11-spa":{"status":"running"`) {
 		t.Errorf("progress: %s", w.Body)
 	}
 	search.open("11-spa")
-	waitFor(t, s.dubs.checks, "11-spa", finished)
+	waitFor(t, d.checks, "11-spa", finished)
 
-	got, raw := addAudioPayload(t, s)
+	got, raw := addAudioPayload(t, d)
 	check, _ := got["checks"].(map[string]any)["11-spa"].(map[string]any)
 	if check["status"] != "done" || check["named"] != 2.0 || len(got["requests"].([]any)) != 0 {
 		t.Errorf("state after the check: %s", raw)
@@ -255,14 +255,14 @@ func TestAddAudioCheck(t *testing.T) {
 
 func TestAddAudioChecksState(t *testing.T) {
 	t.Parallel()
-	s := dubFixture(t)
-	file := filepath.Join(s.dubs.cfg.stateDir, "checks.json")
+	d := dubFixture(t)
+	file := filepath.Join(d.cfg.StateDir, "checks.json")
 	os.WriteFile(file, []byte(`{
 		"11-spa": {"status": "done", "time": 5, "releases": 4, "named": 1},
 		"13-spa": {"status": "done", "time": 5, "releases": 1},
 		"99-cat": {"status": "failed", "time": 5, "error": "gone"}}`), 0o644)
-	s.dubs.checks.load()
-	got, raw := addAudioPayload(t, s)
+	d.checks.load()
+	got, raw := addAudioPayload(t, d)
 	if shown := got["checks"].(map[string]any); len(shown) != 1 || shown["11-spa"] == nil {
 		t.Errorf("only listed films and languages: %s", raw)
 	}
@@ -271,8 +271,8 @@ func TestAddAudioChecksState(t *testing.T) {
 	}
 
 	os.WriteFile(file, []byte("["), 0o644)
-	s.dubs.checks.load()
-	if got, _ := addAudioPayload(t, s); got["error"] == nil {
+	d.checks.load()
+	if got, _ := addAudioPayload(t, d); got["error"] == nil {
 		t.Error("a malformed checks.json must show as an error")
 	}
 }

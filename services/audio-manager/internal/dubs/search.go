@@ -1,6 +1,7 @@
-package main
+package dubs
 
 import (
+	"audio-manager/internal/clients"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -18,11 +19,10 @@ import (
 // well above that.
 
 const (
-	gb             = 1 << 30
-	mb             = 1 << 20
-	maxSizeBytes   = 15 * gb
-	searchWorkers  = 6
-	searchCategory = "2000"
+	gb            = 1 << 30
+	mb            = 1 << 20
+	maxSizeBytes  = 15 * gb
+	searchWorkers = 6
 	// A Matroska file lists its tracks in its first few hundred KB; a probe reads what is there from
 	// 2 MB on, and gives up on a release that has taken probeBudget without showing them.
 	probeHead   = 2 * mb
@@ -32,42 +32,6 @@ const (
 )
 
 var multiAudio = regexp.MustCompile(`(?i)\bmulti|\bdual\b`)
-
-type indexer struct {
-	Name     string
-	Private  bool
-	Language string
-}
-
-// flexInt reads Prowlarr's imdbId, a number on most indexers and a string or null on some.
-type flexInt int64
-
-func (n *flexInt) UnmarshalJSON(raw []byte) error {
-	text := strings.Trim(string(raw), `"`)
-	value, err := strconv.ParseInt(strings.TrimLeft(text, "t"), 10, 64)
-	if err != nil {
-		value = 0
-	}
-	*n = flexInt(value)
-	return nil
-}
-
-type release struct {
-	GUID         string          `json:"guid"`
-	Title        string          `json:"title"`
-	Size         int64           `json:"size"`
-	Seeders      int             `json:"seeders"`
-	ImdbID       flexInt         `json:"imdbId"`
-	IndexerID    int             `json:"indexerId"`
-	Indexer      string          `json:"indexer"`
-	Protocol     string          `json:"protocol"`
-	DownloadURL  string          `json:"downloadUrl"`
-	IndexerFlags json.RawMessage `json:"indexerFlags"`
-}
-
-func (r release) freeleech() bool {
-	return strings.Contains(strings.ToLower(string(r.IndexerFlags)), "freeleech")
-}
 
 // candidate is a release worth probing, in the order to try it.
 type candidate struct {
@@ -140,7 +104,7 @@ func (rules trackerRules) startsAt(indexer string) float64 {
 }
 
 // probeAllowed says whether a few MB of this release can be taken and deleted without owing its site anything.
-func probeAllowed(r release, private bool, rules trackerRules) bool {
+func probeAllowed(r clients.Release, private bool, rules trackerRules) bool {
 	if !private {
 		return true
 	}
@@ -174,7 +138,7 @@ func withoutKey(link, prowlarr string) string {
 // candidates are the releases worth probing, those most likely to carry the language first, then
 // public before private, freeleech before counted, smaller first. A release without an IMDb id is
 // kept: some sites leave it out, and add-audio refuses another film anyway.
-func candidates(results []release, imdb string, lang *language, tried map[string]bool, indexers map[int]indexer,
+func candidates(results []clients.Release, imdb string, lang *language, tried map[string]bool, indexers map[int]clients.Indexer,
 	rules trackerRules, prowlarr string) []candidate {
 	number, _ := strconv.ParseInt(strings.TrimLeft(imdb, "t"), 10, 64)
 	var fits []candidate
@@ -194,7 +158,7 @@ func candidates(results []release, imdb string, lang *language, tried map[string
 		// MULTi on a French site is French plus the original; it only hints on a site of ours or English.
 		multi := multiAudio.MatchString(r.Title) && (ownSite || locale == "en")
 		fits = append(fits, candidate{GUID: r.GUID, Title: r.Title, Size: r.Size, Indexer: r.Indexer,
-			Private: site.Private, Freeleech: r.freeleech(), URL: withoutKey(r.DownloadURL, prowlarr),
+			Private: site.Private, Freeleech: r.Freeleech(), URL: withoutKey(r.DownloadURL, prowlarr),
 			Named: lang.hint.MatchString(r.Title), OwnSite: ownSite, Multi: multi})
 	}
 	sort.SliceStable(fits, func(i, j int) bool { return lessCandidate(fits[i], fits[j]) })
@@ -214,76 +178,26 @@ func lessCandidate(a, b candidate) bool {
 
 // indexerClient is Prowlarr, behind an interface so a check can be tested without one.
 type indexerClient interface {
-	indexers(ctx context.Context) (map[int]indexer, error)
-	searchIndexer(ctx context.Context, id int, imdb, title string) ([]release, error)
-}
-
-type prowlarr struct {
-	base, key string
-	service   *dubService
-}
-
-func (p prowlarr) indexers(ctx context.Context) (map[int]indexer, error) {
-	var list []struct {
-		ID       int    `json:"id"`
-		Name     string `json:"name"`
-		Enable   bool   `json:"enable"`
-		Privacy  string `json:"privacy"`
-		Language string `json:"language"`
-	}
-	if err := getJSON(ctx, p.service.http, p.base+"/api/v1/indexer", p.key, &list); err != nil {
-		return nil, err
-	}
-	out := map[int]indexer{}
-	for _, i := range list {
-		if i.Enable {
-			out[i.ID] = indexer{Name: i.Name, Private: i.Privacy != "public", Language: i.Language}
-		}
-	}
-	return out, nil
-}
-
-// searchIndexer asks one indexer by IMDb id and by title: NOBS finds nothing by IMDb id, and a title
-// match only counts with the same IMDb id.
-func (p prowlarr) searchIndexer(ctx context.Context, id int, imdb, title string) ([]release, error) {
-	number, _ := strconv.ParseInt(strings.TrimLeft(imdb, "t"), 10, 64)
-	var found []release
-	seen := map[string]bool{}
-	for _, query := range []struct {
-		text   string
-		strict bool
-	}{{"{ImdbId:" + imdb + "}", false}, {title, true}} {
-		params := url.Values{"query": {query.text}, "type": {"search"}, "categories": {searchCategory}, "indexerIds": {strconv.Itoa(id)}}
-		var results []release
-		if err := getJSON(ctx, p.service.searchHTTP, p.base+"/api/v1/search?"+params.Encode(), p.key, &results); err != nil {
-			return nil, err
-		}
-		for _, r := range results {
-			if (!query.strict || int64(r.ImdbID) == number) && !seen[r.GUID] {
-				seen[r.GUID] = true
-				found = append(found, r)
-			}
-		}
-	}
-	return found, nil
+	Indexers(ctx context.Context) (map[int]clients.Indexer, error)
+	SearchIndexer(ctx context.Context, id int, imdb, title string) ([]clients.Release, error)
 }
 
 // searchProgress is told about each indexer as it answers.
 type searchProgress func(indexer string, done, total, releases int, err error)
 
 // find searches every enabled indexer at once and ranks what they found.
-func (d *dubService) find(ctx context.Context, imdb, title, lang string, tried []string, progress searchProgress) ([]candidate, error) {
+func (d *Service) find(ctx context.Context, imdb, title, lang string, tried []string, progress searchProgress) ([]candidate, error) {
 	known, ok := d.langs.byCode[lang]
 	if !ok {
 		return nil, fmt.Errorf("unknown language %q", lang)
 	}
-	indexers, err := d.indexers.indexers(ctx)
+	indexers, err := d.indexers.Indexers(ctx)
 	if err != nil {
 		return nil, err
 	}
 	var (
 		mu      sync.Mutex
-		results []release
+		results []clients.Release
 		seen    = map[string]bool{}
 		done    int
 		wg      sync.WaitGroup
@@ -294,7 +208,7 @@ func (d *dubService) find(ctx context.Context, imdb, title, lang string, tried [
 		go func() {
 			defer wg.Done()
 			slots <- struct{}{}
-			found, err := d.indexers.searchIndexer(ctx, id, imdb, title)
+			found, err := d.indexers.SearchIndexer(ctx, id, imdb, title)
 			<-slots
 			mu.Lock()
 			defer mu.Unlock()
@@ -314,7 +228,7 @@ func (d *dubService) find(ctx context.Context, imdb, title, lang string, tried [
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	rules, err := loadTrackerRules(d.cfg.rulesFile)
+	rules, err := loadTrackerRules(d.cfg.RulesFile)
 	if err != nil {
 		return nil, err
 	}
@@ -322,5 +236,5 @@ func (d *dubService) find(ctx context.Context, imdb, title, lang string, tried [
 	for _, guid := range tried {
 		skip[guid] = true
 	}
-	return candidates(results, imdb, known, skip, indexers, rules, d.cfg.prowlarrURL), nil
+	return candidates(results, imdb, known, skip, indexers, rules, d.cfg.ProwlarrURL), nil
 }

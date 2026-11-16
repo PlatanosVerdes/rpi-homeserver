@@ -1,6 +1,7 @@
-package main
+package dubs
 
 import (
+	"audio-manager/internal/store"
 	"context"
 	"errors"
 	"fmt"
@@ -51,7 +52,7 @@ func (c dubCheck) finished() bool { return c.Status == "done" || c.Status == "fa
 
 type checkJob struct{ key, imdb, title, lang string }
 
-// checkSearch is the search a check runs; dubService.check in the service, a fake in tests.
+// checkSearch is the search a check runs; Service.check in the service, a fake in tests.
 type checkSearch func(ctx context.Context, job checkJob, progress searchProgress) (dubCheck, error)
 
 type checker struct {
@@ -74,7 +75,7 @@ func newChecker(file string, search checkSearch) *checker {
 // load reads the finished checks; one written before checks had a status gets one.
 func (c *checker) load() {
 	saved := map[string]dubCheck{}
-	err := readJSON(c.file, &saved)
+	err := store.ReadJSON(c.file, &saved)
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.loadErr = err
@@ -99,7 +100,7 @@ func (c *checker) save() {
 			finished[key] = check
 		}
 	}
-	if err := writeJSONFile(c.file, finished); err != nil {
+	if err := store.WriteJSON(c.file, finished); err != nil {
 		log.Printf("audio-manager: saving checks: %v", err)
 	}
 }
@@ -179,7 +180,7 @@ func (c *checker) run(job checkJob) {
 
 // check is the service's search for a check: how many releases could be probed, how many name the
 // language, how many come from a site in it, and the three most likely.
-func (d *dubService) check(ctx context.Context, job checkJob, progress searchProgress) (dubCheck, error) {
+func (d *Service) check(ctx context.Context, job checkJob, progress searchProgress) (dubCheck, error) {
 	found, err := d.find(ctx, job.imdb, job.title, job.lang, nil, progress)
 	if err != nil {
 		return dubCheck{}, err

@@ -1,6 +1,8 @@
-package main
+package dubs
 
 import (
+	"audio-manager/internal/clients"
+	"audio-manager/internal/httpx"
 	"context"
 	"crypto/sha1"
 	"encoding/hex"
@@ -11,6 +13,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -37,42 +40,43 @@ func testRules(t *testing.T) trackerRules {
 	return rules
 }
 
-// dubFixture is a server whose Add audio lists three films and knows two jobs.
-func dubFixture(t *testing.T) *server {
+// dubFixture is an Add audio service that lists three films and knows two jobs.
+func dubFixture(t *testing.T) *Service {
 	t.Helper()
-	s, _ := fixture(t, "")
-	cfg := dubConfig{stateDir: filepath.Join(s.stateDir, "add-audio"), dataRoot: s.dataRoot, rulesFile: "testdata/rules.json",
-		prowlarrURL: "http://127.0.0.1:9696", budget: 100 * gb}
-	s.dubs = newDubService(cfg, testLanguages(t))
-	s.dubs.load()
-	s.dubs.films = []dubFilm{
+	dir := t.TempDir()
+	cfg := Config{StateDir: filepath.Join(dir, "state", "add-audio"), DataRoot: filepath.Join(dir, "data"), RulesFile: "testdata/rules.json",
+		ProwlarrURL: "http://127.0.0.1:9696", Budget: 100 * gb}
+	os.MkdirAll(filepath.Join(cfg.DataRoot, "films", "A"), 0o755)
+	os.WriteFile(filepath.Join(cfg.DataRoot, "films", "A", "a.mkv"), []byte("x"), 0o644)
+	d := newService(cfg, testLanguages(t))
+	d.load()
+	d.films = []dubFilm{
 		{ID: 11, Title: "The Others", Year: 2001, IMDb: "tt0230600", Audio: "eng", Missing: []string{"spa", "cat"}},
 		{ID: 12, Title: "Heat", Year: 1995, IMDb: "tt0113277", Audio: "eng", Missing: []string{"spa", "cat"}},
 		{ID: 13, Title: "Rec", Year: 2007, IMDb: "tt1038988", Audio: "spa", Missing: []string{"cat"}},
 	}
-	s.dubs.filmsTime = 1
-	s.dubs.state.ChargedBytes = 5
-	s.dubs.state.Jobs = map[string]*jobState{
+	d.filmsTime = 1
+	d.state.ChargedBytes = 5
+	d.state.Jobs = map[string]*jobState{
 		"12-spa": {MovieID: 12, Lang: "spa", Title: "Heat (1995)", Requested: 1, Status: "downloading", Updated: 3, Downloads: 1,
 			Tried: []string{"https://indexer/x?passkey=secret"},
 			Current: &torrentRef{candidate: candidate{Title: "Heat.1995.SPANiSH", Size: 9, Indexer: "NOBS", Private: true,
 				URL: "https://indexer/dl?passkey=secret"}, Hash: "abc", Stage: "downloading", Since: 2}},
 		"12-cat": {MovieID: 12, Lang: "cat", Title: "Heat (1995)", Status: "failed", Reason: "no dub found", Updated: 4},
 	}
-	return s
+	return d
 }
 
-func addAudioPayload(t *testing.T, s *server) (map[string]any, string) {
+// addAudioPayload is the add_audio object of /api/state, decoded as the page decodes it.
+func addAudioPayload(t *testing.T, d *Service) (map[string]any, string) {
 	t.Helper()
 	w := httptest.NewRecorder()
-	s.state(w, httptest.NewRequest("GET", "/api/state", nil))
-	var body struct {
-		AddAudio map[string]any `json:"add_audio"`
-	}
+	httpx.WriteJSON(w, http.StatusOK, d.Payload())
+	var body map[string]any
 	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
 		t.Fatal(err)
 	}
-	return body.AddAudio, w.Body.String()
+	return body, w.Body.String()
 }
 
 func dubPost(handler http.HandlerFunc, movieID, lang string) (int, map[string]any) {
@@ -101,22 +105,15 @@ func TestLanguagesKeepTheFileOrder(t *testing.T) {
 
 func TestFilmsListMkvFilmsWithTheLanguagesTheyLack(t *testing.T) {
 	t.Parallel()
-	movie := func(id int64, audio, path string) radarrMovie {
-		m := radarrMovie{ID: id, Title: fmt.Sprintf("Film %d", id), Year: 2000, ImdbID: "tt0000001", HasFile: true}
-		m.MovieFile = &struct {
-			Path      string `json:"path"`
-			MediaInfo *struct {
-				AudioLanguages string `json:"audioLanguages"`
-			} `json:"mediaInfo"`
-		}{Path: path, MediaInfo: &struct {
-			AudioLanguages string `json:"audioLanguages"`
-		}{audio}}
+	movie := func(id int64, audio, path string) clients.Movie {
+		m := clients.Movie{ID: id, Title: fmt.Sprintf("Film %d", id), Year: 2000, ImdbID: "tt0000001", HasFile: true}
+		m.MovieFile = &clients.MovieFile{Path: path, MediaInfo: &clients.MediaInfo{AudioLanguages: audio}}
 		return m
 	}
 	mkv := "/data/films/A (2000)/a.mkv"
 	noFile := movie(5, "eng", mkv)
 	noFile.HasFile = false
-	listed := filmsFrom([]radarrMovie{movie(1, "eng", mkv), movie(2, "eng/spa", mkv), movie(3, "Spanish / English / English", mkv),
+	listed := filmsFrom([]clients.Movie{movie(1, "eng", mkv), movie(2, "eng/spa", mkv), movie(3, "Spanish / English / English", mkv),
 		movie(4, "eng", "/data/films/B/b.mp4"), noFile}, testLanguages(t))
 	var got []string
 	for _, f := range listed {
@@ -130,7 +127,7 @@ func TestFilmsListMkvFilmsWithTheLanguagesTheyLack(t *testing.T) {
 
 func TestHostPath(t *testing.T) {
 	t.Parallel()
-	d := &dubService{cfg: dubConfig{dataRoot: "/mnt/data"}}
+	d := &Service{cfg: Config{DataRoot: "/mnt/data"}}
 	for in, want := range map[string]string{"/data/films/A/a.mkv": "/mnt/data/films/A/a.mkv", "/data": "/mnt/data", "/database/x": "/database/x"} {
 		if got := d.hostPath(in); got != want {
 			t.Errorf("hostPath(%q) = %q, want %q", in, got, want)
@@ -140,24 +137,31 @@ func TestHostPath(t *testing.T) {
 
 var (
 	testIndexerNames = map[int]string{1: "Public", 2: "NOBS", 3: "TorrentLeech", 4: "Unknown private", 5: "C411"}
-	testIndexers     = map[int]indexer{1: {"Public", false, "en-US"}, 2: {"NOBS", true, "es-ES"},
-		3: {"TorrentLeech", true, "en-US"}, 4: {"Unknown private", true, "en-US"}, 5: {"C411", true, "fr-FR"}}
+	testIndexers     = map[int]clients.Indexer{
+		1: {Name: "Public", Private: false, Language: "en-US"},
+		2: {Name: "NOBS", Private: true, Language: "es-ES"},
+		3: {Name: "TorrentLeech", Private: true, Language: "en-US"},
+		4: {Name: "Unknown private", Private: true, Language: "en-US"},
+		5: {Name: "C411", Private: true, Language: "fr-FR"},
+	}
 )
 
-type releaseOption func(*release)
+type releaseOption func(*clients.Release)
 
 func onIndexer(id int) releaseOption {
-	return func(r *release) { r.IndexerID, r.Indexer = id, testIndexerNames[id] }
+	return func(r *clients.Release) { r.IndexerID, r.Indexer = id, testIndexerNames[id] }
 }
-func withSeeders(n int) releaseOption      { return func(r *release) { r.Seeders = n } }
-func withImdb(n int64) releaseOption       { return func(r *release) { r.ImdbID = flexInt(n) } }
-func withTitle(title string) releaseOption { return func(r *release) { r.Title = title } }
+func withSeeders(n int) releaseOption { return func(r *clients.Release) { r.Seeders = n } }
+func withImdb(n int64) releaseOption {
+	return func(r *clients.Release) { r.ImdbID = clients.FlexInt(n) }
+}
+func withTitle(title string) releaseOption { return func(r *clients.Release) { r.Title = title } }
 func freeleech() releaseOption {
-	return func(r *release) { r.IndexerFlags = json.RawMessage(`["freeleech"]`) }
+	return func(r *clients.Release) { r.IndexerFlags = json.RawMessage(`["freeleech"]`) }
 }
 
-func testRelease(guid string, sizeGB float64, options ...releaseOption) release {
-	r := release{GUID: guid, Size: int64(sizeGB * gb), Seeders: 5, ImdbID: 1, Title: "Film (2000)", Protocol: "torrent",
+func testRelease(guid string, sizeGB float64, options ...releaseOption) clients.Release {
+	r := clients.Release{GUID: guid, Size: int64(sizeGB * gb), Seeders: 5, ImdbID: 1, Title: "Film (2000)", Protocol: "torrent",
 		IndexerFlags: json.RawMessage(`[]`)}
 	onIndexer(1)(&r)
 	for _, option := range options {
@@ -167,7 +171,7 @@ func testRelease(guid string, sizeGB float64, options ...releaseOption) release 
 	return r
 }
 
-func pick(t *testing.T, results []release, tried ...string) []string {
+func pick(t *testing.T, results []clients.Release, tried ...string) []string {
 	t.Helper()
 	skip := map[string]bool{}
 	for _, guid := range tried {
@@ -185,28 +189,28 @@ func TestCandidates(t *testing.T) {
 	tiny := float64(probeBudget*probeMargin*2) / gb
 	cases := []struct {
 		name    string
-		results []release
+		results []clients.Release
 		tried   []string
 		want    []string
 	}{
 		{"public first, then private freeleech, then private, smaller first",
-			[]release{testRelease("tl", 2, onIndexer(3)), testRelease("pub-big", 9), testRelease("pub", 3),
+			[]clients.Release{testRelease("tl", 2, onIndexer(3)), testRelease("pub-big", 9), testRelease("pub", 3),
 				testRelease("tl-fl", 6, onIndexer(3), freeleech())},
 			nil, []string{"pub", "pub-big", "tl-fl", "tl"}},
 		{"likely carriers of the language first; MULTi on a French site does not count",
-			[]release{testRelease("plain", 1), testRelease("multi", 2, withTitle("Film 2000 MULTi 1080p")),
+			[]clients.Release{testRelease("plain", 1), testRelease("multi", 2, withTitle("Film 2000 MULTi 1080p")),
 				testRelease("french-multi", 0.5, onIndexer(5), withTitle("Film 2000 MULTI VFF")),
 				testRelease("spanish-site", 3, onIndexer(2)), testRelease("named", 4, onIndexer(3), withTitle("Film 2000 Castellano"))},
 			nil, []string{"named", "spanish-site", "multi", "plain", "french-multi"}},
-		{"a release without an IMDb id is kept", []release{testRelease("a", 2, withImdb(0))}, nil, []string{"a"}},
+		{"a release without an IMDb id is kept", []clients.Release{testRelease("a", 2, withImdb(0))}, nil, []string{"a"}},
 		{"dead, tried, oversized, Latin or another film are skipped",
-			[]release{testRelease("a", 2, withSeeders(0)), testRelease("b", 2), testRelease("c", 40), testRelease("d", 2, withImdb(2)),
+			[]clients.Release{testRelease("a", 2, withSeeders(0)), testRelease("b", 2), testRelease("c", 40), testRelease("d", 2, withImdb(2)),
 				testRelease("e", 2, withTitle("Film LATINO")), testRelease("f", 1)},
 			[]string{"f"}, []string{"b"}},
 		// TorrentLeech's obligation starts at completion; an unlisted private site is never touched.
 		{"probes only where deleting a few MB owes nothing",
-			[]release{testRelease("tl", 2, onIndexer(3)), testRelease("x", 2, onIndexer(4))}, nil, []string{"tl"}},
-		{"not where the hit & run starts too early", []release{testRelease("nobs", tiny*0.9, onIndexer(2))}, nil, nil},
+			[]clients.Release{testRelease("tl", 2, onIndexer(3)), testRelease("x", 2, onIndexer(4))}, nil, []string{"tl"}},
+		{"not where the hit & run starts too early", []clients.Release{testRelease("nobs", tiny*0.9, onIndexer(2))}, nil, nil},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -220,7 +224,7 @@ func TestCandidates(t *testing.T) {
 
 func TestCandidatesNeverKeepProwlarrsAPIKey(t *testing.T) {
 	t.Parallel()
-	found := candidates([]release{testRelease("a", 2)}, "tt0000001", testLanguages(t).byCode["spa"], nil, testIndexers, testRules(t), "http://127.0.0.1:9696")
+	found := candidates([]clients.Release{testRelease("a", 2)}, "tt0000001", testLanguages(t).byCode["spa"], nil, testIndexers, testRules(t), "http://127.0.0.1:9696")
 	if link := found[0].URL; strings.Contains(link, "secret") || !strings.HasPrefix(link, "http://127.0.0.1:9696/1/download?link=abc") {
 		t.Errorf("url %s", link)
 	}
@@ -305,8 +309,8 @@ func TestPickDub(t *testing.T) {
 
 func TestAddAudioState(t *testing.T) {
 	t.Parallel()
-	s := dubFixture(t)
-	got, raw := addAudioPayload(t, s)
+	d := dubFixture(t)
+	got, raw := addAudioPayload(t, d)
 	if strings.Contains(raw, "secret") || strings.Contains(raw, `"hash"`) {
 		t.Errorf("the state leaked a link or a hash: %s", raw)
 	}
@@ -342,22 +346,22 @@ func TestAddAudioRequest(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
-			s := dubFixture(t)
-			if code, body := dubPost(s.addAudio, c.movieID, c.lang); code != c.want {
+			d := dubFixture(t)
+			if code, body := dubPost(d.ServeAdd, c.movieID, c.lang); code != c.want {
 				t.Fatalf("code %d, want %d: %v", code, c.want, body)
 			}
-			if queued := len(s.dubs.state.Requests) == 1; queued != (c.want == http.StatusOK) {
-				t.Errorf("requests: %+v", s.dubs.state.Requests)
+			if queued := len(d.state.Requests) == 1; queued != (c.want == http.StatusOK) {
+				t.Errorf("requests: %+v", d.state.Requests)
 			}
 		})
 	}
 
-	s := dubFixture(t)
-	dubPost(s.addAudio, "11", "spa")
-	if code, _ := dubPost(s.addAudio, "11", "spa"); code != http.StatusConflict {
+	d := dubFixture(t)
+	dubPost(d.ServeAdd, "11", "spa")
+	if code, _ := dubPost(d.ServeAdd, "11", "spa"); code != http.StatusConflict {
 		t.Errorf("duplicate request: %d", code)
 	}
-	got, raw := addAudioPayload(t, s)
+	got, raw := addAudioPayload(t, d)
 	if requests := got["requests"].([]any); len(requests) != 1 || requests[0].(map[string]any)["movie_id"] != 11.0 {
 		t.Errorf("pending request not in the state: %s", raw)
 	}
@@ -365,30 +369,29 @@ func TestAddAudioRequest(t *testing.T) {
 
 func TestAddAudioCancel(t *testing.T) {
 	t.Parallel()
-	s := dubFixture(t)
-	if code, _ := dubPost(s.cancelAddAudio, "11", "spa"); code != http.StatusNotFound {
+	d := dubFixture(t)
+	if code, _ := dubPost(d.ServeCancel, "11", "spa"); code != http.StatusNotFound {
 		t.Errorf("cancel with nothing under way: %d", code)
 	}
-	if code, _ := dubPost(s.cancelAddAudio, "12", "cat"); code != http.StatusNotFound {
+	if code, _ := dubPost(d.ServeCancel, "12", "cat"); code != http.StatusNotFound {
 		t.Errorf("cancel of a finished job: %d", code)
 	}
-	if code, body := dubPost(s.cancelAddAudio, "12", "spa"); code != http.StatusOK {
+	if code, body := dubPost(d.ServeCancel, "12", "spa"); code != http.StatusOK {
 		t.Fatalf("cancel of an active job: %d %v", code, body)
 	}
-	if want := (dubRequest{MovieID: 12, Lang: "spa", Cancel: true}); len(s.dubs.state.Requests) != 1 ||
-		s.dubs.state.Requests[0].Cancel != want.Cancel || s.dubs.state.Requests[0].MovieID != want.MovieID {
-		t.Errorf("cancel request: %+v", s.dubs.state.Requests)
+	if want := (dubRequest{MovieID: 12, Lang: "spa", Cancel: true}); len(d.state.Requests) != 1 ||
+		d.state.Requests[0].Cancel != want.Cancel || d.state.Requests[0].MovieID != want.MovieID {
+		t.Errorf("cancel request: %+v", d.state.Requests)
 	}
-	dubPost(s.addAudio, "11", "spa")
-	if code, _ := dubPost(s.cancelAddAudio, "11", "spa"); code != http.StatusOK || len(s.dubs.state.Requests) != 1 {
-		t.Errorf("a pending request not dropped: %d %+v", code, s.dubs.state.Requests)
+	dubPost(d.ServeAdd, "11", "spa")
+	if code, _ := dubPost(d.ServeCancel, "11", "spa"); code != http.StatusOK || len(d.state.Requests) != 1 {
+		t.Errorf("a pending request not dropped: %d %+v", code, d.state.Requests)
 	}
 }
 
 func TestTakeRequests(t *testing.T) {
 	t.Parallel()
-	s := dubFixture(t)
-	d := s.dubs
+	d := dubFixture(t)
 	d.state.Jobs = map[string]*jobState{}
 	d.state.Requests = []dubRequest{{MovieID: 11, Lang: "spa"}, {MovieID: 13, Lang: "spa"}}
 	p := &pass{d: d, ctx: context.Background()}
@@ -411,11 +414,11 @@ func TestTakeRequests(t *testing.T) {
 
 func TestDubStatePersists(t *testing.T) {
 	t.Parallel()
-	s := dubFixture(t)
-	s.dubs.mu.Lock()
-	s.dubs.saveState()
-	s.dubs.mu.Unlock()
-	again := newDubService(s.dubs.cfg, s.dubs.langs)
+	d := dubFixture(t)
+	d.mu.Lock()
+	d.saveState()
+	d.mu.Unlock()
+	again := newService(d.cfg, d.langs)
 	again.load()
 	if again.state.ChargedBytes != 5 || len(again.state.Jobs) != 2 || again.state.Jobs["12-spa"].Current.URL != "https://indexer/dl?passkey=secret" {
 		t.Errorf("round trip: %+v", again.state)
@@ -424,30 +427,30 @@ func TestDubStatePersists(t *testing.T) {
 
 // fakeIndexers answers a check or a search without Prowlarr.
 type fakeIndexers struct {
-	sites   map[int]indexer
-	results map[int][]release
+	sites   map[int]clients.Indexer
+	results map[int][]clients.Release
 	fail    map[int]error
 }
 
-func (f fakeIndexers) indexers(context.Context) (map[int]indexer, error) { return f.sites, nil }
+func (f fakeIndexers) Indexers(context.Context) (map[int]clients.Indexer, error) { return f.sites, nil }
 
-func (f fakeIndexers) searchIndexer(_ context.Context, id int, _, _ string) ([]release, error) {
+func (f fakeIndexers) SearchIndexer(_ context.Context, id int, _, _ string) ([]clients.Release, error) {
 	return f.results[id], f.fail[id]
 }
 
 func TestCheckReportsEachIndexerThenWhatItFound(t *testing.T) {
 	t.Parallel()
-	s := dubFixture(t)
-	s.dubs.indexers = fakeIndexers{
-		sites: map[int]indexer{1: testIndexers[1], 2: testIndexers[2], 4: testIndexers[4]},
-		results: map[int][]release{1: {testRelease("plain", 1), testRelease("named", 2, withTitle("Film 2000 Castellano"))},
+	d := dubFixture(t)
+	d.indexers = fakeIndexers{
+		sites: map[int]clients.Indexer{1: testIndexers[1], 2: testIndexers[2], 4: testIndexers[4]},
+		results: map[int][]clients.Release{1: {testRelease("plain", 1), testRelease("named", 2, withTitle("Film 2000 Castellano"))},
 			2: {testRelease("site", 3, onIndexer(2))}},
 		fail: map[int]error{4: errors.New("timed out")},
 	}
 	var mu sync.Mutex
 	var done []int
 	errorsSeen := 0
-	result, err := s.dubs.check(context.Background(), checkJob{imdb: "tt0000001", title: "Film", lang: "spa"},
+	result, err := d.check(context.Background(), checkJob{imdb: "tt0000001", title: "Film", lang: "spa"},
 		func(_ string, n, total, _ int, err error) {
 			mu.Lock()
 			defer mu.Unlock()
@@ -553,8 +556,7 @@ func (f *fakeQbit) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func TestJobProbesDownloadsAndAddsTheDub(t *testing.T) {
 	t.Parallel()
-	s := dubFixture(t)
-	d := s.dubs
+	d := dubFixture(t)
 	d.state = dubState{Jobs: map[string]*jobState{}}
 	d.watchFor, d.pollEvery = 2*time.Second, time.Millisecond
 
@@ -573,8 +575,8 @@ func TestJobProbesDownloadsAndAddsTheDub(t *testing.T) {
 		}
 	}))
 	defer prowlarrServer.Close()
-	d.cfg.prowlarrURL, d.cfg.prowlarrKey = prowlarrServer.URL, "key"
-	d.indexers = fakeIndexers{sites: map[int]indexer{1: testIndexers[1]}, results: map[int][]release{1: {
+	d.cfg.ProwlarrURL, d.cfg.ProwlarrKey = prowlarrServer.URL, "key"
+	d.indexers = fakeIndexers{sites: map[int]clients.Indexer{1: testIndexers[1]}, results: map[int][]clients.Release{1: {
 		testRelease("named", 2, withTitle("The Others 2001 Castellano"), withImdb(230600)),
 		testRelease("multi", 3, withTitle("The Others 2001 MULTi"), withImdb(230600)),
 	}}}
@@ -582,13 +584,13 @@ func TestJobProbesDownloadsAndAddsTheDub(t *testing.T) {
 	qb := &fakeQbit{torrents: map[string]*fakeTorrent{}}
 	qbitServer := httptest.NewServer(qb)
 	defer qbitServer.Close()
-	d.cfg.qbitURL = qbitServer.URL
+	d.cfg.QbitURL = qbitServer.URL
 
 	radarrServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(`{"id": 11, "movieFile": {"path": "/data/films/A/a.mkv"}}`))
 	}))
 	defer radarrServer.Close()
-	d.cfg.radarrURL = radarrServer.URL
+	d.cfg.RadarrURL = radarrServer.URL
 
 	// The title that names Castellano carries only English; the MULTi one has it.
 	d.probeHead = func(path string, size int64) *probeInfo {
@@ -629,7 +631,7 @@ func TestJobProbesDownloadsAndAddsTheDub(t *testing.T) {
 	if job.Status != "done" || job.Reason != "added a spa track" || job.Current != nil {
 		t.Fatalf("after the download: %+v", job)
 	}
-	want := []string{filepath.Join(d.cfg.dataRoot, "films/A/a.mkv"), filepath.Join(d.cfg.dataRoot, "downloads/Release/multi.mkv"), "spa"}
+	want := []string{filepath.Join(d.cfg.DataRoot, "films/A/a.mkv"), filepath.Join(d.cfg.DataRoot, "downloads/Release/multi.mkv"), "spa"}
 	if !slices.Equal(added, want) {
 		t.Errorf("add-audio ran with %q, want %q", added, want)
 	}
@@ -640,9 +642,8 @@ func TestJobProbesDownloadsAndAddsTheDub(t *testing.T) {
 
 func TestJobStopsAtTheBudget(t *testing.T) {
 	t.Parallel()
-	s := dubFixture(t)
-	d := s.dubs
-	d.cfg.budget = gb
+	d := dubFixture(t)
+	d.cfg.Budget = gb
 	job := &jobState{MovieID: 11, Lang: "spa", Title: "The Others (2001)", Status: "trying", Tried: []string{},
 		Candidates: []candidate{{GUID: "tl", Title: "The Others", Size: 2 * gb, Private: true}}}
 	p := &pass{d: d, ctx: context.Background()}
