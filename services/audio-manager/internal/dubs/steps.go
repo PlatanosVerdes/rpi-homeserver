@@ -136,9 +136,16 @@ func (p *pass) advance(job *jobState) {
 }
 
 func (p *pass) search(job *jobState) error {
-	ctx, cancel := context.WithTimeout(p.ctx, checkTimeout)
+	ctx, cancel := context.WithTimeout(p.ctx, filmSearchTimeout)
 	defer cancel()
-	found, err := p.d.find(ctx, job.IMDb, job.Name, job.Lang, job.Tried, nil)
+	p.d.jobSearching.Store(true)
+	search, err := p.d.searchFilm(ctx, searchJob{id: job.MovieID, imdb: job.IMDb, title: job.Name}, nil)
+	p.d.jobSearching.Store(false)
+	if err != nil {
+		return err
+	}
+	p.d.searches.put(job.MovieID, search)
+	found, err := p.d.rank(search, job.Lang, job.Tried)
 	if err != nil {
 		return err
 	}

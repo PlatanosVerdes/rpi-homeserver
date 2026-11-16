@@ -39,14 +39,23 @@
         </div>
         <input type="search" id="dub-filter" placeholder="Search films" aria-label="Search films" autocomplete="off">
       </div>
-      <div class="toolnote"><span id="dub-matches"></span><span class="when" id="dub-when"></span></div>
+      <div class="toolnote">
+        <div class="seg" role="group" aria-label="Films to show">
+          <button type="button" id="show-all" aria-pressed="true">All</button>
+          <button type="button" id="show-available" aria-pressed="false" title="A release names the language, or comes from a site in it">Available <span class="n"></span></button>
+        </div>
+        <span id="dub-matches"></span>
+        <span class="when"><span id="dub-when"></span><span id="dub-sweep"></span></span>
+      </div>
       <div id="dub-films"></div>
     </div>
 
     <footer>
       Add searches every indexer for a release with that dub, one film at a time: it reads the first megabytes of
       each candidate to see its tracks, downloads the first that has the language, and adds it to the film beside the
-      audio it already has. Cancel stops it at any point. Check only asks the indexers what they have, and downloads nothing.
+      audio it already has. Cancel stops it at any point. In the background every film is searched once, one every few
+      minutes and again after a week, which is what each row shows for the language; Search again asks the indexers
+      now. Neither downloads anything.
     </footer>
   </section>
 

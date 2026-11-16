@@ -29,6 +29,19 @@ func env(key, fallback string) string {
 	return fallback
 }
 
+// duration reads a positive duration such as 5m or 168h.
+func duration(key string, fallback time.Duration) (time.Duration, error) {
+	raw := os.Getenv(key)
+	if raw == "" {
+		return fallback, nil
+	}
+	d, err := time.ParseDuration(raw)
+	if err != nil || d <= 0 {
+		return 0, fmt.Errorf("%s %q is not a duration such as 5m or 168h", key, raw)
+	}
+	return d, nil
+}
+
 type config struct {
 	reencode reencode.Config
 	dubs     dubs.Config
@@ -42,6 +55,14 @@ func loadConfig() (config, error) {
 	scanEvery := 6 * time.Hour
 	if d, err := time.ParseDuration(os.Getenv("SCAN_INTERVAL")); err == nil && d > 0 {
 		scanEvery = d
+	}
+	sweepEvery, err := duration("SWEEP_EVERY", 5*time.Minute)
+	if err != nil {
+		return config{}, err
+	}
+	sweepRefresh, err := duration("SWEEP_REFRESH", 7*24*time.Hour)
+	if err != nil {
+		return config{}, err
 	}
 	budgetGB, err := strconv.ParseFloat(env("DUB_BUDGET_GB", "100"), 64)
 	if err != nil || budgetGB < 0 {
@@ -73,6 +94,8 @@ func loadConfig() (config, error) {
 			Budget:        int64(budgetGB * (1 << 30)),
 			TelegramToken: os.Getenv("TELEGRAM_ALERT_BOT_TOKEN"),
 			TelegramChat:  os.Getenv("TELEGRAM_ALERT_CHAT_ID"),
+			SweepEvery:    sweepEvery,
+			SweepRefresh:  sweepRefresh,
 		},
 	}
 	for name, value := range map[string]string{"RADARR_URL": cfg.dubs.RadarrURL, "PROWLARR_URL": cfg.dubs.ProwlarrURL, "QBIT_URL": cfg.dubs.QbitURL} {
@@ -100,7 +123,7 @@ func main() {
 	http.Handle("/", web.Handler())
 	http.HandleFunc("/api/state", func(w http.ResponseWriter, r *http.Request) {
 		payload := recodes.State()
-		payload["add_audio"] = adds.Payload()
+		payload["add_audio"] = adds.Payload(r.URL.Query().Get("lang"))
 		httpx.WriteJSON(w, http.StatusOK, payload)
 	})
 	http.HandleFunc("/api/play", recodes.ServePlay)

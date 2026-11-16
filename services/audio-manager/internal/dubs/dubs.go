@@ -19,6 +19,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -46,6 +47,8 @@ type Config struct {
 	Budget                   int64
 	TelegramToken            string
 	TelegramChat             string
+	// The sweep searches one film every SweepEvery, and a film again once its search is SweepRefresh old.
+	SweepEvery, SweepRefresh time.Duration
 }
 
 type dubFilm struct {
@@ -122,12 +125,14 @@ type Service struct {
 	http       *http.Client
 	searchHTTP *http.Client
 	indexers   indexerClient
-	checks     *checker
+	searches   *searches
 	// Replaced in tests: the probe's ffprobe and the run of add-audio.py.
 	probeHead   func(path string, size int64) *probeInfo
 	runAddAudio func(target, source, lang string) (last string, code int)
 	watchFor    time.Duration
 	pollEvery   time.Duration
+	// Set while a job searches, so the sweep leaves Prowlarr alone.
+	jobSearching atomic.Bool
 
 	mu        sync.Mutex
 	films     []dubFilm
@@ -137,6 +142,15 @@ type Service struct {
 	stateErr  string
 	refresh   chan struct{}
 	wake      chan struct{}
+	lastSweep int64
+	counts    countsMemo
+}
+
+// countsMemo keeps availableCounts until the films or the searches change.
+type countsMemo struct {
+	filmsTime  int64
+	generation int
+	byLang     map[string]int
 }
 
 func newService(cfg Config, langs *languages) *Service {
@@ -154,7 +168,7 @@ func newService(cfg Config, langs *languages) *Service {
 	d.indexers = d.prowlarr()
 	d.probeHead = d.ffprobeHead
 	d.runAddAudio = d.addAudioScript
-	d.checks = newChecker(filepath.Join(cfg.StateDir, "checks.json"), d.check)
+	d.searches = newSearches(filepath.Join(cfg.StateDir, "searches.json"), d.searchFilm)
 	return d
 }
 
@@ -180,7 +194,7 @@ func (d *Service) prowlarr() clients.Prowlarr {
 func (d *Service) filmsFile() string { return filepath.Join(d.cfg.StateDir, "films.json") }
 func (d *Service) stateFile() string { return filepath.Join(d.cfg.StateDir, "state.json") }
 
-// load reads what the last run left: the films as Radarr last listed them, the jobs and the checks.
+// load reads what the last run left: the films as Radarr last listed them, the jobs and the searches.
 func (d *Service) load() {
 	if err := os.MkdirAll(d.cfg.StateDir, 0o755); err != nil {
 		log.Printf("audio-manager: %v", err)
@@ -203,7 +217,7 @@ func (d *Service) load() {
 		d.state = state
 	}
 	d.mu.Unlock()
-	d.checks.load()
+	d.searches.load()
 }
 
 // saveState is called with d.mu held.
@@ -213,10 +227,11 @@ func (d *Service) saveState() {
 	}
 }
 
-// Start runs the Radarr listing and the job worker in the background.
+// Start runs the Radarr listing, the job worker and the sweep in the background.
 func (d *Service) Start() {
 	go d.filmsLoop()
 	go d.worker()
+	go d.sweepLoop()
 }
 
 func poke(ch chan struct{}) {
@@ -256,6 +271,7 @@ func (d *Service) listFilms() {
 	d.mu.Lock()
 	d.films, d.filmsTime, d.filmsErr = films, now, ""
 	d.mu.Unlock()
+	d.searches.keepOnly(films)
 	payload := map[string]any{"time": now, "languages": d.langs.names(), "films": films}
 	if err := store.WriteJSON(d.filmsFile(), payload); err != nil {
 		log.Printf("audio-manager: %v", err)
@@ -425,15 +441,35 @@ func (j *jobState) view() dubJobView {
 	return v
 }
 
-// Payload is the add_audio object of /api/state.
-func (d *Service) Payload() map[string]any {
-	checks, checksErr := d.checks.snapshot()
+// Payload is the add_audio object of /api/state, with each film's availability in lang.
+func (d *Service) Payload(lang string) map[string]any {
+	done, generation, searchesErr := d.searches.snapshot()
+	live := d.searches.underway()
 	d.mu.Lock()
-	defer d.mu.Unlock()
 	var jobs []dubJobView
 	for _, job := range d.state.Jobs {
 		jobs = append(jobs, job.view())
 	}
+	films, filmsTime, lastSweep, memo := d.films, d.filmsTime, d.lastSweep, d.counts
+	if films == nil {
+		films = []dubFilm{}
+	}
+	requests := slices.Clone(d.state.Requests)
+	if requests == nil {
+		requests = []dubRequest{}
+	}
+	out := map[string]any{
+		"time":          filmsTime,
+		"languages":     d.langs.names(),
+		"films":         films,
+		"requests":      requests,
+		"searching":     live,
+		"charged_bytes": d.state.ChargedBytes,
+		"budget_bytes":  d.cfg.Budget,
+	}
+	problems := slices.DeleteFunc([]string{d.filmsErr, d.stateErr}, func(p string) bool { return p == "" })
+	d.mu.Unlock()
+
 	sort.Slice(jobs, func(i, j int) bool {
 		ai, aj := !isFinished(jobs[i].Status), !isFinished(jobs[j].Status)
 		if ai != aj {
@@ -450,40 +486,33 @@ func (d *Service) Payload() map[string]any {
 		}
 		shown = append(shown, job)
 	}
-	listed := map[string]dubCheck{}
-	films := d.films
-	if films == nil {
-		films = []dubFilm{}
-	}
-	for _, film := range films {
-		for _, lang := range film.Missing {
-			if check, ok := checks[dubKey(film.ID, lang)]; ok {
-				listed[dubKey(film.ID, lang)] = check
+	out["jobs"] = shown
+	out["sweep"] = d.sweepStatus(films, done, lastSweep)
+
+	available := map[int64]availability{}
+	rules, err := loadTrackerRules(d.cfg.RulesFile)
+	if err != nil {
+		problems = append(problems, err.Error())
+	} else {
+		if known, ok := d.langs.byCode[lang]; ok {
+			for _, f := range films {
+				if search, ok := done[f.ID]; ok && slices.Contains(f.Missing, lang) {
+					available[f.ID] = availabilityOf(search, known, rules)
+				}
 			}
 		}
-	}
-	requests := slices.Clone(d.state.Requests)
-	if requests == nil {
-		requests = []dubRequest{}
-	}
-	out := map[string]any{
-		"time":          d.filmsTime,
-		"languages":     d.langs.names(),
-		"films":         films,
-		"jobs":          shown,
-		"requests":      requests,
-		"checks":        listed,
-		"charged_bytes": d.state.ChargedBytes,
-		"budget_bytes":  d.cfg.Budget,
-	}
-	var problems []string
-	for _, problem := range []string{d.filmsErr, d.stateErr} {
-		if problem != "" {
-			problems = append(problems, problem)
+		if memo.byLang == nil || memo.filmsTime != filmsTime || memo.generation != generation {
+			memo = countsMemo{filmsTime: filmsTime, generation: generation, byLang: availableCounts(films, done, d.langs, rules)}
+			d.mu.Lock()
+			d.counts = memo
+			d.mu.Unlock()
 		}
+		out["available_counts"] = memo.byLang
 	}
-	if checksErr != nil {
-		problems = append(problems, checksErr.Error())
+	out["lang"] = lang
+	out["availability"] = available
+	if searchesErr != nil {
+		problems = append(problems, searchesErr.Error())
 	}
 	if len(problems) > 0 {
 		out["error"] = strings.Join(problems, "; ")
