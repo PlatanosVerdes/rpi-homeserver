@@ -19,6 +19,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 )
 
 var csrfMeta = regexp.MustCompile(`name="csrf-token"\s+content="([^"]+)"`)
@@ -324,4 +325,53 @@ func apiMessage(raw string) string {
 		return raw[:140]
 	}
 	return raw
+}
+
+// fetchUNIT3D reads /api/user with the account's API token, which UNIT3D accepts as a bearer token
+// and which needs no login, so a second factor on the account does not get in the way. Sizes come
+// formatted ("50 GiB") and seedbonus with thousands separators.
+func fetchUNIT3D(tracker string, config map[string]any) (profile, error) {
+	var out profile
+	variable := strings.ToUpper(tracker) + "_APIKEY"
+	token := env(variable, "")
+	if token == "" {
+		return out, fmt.Errorf("no API key for this site: set %s in .env", variable)
+	}
+	site := strings.TrimRight(str(config, "site"), "/")
+	request, err := http.NewRequest("GET", site+"/api/user", nil)
+	if err != nil {
+		return out, err
+	}
+	request.Header.Set("Authorization", "Bearer "+token)
+	request.Header.Set("Accept", "application/json")
+	request.Header.Set("User-Agent", userAgent)
+	resp, err := (&http.Client{Timeout: 30 * time.Second}).Do(request)
+	if err != nil {
+		return out, err
+	}
+	text := body(resp)
+	if resp.StatusCode != 200 {
+		return out, fmt.Errorf("/api/user returned %d: %s", resp.StatusCode, apiMessage(text))
+	}
+	var account map[string]any
+	if err := json.Unmarshal([]byte(text), &account); err != nil {
+		return out, fmt.Errorf("/api/user is not JSON: %v", err)
+	}
+	if inner, ok := account["data"].(map[string]any); ok {
+		account = inner
+	}
+	uploaded, hasUp := toBytes(str(account, "uploaded"))
+	downloaded, hasDown := toBytes(str(account, "downloaded"))
+	if !hasUp || !hasDown {
+		return out, fmt.Errorf("/api/user carried no readable uploaded/downloaded, keys were: %s", topKeys(text))
+	}
+	out.uploaded, out.downloaded = uploaded, downloaded
+	if ratio, ok := toFloat(strings.ReplaceAll(str(account, "ratio"), ",", "")); ok {
+		out.ratio = ratio
+	} else if downloaded > 0 {
+		out.ratio = uploaded / downloaded
+	}
+	out.points, _ = toFloat(strings.ReplaceAll(str(account, "seedbonus"), ",", ""))
+	out.class = str(account, "group")
+	return out, nil
 }

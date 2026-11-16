@@ -148,6 +148,8 @@
     "site": "https://nobs.rawsmoke.net",
     "_rules_read": "2026-11-15, from the site's own H&R, Ratio and qBittorrent wiki pages",
     "prowlarr_indexer": "NOBS",
+    "software": "unit3d",
+    "_software_note": "tracker-control reads the account from /api/user with NOBS_APIKEY (the same key Prowlarr holds); the account has 2FA, so a password login is not an option.",
     "min_ratio": 0.4,
     "_min_ratio_note": "Below 0.4 downloads are blocked; seeding still works and is the way out. The site's ratio includes the 50 GB signup credit, its 'ratio real' does not.",
     "hit_and_run": {
