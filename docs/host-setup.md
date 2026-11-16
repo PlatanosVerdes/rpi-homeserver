@@ -88,6 +88,29 @@ Verify with `systemd-analyze cat-config systemd/journald.conf | grep Storage` (l
 Once it works, `journalctl --list-boots` lists more than the current boot and `journalctl -b -1`
 reaches the log that ends at a crash.
 
+### Keeping it off the SD card
+
+A persistent journal logs little, but every entry also rewrites the file's index, so it ends up
+writing a megabyte or two a minute to the card. With a data disk, bind-mount the journal directory
+onto it. Use one disk directly, not the mergerfs pool: the mount has to work before FUSE is up.
+
+```bash
+sudo install -d -m 2755 -o root -g systemd-journal /mnt/disk1/journal
+sudo journalctl --relinquish-var    # journald writes to RAM while the directory moves
+sudo rsync -aAX /var/log/journal/ /mnt/disk1/journal/
+echo '/mnt/disk1/journal /var/log/journal none bind,nofail,x-systemd.requires=/mnt/disk1 0 0' | sudo tee -a /etc/fstab
+sudo systemctl daemon-reload
+sudo mount /var/log/journal
+sudo journalctl --flush
+```
+
+`findmnt /var/log/journal` should show the disk. Nothing else changes: the path is the same, so
+`journalctl` and anything reading it keep working. If the disk does not mount at boot, `nofail`
+lets the system start and journald writes to the card's own `/var/log/journal` again.
+
+To undo it: `journalctl --relinquish-var`, `umount /var/log/journal`, remove the fstab line, then
+`journalctl --flush`.
+
 ## 6. IP forwarding, static IP, Tailscale
 
 - **IP forwarding** and the **Tailscale** flags (`up` once, then only `set`): [tailscale.md](tailscale.md).
