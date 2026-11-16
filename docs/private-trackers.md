@@ -327,6 +327,7 @@ Spanish tracker, added for Castilian audio: nearly every release carries it.
 | :--- | :--- | :--- |
 | Prowlarr | `NOBS` definition, API key, direct | no freeleech switch needed while the signup credit holds |
 | Seed goal | **168 h, no ratio limit**, on announce host `nobs.rawsmoke.net` | their counter adds only announced time; a ratio limit would delete a torrent still owing hours |
+| cross-seed | included, indexer 18 | a cross-seed downloads nothing, so it stays under the 50% that starts a hit and run |
 | Account reading | tracker-control, `/api/user` with `NOBS_APIKEY` (in homelab-secrets) | UNIT3D answers it to the API key, so the account's 2FA does not matter; per-torrent seed time is still only on the site |
 
 ## C411
