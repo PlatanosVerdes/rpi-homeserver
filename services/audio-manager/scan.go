@@ -62,10 +62,10 @@ func (s *server) scan() {
 	result := libraryScan{Time: time.Now().Unix()}
 	if err != nil {
 		result.Error = "library scan failed: " + err.Error()
-		log.Printf("audio-convert: %s", result.Error)
+		log.Printf("audio-manager: %s", result.Error)
 	} else if err := json.Unmarshal(out, &result); err != nil {
 		result = libraryScan{Time: time.Now().Unix(), Error: "library scan returned bad JSON: " + err.Error()}
-		log.Printf("audio-convert: %s", result.Error)
+		log.Printf("audio-manager: %s", result.Error)
 	}
 
 	s.mu.Lock()
@@ -77,10 +77,7 @@ func (s *server) scan() {
 	s.mu.Unlock()
 
 	if raw, err := json.Marshal(result); err == nil {
-		tmp := s.scanFile() + ".tmp"
-		if os.WriteFile(tmp, raw, 0o644) == nil {
-			os.Rename(tmp, s.scanFile())
-		}
+		writeAtomic(s.scanFile(), raw)
 	}
 }
 

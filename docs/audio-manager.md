@@ -1,4 +1,10 @@
-# Audio convert: fixing a re-encoded file from a page
+# Audio manager: fixing a re-encoded file, adding a dub
+
+The audio manager page (`https://audio.<domain>`, or `http://audio` on the LAN) has two sections.
+**Add audio** lists the films without a language and fetches a dub for one when asked; that part is
+[add-audio.md](add-audio.md#from-the-page-dub-fetchpy). The rest of this guide is **Re-encode**.
+
+## Re-encode
 
 When Plex or Jellyfin has to re-encode a film's audio for a TV, the alert "Audio is being
 re-encoded" fires and the file lands on `https://audio.<domain>` (or `http://audio` on
@@ -17,7 +23,7 @@ Three pieces, and each one does a single job:
 | :--- | :--- |
 | `services/pi-metrics` (`recodes.go`, `plan.go`) | Watches the sessions, decides whether a file change can help, and writes the plan into `appdata/pi-metrics/audio-recodes.json` |
 | `scripts/sync/audio-compat.py` | The only code that converts: remux, verify, rename. Nightly over the library, `--file` for one, `--scan` to list what the nightly pass would convert |
-| `services/audio-convert` | The page: lists the plans and the library scan, queues a file, runs `audio-compat.py --file`, shows its progress |
+| `services/audio-manager` | The page: lists the plans and the library scan, queues a file, runs `audio-compat.py --file`, shows its progress. Its Add audio section only reads and writes files that `dub-fetch.py` acts on |
 
 The page never touches ffmpeg itself. The container carries Python and ffmpeg and runs the very
 same script the cron runs, mounted from `scripts/sync/` rather than copied into the image, so a
@@ -53,7 +59,7 @@ that it works out the same thing `audio-compat.py` would:
 The page's "In the library" section, folded by default, lists every library file the nightly pass
 would convert, from `audio-compat.py --scan`: the same rule, run over the library without
 converting anything. The page runs it on start, every `SCAN_INTERVAL` (6 h by default) and after
-each conversion, keeps the result in `appdata/audio-convert/library.json`, and leaves out files the
+each conversion, keeps the result in `appdata/audio-manager/library.json`, and leaves out files the
 ledger already lists. Those files can be converted from there too, ahead of the night run.
 - **The cost** is 640 kb/s times the duration for each added track, about 576 MB for two hours. On top of that, the old
   file stays beside the new one as `.original` until someone deletes it.
@@ -152,16 +158,16 @@ reads as "the library let go" (`noHL`).
 
 ## One conversion at a time
 
-Both modes of `audio-compat.py` take an `flock` on `appdata/audio-convert/convert.lock` and write who
+Both modes of `audio-compat.py` take an `flock` on `appdata/audio-manager/convert.lock` and write who
 holds it into that file. The page's queue runs one file at a time and waits while the lock is taken,
 showing "The nightly pass is converting X". The nightly pass, if it finds the page converting
 at 05:00, waits for it and starts nothing once 07:00 has passed, saying so in
 `audio-compat.log`.
 
-Every conversion either side attempts is appended to `appdata/audio-convert/history.jsonl`: which
+Every conversion either side attempts is appended to `appdata/audio-manager/history.jsonl`: which
 file, from where, how long it took and at what speed, or why it failed. That file is the page's
 history and the source of its speed average. The queue and the result of each file pressed on the
-page are in `appdata/audio-convert/audio-convert.json`, so a restart keeps them. A conversion cut
+page are in `appdata/audio-manager/audio-manager.json`, so a restart keeps them. A conversion cut
 short by a restart starts again from the beginning when the page comes back, since it is still at
 the head of the queue; the script deletes its half-written file before it starts.
 

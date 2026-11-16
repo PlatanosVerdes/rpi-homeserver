@@ -339,3 +339,299 @@ func TestPlayTarget(t *testing.T) {
 		t.Errorf("the chosen codec was not queued: %+v", s.queue)
 	}
 }
+
+const (
+	dubFilmsJSON = `{"time": 1700000000, "languages": {"spa": "Castellano", "cat": "Catalan"}, "films": [
+		{"id": 11, "title": "The Others", "year": 2001, "imdb": "tt0230600", "path": "/data/films/o.mkv", "audio": "eng", "missing": ["spa"]},
+		{"id": 12, "title": "Heat", "year": 1995, "audio": "eng", "missing": ["spa", "cat"]},
+		{"id": 13, "title": "Rec", "year": 2007, "audio": "spa", "missing": ["cat"]}]}`
+	dubStateJSON = `{"charged_bytes": 5, "jobs": {
+		"12-spa": {"movie_id": 12, "lang": "spa", "title": "Heat (1995)", "requested": 1, "status": "downloading", "reason": "",
+		           "updated": 3, "downloads": 1, "tried": ["https://indexer/x?passkey=secret"], "url": "https://indexer/secret",
+		           "current": {"title": "Heat.1995.SPANiSH", "size": 9, "indexer": "NOBS", "private": true, "stage": "downloading",
+		                       "since": 2, "link": "https://indexer/dl?passkey=secret"}},
+		"12-cat": {"movie_id": 12, "lang": "cat", "title": "Heat (1995)", "status": "failed", "reason": "no dub found", "updated": 4}}}`
+)
+
+func dubFixture(t *testing.T, films, state string) *server {
+	t.Helper()
+	s, _ := fixture(t, "")
+	dir := s.addAudioDir()
+	os.MkdirAll(dir, 0o755)
+	if films != "" {
+		os.WriteFile(filepath.Join(dir, "films.json"), []byte(films), 0o644)
+	}
+	if state != "" {
+		os.WriteFile(filepath.Join(dir, "state.json"), []byte(state), 0o644)
+	}
+	return s
+}
+
+func addAudioPayload(t *testing.T, s *server) (map[string]any, string) {
+	t.Helper()
+	w := httptest.NewRecorder()
+	s.state(w, httptest.NewRequest("GET", "/api/state", nil))
+	var body struct {
+		AddAudio map[string]any `json:"add_audio"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	return body.AddAudio, w.Body.String()
+}
+
+func TestAddAudioState(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name, films, state  string
+		wantFilms, wantJobs int
+		wantError           bool
+	}{
+		{name: "no files", wantFilms: 0, wantJobs: 0},
+		{name: "both files", films: dubFilmsJSON, state: dubStateJSON, wantFilms: 3, wantJobs: 2},
+		{name: "films only", films: dubFilmsJSON, wantFilms: 3, wantJobs: 0},
+		{name: "malformed films", films: "{", state: dubStateJSON, wantJobs: 2, wantError: true},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			s := dubFixture(t, c.films, c.state)
+			got, raw := addAudioPayload(t, s)
+			if got == nil {
+				t.Fatalf("no add_audio in %s", raw)
+			}
+			films, _ := got["films"].([]any)
+			jobs, _ := got["jobs"].([]any)
+			requests, _ := got["requests"].([]any)
+			if len(films) != c.wantFilms || len(jobs) != c.wantJobs || requests == nil {
+				t.Errorf("films %d jobs %d requests %v: %s", len(films), len(jobs), requests, raw)
+			}
+			if _, has := got["error"]; has != c.wantError {
+				t.Errorf("error present %v, want %v: %v", has, c.wantError, got["error"])
+			}
+			if strings.Contains(raw, "secret") {
+				t.Errorf("state.json leaked a URL: %s", raw)
+			}
+		})
+	}
+
+	s := dubFixture(t, dubFilmsJSON, dubStateJSON)
+	got, _ := addAudioPayload(t, s)
+	first := got["jobs"].([]any)[0].(map[string]any)
+	current, _ := first["current"].(map[string]any)
+	if first["status"] != "downloading" || first["tried"] != 1.0 || current["title"] != "Heat.1995.SPANiSH" || current["indexer"] != "NOBS" {
+		t.Errorf("active job not first or not complete: %v", first)
+	}
+	if got["languages"].(map[string]any)["spa"] != "Castellano" {
+		t.Errorf("languages: %v", got["languages"])
+	}
+}
+
+func dubPost(s *server, handler http.HandlerFunc, movieID, lang string) (int, map[string]any) {
+	r := httptest.NewRequest("POST", "/", strings.NewReader(url.Values{"movie_id": {movieID}, "lang": {lang}}.Encode()))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+	handler(w, r)
+	var body map[string]any
+	json.NewDecoder(w.Body).Decode(&body)
+	return w.Code, body
+}
+
+func TestAddAudioRequest(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name, movieID, lang string
+		want                int
+	}{
+		{"unknown language", "11", "fre", http.StatusBadRequest},
+		{"film not missing it", "13", "spa", http.StatusBadRequest},
+		{"film not listed", "99", "spa", http.StatusBadRequest},
+		{"not a number", "x", "spa", http.StatusBadRequest},
+		{"active job", "12", "spa", http.StatusConflict},
+		{"after a failed job", "12", "cat", http.StatusOK},
+		{"new", "11", "spa", http.StatusOK},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			s := dubFixture(t, dubFilmsJSON, dubStateJSON)
+			if code, body := dubPost(s, s.addAudio, c.movieID, c.lang); code != c.want {
+				t.Fatalf("code %d, want %d: %v", code, c.want, body)
+			}
+			entries, _ := os.ReadDir(s.dubRequestDir())
+			if wrote := len(entries) == 1; wrote != (c.want == http.StatusOK) {
+				t.Errorf("request files: %v", entries)
+			}
+		})
+	}
+}
+
+func TestAddAudioRequestFile(t *testing.T) {
+	t.Parallel()
+	s := dubFixture(t, dubFilmsJSON, dubStateJSON)
+	before := time.Now().Unix()
+	if code, body := dubPost(s, s.addAudio, "11", "spa"); code != http.StatusOK {
+		t.Fatalf("%d %v", code, body)
+	}
+	raw, err := os.ReadFile(filepath.Join(s.dubRequestDir(), "11-spa.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var request map[string]any
+	json.Unmarshal(raw, &request)
+	if len(request) != 3 || request["movie_id"] != 11.0 || request["lang"] != "spa" || request["requested"].(float64) < float64(before) {
+		t.Errorf("request body: %s", raw)
+	}
+	if info, _ := os.Stat(s.dubRequestDir()); info.Mode().Perm() != 0o755 {
+		t.Errorf("requests dir mode %v", info.Mode())
+	}
+
+	if code, _ := dubPost(s, s.addAudio, "11", "spa"); code != http.StatusConflict {
+		t.Errorf("duplicate request: %d", code)
+	}
+	got, raw2 := addAudioPayload(t, s)
+	requests := got["requests"].([]any)
+	if len(requests) != 1 || requests[0].(map[string]any)["movie_id"] != 11.0 {
+		t.Errorf("pending request not in the state: %s", raw2)
+	}
+}
+
+func TestAddAudioCancel(t *testing.T) {
+	t.Parallel()
+	s := dubFixture(t, dubFilmsJSON, dubStateJSON)
+
+	if code, _ := dubPost(s, s.cancelAddAudio, "11", "spa"); code != http.StatusNotFound {
+		t.Errorf("cancel with nothing under way: %d", code)
+	}
+	if code, _ := dubPost(s, s.cancelAddAudio, "12", "cat"); code != http.StatusNotFound {
+		t.Errorf("cancel of a finished job: %d", code)
+	}
+
+	if code, body := dubPost(s, s.cancelAddAudio, "12", "spa"); code != http.StatusOK {
+		t.Fatalf("cancel of an active job: %d %v", code, body)
+	}
+	raw, _ := os.ReadFile(filepath.Join(s.dubRequestDir(), "12-spa.json"))
+	var request map[string]any
+	json.Unmarshal(raw, &request)
+	if request["cancel"] != true || request["movie_id"] != 12.0 || request["lang"] != "spa" {
+		t.Errorf("cancel body: %s", raw)
+	}
+
+	dubPost(s, s.addAudio, "11", "spa")
+	if code, _ := dubPost(s, s.cancelAddAudio, "11", "spa"); code != http.StatusOK {
+		t.Errorf("cancel of a pending request: %d", code)
+	}
+	if _, err := os.Stat(filepath.Join(s.dubRequestDir(), "11-spa.json")); !os.IsNotExist(err) {
+		t.Errorf("pending request not dropped: %v", err)
+	}
+}
+
+func TestAddAudioCheck(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name, movieID, lang string
+		want                int
+	}{
+		{"unknown language", "11", "fre", http.StatusBadRequest},
+		{"film not missing it", "13", "spa", http.StatusBadRequest},
+		{"while a job runs", "12", "spa", http.StatusOK},
+		{"new", "11", "spa", http.StatusOK},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			s := dubFixture(t, dubFilmsJSON, dubStateJSON)
+			if code, body := dubPost(s, s.checkAddAudio, c.movieID, c.lang); code != c.want {
+				t.Fatalf("code %d, want %d: %v", code, c.want, body)
+			}
+		})
+	}
+
+	s := dubFixture(t, dubFilmsJSON, dubStateJSON)
+	before := time.Now().Unix()
+	if code, body := dubPost(s, s.checkAddAudio, "11", "spa"); code != http.StatusOK {
+		t.Fatalf("%d %v", code, body)
+	}
+	raw, err := os.ReadFile(filepath.Join(s.dubRequestDir(), "11-spa-check.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var request map[string]any
+	json.Unmarshal(raw, &request)
+	if len(request) != 4 || request["movie_id"] != 11.0 || request["lang"] != "spa" || request["check"] != true ||
+		request["requested"].(float64) < float64(before) {
+		t.Errorf("check body: %s", raw)
+	}
+	if code, _ := dubPost(s, s.checkAddAudio, "11", "spa"); code != http.StatusConflict {
+		t.Errorf("second check while one is pending: %d", code)
+	}
+
+	got, rawState := addAudioPayload(t, s)
+	if requests := got["requests"].([]any); len(requests) != 0 {
+		t.Errorf("a pending check counted as an add request: %s", rawState)
+	}
+	if checking := got["checking"].([]any); len(checking) != 1 || checking[0] != "11-spa" {
+		t.Errorf("checking: %s", rawState)
+	}
+	if code, body := dubPost(s, s.addAudio, "11", "spa"); code != http.StatusOK {
+		t.Errorf("a pending check blocked the add: %d %v", code, body)
+	}
+	if code, _ := dubPost(s, s.cancelAddAudio, "11", "spa"); code != http.StatusOK {
+		t.Errorf("cancel of the add: %d", code)
+	}
+	if _, err := os.Stat(filepath.Join(s.dubRequestDir(), "11-spa-check.json")); err != nil {
+		t.Errorf("cancelling the add removed the check: %v", err)
+	}
+}
+
+func TestAddAudioChecksState(t *testing.T) {
+	t.Parallel()
+	checks := `{
+		"11-spa": {"time": 5, "releases": 4, "named": 1, "own_site": 2,
+		           "best": [{"title": "The.Others.2001.SPANiSH", "size": 7, "indexer": "NOBS", "private": true, "link": "https://x/?passkey=secret"}]},
+		"13-spa": {"time": 5, "releases": 1},
+		"99-cat": {"time": 5, "releases": 1, "error": "gone"}}`
+	cases := []struct {
+		name, checks string
+		wantKeys     []string
+		wantError    bool
+	}{
+		{name: "no file", wantKeys: nil},
+		{name: "only listed films and languages", checks: checks, wantKeys: []string{"11-spa"}},
+		{name: "malformed", checks: "[", wantError: true},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			s := dubFixture(t, dubFilmsJSON, dubStateJSON)
+			if c.checks != "" {
+				os.WriteFile(filepath.Join(s.addAudioDir(), "checks.json"), []byte(c.checks), 0o644)
+			}
+			got, raw := addAudioPayload(t, s)
+			shown, ok := got["checks"].(map[string]any)
+			if !ok {
+				t.Fatalf("no checks map: %s", raw)
+			}
+			var keys []string
+			for key := range shown {
+				keys = append(keys, key)
+			}
+			if !slices.Equal(keys, c.wantKeys) {
+				t.Errorf("checks %v, want %v", keys, c.wantKeys)
+			}
+			if _, has := got["error"]; has != c.wantError {
+				t.Errorf("error present %v, want %v: %v", has, c.wantError, got["error"])
+			}
+			if strings.Contains(raw, "secret") {
+				t.Errorf("checks.json leaked a URL: %s", raw)
+			}
+			if c.wantKeys != nil {
+				check := shown["11-spa"].(map[string]any)
+				best := check["best"].([]any)[0].(map[string]any)
+				if check["named"] != 1.0 || check["own_site"] != 2.0 || check["releases"] != 4.0 || best["indexer"] != "NOBS" {
+					t.Errorf("check fields: %v", check)
+				}
+			}
+		})
+	}
+}

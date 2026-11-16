@@ -41,13 +41,18 @@ Leaving that out once measured 80 ms wrong.
 ## What it writes
 
 - **Always AC3**, up to 5.1: the one codec the TVs here play without Plex re-encoding it, for the
-  reasons in [audio-convert.md](audio-convert.md). An AC3 dub at the same speed is copied
+  reasons in [audio-manager.md](audio-manager.md). An AC3 dub at the same speed is copied
   untouched; DTS, TrueHD, EAC3 or a PAL dub is converted to AC3 640k.
 - Tagged `es-ES`, named `Castellano`, **not default**: the original audio stays what plays first,
   `--default` changes that.
 - The file is checked before it replaces anything: same duration, one more stream, the new track
   in AC3, and the new track measured against the dub it came from (the mapping must hold inside
-  the new file). The old file is kept as `.original`, as [audio-convert.md](audio-convert.md) does.
+  the new file). The old file is kept as `.original`, as [audio-manager.md](audio-manager.md) does.
+
+The languages it can add are the `LANGUAGES` table at the top of `add-audio.py`: 26 of them, Castellano
+by default, each with the codes files tag it with, the words Radarr and release titles use for it, and
+for three the variant that is not it (Latin American Spanish, Québécois French, Brazilian Portuguese).
+Adding a language is one line there; the page and dub-fetch read the same table.
 
 Which dub track it picks: a `spa` track whose title does not say Latino, Mexican, neutral or
 commentary, preferring one titled Castellano, then AC3, then more channels. A track mislabelled by
@@ -61,10 +66,56 @@ It re-runs itself in a systemd user scope capped at 1 GB, page cache included, w
 and the uptime probe called the Pi down for three minutes. It shares the conversion lock with
 `audio-compat.py` and the audio page, so it never runs alongside them.
 
+## From the page: dub-fetch.py
+
+The **Add audio** section of the audio manager page (`https://audio.<domain>`,
+[audio-manager.md](audio-manager.md)) lists the films that lack a language, with a button per film.
+Nothing is fetched unless that button is pressed: it leaves a request file, and
+`scripts/sync/dub-fetch.py`, from cron every minute, does the rest one film at a time.
+
+**Check** beside a film answers first whether a release in that language exists at all, downloading
+nothing: within a minute the row says how many releases were found, how many name the language in
+their title and how many come from a site in that language. A title that names it is likely; the
+rest can only be known by probing, which Add does.
+
+1. **Search.** Prowlarr is asked on every enabled indexer, by IMDb id and by title (NOBS answers
+   nothing by IMDb id, and a title match only counts with the same IMDb id). Releases go in order of
+   how likely they are to carry the language: a title that names it, then a site in that language,
+   then MULTi/DUAL (not on a site in a third language: on C411 that means French), then public before
+   private, freeleech before counted, smaller first. At most 15 GB, never titled Latino.
+2. **Probe before downloading.** A Matroska file lists its tracks in its first few hundred KB. The
+   release is added stopped, with only its largest `.mkv` wanted, sequential and capped at 2 MB/s,
+   then watched every 3 s: once 2 MB from the file's start are in, ffprobe reads the track list and
+   the torrent is stopped. No track in the language (add-audio's own pick: not Latino, not commentary)
+   and it is deleted after a few MB; measured on a YTS release, 12.8 MB. A release that shows no
+   track list within 64 MB is given up the same way.
+3. **Download and add.** A release with the track is downloaded whole and handed to add-audio, which
+   still measures the sync and refuses another cut. A refusal or a download stalled for 48 h moves to
+   the next release, up to two whole downloads and eight probes per film.
+
+What keeps a probe from costing an account anything:
+
+- **A private site is probed only where deleting a few MB owes nothing**: its hit and run in
+  `config/trackers/rules.json` starts at `starts_at_progress` (completion when absent), and the probe
+  stays a quarter under it. NOBS starts at 50%, DigitalCore at 10%. A private indexer with no entry
+  there is never used.
+- **The probe stops itself** at that limit or at 64 MB, whichever is lower, whatever the swarm's speed.
+- **A whole download is never deleted here.** `audio-source` is in qbit-manage's `nohardlinks` list, so
+  it is tagged noHL and its tracker's share-limit group seeds and deletes it. dub-fetch adds a `keep`
+  tag, which every group skips, and removes it once add-audio is done: without it a public download
+  would be deleted 2 h after finishing, possibly while add-audio still reads it.
+- **A budget of counted download**, `DUB_FETCH_BUDGET_GB` (100 by default; public and freeleech count
+  zero), across all requests.
+
+The page shows each request's state and why it ended; the alert Telegram chat gets each download
+and result. `dub-fetch.py --status` prints the jobs and `--candidates <radarr id>` lists what it would
+probe for a film, touching nothing. Its files are in `appdata/audio-manager/add-audio/`: `films.json`
+and `state.json` written by it, `requests/` written by the page.
+
 ## Tests
 
 ```bash
-python3 -m unittest scripts/sync/test_add_audio.py
+python3 -m unittest scripts/sync/test_add_audio.py scripts/sync/test_dub_fetch.py
 ```
 
 The sync maths on synthetic loudness curves, track choice, and three whole runs on generated

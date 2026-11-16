@@ -54,7 +54,7 @@ Silent unless something happened.
     audio-compat.py --file PATH [--progress] [--allow-hardlinked] [--track N ...]
 
 `--file` converts one file through the same checks, remux, verify and rename, and is what
-services/audio-convert runs when its Play button is pressed. `--progress` makes it print one JSON
+services/audio-manager runs when its Play button is pressed. `--progress` makes it print one JSON
 object per line instead of prose: a plan, progress from ffmpeg's own -progress output, and a done or
 failed with the reason. `--track`, repeatable, builds the AC3 from the audio tracks pi-metrics
 planned, the one the client played among them, instead of the main track of every language. `--allow-hardlinked` is the page's explicit
@@ -62,7 +62,7 @@ planned, the one the client played among them, instead of the main track of ever
 qbit-manage still counts 2; what it costs is the file's size again until the torrent is gone and
 .original pruned.
 
-Both modes take the same flock, in the state directory services/audio-convert mounts, so the night
+Both modes take the same flock, in the state directory services/audio-manager mounts, so the night
 run and the page never convert at once. Every conversion either of them attempts is appended to
 history.jsonl there, which is how the page shows what the night did and measures the speed.
 """
@@ -87,7 +87,7 @@ LIBRARIES = ("films", "series")
 EXTENSIONS = (".mkv", ".mp4", ".m4v")
 
 LEDGER = Path(os.environ.get("AUDIO_RECODES", PROJECT_DIR / "appdata" / "pi-metrics" / "audio-recodes.json"))
-STATE_DIR = Path(os.environ.get("AUDIO_CONVERT_STATE", PROJECT_DIR / "appdata" / "audio-convert"))
+STATE_DIR = Path(os.environ.get("AUDIO_MANAGER_STATE", PROJECT_DIR / "appdata" / "audio-manager"))
 LOCK = STATE_DIR / "convert.lock"
 HISTORY = STATE_DIR / "history.jsonl"
 
@@ -603,7 +603,7 @@ def main():
 
 
 class Reporter:
-    """Prose on stdout/stderr for a person, or one JSON object per line for services/audio-convert."""
+    """Prose on stdout/stderr for a person, or one JSON object per line for services/audio-manager."""
 
     def __init__(self, machine):
         self.machine = machine
@@ -700,7 +700,7 @@ def convert_file(given, machine, allow_hardlinked, tracks=None, target=TARGET):
 def scan():
     """Every library file the nightly pass would convert, shaped like a pi-metrics ledger entry.
 
-    services/audio-convert lists these under the files a client actually had re-encoded, so the
+    services/audio-manager lists these under the files a client actually had re-encoded, so the
     rule that picks them stays here and the page never has a second copy of it.
     """
     incompatible = incompatible_codecs(load_ledger())

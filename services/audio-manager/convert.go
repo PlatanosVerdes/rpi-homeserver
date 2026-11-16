@@ -76,7 +76,7 @@ func (s *server) load() {
 	}
 	var saved persisted
 	if err := json.Unmarshal(raw, &saved); err != nil {
-		log.Printf("audio-convert: %s: %v", s.stateFile, err)
+		log.Printf("audio-manager: %s: %v", s.stateFile, err)
 		return
 	}
 	s.queue = saved.Queue
@@ -91,13 +91,8 @@ func (s *server) save() {
 	if err != nil {
 		return
 	}
-	tmp := s.stateFile + ".tmp"
-	if err := os.WriteFile(tmp, raw, 0o644); err != nil {
-		log.Printf("audio-convert: %v", err)
-		return
-	}
-	if err := os.Rename(tmp, s.stateFile); err != nil {
-		log.Printf("audio-convert: %v", err)
+	if err := writeAtomic(s.stateFile, raw); err != nil {
+		log.Printf("audio-manager: %v", err)
 	}
 }
 
@@ -164,7 +159,7 @@ func (s *server) worker() {
 		if !busy {
 			s.queue = slices.DeleteFunc(s.queue, func(q job) bool { return q.Library == next.Library })
 			s.results[next.Library] = result
-			log.Printf("audio-convert: %s: %s %s", next.Library, result.Result, result.Reason)
+			log.Printf("audio-manager: %s: %s %s", next.Library, result.Result, result.Reason)
 		}
 		s.save()
 		s.mu.Unlock()
@@ -255,4 +250,4 @@ func (s *server) run(j job) (outcome, bool) {
 	return outcome{Time: now, Result: "failed", Reason: reason}, false
 }
 
-func defaultStateFile(dir string) string { return filepath.Join(dir, "audio-convert.json") }
+func defaultStateFile(dir string) string { return filepath.Join(dir, "audio-manager.json") }

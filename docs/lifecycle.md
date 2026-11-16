@@ -30,14 +30,17 @@ flowchart TB
   PW["<b>Prowlarr</b><br/>eight public sites, four private,<br/>one freeleech switch"] --> QB
   BRR["<b>autobrr</b><br/><i>IRC announce, seconds after upload</i><br/>tags every grab `ratio`"] --> QB
   TD["<b>torrent-drop</b><br/><i>added by hand</i><br/>category and tag `manual`"] --> QB
-  QB["<b>qBittorrent</b><br/>category radarr / tv-sonarr / prowlarr / manual"]
+  DF["<b>dub-fetch</b><br/><i>a dub asked for on the audio page</i><br/>category and tag `audio-source`"] --> QB
+  QB["<b>qBittorrent</b><br/>category radarr / tv-sonarr / prowlarr / manual / audio-source"]
 ```
 
 **Asked for** goes through the arrs: they decide whether a release qualifies
 ([media-policy.md](media-policy.md)), Prowlarr searches, qBittorrent downloads into the category the
 arr owns. RSS every few minutes catches anything new. **Announced** comes from autobrr, which grabs
 within seconds of an upload on a tracker's IRC channel; those exist only to build ratio and carry the
-`ratio` tag for life. **Added by hand** comes from torrent-drop (below).
+`ratio` tag for life. **Added by hand** comes from torrent-drop (below). **A dub** comes from
+dub-fetch: another release of a library film, probed for its track list before it is downloaded, never
+hardlinked, so noHL from the start ([add-audio.md](add-audio.md#from-the-page-dub-fetchpy)).
 
 Heavy night jobs avoid 02:00 to 05:00: Plex's own maintenance holds that window and costs 0.4 cores
 and 52 MB/s of reads, on the same two USB platters the downloads write to.
@@ -74,7 +77,7 @@ to go.
 | `ratio` | autobrr | Grabbed for ratio, never in the library. Without it these would be invisible: no category, so the hardlink check never inspects them |
 | `stalledDL` | qbit-manage | No seeder found. Added and removed by the tool as the state changes |
 | `issue` | qbit-manage | The tracker no longer recognises the torrent. Tagged, not removed: a reset passkey looks exactly like this |
-| `keep`, `keep-bonus` | a person; tracker-control | Out of every clock |
+| `keep`, `keep-bonus` | a person; tracker-control; dub-fetch while add-audio needs the file | Out of every clock |
 | `cross-seed`, `radarr.cross-seed` | cross-seed | A second tracker on bytes another one brought |
 | `manual` | torrent-drop | Added by hand; selects the one group that never deletes the file |
 | `xseed` | torrent-drop | cross-seed was already asked about it |

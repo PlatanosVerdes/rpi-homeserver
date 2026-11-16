@@ -49,11 +49,56 @@ MIN_GOOD_WINDOWS = 0.6
 MAX_RESIDUAL_SECONDS = 0.045
 SAME_SPEED = 2e-5
 TARGET_CODEC = "ac3"
-LANGUAGE_ALIASES = {"spa": {"spa", "es", "esp", "es-es"}}
-LANGUAGE_TAGS = {"spa": "es-ES"}
-TRACK_NAMES = {"spa": "Castellano"}
-REJECTED_TITLES = {"spa": re.compile(r"latin|\blat\b|m[eé]x|neutr|commentary|comentario", re.I)}
-PREFERRED_TITLES = {"spa": re.compile(r"castellano|espa[nñ]a|\bcast\b|europe", re.I)}
+# The languages a dub can be added in, and the only place to add one: ISO 639-2 code, the ISO 639-1 code
+# files also tag with, the name shown, and the words Radarr and release titles use for it.
+_LANGUAGES = [
+    ("spa", "es", "Castellano", "spanish español castellano cast esp"),
+    ("cat", "ca", "Català", "catalan català catala"),
+    ("eus", "eu", "Euskara", "basque euskara euskera"),
+    ("glg", "gl", "Galego", "galician galego gallego"),
+    ("eng", "en", "English", "english"),
+    ("fra", "fr", "Français", "french français francais vff"),
+    ("ita", "it", "Italiano", "italian italiano"),
+    ("deu", "de", "Deutsch", "german deutsch"),
+    ("por", "pt", "Português", "portuguese português portugues"),
+    ("nld", "nl", "Nederlands", "dutch nederlands"),
+    ("swe", "sv", "Svenska", "swedish svenska"),
+    ("nor", "no", "Norsk", "norwegian norsk"),
+    ("dan", "da", "Dansk", "danish dansk"),
+    ("fin", "fi", "Suomi", "finnish suomi"),
+    ("pol", "pl", "Polski", "polish polski"),
+    ("ces", "cs", "Čeština", "czech čeština"),
+    ("hun", "hu", "Magyar", "hungarian magyar"),
+    ("ell", "el", "Ελληνικά", "greek"),
+    ("tur", "tr", "Türkçe", "turkish türkçe"),
+    ("rus", "ru", "Русский", "russian"),
+    ("ukr", "uk", "Українська", "ukrainian"),
+    ("ara", "ar", "العربية", "arabic"),
+    ("hin", "hi", "हिन्दी", "hindi"),
+    ("jpn", "ja", "日本語", "japanese"),
+    ("kor", "ko", "한국어", "korean"),
+    ("zho", "zh", "中文", "chinese mandarin"),
+]
+# The bibliographic codes older files carry next to the ones above.
+_OLD_CODES = {"fra": "fre", "deu": "ger", "nld": "dut", "ces": "cze", "ell": "gre", "zho": "chi"}
+# Track titles of a variant that is not the one asked for.
+_VARIANTS = {"spa": r"latin|\blat\b|m[eé]x|neutr", "fra": r"qu[eé]bec|\bvfq\b|canad",
+             "por": r"brasil|brazil|\bpt-br\b"}
+LANGUAGES = {
+    code: {"name": name, "tag": short, "locale": short, "words": set(words.split()),
+           "aliases": {code, short} | ({_OLD_CODES[code]} if code in _OLD_CODES else set()),
+           **({"rejected": _VARIANTS[code]} if code in _VARIANTS else {})}
+    for code, short, name, words in _LANGUAGES
+}
+LANGUAGES["spa"].update(tag="es-ES", preferred=r"castellano|espa[nñ]a|\bcast\b|europe")
+LANGUAGES["spa"]["aliases"] |= {"esp", "es-es"}
+LANGUAGES["por"].update(tag="pt-PT")
+LANGUAGE_ALIASES = {code: lang["aliases"] for code, lang in LANGUAGES.items()}
+LANGUAGE_TAGS = {code: lang["tag"] for code, lang in LANGUAGES.items()}
+TRACK_NAMES = {code: lang["name"] for code, lang in LANGUAGES.items()}
+REJECTED_TITLES = {code: re.compile("|".join(filter(None, (lang.get("rejected"), r"commentary|comentario"))), re.I)
+                   for code, lang in LANGUAGES.items()}
+PREFERRED_TITLES = {code: re.compile(lang["preferred"], re.I) for code, lang in LANGUAGES.items() if "preferred" in lang}
 ANY_COMMENTARY = re.compile(r"commentary|comentario", re.I)
 SCOPE = ["systemd-run", "--user", "--scope", "--quiet", "-p", "MemoryHigh=700M", "-p", "MemoryMax=1G",
          "-p", "MemorySwapMax=0", "-p", "CPUWeight=1"]

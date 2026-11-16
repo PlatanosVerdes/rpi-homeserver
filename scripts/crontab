@@ -51,6 +51,13 @@
 # One file after another until 07:00, about ten minutes each, nice and ionice. Leaves anything still hardlinked
 # alone, so it never drops a link qbit-manage would read as noHL. Which codecs it converts comes
 # from what pi-metrics saw a server refuse for a client: appdata/pi-metrics/audio-recodes.json.
-# Shares a lock with services/audio-convert, and waits for a conversion started from that page.
-# when: audio-convert
+# Shares a lock with services/audio-manager, and waits for a conversion started from that page.
+# when: audio-manager
 0 5 * * * @PROJECT_DIR@/scripts/sync/audio-compat.py >> @PROJECT_DIR@/audio-compat.log 2>&1
+
+# Dubs and availability checks asked for on the audio-manager page. Every minute so a check answers
+# quickly; a pass with no request reads Radarr's film list at most every ten minutes and nothing else.
+# One film at a time, probed before it is downloaded; add-audio shares audio-compat's lock and waits
+# for it. See docs/add-audio.md.
+# when: audio-manager
+* * * * * @PROJECT_DIR@/scripts/sync/dub-fetch.py >> @PROJECT_DIR@/dub-fetch.log 2>&1

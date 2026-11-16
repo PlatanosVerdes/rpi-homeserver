@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// The conversion plan for each file in the ledger, worked out here so that services/audio-convert
+// The conversion plan for each file in the ledger, worked out here so that services/audio-manager
 // only has to show it and run it. Every rule mirrors scripts/sync/audio-compat.py, which is what
 // does the conversion: the same codec names, the same incompatible set, the same track choice. When
 // the two disagree the script wins, since it reads the file itself.

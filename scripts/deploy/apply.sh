@@ -357,6 +357,13 @@ deploy_repo() {
     # Must happen after the pull and before compose can restart Grafana
     [[ "$label" == "homeserver" ]] && runs grafana && render_grafana_alerting
 
+    # audio-convert became audio-manager on 2026-11-16; its queue, lock and history move with it.
+    if [[ "$label" == "homeserver" && -d "$APPDATA/audio-convert" && ! -e "$APPDATA/audio-manager" ]]; then
+        mv "$APPDATA/audio-convert" "$APPDATA/audio-manager" &&
+            mv -f "$APPDATA/audio-manager/audio-convert.json" "$APPDATA/audio-manager/audio-manager.json" 2>/dev/null
+        log "[$label] moved appdata/audio-convert to appdata/audio-manager"
+    fi
+
     # Docker creates a missing bind-mount target as root, which locks out any container running as
     # PUID:PGID. Pre-create only those: appdata also holds ten that are legitimately root-owned. The
     # list comes from the resolved compose config, so a new service is covered without editing this.

@@ -154,7 +154,8 @@
     "_min_ratio_note": "Below 0.4 downloads are blocked; seeding still works and is the way out. The site's ratio includes the 50 GB signup credit, its 'ratio real' does not.",
     "hit_and_run": {
       "min_seed_hours": 96,
-      "min_ratio": null
+      "min_ratio": null,
+      "starts_at_progress": 0.5
     },
     "_hit_and_run_note": "96 h of seeding within 14 days, counted from completion, only once 50% or more was downloaded. Time is the only thing that clears it. Five H&R remove download rights. The site's Seedtime column (profile, 'Show more precision') is the truth and lags the client, which is why the nobs share_limits group seeds 168 h with no ratio limit.",
     "tracker_hosts": [
