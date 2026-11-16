@@ -171,6 +171,8 @@ type profile struct {
 	uploaded, downloaded float64
 	ratio, points        float64
 	class, warnedUntil   string
+	hitAndRuns           float64
+	hasHitAndRuns        bool
 }
 
 // fetchAccount picks the reader for this site. One per site rather than one generic reader: they
@@ -384,6 +386,8 @@ func read(rules map[string]map[string]any) ([]string, map[string]reading, []stri
 		"# TYPE tracker_headroom_bytes gauge",
 		"# HELP tracker_points Bonus points the site grants for seeding",
 		"# TYPE tracker_points gauge",
+		"# HELP tracker_hnr_count Hit and runs on the account, as the site's API reports them",
+		"# TYPE tracker_hnr_count gauge",
 		"# HELP tracker_warning_seconds Seconds left on an active warning, 0 when there is none",
 		"# TYPE tracker_warning_seconds gauge",
 		"# HELP tracker_hnr_pending Torrents owing a hit & run obligation right now",
@@ -538,6 +542,9 @@ func read(rules map[string]map[string]any) ([]string, map[string]reading, []stri
 			fmt.Sprintf("tracker_points{%s} %g", label, stats.points),
 			fmt.Sprintf("tracker_warning_seconds{%s} %.0f", label, warning),
 			fmt.Sprintf("tracker_class_info{%s,class=%q} 1", label, escape(withDefault(stats.class, "?"))))
+		if stats.hasHitAndRuns {
+			lines = append(lines, fmt.Sprintf("tracker_hnr_count{%s} %g", label, stats.hitAndRuns))
+		}
 		// Headroom is bytes divided by a threshold, so a site that states no ratio rule has none of
 		// it to report. retrotoon is that site: min_ratio 0 there would be a division by zero, and
 		// an infinity in a "tightest headroom" panel reads as a real number.
