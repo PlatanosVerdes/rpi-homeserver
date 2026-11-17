@@ -46,7 +46,7 @@ func dubFixture(t *testing.T) *Service {
 	dir := t.TempDir()
 	cfg := Config{StateDir: filepath.Join(dir, "state", "add-audio"), DataRoot: filepath.Join(dir, "data"), RulesFile: "testdata/rules.json",
 		ProwlarrURL: "http://127.0.0.1:9696", Budget: 100 * gb,
-		SweepEvery: 5 * time.Minute, SweepRefresh: 7 * 24 * time.Hour}
+		SweepEvery: 5 * time.Minute, SweepRefresh: 7 * 24 * time.Hour, SweepLanguage: "spa"}
 	os.MkdirAll(filepath.Join(cfg.DataRoot, "films", "A"), 0o755)
 	os.WriteFile(filepath.Join(cfg.DataRoot, "films", "A", "a.mkv"), []byte("x"), 0o644)
 	d := newService(cfg, testLanguages(t))

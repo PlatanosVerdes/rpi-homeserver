@@ -75,14 +75,19 @@ all of it in Go, one film at a time; the only Python it runs is `add-audio.py` i
 `audio-compat.py` for Re-encode.
 
 **Availability** comes from a search the service runs in the background, one film every
-`SWEEP_EVERY` (1 min), never-searched films first, each film again after `SWEEP_REFRESH` (7 days). A
+`SWEEP_EVERY` (1 min), never-searched films first, each film again after `SWEEP_REFRESH` (14 days).
+It only searches for `SWEEP_LANGUAGE` (Castellano): a film that has it, was given it by a request, has
+a request for it under way, or already has a release naming it or from a site in it is left alone, since
+Add searches afresh. A film whose request failed is searched again, as a new release may carry it. Other
+languages are ranked from the same searches; for a film the sweep left alone, use Search again. A
 search returns the same releases whatever the language, so each film is searched once and every
 language is ranked from that result: the row says how many releases name the language in their title,
 how many come from a site in that language, and how many could only be known by probing. The
 Available filter keeps the films where the first two are not zero. **Search again** on a row searches
 that film now, with each indexer shown as it answers. A title that names the language is likely; the
-rest can only be known by probing, which Add does. About 60 films take an hour the first time. Each search is two queries per indexer, so at one a
-minute a tracker sees at most one query every 30 s, less than Radarr's own RSS.
+rest can only be known by probing, which Add does. About 60 films take an hour the first time; after that only
+the films with nothing found are searched, about 20 every two weeks. Each search is two queries per
+indexer, so at one a minute a tracker sees at most one query every 30 s, less than Radarr's own RSS.
 
 1. **Search.** Prowlarr is asked on every enabled indexer, by IMDb id and by title (NOBS answers
    nothing by IMDb id, and a title match only counts with the same IMDb id). Releases go in order of

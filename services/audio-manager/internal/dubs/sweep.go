@@ -2,13 +2,15 @@ package dubs
 
 import (
 	"log"
+	"slices"
 	"sort"
 	"time"
 )
 
 // The sweep searches one film per tick in the background, so the page knows which films have a
 // release in a language before anyone asks: films never searched first, then the oldest search once
-// it is older than the refresh. It only starts one when nothing else is asking Prowlarr.
+// it is older than the refresh. It only starts one when nothing else is asking Prowlarr, and leaves
+// alone the films that no longer need its language (see toSweep).
 
 // retryAfter is how long a search that failed waits before the sweep tries that film again.
 const retryAfter = time.Hour
@@ -73,7 +75,7 @@ func (d *Service) sweep(now time.Time) {
 		return
 	}
 	done, _, _ := d.searches.snapshot()
-	film, dueAt, ok := nextToSweep(films, done, d.cfg.SweepRefresh)
+	film, dueAt, ok := nextToSweep(d.toSweep(films, done), done, d.cfg.SweepRefresh)
 	if !ok || dueAt > now.Unix() {
 		return
 	}
@@ -84,6 +86,7 @@ func (d *Service) sweep(now time.Time) {
 
 // sweepStatus says how far the sweep is, and which film it searches next and when.
 func (d *Service) sweepStatus(films []dubFilm, done map[int64]filmSearch, lastSweep int64) sweepStatus {
+	films = d.toSweep(films, done)
 	status := sweepStatus{Total: len(films)}
 	for _, f := range films {
 		if search, ok := done[f.ID]; ok && search.Time > 0 {
@@ -95,4 +98,32 @@ func (d *Service) sweepStatus(films []dubFilm, done map[int64]filmSearch, lastSw
 		status.NextAt = max(dueAt, lastSweep+int64(d.cfg.SweepEvery/time.Second))
 	}
 	return status
+}
+
+// toSweep is the films still worth searching for the sweep's language: not those that have it, nor
+// those with a request for it that is done or under way, nor those with a release found for it already,
+// since Add searches afresh. A film whose request failed stays, as a new release may carry it.
+func (d *Service) toSweep(films []dubFilm, done map[int64]filmSearch) []dubFilm {
+	lang := d.langs.byCode[d.cfg.SweepLanguage]
+	rules, rulesErr := loadTrackerRules(d.cfg.RulesFile)
+	d.mu.Lock()
+	requested := map[int64]string{}
+	for _, job := range d.state.Jobs {
+		if job.Lang == d.cfg.SweepLanguage {
+			requested[job.MovieID] = job.Status
+		}
+	}
+	d.mu.Unlock()
+	out := []dubFilm{}
+	for _, f := range films {
+		status, asked := requested[f.ID]
+		switch {
+		case !slices.Contains(f.Missing, d.cfg.SweepLanguage):
+		case asked && status != "failed" && status != "cancelled":
+		case status != "failed" && rulesErr == nil && done[f.ID].Time > 0 && availabilityOf(done[f.ID], lang, rules).available():
+		default:
+			out = append(out, f)
+		}
+	}
+	return out
 }
