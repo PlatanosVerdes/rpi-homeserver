@@ -865,10 +865,15 @@ func (d *Service) addAudioScript(target, source, lang string) (string, int) {
 	} else if err != nil {
 		return err.Error(), 1
 	}
-	if output == "" {
+	// The result is stdout's last line, a refusal stderr's; stderr also carries notes printed on the way.
+	outcome := strings.TrimSpace(stdout.String())
+	if code != 0 || outcome == "" {
+		outcome = strings.TrimSpace(stderr.String())
+	}
+	if outcome == "" {
 		return fmt.Sprintf("exit %d", code), code
 	}
-	return script.LastLine(output), code
+	return script.LastLine(outcome), code
 }
 
 // ffprobeFile reads the track list of a whole file, which ffprobe takes from its head.
