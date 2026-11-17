@@ -327,6 +327,7 @@ func TestSweep(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
 			d := dubFixture(t)
+			d.state.Jobs = map[string]*jobState{}
 			gate := newGatedSearch(11, 12, 13)
 			d.searches.run = gate.search
 			c.prepare(d, gate)
@@ -355,8 +356,9 @@ func TestSweepStatus(t *testing.T) {
 	t.Parallel()
 	d := dubFixture(t)
 	d.cfg.SweepEvery, d.cfg.SweepRefresh = 5*time.Minute, 7*24*time.Hour
+	d.state.Jobs = map[string]*jobState{}
 	status := d.sweepStatus(d.films, map[int64]filmSearch{11: {Time: 100}, 13: {Failed: 100}}, 1000)
-	want := sweepStatus{Searched: 1, Total: 3, Next: 12, NextTitle: "Heat", NextAt: 1300}
+	want := sweepStatus{Searched: 1, Total: 2, Next: 12, NextTitle: "Heat", NextAt: 1300}
 	if status != want {
 		t.Errorf("got %+v, want %+v", status, want)
 	}
@@ -430,7 +432,7 @@ func TestAddAudioStateWithoutSearches(t *testing.T) {
 	if len(got["availability"].(map[string]any)) != 0 || len(got["searching"].(map[string]any)) != 0 {
 		t.Errorf("nothing searched yet: %s", raw)
 	}
-	if sweep := got["sweep"].(map[string]any); sweep["total"] != 3.0 || sweep["searched"] != 0.0 || sweep["next_title"] != "The Others" {
+	if sweep := got["sweep"].(map[string]any); sweep["total"] != 1.0 || sweep["searched"] != 0.0 || sweep["next_title"] != "The Others" {
 		t.Errorf("sweep: %v", sweep)
 	}
 	if _, has := got["error"]; has {
@@ -441,5 +443,41 @@ func TestAddAudioStateWithoutSearches(t *testing.T) {
 	d.searches.load()
 	if got, _ := addAudioPayload(t, d); got["error"] == nil {
 		t.Error("a malformed searches.json must show as an error")
+	}
+}
+
+func TestToSweep(t *testing.T) {
+	t.Parallel()
+	castellano := filmSearch{Time: 7, Releases: []found{{GUID: "es", Title: "Film 2000 Castellano", Size: gb, Seeders: 1, Indexer: "Public", SiteLanguage: "en-US"}}}
+	plain := filmSearch{Time: 7, Releases: []found{{GUID: "en", Title: "Film 2000 1080p", Size: gb, Seeders: 1, Indexer: "Public", SiteLanguage: "en-US"}}}
+	cases := []struct {
+		name   string
+		film   dubFilm
+		job    string
+		search filmSearch
+		swept  bool
+	}{
+		{"never searched", dubFilm{ID: 1, Missing: []string{"spa"}}, "", filmSearch{}, true},
+		{"nothing found yet", dubFilm{ID: 1, Missing: []string{"spa"}}, "", plain, true},
+		{"has the language", dubFilm{ID: 1, Missing: []string{"cat"}}, "", filmSearch{}, false},
+		{"a release names it", dubFilm{ID: 1, Missing: []string{"spa"}}, "", castellano, false},
+		{"added already", dubFilm{ID: 1, Missing: []string{"spa"}}, "done", plain, false},
+		{"request under way", dubFilm{ID: 1, Missing: []string{"spa"}}, "probing", filmSearch{}, false},
+		{"request failed, though a release names it", dubFilm{ID: 1, Missing: []string{"spa"}}, "failed", castellano, true},
+		{"request cancelled", dubFilm{ID: 1, Missing: []string{"spa"}}, "cancelled", plain, true},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			d := dubFixture(t)
+			d.state.Jobs = map[string]*jobState{"1-cat": {MovieID: 1, Lang: "cat", Status: "done"}}
+			if c.job != "" {
+				d.state.Jobs["1-spa"] = &jobState{MovieID: 1, Lang: "spa", Status: c.job}
+			}
+			got := d.toSweep([]dubFilm{c.film}, map[int64]filmSearch{1: c.search})
+			if (len(got) == 1) != c.swept {
+				t.Errorf("swept %v, want %v", len(got) == 1, c.swept)
+			}
+		})
 	}
 }

@@ -47,8 +47,10 @@ type Config struct {
 	Budget                   int64
 	TelegramToken            string
 	TelegramChat             string
-	// The sweep searches one film every SweepEvery, and a film again once its search is SweepRefresh old.
+	// The sweep searches one film every SweepEvery, and a film again once its search is SweepRefresh old,
+	// for SweepLanguage only.
 	SweepEvery, SweepRefresh time.Duration
+	SweepLanguage            string
 }
 
 type dubFilm struct {
@@ -189,6 +191,9 @@ func Open(cfg Config) (*Service, error) {
 	langs, err := loadLanguages(cfg.LanguagesFile)
 	if err != nil {
 		return nil, err
+	}
+	if _, ok := langs.byCode[cfg.SweepLanguage]; !ok {
+		return nil, fmt.Errorf("SWEEP_LANGUAGE %q is not in %s", cfg.SweepLanguage, cfg.LanguagesFile)
 	}
 	d := newService(cfg, langs)
 	d.load()

@@ -60,7 +60,7 @@ func loadConfig() (config, error) {
 	if err != nil {
 		return config{}, err
 	}
-	sweepRefresh, err := duration("SWEEP_REFRESH", 7*24*time.Hour)
+	sweepRefresh, err := duration("SWEEP_REFRESH", 14*24*time.Hour)
 	if err != nil {
 		return config{}, err
 	}
@@ -96,6 +96,7 @@ func loadConfig() (config, error) {
 			TelegramChat:  os.Getenv("TELEGRAM_ALERT_CHAT_ID"),
 			SweepEvery:    sweepEvery,
 			SweepRefresh:  sweepRefresh,
+			SweepLanguage: env("SWEEP_LANGUAGE", "spa"),
 		},
 	}
 	for name, value := range map[string]string{"RADARR_URL": cfg.dubs.RadarrURL, "PROWLARR_URL": cfg.dubs.ProwlarrURL, "QBIT_URL": cfg.dubs.QbitURL} {

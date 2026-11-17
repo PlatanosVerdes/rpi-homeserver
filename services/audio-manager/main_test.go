@@ -36,7 +36,7 @@ func TestLoadConfig(t *testing.T) {
 				t.Fatal(err)
 			}
 			if cfg.reencode.ScanEvery != 6*time.Hour || cfg.dubs.Budget != 100<<30 || cfg.dubs.StateDir != "/state/add-audio" ||
-				cfg.dubs.SweepEvery != time.Minute || cfg.dubs.SweepRefresh != 7*24*time.Hour {
+				cfg.dubs.SweepEvery != time.Minute || cfg.dubs.SweepRefresh != 14*24*time.Hour || cfg.dubs.SweepLanguage != "spa" {
 				t.Errorf("defaults: %+v", cfg)
 			}
 		})
