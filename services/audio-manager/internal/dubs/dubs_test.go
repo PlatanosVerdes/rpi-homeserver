@@ -629,6 +629,9 @@ func TestJobProbesDownloadsAndAddsTheDub(t *testing.T) {
 		}
 		s := probeStream{Index: 1, CodecType: "audio", CodecName: "ac3", Channels: 6}
 		s.Tags.Language = lang
+		if lang == "spa" {
+			s.Tags.Title = "Castellano"
+		}
 		return &probeInfo{Streams: []probeStream{s}}
 	}
 	var added []string
@@ -711,7 +714,7 @@ func TestJobReusesASourceDownloadedBefore(t *testing.T) {
 	d.cfg.RadarrURL = radarrServer.URL
 	d.probeHead = func(path string, size int64) *probeInfo {
 		s := probeStream{Index: 1, CodecType: "audio", CodecName: "ac3", Channels: 6}
-		s.Tags.Language = "spa"
+		s.Tags.Language, s.Tags.Title = "spa", "Castellano"
 		return &probeInfo{Streams: []probeStream{s}}
 	}
 	var sources []string
@@ -781,5 +784,162 @@ func TestJobStopsAtTheBudget(t *testing.T) {
 	p.advance(job)
 	if job.Status != "failed" || job.Reason != "none of the 1 releases probed carried it" {
 		t.Errorf("a counted download over the budget is skipped: %+v", job)
+	}
+}
+
+func TestDubChecks(t *testing.T) {
+	t.Parallel()
+	langs := testLanguages(t)
+	spa, cat := langs.byCode["spa"], langs.byCode["cat"]
+	track := func(title string) *probeStream {
+		s := &probeStream{CodecType: "audio"}
+		s.Tags.Language, s.Tags.Title = "spa", title
+		return s
+	}
+	cases := []struct {
+		name    string
+		dub     *probeStream
+		release candidate
+		lang    *language
+		want    bool
+	}{
+		{"the track says Castellano", track("Castellano AC3 5.1"), candidate{Title: "Film MULTi"}, spa, true},
+		{"the release says Castellano", track(""), candidate{Title: "Film 2000 Castellano 1080p"}, spa, true},
+		{"from a Spanish site", track(""), candidate{Title: "Film MULTi", OwnSite: true}, spa, true},
+		{"spa and nothing else", track(""), candidate{Title: "Film MULTi"}, spa, false},
+		{"Spanish could be Latino", track("Spanish"), candidate{Title: "Film 2000 SPANiSH"}, spa, false},
+		{"a language without variants", track(""), candidate{Title: "Film MULTi"}, cat, true},
+	}
+	for _, c := range cases {
+		if got := confirmed(c.dub, c.release, c.lang); got != c.want {
+			t.Errorf("%s: confirmed %v, want %v", c.name, got, c.want)
+		}
+	}
+
+	film := 127 * 60.0
+	for _, c := range []struct {
+		name   string
+		source float64
+		want   bool
+	}{
+		{"longer credits", film + 83, true},
+		{"PAL speed-up", film * 23.976 / 25, true},
+		{"extended edition", film + 15*60, false},
+		{"a sample", 60, false},
+		{"length unknown", 0, true},
+	} {
+		if got := sameCut(c.source, film); got != c.want {
+			t.Errorf("%s: same cut %v, want %v", c.name, got, c.want)
+		}
+	}
+}
+
+func TestReadTracksTrustsTheFileOverRadarr(t *testing.T) {
+	t.Parallel()
+	d := dubFixture(t)
+	dir := filepath.Join(d.cfg.DataRoot, "films", "A")
+	stream := func(lang, title string) probeStream {
+		s := probeStream{CodecType: "audio", CodecName: "ac3"}
+		s.Tags.Language, s.Tags.Title = lang, title
+		return s
+	}
+	probes := 0
+	d.probeFile = func(path string) *probeInfo {
+		probes++
+		info := &probeInfo{Streams: []probeStream{stream("eng", ""), stream("spa", "Español Latino")}}
+		info.Format.Duration = "7641.7"
+		return info
+	}
+	films := []dubFilm{{ID: 1, Path: "/data/films/A/a.mkv", Audio: "English/Spanish", Missing: []string{"cat"}}}
+	d.readTracks(films, nil)
+	if !slices.Contains(films[0].Missing, "spa") || slices.Contains(films[0].Missing, "eng") || films[0].File.Length != 7641.7 {
+		t.Errorf("a Latino track is not Castellano: %+v", films[0])
+	}
+	again := []dubFilm{{ID: 1, Path: "/data/films/A/a.mkv", Missing: []string{}}}
+	d.readTracks(again, films)
+	if probes != 1 || !slices.Contains(again[0].Missing, "spa") {
+		t.Errorf("an unchanged file is not read again: %d probes, %+v", probes, again[0])
+	}
+	os.WriteFile(filepath.Join(dir, "a.mkv"), []byte("upgraded"), 0o644)
+	d.readTracks(again, films)
+	if probes != 2 {
+		t.Errorf("a changed file is read again: %d probes", probes)
+	}
+	gone := []dubFilm{{ID: 2, Path: "/data/films/B/b.mkv", Missing: []string{"spa"}}}
+	d.readTracks(gone, nil)
+	if gone[0].File != nil || !slices.Equal(gone[0].Missing, []string{"spa"}) {
+		t.Errorf("a file that cannot be read keeps Radarr's word: %+v", gone[0])
+	}
+}
+
+func TestAddAudioWaitsForALowLoad(t *testing.T) {
+	t.Parallel()
+	d := dubFixture(t)
+	d.cfg.MaxLoad = 4
+	load := 9.0
+	d.loadAverage = func() (float64, error) { return load, nil }
+	ran := 0
+	d.runAddAudio = func(target, source, lang string) (string, int) { ran++; return "added a spa track", 0 }
+	qb := &fakeQbit{torrents: map[string]*fakeTorrent{"abc": {name: "x.mkv", category: "audio-source", progress: 1}}}
+	qbitServer := httptest.NewServer(qb)
+	defer qbitServer.Close()
+	d.cfg.QbitURL = qbitServer.URL
+	radarrServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`{"id": 11, "movieFile": {"path": "/data/films/A/a.mkv"}}`))
+	}))
+	defer radarrServer.Close()
+	d.cfg.RadarrURL = radarrServer.URL
+	job := &jobState{MovieID: 11, Lang: "spa", Title: "The Others (2001)", Status: "downloading",
+		Current: &torrentRef{candidate: candidate{Title: "x"}, Hash: "abc", Stage: "downloading"}}
+	p := &pass{d: d, ctx: context.Background()}
+	p.advance(job)
+	if ran != 0 || job.Status != "downloading" || !strings.Contains(job.Reason, "load 9.0") {
+		t.Fatalf("waits while the load is high: ran %d, %+v", ran, job)
+	}
+	load = 1
+	p.advance(job)
+	if ran != 1 || job.Status != "done" {
+		t.Errorf("runs once it is low: ran %d, %+v", ran, job)
+	}
+}
+
+func TestJobTriesAnUnconfirmedDubLast(t *testing.T) {
+	t.Parallel()
+	d := dubFixture(t)
+	d.state = dubState{Jobs: map[string]*jobState{}}
+	d.watchFor, d.pollEvery = 2*time.Second, time.Millisecond
+	multi, multiHash := torrentFile("multi.mkv")
+	prowlarrServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.Write(multi) }))
+	defer prowlarrServer.Close()
+	d.cfg.ProwlarrURL, d.cfg.ProwlarrKey = prowlarrServer.URL, "key"
+	d.indexers = fakeIndexers{sites: map[int]clients.Indexer{1: testIndexers[1]}, results: map[int][]clients.Release{1: {
+		testRelease("multi", 3, withTitle("The Others 2001 MULTi"), withImdb(230600)),
+	}}}
+	qb := &fakeQbit{torrents: map[string]*fakeTorrent{}}
+	qbitServer := httptest.NewServer(qb)
+	defer qbitServer.Close()
+	d.cfg.QbitURL = qbitServer.URL
+	radarrServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`{"id": 11, "movieFile": {"path": "/data/films/A/a.mkv"}}`))
+	}))
+	defer radarrServer.Close()
+	d.cfg.RadarrURL = radarrServer.URL
+	d.probeHead = func(path string, size int64) *probeInfo {
+		s := probeStream{Index: 1, CodecType: "audio", CodecName: "ac3", Channels: 6}
+		s.Tags.Language = "spa"
+		return &probeInfo{Streams: []probeStream{s}}
+	}
+	d.runAddAudio = func(target, source, lang string) (string, int) { return "added a spa track", 0 }
+
+	d.state.Requests = []dubRequest{{MovieID: 11, Lang: "spa", Requested: 1}}
+	d.tick()
+	job := d.state.Jobs["11-spa"]
+	if job.Status != "downloading" || !job.Unconfirmed || len(job.Probes) != 2 || !strings.Contains(job.Probes[0].Outcome, "not confirmed") {
+		t.Fatalf("probed, kept for last, then taken when nothing else had it: %+v", job)
+	}
+	qb.torrents[multiHash].progress = 1
+	d.tick()
+	if job = d.state.Jobs["11-spa"]; job.Status != "done" || !strings.Contains(job.Reason, "check it") {
+		t.Errorf("the result says to check it: %+v", job)
 	}
 }

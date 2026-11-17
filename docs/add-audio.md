@@ -69,16 +69,19 @@ and the uptime probe called the Pi down for three minutes. It shares the convers
 ## From the page: audio-manager
 
 The **Add audio** view of the audio manager page (`https://audio.<domain>`,
-[audio-manager.md](audio-manager.md)) lists the films that lack a language, from Radarr, and for each
-one whether a release in that language is out there. Nothing is downloaded unless Add is pressed. The `services/audio-manager` service does
+[audio-manager.md](audio-manager.md)) lists the films that lack a language, and for each
+one whether a release in that language is out there. The films come from Radarr, but what each file
+holds is read from the file itself with ffprobe, again only when its size or time changes: Radarr says
+"Spanish" for a Latino track too, so a film with only Latino would never be offered Castellano. Nothing is downloaded unless Add is pressed. The `services/audio-manager` service does
 all of it in Go, one film at a time; the only Python it runs is `add-audio.py` itself, as it runs
 `audio-compat.py` for Re-encode.
 
 **Availability** comes from a search the service runs in the background, one film every
 `SWEEP_EVERY` (1 min), never-searched films first, each film again after `SWEEP_REFRESH` (14 days).
-It only searches for `SWEEP_LANGUAGE` (Castellano): a film that has it, was given it by a request, has
-a request for it under way, or already has a release naming it or from a site in it is left alone, since
-Add searches afresh. A film whose request failed is searched again, as a new release may carry it. Other
+It only searches for `SWEEP_LANGUAGE` (Castellano): a film that has it, has a request for it under way,
+or already has a release naming it or from a site in it is left alone, since Add searches afresh. A
+film whose request failed is searched again, as a new release may carry it, and so is one whose file
+lacks it again after a request added it: Radarr replaced the file with an upgrade. Other
 languages are ranked from the same searches; for a film the sweep left alone, use Search again. A
 search returns the same releases whatever the language, so each film is searched once and every
 language is ranked from that result: the row says how many releases name the language in their title,
@@ -103,10 +106,18 @@ indexer, so at one a minute a tracker sees at most one query every 30 s, less th
    then watched every 3 s: once 2 MB from the file's start are in, ffprobe reads the track list and
    the torrent is stopped. No track in the language (add-audio's own pick: not Latino, not commentary)
    and it is deleted after a few MB; measured on a YTS release, 12.8 MB. A release that shows no
-   track list within 64 MB is given up the same way.
+   track list within 64 MB is given up the same way. The header also gives its length: one more than
+   5 min away from the film's, at any frame-rate change add-audio can undo, is another cut (an
+   extended edition) and is dropped too.
+   For a language with variants it rejects (Castellano against Latino), a track tagged `spa` is
+   confirmed only when its title, the release title or the site says Castellano; a MULTi release may
+   tag Latino as `spa`. An unconfirmed one is dropped and kept for last: it is probed again only once
+   nothing confirmed has the dub, and the result then says to check it.
    Each probe is listed under its request: the release, how many MB it took and which tracks it had.
 3. **Download and add.** A release with the track is downloaded whole and handed to add-audio, which
-   still measures the sync and refuses another cut or a source under 90% of the film's length. A dub
+   still measures the sync and refuses another cut or a source under 90% of the film's length. It runs
+   only while the raspi's 5-minute load is under `ADD_AUDIO_MAX_LOAD` (4); a finished download waits
+   for it, as decoding and muxing a film beside a busy raspi has made it stop answering. A dub
    that runs longer than the film (longer credits) is cut at the film's end. A refusal or a download
    stalled for 48 h moves to the next release, up to two whole downloads and eight probes per film.
    A release still seeding from an earlier request is not downloaded again: when Add finds it complete

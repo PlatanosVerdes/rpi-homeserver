@@ -47,6 +47,8 @@ type Config struct {
 	Budget                   int64
 	TelegramToken            string
 	TelegramChat             string
+	// add-audio waits while the host's 5-minute load is above MaxLoad.
+	MaxLoad float64
 	// The sweep searches one film every SweepEvery, and a film again once its search is SweepRefresh old,
 	// for SweepLanguage only.
 	SweepEvery, SweepRefresh time.Duration
@@ -61,6 +63,16 @@ type dubFilm struct {
 	Path    string   `json:"path"`
 	Audio   string   `json:"audio"`
 	Missing []string `json:"missing"`
+	// What the file itself holds, read with ffprobe and kept while its size and time stay the same:
+	// Radarr's audio languages say "Spanish" for a Latino track too.
+	File *fileTracks `json:"file,omitempty"`
+}
+
+type fileTracks struct {
+	Size    int64         `json:"size"`
+	ModTime int64         `json:"mtime"`
+	Length  float64       `json:"length"`
+	Audio   []probeStream `json:"audio"`
 }
 
 type dubRequest struct {
@@ -87,6 +99,9 @@ type jobState struct {
 	Candidates []candidate   `json:"candidates,omitempty"`
 	Current    *torrentRef   `json:"current"`
 	Probes     []probeRecord `json:"probes,omitempty"`
+	// Releases whose track has the language code but not its name, tried only once nothing else has it.
+	Doubtful    []candidate `json:"doubtful,omitempty"`
+	Unconfirmed bool        `json:"unconfirmed,omitempty"`
 }
 
 // probeRecord is what one probe of a job found, kept so a failed job shows why.
@@ -126,6 +141,7 @@ func (j *jobState) clone() *jobState {
 	c.Tried = slices.Clone(j.Tried)
 	c.Candidates = slices.Clone(j.Candidates)
 	c.Probes = slices.Clone(j.Probes)
+	c.Doubtful = slices.Clone(j.Doubtful)
 	if j.Current != nil {
 		current := *j.Current
 		c.Current = &current
@@ -152,7 +168,9 @@ type Service struct {
 	searches   *searches
 	// Replaced in tests: the probe's ffprobe and the run of add-audio.py.
 	probeHead   func(path string, size int64) *probeInfo
+	probeFile   func(path string) *probeInfo
 	runAddAudio func(target, source, lang string) (last string, code int)
+	loadAverage func() (float64, error)
 	watchFor    time.Duration
 	pollEvery   time.Duration
 	// Set while a job searches, so the sweep leaves Prowlarr alone.
@@ -191,6 +209,8 @@ func newService(cfg Config, langs *languages) *Service {
 	}
 	d.indexers = d.prowlarr()
 	d.probeHead = d.ffprobeHead
+	d.probeFile = ffprobeFile
+	d.loadAverage = hostLoad
 	d.runAddAudio = d.addAudioScript
 	d.searches = newSearches(filepath.Join(cfg.StateDir, "searches.json"), d.searchFilm)
 	return d
@@ -294,6 +314,10 @@ func (d *Service) listFilms() {
 		return
 	}
 	films := filmsFrom(movies, d.langs)
+	d.mu.Lock()
+	previous := d.films
+	d.mu.Unlock()
+	d.readTracks(films, previous)
 	now := time.Now().Unix()
 	d.mu.Lock()
 	d.films, d.filmsTime, d.filmsErr = films, now, ""
@@ -303,6 +327,18 @@ func (d *Service) listFilms() {
 	if err := store.WriteJSON(d.filmsFile(), payload); err != nil {
 		log.Printf("audio-manager: %v", err)
 	}
+}
+
+// listedFilm is the film as last listed, the zero film when it is not.
+func (d *Service) listedFilm(movieID int64) dubFilm {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	for _, f := range d.films {
+		if f.ID == movieID {
+			return f
+		}
+	}
+	return dubFilm{}
 }
 
 // film is the listed film when it lacks that language; called with d.mu held.

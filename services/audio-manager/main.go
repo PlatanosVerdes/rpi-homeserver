@@ -64,6 +64,10 @@ func loadConfig() (config, error) {
 	if err != nil {
 		return config{}, err
 	}
+	maxLoad, err := strconv.ParseFloat(env("ADD_AUDIO_MAX_LOAD", "4"), 64)
+	if err != nil || maxLoad < 0 {
+		return config{}, fmt.Errorf("ADD_AUDIO_MAX_LOAD %q is not a load average", os.Getenv("ADD_AUDIO_MAX_LOAD"))
+	}
 	budgetGB, err := strconv.ParseFloat(env("DUB_BUDGET_GB", "100"), 64)
 	if err != nil || budgetGB < 0 {
 		return config{}, fmt.Errorf("DUB_BUDGET_GB %q is not a number of GB", os.Getenv("DUB_BUDGET_GB"))
@@ -97,6 +101,7 @@ func loadConfig() (config, error) {
 			SweepEvery:    sweepEvery,
 			SweepRefresh:  sweepRefresh,
 			SweepLanguage: env("SWEEP_LANGUAGE", "spa"),
+			MaxLoad:       maxLoad,
 		},
 	}
 	for name, value := range map[string]string{"RADARR_URL": cfg.dubs.RadarrURL, "PROWLARR_URL": cfg.dubs.ProwlarrURL, "QBIT_URL": cfg.dubs.QbitURL} {
