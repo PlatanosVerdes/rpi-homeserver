@@ -107,6 +107,16 @@ type torrentRef struct {
 	Since       int64   `json:"since"`
 	DeleteBelow float64 `json:"delete_below"`
 	Dub         string  `json:"dub,omitempty"`
+	Reused      bool    `json:"reused,omitempty"`
+}
+
+// settle is how far the budget must move once a download is over: checkProbe charged its advertised
+// size, and what counts is what qBittorrent fetched. A reused source was never charged.
+func (t *torrentRef) settle(downloaded int64) int64 {
+	if t.Reused || t.charged() == 0 {
+		return 0
+	}
+	return downloaded - t.charged()
 }
 
 func (j *jobState) finished() bool { return isFinished(j.Status) }

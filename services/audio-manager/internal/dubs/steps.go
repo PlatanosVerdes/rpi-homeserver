@@ -26,6 +26,9 @@ import (
 // swarm took 300 MB in the ten seconds between two checks.
 const probeRate = 2 * mb
 
+// minVideoShare is how much of a torrent its .mkv must be to hold the film rather than a sample.
+const minVideoShare = 0.5
+
 // pass is one tick of the worker: it logs into qBittorrent when first needed and sends what happened
 // to Telegram at the end.
 type pass struct {
@@ -122,7 +125,7 @@ func (p *pass) advance(job *jobState) {
 		case "probing":
 			charged, err = p.checkProbe(job)
 		case "downloading":
-			err = p.checkDownload(job)
+			charged, err = p.checkDownload(job)
 		}
 		if err != nil {
 			log.Printf("audio-manager: %s: %v", job.Title, err)
@@ -149,6 +152,9 @@ func (p *pass) search(job *jobState) error {
 	if err != nil {
 		return err
 	}
+	if err := p.downloadedFirst(found); err != nil {
+		return err
+	}
 	job.Candidates = found
 	if len(found) == 0 {
 		job.set("failed", "no release to try on any indexer")
@@ -156,6 +162,95 @@ func (p *pass) search(job *jobState) error {
 		return nil
 	}
 	job.set("trying", fmt.Sprintf("%d releases to probe", len(found)))
+	return nil
+}
+
+// downloadedFirst moves the releases a previous job already downloaded to the front, so a dub that
+// was fetched but refused gets another try without fetching anything.
+func (p *pass) downloadedFirst(found []candidate) error {
+	if len(found) == 0 {
+		return nil
+	}
+	q, err := p.qbit()
+	if err != nil {
+		return err
+	}
+	sources, err := q.Sources(p.ctx)
+	if err != nil {
+		return err
+	}
+	var complete []string
+	for _, t := range sources {
+		if t.Progress >= 1 {
+			complete = append(complete, releaseKey(t.Name))
+		}
+	}
+	// A site may add words to the torrent's own name in its listing ("... h264.mkv Spanish").
+	downloaded := func(c candidate) bool {
+		title := releaseKey(c.Title)
+		return slices.ContainsFunc(complete, func(name string) bool { return name != "" && strings.HasPrefix(title, name) })
+	}
+	slices.SortStableFunc(found, func(a, b candidate) int {
+		switch da, db := downloaded(a), downloaded(b); {
+		case da == db:
+			return 0
+		case da:
+			return -1
+		}
+		return 1
+	})
+	return nil
+}
+
+func releaseKey(name string) string {
+	return strings.TrimSuffix(strings.ToLower(strings.TrimSpace(name)), ".mkv")
+}
+
+// largestMKV is the index of the biggest .mkv, or -1 when it is not most of the torrent: a release
+// packed in RAR files shows only its sample as .mkv.
+func largestMKV(files []clients.QbitFile) int {
+	video := -1
+	var total int64
+	for i, f := range files {
+		total += f.Size
+		if strings.HasSuffix(strings.ToLower(f.Name), ".mkv") && (video < 0 || f.Size > files[video].Size) {
+			video = i
+		}
+	}
+	if video < 0 || float64(files[video].Size) < minVideoShare*float64(total) {
+		return -1
+	}
+	return video
+}
+
+// reuse hands a source an earlier job downloaded to add-audio again, if it is complete and has the dub.
+func (p *pass) reuse(job *jobState, next candidate, q *clients.Qbit, existing *clients.QbitTorrent) error {
+	if !existing.IsSource() || existing.Progress < 1 {
+		p.rejected(job, next, 0, "already in qBittorrent")
+		return nil
+	}
+	files, err := q.Files(p.ctx, existing.Hash)
+	if err != nil {
+		return err
+	}
+	video := largestMKV(files)
+	if video < 0 {
+		p.rejected(job, next, 0, "no .mkv holding the film")
+		return nil
+	}
+	path := filepath.Join(p.d.hostPath(existing.SavePath), filepath.FromSlash(files[video].Name))
+	dub := pickDub(p.d.probeHead(path, min(files[video].Size, probeBudget)), p.d.langs.byCode[job.Lang])
+	if dub == nil {
+		p.rejected(job, next, 0, "downloaded already, without the language")
+		return nil
+	}
+	if err := q.Keep(p.ctx, existing.Hash); err != nil {
+		return err
+	}
+	p.probed(job, next, 0, "downloaded already, has "+p.d.langs.byCode[job.Lang].Name)
+	job.Current = &torrentRef{candidate: next, Hash: existing.Hash, File: video, Stage: "downloading",
+		Since: time.Now().Unix(), Dub: dub.describe(), Reused: true}
+	job.set("downloading", next.Title+", downloaded already")
 	return nil
 }
 
@@ -191,8 +286,8 @@ func (p *pass) tryNext(job *jobState) error {
 	if existing, err := q.Torrent(p.ctx, hash); err != nil {
 		return err
 	} else if existing != nil {
-		p.rejected(job, next, 0, "already in qBittorrent")
-		return nil
+		existing.Hash = hash
+		return p.reuse(job, next, q, existing)
 	}
 	if err := q.EnsureCategory(p.ctx); err != nil {
 		return err
@@ -210,17 +305,12 @@ func (p *pass) tryNext(job *jobState) error {
 		}
 		time.Sleep(time.Second)
 	}
-	video := -1
-	for i, f := range files {
-		if strings.HasSuffix(strings.ToLower(f.Name), ".mkv") && (video < 0 || f.Size > files[video].Size) {
-			video = i
-		}
-	}
+	video := largestMKV(files)
 	if video < 0 {
 		if err := q.Delete(p.ctx, hash); err != nil {
 			return err
 		}
-		p.rejected(job, next, 0, "no .mkv")
+		p.rejected(job, next, 0, "no .mkv holding the film (packed, or only a sample)")
 		return nil
 	}
 	var others []string
@@ -406,33 +496,37 @@ func (p *pass) rejected(job *jobState, release candidate, downloaded int64, outc
 	job.set("trying", release.Title+": "+outcome)
 }
 
-func (p *pass) checkDownload(job *jobState) error {
+// checkDownload hands a finished download to add-audio. It returns how far the counted download
+// came out from what checkProbe charged for it, once the torrent is settled.
+func (p *pass) checkDownload(job *jobState) (int64, error) {
 	current := job.Current
 	q, err := p.qbit()
 	if err != nil {
-		return err
+		return 0, err
 	}
 	torrent, err := q.Torrent(p.ctx, current.Hash)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	if torrent == nil {
 		job.Current = nil
 		p.nextOrFail(job, "the download left qBittorrent")
-		return nil
+		return 0, nil
 	}
+	settled := current.settle(torrent.Downloaded)
 	if torrent.Progress < 1 {
 		if time.Now().Unix()-current.Since > stalledHours*3600 {
 			if err := p.dropTorrent(job); err != nil {
-				return err
+				return 0, err
 			}
 			p.nextOrFail(job, fmt.Sprintf("%s: %.0f%% after %d h", current.Title, torrent.Progress*100, stalledHours))
+			return settled, nil
 		}
-		return nil
+		return 0, nil
 	}
 	movie, err := p.d.radarr().Movie(p.ctx, job.MovieID)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	target := ""
 	if movie.MovieFile != nil {
@@ -440,27 +534,27 @@ func (p *pass) checkDownload(job *jobState) error {
 	}
 	files, err := q.Files(p.ctx, current.Hash)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	if current.File >= len(files) {
-		return fmt.Errorf("qBittorrent lists no file %d in %s", current.File, current.Title)
+		return 0, fmt.Errorf("qBittorrent lists no file %d in %s", current.File, current.Title)
 	}
 	source := filepath.Join(p.d.hostPath(torrent.SavePath), filepath.FromSlash(files[current.File].Name))
 	if _, err := os.Stat(target); !strings.HasSuffix(target, ".mkv") || err != nil {
 		if err := p.dropTorrent(job); err != nil {
-			return err
+			return 0, err
 		}
 		job.set("failed", "the library file is gone or no longer .mkv")
 		p.say(job, job.Reason)
-		return nil
+		return settled, nil
 	}
 	last, code := p.d.runAddAudio(target, source, job.Lang)
 	if strings.HasPrefix(last, "busy:") {
 		log.Printf("audio-manager: %s: %s, next pass", job.Title, last)
-		return nil
+		return 0, nil
 	}
 	if err := p.dropTorrent(job); err != nil {
-		return err
+		return 0, err
 	}
 	if code == 0 || strings.Contains(last, "already has a") {
 		job.set("done", last)
@@ -468,7 +562,7 @@ func (p *pass) checkDownload(job *jobState) error {
 	} else {
 		p.nextOrFail(job, "add-audio refused it: "+last)
 	}
-	return nil
+	return settled, nil
 }
 
 func (p *pass) nextOrFail(job *jobState, reason string) {

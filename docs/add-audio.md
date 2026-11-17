@@ -95,16 +95,23 @@ indexer, so at one a minute a tracker sees at most one query every 30 s, less th
    then MULTi/DUAL (not on a site in a third language: on C411 that means French), then public before
    private, freeleech before counted, smaller first. A site in a third language goes last: on Split,
    C411's MULTi VFF releases were probed first and carried French and English only. At most 15 GB, never titled Latino.
+   A release an earlier request already downloaded goes first (see step 3).
 2. **Probe before downloading.** A Matroska file lists its tracks in its first few hundred KB. The
    release is added stopped, with only its largest `.mkv` wanted, sequential and capped at 2 MB/s,
+   unless that `.mkv` is under half the torrent: a release packed in RAR files shows only its sample as
+   `.mkv` (Michael's XPERT_HD WEB on DigitalCore), and is deleted before anything downloads. Otherwise it is
    then watched every 3 s: once 2 MB from the file's start are in, ffprobe reads the track list and
    the torrent is stopped. No track in the language (add-audio's own pick: not Latino, not commentary)
    and it is deleted after a few MB; measured on a YTS release, 12.8 MB. A release that shows no
    track list within 64 MB is given up the same way.
    Each probe is listed under its request: the release, how many MB it took and which tracks it had.
 3. **Download and add.** A release with the track is downloaded whole and handed to add-audio, which
-   still measures the sync and refuses another cut. A refusal or a download stalled for 48 h moves to
-   the next release, up to two whole downloads and eight probes per film.
+   still measures the sync and refuses another cut or a source under 90% of the film's length. A dub
+   that runs longer than the film (longer credits) is cut at the film's end. A refusal or a download
+   stalled for 48 h moves to the next release, up to two whole downloads and eight probes per film.
+   A release still seeding from an earlier request is not downloaded again: when Add finds it complete
+   in qBittorrent under `audio-source`, it reads its tracks and hands it straight to add-audio, so a
+   request that failed for a reason fixed since costs nothing to repeat.
 
 What keeps a probe from costing an account anything:
 
@@ -118,7 +125,9 @@ What keeps a probe from costing an account anything:
   tag, which every group skips, and removes it once add-audio is done: without it a public download
   would be deleted 2 h after finishing, possibly while add-audio still reads it.
 - **A budget of counted download**, `DUB_BUDGET_GB` (100 by default; public and freeleech count
-  zero), across all requests.
+  zero), across all requests. A download is charged its listed size when it starts and settled to what
+  qBittorrent actually fetched when it ends; NOBS's site-wide freeleech is not in Prowlarr's flags, so it
+  still counts.
 
 The page shows each request's state and why it ended; the alert Telegram chat gets each download
 and result. Its state is in `appdata/audio-manager/add-audio/`: `state.json` for the jobs and
