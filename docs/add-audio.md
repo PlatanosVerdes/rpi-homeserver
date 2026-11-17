@@ -47,7 +47,7 @@ Leaving that out once measured 80 ms wrong.
   `--default` changes that.
 - The file is checked before it replaces anything: same duration, one more stream, the new track
   in AC3, and the new track measured against the dub it came from (the mapping must hold inside
-  the new file). The old file is kept as `.original`, as [audio-manager.md](audio-manager.md) does.
+  the new file). The old file is kept as `.original`, as [audio-manager.md](audio-manager.md) does; the page lists them and deletes one when asked.
 
 The languages it can add are `scripts/sync/languages.json`: 26 of them, Castellano
 by default, each with the codes files tag it with, the words Radarr and release titles use for it, and
