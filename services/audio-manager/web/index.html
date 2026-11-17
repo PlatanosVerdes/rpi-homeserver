@@ -55,7 +55,8 @@
       each candidate to see its tracks, downloads the first that has the language, and adds it to the film beside the
       audio it already has. Cancel stops it at any point. In the background every film is searched once, one a minute,
       and again after a week, which is what each row shows for the language; Search again asks the indexers
-      now. Neither downloads anything.
+      now. Neither downloads anything. The film's previous file is kept beside it as <code>.original</code> until it
+      is deleted from Originals kept.
     </footer>
   </section>
 
@@ -77,11 +78,17 @@
       <div id="history"></div>
     </details>
 
+    <details class="group" id="originals-group" hidden>
+      <summary>Originals kept <span class="n" id="originals-count"></span></summary>
+      <div id="originals"></div>
+    </details>
+
     <footer>
       Runs <code>audio-compat.py --file</code>, the same script as the 05:00 pass: an AC3 track goes first, every
       other track stays, and the previous file is kept beside it as <code>.original</code>. One at a time; the
       queue waits while the nightly pass works. To convert lists what a client had re-encoded and what the nightly
-      scan of the library would convert before any client plays it. Click a file for its details.
+      scan of the library would convert before any client plays it. Click a file for its details. Originals kept
+      lists every <code>.original</code>, to delete once the new file plays.
     </footer>
   </section>
 </div>

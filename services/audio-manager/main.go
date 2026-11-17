@@ -16,6 +16,7 @@ import (
 
 	"audio-manager/internal/dubs"
 	"audio-manager/internal/httpx"
+	"audio-manager/internal/originals"
 	"audio-manager/internal/reencode"
 	"audio-manager/web"
 )
@@ -120,11 +121,13 @@ func main() {
 	if err != nil {
 		log.Fatalf("audio-manager: %v", err)
 	}
+	kept := originals.New(cfg.reencode.DataRoot)
 
 	http.Handle("/", web.Handler())
 	http.HandleFunc("/api/state", func(w http.ResponseWriter, r *http.Request) {
 		payload := recodes.State()
 		payload["add_audio"] = adds.Payload(r.URL.Query().Get("lang"))
+		payload["originals"] = kept.List()
 		httpx.WriteJSON(w, http.StatusOK, payload)
 	})
 	http.HandleFunc("/api/play", recodes.ServePlay)
@@ -133,6 +136,7 @@ func main() {
 	http.HandleFunc("/api/add-audio/cancel", adds.ServeCancel)
 	http.HandleFunc("/api/add-audio/check", adds.ServeCheck)
 	http.HandleFunc("/api/add-audio/checks", adds.ServeChecks)
+	http.HandleFunc("/api/originals/delete", kept.ServeDelete)
 
 	recodes.Start()
 	adds.Start()

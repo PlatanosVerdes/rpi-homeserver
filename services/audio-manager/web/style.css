@@ -52,7 +52,7 @@
 
   .row { display:grid; grid-template-columns:14px minmax(0,1fr) 10.5rem 5.5rem 5.5rem 6rem; align-items:center;
          gap:.75rem; min-height:2.6rem; padding:0 .85rem; border-top:1px solid var(--line); cursor:default; }
-  #list > .row:first-child, #history > .row:first-child { border-top:0; }
+  #list > .row:first-child, #history > .row:first-child, #originals > .row:first-child { border-top:0; }
   .row.click { cursor:pointer; }
   .row.click:hover { background:var(--hover); }
   .row.off { color:var(--dim); }
@@ -171,6 +171,7 @@
     .meta { display:flex; flex-wrap:wrap; gap:.15rem .9rem; grid-column:2; min-width:0; }
     .meta .bar { flex:1 0 100%; margin:.3rem 0 .1rem; }
     .meta .c { text-align:left; }
+    .meta .c:empty { display:none; }
     .meta .source { display:block; flex:1 0 100%; color:var(--faint); font-size:12px; }
     .title small { display:none; }
     .row > button { grid-column:3; grid-row:1 / span 2; }
