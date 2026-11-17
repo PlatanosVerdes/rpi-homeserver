@@ -239,7 +239,7 @@ func (p *pass) reuse(job *jobState, next candidate, q *clients.Qbit, existing *c
 		return nil
 	}
 	path := filepath.Join(p.d.hostPath(existing.SavePath), filepath.FromSlash(files[video].Name))
-	dub := pickDub(p.d.probeHead(path, files[video].Size), p.d.langs.byCode[job.Lang])
+	dub := pickDub(p.d.probeHead(path, min(files[video].Size, probeBudget)), p.d.langs.byCode[job.Lang])
 	if dub == nil {
 		p.rejected(job, next, 0, "downloaded already, without the language")
 		return nil
