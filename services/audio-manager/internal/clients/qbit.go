@@ -33,6 +33,9 @@ type Qbit struct {
 }
 
 type QbitTorrent struct {
+	Hash         string  `json:"hash"`
+	Name         string  `json:"name"`
+	Category     string  `json:"category"`
 	Downloaded   int64   `json:"downloaded"`
 	Progress     float64 `json:"progress"`
 	SavePath     string  `json:"save_path"`
@@ -126,6 +129,18 @@ func (q *Qbit) Torrent(ctx context.Context, hash string) (*QbitTorrent, error) {
 	return &found[0], nil
 }
 
+// Sources is every torrent a dub job added.
+func (q *Qbit) Sources(ctx context.Context) ([]QbitTorrent, error) {
+	var found []QbitTorrent
+	if err := q.get(ctx, "torrents/info", url.Values{"category": {qbitCategory}}, &found); err != nil && !errors.Is(err, errQbitNotFound) {
+		return nil, err
+	}
+	return found, nil
+}
+
+// IsSource says the torrent is one a dub job added.
+func (t QbitTorrent) IsSource() bool { return t.Category == qbitCategory }
+
 func (q *Qbit) Files(ctx context.Context, hash string) ([]QbitFile, error) {
 	var files []QbitFile
 	err := q.get(ctx, "torrents/files", url.Values{"hash": {hash}}, &files)
@@ -214,6 +229,11 @@ func (q *Qbit) either(ctx context.Context, current, older, hash string) error {
 
 func (q *Qbit) Delete(ctx context.Context, hash string) error {
 	return q.Post(ctx, "torrents/delete", url.Values{"hashes": {hash}, "deleteFiles": {"true"}})
+}
+
+// Keep holds the torrent back from qbit-manage's share limits until Release.
+func (q *Qbit) Keep(ctx context.Context, hash string) error {
+	return q.Post(ctx, "torrents/addTags", url.Values{"hashes": {hash}, "tags": {qbitKeepTag}})
 }
 
 // Release hands the torrent to qbit-manage's share limits.

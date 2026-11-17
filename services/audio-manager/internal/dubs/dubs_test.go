@@ -498,10 +498,14 @@ type fakeQbit struct {
 	torrents map[string]*fakeTorrent
 	deleted  []string
 	released []string
+	kept     []string
+	added    int
 }
 
 type fakeTorrent struct {
 	name     string
+	title    string
+	category string
 	started  bool
 	progress float64
 }
@@ -516,6 +520,16 @@ func (f *fakeQbit) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "auth/login":
 		w.WriteHeader(http.StatusNoContent)
 	case "torrents/info":
+		if category := r.FormValue("category"); category != "" {
+			list := []map[string]any{}
+			for h, each := range f.torrents {
+				if each.category == category {
+					list = append(list, map[string]any{"hash": h, "name": each.title, "category": each.category, "progress": each.progress})
+				}
+			}
+			json.NewEncoder(w).Encode(list)
+			return
+		}
 		if t == nil {
 			w.Write([]byte("[]"))
 			return
@@ -524,7 +538,8 @@ func (f *fakeQbit) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if t.started {
 			downloaded = 10 * mb
 		}
-		json.NewEncoder(w).Encode([]map[string]any{{"downloaded": downloaded, "progress": t.progress, "save_path": "/data/downloads", "download_path": ""}})
+		json.NewEncoder(w).Encode([]map[string]any{{"downloaded": downloaded, "progress": t.progress, "category": t.category,
+			"save_path": "/data/downloads", "download_path": ""}})
 	case "torrents/categories":
 		w.Write([]byte("{}"))
 	case "torrents/add":
@@ -538,7 +553,8 @@ func (f *fakeQbit) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// Names under ten bytes: "4:name9:named.mkv12:piece length...".
 		name := strings.Split(string(raw), "4:name")[1][2:]
 		name = name[:strings.Index(name, "12:piece")]
-		f.torrents[added] = &fakeTorrent{name: name}
+		f.torrents[added] = &fakeTorrent{name: name, category: "audio-source"}
+		f.added++
 	case "torrents/files":
 		json.NewEncoder(w).Encode([]map[string]any{{"name": "Release/" + t.name, "size": 10 * mb, "piece_range": []int{0, 9}}})
 	case "torrents/start":
@@ -562,6 +578,8 @@ func (f *fakeQbit) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		f.deleted = append(f.deleted, hash)
 	case "torrents/removeTags":
 		f.released = append(f.released, hash)
+	case "torrents/addTags":
+		f.kept = append(f.kept, hash)
 	}
 }
 
@@ -658,6 +676,98 @@ func TestJobProbesDownloadsAndAddsTheDub(t *testing.T) {
 	}
 	if !slices.Equal(qb.released, []string{multiHash}) || d.state.ChargedBytes != 0 {
 		t.Errorf("the download goes to qbit-manage: released %v, charged %d", qb.released, d.state.ChargedBytes)
+	}
+}
+
+func TestJobReusesASourceDownloadedBefore(t *testing.T) {
+	t.Parallel()
+	d := dubFixture(t)
+	d.state = dubState{Jobs: map[string]*jobState{}}
+	named, _ := torrentFile("named.mkv")
+	multi, multiHash := torrentFile("multi.mkv")
+	prowlarrServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("file") == "named" {
+			w.Write(named)
+		} else {
+			w.Write(multi)
+		}
+	}))
+	defer prowlarrServer.Close()
+	d.cfg.ProwlarrURL, d.cfg.ProwlarrKey = prowlarrServer.URL, "key"
+	d.indexers = fakeIndexers{sites: map[int]clients.Indexer{1: testIndexers[1]}, results: map[int][]clients.Release{1: {
+		testRelease("named", 2, withTitle("The Others 2001 Castellano"), withImdb(230600)),
+		testRelease("multi", 3, withTitle("The Others 2001 MULTi"), withImdb(230600)),
+	}}}
+	qb := &fakeQbit{torrents: map[string]*fakeTorrent{
+		multiHash: {name: "multi.mkv", title: "The Others 2001 MULTi.mkv", category: "audio-source", progress: 1},
+	}}
+	qbitServer := httptest.NewServer(qb)
+	defer qbitServer.Close()
+	d.cfg.QbitURL = qbitServer.URL
+	radarrServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`{"id": 11, "movieFile": {"path": "/data/films/A/a.mkv"}}`))
+	}))
+	defer radarrServer.Close()
+	d.cfg.RadarrURL = radarrServer.URL
+	d.probeHead = func(path string, size int64) *probeInfo {
+		s := probeStream{Index: 1, CodecType: "audio", CodecName: "ac3", Channels: 6}
+		s.Tags.Language = "spa"
+		return &probeInfo{Streams: []probeStream{s}}
+	}
+	var sources []string
+	d.runAddAudio = func(target, source, lang string) (string, int) {
+		sources = append(sources, source)
+		return "added a spa track", 0
+	}
+
+	d.state.Requests = []dubRequest{{MovieID: 11, Lang: "spa", Requested: 1}}
+	d.tick()
+	job := d.state.Jobs["11-spa"]
+	if job.Status != "done" || job.Downloads != 0 || len(job.Tried) != 1 || qb.added != 0 {
+		t.Fatalf("the downloaded source goes first and nothing is fetched: %+v, %d added", job, qb.added)
+	}
+	if !slices.Equal(sources, []string{filepath.Join(d.cfg.DataRoot, "downloads/Release/multi.mkv")}) {
+		t.Errorf("add-audio ran on %q", sources)
+	}
+	if !slices.Equal(qb.kept, []string{multiHash}) || !slices.Equal(qb.released, []string{multiHash}) {
+		t.Errorf("held while add-audio runs, then released: kept %v, released %v", qb.kept, qb.released)
+	}
+	if job.Probes[0].Outcome != "downloaded already, has Castellano" {
+		t.Errorf("probes %+v", job.Probes)
+	}
+}
+
+func TestLargestMKV(t *testing.T) {
+	t.Parallel()
+	file := func(name string, size int64) clients.QbitFile { return clients.QbitFile{Name: name, Size: size} }
+	cases := []struct {
+		name  string
+		files []clients.QbitFile
+		want  int
+	}{
+		{"the film", []clients.QbitFile{file("Sample/s.mkv", 30*mb), file("film.mkv", 9*gb), file("film.nfo", 1)}, 1},
+		{"packed, only the sample is .mkv", []clients.QbitFile{file("Sample/s.mkv", 30*mb), file("film.r00", 450*mb),
+			file("film.r01", 450*mb), file("film.rar", 450*mb)}, -1},
+		{"no .mkv", []clients.QbitFile{file("film.mp4", gb)}, -1},
+	}
+	for _, c := range cases {
+		if got := largestMKV(c.files); got != c.want {
+			t.Errorf("%s: %d, want %d", c.name, got, c.want)
+		}
+	}
+}
+
+func TestSettleCountsWhatWasFetched(t *testing.T) {
+	t.Parallel()
+	counted := torrentRef{candidate: candidate{Size: 9 * gb, Private: true}}
+	reused := counted
+	reused.Reused = true
+	free := torrentRef{candidate: candidate{Size: 9 * gb, Private: true, Freeleech: true}}
+	if got := counted.settle(30 * mb); got != 30*mb-9*gb {
+		t.Errorf("counted: %d", got)
+	}
+	if reused.settle(30*mb) != 0 || free.settle(30*mb) != 0 {
+		t.Error("a reused or freeleech source charges nothing")
 	}
 }
 

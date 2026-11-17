@@ -50,6 +50,8 @@ MIN_GOOD_WINDOWS = 0.6
 MAX_RESIDUAL_SECONDS = 0.045
 SAME_SPEED = 2e-5
 TARGET_CODEC = "ac3"
+# A PAL speed-up makes a source 4% shorter; a sample or a cut film is far shorter.
+MIN_SOURCE_SHARE = 0.9
 # Shared with services/audio-manager, which lists and searches the same languages.
 LANGUAGES = {code: {**lang, "aliases": set(lang["aliases"]), "words": set(lang["words"])}
              for code, lang in json.loads(Path(__file__).with_name("languages.json").read_text())["languages"].items()}
@@ -228,13 +230,15 @@ def plan_track(dub, mapping):
     return copy, b
 
 
-def build_track(source, dub, mapping, workdir):
-    """The dub as AC3 on the target's timeline, plus the delay mkvmerge must still apply in ms."""
+def build_track(source, dub, mapping, workdir, length):
+    """The dub as AC3 on the target's timeline, cut at the target's length, plus the delay mkvmerge must
+    still apply in ms."""
     copy, b = plan_track(dub, mapping)
     out = Path(workdir) / "dub.mka"
     head = ["ffmpeg", "-v", "error", "-nostdin", "-i", str(source), "-map", f"0:{dub['index']}"]
     if copy:
-        subprocess.run(head + ["-c", "copy", "-avoid_negative_ts", "make_zero", str(out)], check=True)
+        subprocess.run(head + ["-t", f"{length + b:.3f}", "-c", "copy", "-avoid_negative_ts", "make_zero", str(out)],
+                       check=True)
         return out, round(-b * 1000), "copied"
     a = mapping["a"]
     rate = int(dub.get("sample_rate") or 48000)
@@ -247,7 +251,7 @@ def build_track(source, dub, mapping, workdir):
     elif offset < 0:
         filters.append(f"adelay={-offset * 1000:.1f}:all=1")
     channels = min(int(dub.get("channels") or 6), compat.AC3_MAX_CHANNELS)
-    subprocess.run(head + ["-af", ",".join(filters), "-c:a", TARGET_CODEC, "-b:a", compat.AC3_BITRATE,
+    subprocess.run(head + ["-af", ",".join(filters), "-t", f"{length:.3f}", "-c:a", TARGET_CODEC, "-b:a", compat.AC3_BITRATE,
                            "-ac", str(channels), str(out)], check=True, timeout=compat.FFMPEG_TIMEOUT)
     return out, 0, f"converted {dub.get('codec_name')} to AC3"
 
@@ -327,6 +331,10 @@ def main():
     aliases = LANGUAGE_ALIASES.get(args.lang, {args.lang})
     if any(language(s) in aliases for s in compat.audio_streams(target_info)):
         raise SystemExit(f"{target.name} already has a {args.lang} track")
+    target_length, source_length = float(target_info["format"]["duration"]), float(source_info["format"]["duration"])
+    if source_length < MIN_SOURCE_SHARE * target_length:
+        raise SystemExit(f"{source.name}: {source_length / 60:.0f} min against the target's "
+                         f"{target_length / 60:.0f}; a sample or another cut")
     dub = pick_dub(source_info, args.lang, args.track)
     if not dub:
         raise SystemExit(f"{source.name}: no {args.lang} track; name one with --track")
@@ -359,7 +367,7 @@ def main():
         tmp.unlink(missing_ok=True)
         try:
             with tempfile.TemporaryDirectory(dir=target.parent, prefix=".add-audio.") as workdir:
-                track, sync_ms, how = build_track(source, dub, mapping, workdir)
+                track, sync_ms, how = build_track(source, dub, mapping, workdir, target_length)
                 mux(target, track, sync_ms, args.lang, args.default, tmp)
             failure = verify(target_info, tmp, source, dub, mapping)
         except BaseException:
