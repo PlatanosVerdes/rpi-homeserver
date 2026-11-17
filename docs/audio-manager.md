@@ -62,7 +62,7 @@ converting anything. The page runs it on start, every `SCAN_INTERVAL` (6 h by de
 each conversion, keeps the result in `appdata/audio-manager/library.json`, and leaves out files the
 ledger already lists. Those files can be converted from there too, ahead of the night run.
 - **The cost** is 640 kb/s times the duration for each added track, about 576 MB for two hours. On top of that, the old
-  file stays beside the new one as `.original` until someone deletes it.
+  file stays beside the new one as `.original` until someone deletes it from the page.
 - **The time** is the duration divided by how fast conversions run. That starts at 20× realtime,
   measured on this Pi, and becomes the mean of the last five real conversions as they happen,
   the nightly ones included.
@@ -140,7 +140,7 @@ the first one fixed. What it does **not** do:
   page can, after a confirmation; [below](#a-file-that-is-still-seeding) is what that costs.
 
 Adding a codec can put a lot of the library in the queue at once, and every conversion keeps the
-old file as `.original` beside the new one, so the disk pays for both until those are pruned.
+old file as `.original` beside the new one, so the disk pays for both until those are deleted.
 `RUN_SECONDS` spreads that out: the 05:00 pass converts one file after another and starts no new
 one after 07:00, and each file still needs 40 GiB free after its copy.
 
@@ -155,6 +155,20 @@ torrent's link count stays at 2. qbit-manage sees nothing change and the torrent
 it costs is disk: both copies stay until the torrent is removed and `.original` deleted. Deleting
 `.original` while the torrent still seeds frees nothing and drops its count to 1, which qbit-manage
 reads as "the library let go" (`noHL`).
+
+## Deleting the `.original` files
+
+Both views share an **Originals kept** section, folded, and hidden while there are none: every
+`.original` (and `.original.2` and up) under `films/` and `series/`, whichever side made it, with
+its size, date and the total they hold. **Delete** removes one after a confirmation, usually once
+the new file has played on the TV. The library is walked for them at most once a minute, and again
+right after a delete.
+
+The page deletes only a regular file named like an `.original`, inside `films/` or `series/` once
+symlinks are resolved, with its live file beside it. One whose live file is gone is listed in red
+without a button: it may be the only copy left, so it is deleted by hand or not at all. One still
+seeding ([above](#a-file-that-is-still-seeding)) is marked so, and deleting it asks again, since it
+frees nothing until the torrent is removed.
 
 ## One conversion at a time
 
@@ -177,7 +191,8 @@ file does not fit.
 
 ## What it does not do
 
-- **Delete `.original` files.** Pruning those is a decision, not a timer, here as in the nightly pass.
+- **Delete `.original` files on its own.** Pruning those is a decision, not a timer, here as in the
+  nightly pass: the page deletes one only when it is pressed ([above](#deleting-the-original-files)).
 - **Convert anything nobody listed as fixable.** The page only queues files whose ledger entry says
   `actionable` or that the last library scan found, and only by their path inside the library.
 - **Forget.** An entry stays in the ledger until a hundred newer ones push it out. A file already
