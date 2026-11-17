@@ -328,8 +328,7 @@ def main():
     target_info, source_info = compat.probe(target), compat.probe(source)
     if not target_info or not source_info:
         raise SystemExit("ffprobe cannot read one of the files")
-    aliases = LANGUAGE_ALIASES.get(args.lang, {args.lang})
-    if any(language(s) in aliases for s in compat.audio_streams(target_info)):
+    if pick_dub(target_info, args.lang):
         raise SystemExit(f"{target.name} already has a {args.lang} track")
     target_length, source_length = float(target_info["format"]["duration"]), float(source_info["format"]["duration"])
     if source_length < MIN_SOURCE_SHARE * target_length:

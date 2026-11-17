@@ -334,6 +334,51 @@ function historyRow(h) {
   return row;
 }
 
+function deleteOriginal(o, button) {
+  var name = o.path.split("/").pop();
+  var seeding = o.links > 1;
+  var ok = confirm(seeding ? name + " is still seeding (hardlinked to the torrent).\n\n" +
+    "Deleting it frees nothing until the torrent is removed, and qbit-manage then reads the torrent as no longer in the library.\n\n" +
+    "Delete it anyway?" : "Delete " + name + "?\n\nThis frees " + human(o.size) + ". The file beside it stays. There is no undo.");
+  if (!ok) return;
+  var data = { path: o.path };
+  if (seeding) data.allow_hardlinked = "1";
+  button.disabled = true;
+  post("/api/originals/delete", data).then(function (d) {
+    if (d.error) { say(d.error); button.disabled = false; return; }
+    say("");
+    refresh();
+  });
+}
+
+function originalRow(o) {
+  var state = !o.live ? ["bad", "No file beside it"] : o.links > 1 ? ["warn", "Still seeding"] : ["idle", ""];
+  var row = el("div", "row" + (o.live ? "" : " off"));
+  row.appendChild(el("span", "dot " + state[0]));
+  row.appendChild(el("div", "title", o.path.split("/").pop())).title = o.path;
+  var meta = el("div", "meta");
+  row.appendChild(meta);
+  meta.appendChild(el("div", "c", state[1]));
+  meta.appendChild(el("div", "c r", human(o.size)));
+  meta.appendChild(el("div", "c r", when(o.time)));
+  if (o.live) {
+    var del = el("button", "", "Delete");
+    del.onclick = function () { deleteOriginal(o, del); };
+    row.appendChild(del);
+  }
+  return row;
+}
+
+function renderOriginals(list) {
+  list = (list || []).slice().sort(function (a, b) { return b.time - a.time; });
+  var total = list.reduce(function (n, o) { return n + o.size; }, 0);
+  document.getElementById("originals-group").hidden = !list.length;
+  document.getElementById("originals-count").textContent = list.length ? plural(list.length, "file", "files") + ", " + human(total) : "";
+  var box = document.getElementById("originals");
+  box.textContent = "";
+  list.forEach(function (o) { box.appendChild(originalRow(o)); });
+}
+
 var DUB_STATUS = { requested: "Requested", cancelling: "Cancelling", queued: "Waiting",
   trying: "Searching", probing: "Checking the dub", downloading: "Downloading", done: "Added",
   failed: "Failed", cancelled: "Cancelled" };
@@ -816,6 +861,9 @@ function sweepLine(sweep) {
 function route() {
   var view = location.hash === "#reencode" ? "reencode" : "add";
   ["add", "reencode"].forEach(function (name) { document.getElementById("view-" + name).hidden = name !== view; });
+  // Both views make .original files, so the one list of them moves to whichever is shown.
+  var shown = document.getElementById("view-" + view);
+  shown.insertBefore(document.getElementById("originals-group"), shown.querySelector("footer"));
   Array.prototype.forEach.call(document.querySelectorAll(".tabs a"), function (a) {
     if (a.dataset.view === view) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
   });
@@ -844,6 +892,7 @@ function refresh() {
     facts.appendChild(el("span", "", d.speed.toFixed(0) + "× realtime"));
 
     renderReencode(d);
+    renderOriginals(d.originals);
 
     dub = d.add_audio || {};
     renderDub();

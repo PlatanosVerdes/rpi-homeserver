@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"audio-manager/internal/httpx"
+	"audio-manager/internal/libraries"
 )
 
 // audio-compat's MIN_FREE_BYTES: what must be left after a copy of the file.
@@ -197,7 +198,7 @@ func (s *Server) State() map[string]any {
 		"holder":  holder,
 		"history": recent,
 		"speed":   speed,
-		"free":    freeBytes(filepath.Join(s.dataRoot, libraries[0])),
+		"free":    freeBytes(filepath.Join(s.dataRoot, libraries.Folders[0])),
 		"minFree": minFreeBytes,
 	}
 	if ledgerErr != nil {

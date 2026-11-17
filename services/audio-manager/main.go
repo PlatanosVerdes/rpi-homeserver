@@ -16,6 +16,7 @@ import (
 
 	"audio-manager/internal/dubs"
 	"audio-manager/internal/httpx"
+	"audio-manager/internal/originals"
 	"audio-manager/internal/reencode"
 	"audio-manager/web"
 )
@@ -64,6 +65,10 @@ func loadConfig() (config, error) {
 	if err != nil {
 		return config{}, err
 	}
+	maxLoad, err := strconv.ParseFloat(env("ADD_AUDIO_MAX_LOAD", "4"), 64)
+	if err != nil || maxLoad < 0 {
+		return config{}, fmt.Errorf("ADD_AUDIO_MAX_LOAD %q is not a load average", os.Getenv("ADD_AUDIO_MAX_LOAD"))
+	}
 	budgetGB, err := strconv.ParseFloat(env("DUB_BUDGET_GB", "100"), 64)
 	if err != nil || budgetGB < 0 {
 		return config{}, fmt.Errorf("DUB_BUDGET_GB %q is not a number of GB", os.Getenv("DUB_BUDGET_GB"))
@@ -97,6 +102,7 @@ func loadConfig() (config, error) {
 			SweepEvery:    sweepEvery,
 			SweepRefresh:  sweepRefresh,
 			SweepLanguage: env("SWEEP_LANGUAGE", "spa"),
+			MaxLoad:       maxLoad,
 		},
 	}
 	for name, value := range map[string]string{"RADARR_URL": cfg.dubs.RadarrURL, "PROWLARR_URL": cfg.dubs.ProwlarrURL, "QBIT_URL": cfg.dubs.QbitURL} {
@@ -120,11 +126,13 @@ func main() {
 	if err != nil {
 		log.Fatalf("audio-manager: %v", err)
 	}
+	kept := originals.New(cfg.reencode.DataRoot)
 
 	http.Handle("/", web.Handler())
 	http.HandleFunc("/api/state", func(w http.ResponseWriter, r *http.Request) {
 		payload := recodes.State()
 		payload["add_audio"] = adds.Payload(r.URL.Query().Get("lang"))
+		payload["originals"] = kept.List()
 		httpx.WriteJSON(w, http.StatusOK, payload)
 	})
 	http.HandleFunc("/api/play", recodes.ServePlay)
@@ -133,6 +141,7 @@ func main() {
 	http.HandleFunc("/api/add-audio/cancel", adds.ServeCancel)
 	http.HandleFunc("/api/add-audio/check", adds.ServeCheck)
 	http.HandleFunc("/api/add-audio/checks", adds.ServeChecks)
+	http.HandleFunc("/api/originals/delete", kept.ServeDelete)
 
 	recodes.Start()
 	adds.Start()

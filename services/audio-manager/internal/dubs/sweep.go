@@ -101,8 +101,9 @@ func (d *Service) sweepStatus(films []dubFilm, done map[int64]filmSearch, lastSw
 }
 
 // toSweep is the films still worth searching for the sweep's language: not those that have it, nor
-// those with a request for it that is done or under way, nor those with a release found for it already,
-// since Add searches afresh. A film whose request failed stays, as a new release may carry it.
+// those with a request for it under way, nor those with a release found for it already, since Add
+// searches afresh. A film whose request failed stays, as a new release may carry it, and so does one
+// whose request was done but whose file lacks it again: Radarr replaced it with an upgrade.
 func (d *Service) toSweep(films []dubFilm, done map[int64]filmSearch) []dubFilm {
 	lang := d.langs.byCode[d.cfg.SweepLanguage]
 	rules, rulesErr := loadTrackerRules(d.cfg.RulesFile)
@@ -119,8 +120,8 @@ func (d *Service) toSweep(films []dubFilm, done map[int64]filmSearch) []dubFilm 
 		status, asked := requested[f.ID]
 		switch {
 		case !slices.Contains(f.Missing, d.cfg.SweepLanguage):
-		case asked && status != "failed" && status != "cancelled":
-		case status != "failed" && rulesErr == nil && done[f.ID].Time > 0 && availabilityOf(done[f.ID], lang, rules).available():
+		case asked && !isFinished(status):
+		case status != "failed" && status != "done" && rulesErr == nil && done[f.ID].Time > 0 && availabilityOf(done[f.ID], lang, rules).available():
 		default:
 			out = append(out, f)
 		}

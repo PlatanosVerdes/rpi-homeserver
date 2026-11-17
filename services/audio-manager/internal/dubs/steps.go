@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"net/url"
 	"os"
 	"os/exec"
@@ -239,15 +240,26 @@ func (p *pass) reuse(job *jobState, next candidate, q *clients.Qbit, existing *c
 		return nil
 	}
 	path := filepath.Join(p.d.hostPath(existing.SavePath), filepath.FromSlash(files[video].Name))
-	dub := pickDub(p.d.probeHead(path, min(files[video].Size, probeBudget)), p.d.langs.byCode[job.Lang])
+	lang := p.d.langs.byCode[job.Lang]
+	info := p.d.probeHead(path, min(files[video].Size, probeBudget))
+	dub := pickDub(info, lang)
 	if dub == nil {
 		p.rejected(job, next, 0, "downloaded already, without the language")
+		return nil
+	}
+	if film := p.d.listedFilm(job.MovieID); film.File != nil && !sameCut(info.length(), film.File.Length) {
+		p.rejected(job, next, 0, "downloaded already, another cut")
+		return nil
+	}
+	if !job.Unconfirmed && !confirmed(dub, next, lang) {
+		job.Doubtful = append(job.Doubtful, next)
+		p.rejected(job, next, 0, "downloaded already, "+lang.Name+" not confirmed, kept for last")
 		return nil
 	}
 	if err := q.Keep(p.ctx, existing.Hash); err != nil {
 		return err
 	}
-	p.probed(job, next, 0, "downloaded already, has "+p.d.langs.byCode[job.Lang].Name)
+	p.probed(job, next, 0, "downloaded already, has "+lang.Name)
 	job.Current = &torrentRef{candidate: next, Hash: existing.Hash, File: video, Stage: "downloading",
 		Since: time.Now().Unix(), Dub: dub.describe(), Reused: true}
 	job.set("downloading", next.Title+", downloaded already")
@@ -255,7 +267,11 @@ func (p *pass) reuse(job *jobState, next candidate, q *clients.Qbit, existing *c
 }
 
 func (p *pass) tryNext(job *jobState) error {
-	if len(job.Tried) >= maxProbes || len(job.Candidates) == 0 {
+	if (len(job.Tried) >= maxProbes || len(job.Candidates) == 0) && len(job.Doubtful) > 0 && !job.Unconfirmed {
+		job.Candidates, job.Doubtful, job.Unconfirmed = job.Doubtful, nil, true
+		p.say(job, fmt.Sprintf("nothing confirmed; trying the %d releases whose track may be another variant", len(job.Candidates)))
+	}
+	if (len(job.Tried) >= maxProbes && !job.Unconfirmed) || len(job.Candidates) == 0 {
 		job.set("failed", fmt.Sprintf("none of the %d releases probed carried it", len(job.Tried)))
 		p.say(job, job.Reason)
 		return nil
@@ -462,6 +478,22 @@ func (p *pass) checkProbe(job *jobState) (int64, error) {
 		p.rejected(job, current.candidate, downloaded, fmt.Sprintf("no %s: %s", lang.Name, strings.Join(found, ", ")))
 		return 0, nil
 	}
+	if film := p.d.listedFilm(job.MovieID); film.File != nil && !sameCut(info.length(), film.File.Length) {
+		if err := p.dropTorrent(job); err != nil {
+			return 0, err
+		}
+		p.rejected(job, current.candidate, downloaded, fmt.Sprintf("another cut: %.0f min against the film's %.0f",
+			info.length()/60, film.File.Length/60))
+		return 0, nil
+	}
+	if !job.Unconfirmed && !confirmed(dub, current.candidate, lang) {
+		if err := p.dropTorrent(job); err != nil {
+			return 0, err
+		}
+		job.Doubtful = append(job.Doubtful, current.candidate)
+		p.rejected(job, current.candidate, downloaded, fmt.Sprintf("%s not confirmed: %s, kept for last", lang.Name, dub.describe()))
+		return 0, nil
+	}
 	for _, step := range []func() error{
 		func() error {
 			return q.Post(p.ctx, "torrents/toggleSequentialDownload", url.Values{"hashes": {current.Hash}})
@@ -548,6 +580,10 @@ func (p *pass) checkDownload(job *jobState) (int64, error) {
 		p.say(job, job.Reason)
 		return settled, nil
 	}
+	if load, err := p.d.loadAverage(); err == nil && p.d.cfg.MaxLoad > 0 && load > p.d.cfg.MaxLoad {
+		job.Reason = fmt.Sprintf("downloaded; add-audio waits for the raspi to calm down (load %.1f)", load)
+		return 0, nil
+	}
 	last, code := p.d.runAddAudio(target, source, job.Lang)
 	if strings.HasPrefix(last, "busy:") {
 		log.Printf("audio-manager: %s: %s, next pass", job.Title, last)
@@ -558,7 +594,11 @@ func (p *pass) checkDownload(job *jobState) (int64, error) {
 	}
 	if code == 0 || strings.Contains(last, "already has a") {
 		job.set("done", last)
-		p.say(job, "done: "+last)
+		if job.Unconfirmed {
+			job.Reason += "; " + p.d.langs.byCode[job.Lang].Name + " not confirmed by its track title, check it"
+		}
+		p.say(job, "done: "+job.Reason)
+		poke(p.d.refresh)
 	} else {
 		p.nextOrFail(job, "add-audio refused it: "+last)
 	}
@@ -703,6 +743,18 @@ func bencodeEnd(data []byte, i int) (int, error) {
 // probeInfo is ffprobe's view of a file.
 type probeInfo struct {
 	Streams []probeStream `json:"streams"`
+	Format  struct {
+		Duration string `json:"duration"`
+	} `json:"format"`
+}
+
+// length is the file's duration in seconds, 0 when the header does not say.
+func (info *probeInfo) length() float64 {
+	if info == nil {
+		return 0
+	}
+	seconds, _ := strconv.ParseFloat(info.Format.Duration, 64)
+	return seconds
 }
 
 type probeStream struct {
@@ -817,4 +869,57 @@ func (d *Service) addAudioScript(target, source, lang string) (string, int) {
 		return fmt.Sprintf("exit %d", code), code
 	}
 	return script.LastLine(output), code
+}
+
+// ffprobeFile reads the track list of a whole file, which ffprobe takes from its head.
+func ffprobeFile(path string) *probeInfo {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	out, err := exec.CommandContext(ctx, "ffprobe", "-v", "error", "-print_format", "json", "-show_format", "-show_streams", path).Output()
+	if err != nil {
+		log.Printf("audio-manager: ffprobe %s: %v", path, err)
+		return nil
+	}
+	var info probeInfo
+	if json.Unmarshal(out, &info) != nil {
+		return nil
+	}
+	return &info
+}
+
+// hostLoad is the 5-minute load average, which a container reads as the host's.
+func hostLoad() (float64, error) {
+	raw, err := os.ReadFile("/proc/loadavg")
+	if err != nil {
+		return 0, err
+	}
+	fields := strings.Fields(string(raw))
+	if len(fields) < 2 {
+		return 0, fmt.Errorf("/proc/loadavg: %q", raw)
+	}
+	return strconv.ParseFloat(fields[1], 64)
+}
+
+// speedRatios are the frame-rate changes between releases add-audio can undo: PAL speed-up and the like.
+var speedRatios = []float64{1, 23.976 / 25, 25 / 23.976, 24.0 / 25, 25.0 / 24, 23.976 / 24, 24 / 23.976}
+
+// maxLengthGap is how far a source may run from the film, at any of those speeds, before it is taken
+// for another cut: longer credits stay well under it, an extended edition does not.
+const maxLengthGap = 5 * 60
+
+// sameCut says the source could be the film's cut, and is true when either length is unknown.
+func sameCut(source, film float64) bool {
+	if source <= 0 || film <= 0 {
+		return true
+	}
+	return slices.ContainsFunc(speedRatios, func(r float64) bool { return math.Abs(source-film*r) <= maxLengthGap })
+}
+
+// confirmed says the dub is surely this language and not a variant it rejects (Latino for Castellano):
+// its track title or the release title says so, or the release comes from a site in that language.
+func confirmed(dub *probeStream, release candidate, lang *language) bool {
+	if lang.rejectedTitle == nil || release.OwnSite {
+		return true
+	}
+	return lang.preferred != nil && (lang.preferred.MatchString(dub.Tags.Title) || lang.preferred.MatchString(release.Title))
 }
