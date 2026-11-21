@@ -45,6 +45,11 @@ scrape_configs:
     static_configs:
       - targets: ['tailscale-metrics:9736']
 
+  # Polls smartctl in the background once a minute, so a scrape never waits on a disk.
+  - job_name: 'disk-health'
+    static_configs:
+      - targets: ['disk-health:9112']
+
   - job_name: 'qbittorrent'
     static_configs:
       - targets: ['qbittorrent-exporter:17871']

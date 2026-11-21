@@ -33,6 +33,7 @@ and the everyday commands) is in [docs/overview.md](docs/overview.md).
 | | [tailscale.md](docs/tailscale.md) | Exit node, subnet routes, Pi-hole as tailnet DNS, guests |
 | | [plex-remote-access.md](docs/plex-remote-access.md) | Why Plex counts as local from outside, and how to keep it so |
 | **Watch it** | [alerting.md](docs/alerting.md) | Metrics, dashboards, alert rules, Telegram, the dead man's switch |
+| | [disk-health.md](docs/disk-health.md) | SMART and spin state of the disks, and why monitoring never wakes one |
 | | [logging.md](docs/logging.md) | VictoriaLogs and Vector, LogsQL |
 | **Media** | [media-policy.md](docs/media-policy.md) | Playback targets, formats, scores, qBittorrent limits |
 | | [lifecycle.md](docs/lifecycle.md) | One torrent from indexer to recycle bin, Maintainerr, orphans |

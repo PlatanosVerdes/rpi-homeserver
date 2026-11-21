@@ -1,0 +1,6 @@
+# Only what the Dockerfile copies: on the Pi this directory can also hold a local binary or a
+# stray .env, and neither belongs in an image.
+*
+!go.mod
+!go.sum
+!*.go
