@@ -350,6 +350,29 @@ services:
     networks:
       - media-network
 
+  # --- DISK HEALTH (SMART and spin state of every sd* disk) ---
+  # Not privileged: smartctl needs raw SCSI commands (SYS_RAWIO) on the sd* block devices (major 8)
+  # and nothing else. /dev goes in under another path because mounting it over /dev hides the
+  # container's own device nodes. See docs/disk-health.md.
+  disk-health:
+    image: ghcr.io/platanosverdes/rpi-homeserver-disk-health:${DISK_HEALTH_IMAGE_TAG}
+    build: ./services/disk-health
+    container_name: disk-health
+    restart: unless-stopped
+    mem_limit: 32m
+    memswap_limit: 32m
+    profiles: [disk-health, moni, all]
+    cap_add:
+      - SYS_RAWIO
+    device_cgroup_rules:
+      - 'b 8:* rm'
+    volumes:
+      - /dev:/host-dev:ro
+    environment:
+      - TZ=${TZ}
+    networks:
+      - media-network
+
   # --- VICTORIALOGS (Log storage) ---
   victorialogs:
     image: victoriametrics/victoria-logs:${VICTORIALOGS_VERSION}

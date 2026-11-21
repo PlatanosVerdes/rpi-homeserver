@@ -20,7 +20,7 @@ Every service has a profile of its own name, plus a group, plus `all`:
 | Group | Services |
 | :--- | :--- |
 | `essential` | caddy, homepage, pihole, speedtest |
-| `moni` | prometheus, grafana, pushgateway, node-exporter, cadvisor, blackbox-exporter, pi-metrics, qbittorrent-exporter, pihole-exporter, tailscale-metrics, victorialogs, vector, speedtest, smokeping-prober |
+| `moni` | prometheus, grafana, pushgateway, node-exporter, cadvisor, blackbox-exporter, pi-metrics, disk-health, qbittorrent-exporter, pihole-exporter, tailscale-metrics, victorialogs, vector, speedtest, smokeping-prober |
 | `acestream` | jellyfin, gluetun, aceserve, kubo, bifrost, farnsworth, baird, plus prometheus, grafana, pushgateway |
 | `media` | plex, seerr, bazarr, maintainerr, tautulli, watch-next, subtitle-links, audio-manager, prowlarr, radarr, sonarr, qbittorrent, flaresolverr, unpackerr, qbit-manage, autobrr, tracker-control, cross-seed, torrent-drop |
 | `vpn` | sleipnir, docker-socket-proxy, gluetun-test, huginn |

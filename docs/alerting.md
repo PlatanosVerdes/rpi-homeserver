@@ -19,6 +19,8 @@ left behind kept serving frozen values as if they were live.
   since one media pass takes ~7 s and a scrape cannot wait. `up` says the process lives,
   `pi_metrics_last_success_timestamp_seconds` says the data is fresh: two failures, two alerts. Its
   `playback` collector runs every 60 s, so a re-encode is seen while it is happening.
+- **disk-health** reads SMART and the spin state of every `sd*` disk once a minute without ever
+  waking one ([disk-health.md](disk-health.md)).
 - **blackbox-exporter** probes every container with a `prometheus.probe` label from the inside, and
   every `prometheus.probe.access` label from the internet's side ([access.md](access.md)). No scrape
   job to edit for a new service ([add-service.md](add-service.md)).
