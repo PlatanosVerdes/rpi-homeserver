@@ -344,7 +344,7 @@ services:
     networks:
       - media-network
 
-  # --- audio-manager: the files a client had its audio re-encoded on, and a button to fix one ---
+  # --- audio-manager: re-encoded files to fix, and dubs to add on request ---
   # pi-metrics works out the plan, scripts/sync/audio-compat.py --file does the conversion; this
   # lists the first and runs the second. Tailnet only, like every page Caddy serves without Access.
   audio-manager:
@@ -361,9 +361,10 @@ services:
     labels:
       prometheus.probe: "http://audio-manager:8088/"
     restart: unless-stopped
-    # ffmpeg holds a few MB per stream for a remux; the AC3 encode is the only real work.
-    mem_limit: 256m
-    memswap_limit: 256m
+    # add-audio.py runs in here: decoding a film twice and writing a 10 GB copy, page cache included,
+    # pushed every other service into swap when it ran uncapped. 1 GB is the cap it had on the host.
+    mem_limit: 1g
+    memswap_limit: 1g
     profiles: [audio-manager, media, all]
     # The owner of every library file, so a converted file and its .original keep it.
     user: "${PUID}:${PGID}"
@@ -374,11 +375,28 @@ services:
       - DATA_ROOT=/mnt/data
       - AUDIO_RECODES=/ledger/audio-recodes.json
       - AUDIO_MANAGER_STATE=/state
+      # Add audio: Radarr lists the films, Prowlarr searches, qBittorrent probes and downloads.
+      - RADARR_URL=http://radarr:7878
+      - RADARR_API_KEY=${RADARR_API_KEY}
+      - PROWLARR_URL=http://prowlarr:9696
+      - PROWLARR_API_KEY=${PROWLARR_API_KEY}
+      - QBIT_URL=http://qbittorrent:${QBIT_WEBUI_PORT:-8080}
+      - QBIT_USER=${QBIT_USER}
+      - QBIT_PASSWORD=${QBIT_PASSWORD}
+      - TRACKER_RULES=/trackers/rules.json
+      - DUB_BUDGET_GB=${DUB_BUDGET_GB:-100}
+      - SWEEP_EVERY=${SWEEP_EVERY:-1m}
+      - SWEEP_REFRESH=${SWEEP_REFRESH:-336h}
+      - SWEEP_LANGUAGE=${SWEEP_LANGUAGE:-spa}
+      - ADD_AUDIO_MAX_LOAD=${ADD_AUDIO_MAX_LOAD:-4}
+      - TELEGRAM_ALERT_BOT_TOKEN=${TELEGRAM_ALERT_BOT_TOKEN:-}
+      - TELEGRAM_ALERT_CHAT_ID=${TELEGRAM_ALERT_CHAT_ID:-}
     volumes:
-      # Read-write: a conversion writes the new file beside the old one and renames both. Only the
-      # two libraries, so downloads and everything else on the disk stay out of its reach.
+      # Read-write: a conversion or a dub writes the new file beside the old one and renames both.
       - ${DATA_ROOT}/films:/mnt/data/films
       - ${DATA_ROOT}/series:/mnt/data/series
+      # Read-only: a probe reads the head of a partial download, add-audio the finished source.
+      - ${DATA_ROOT}/downloads:/mnt/data/downloads:ro
       # pi-metrics' ledger with each file's plan, read-only.
       - ${APP_CONFIG_PATH}/pi-metrics:/ledger:ro
       # The queue, the shared lock and history.jsonl. The host's audio-compat.py uses the same
@@ -387,6 +405,8 @@ services:
       # The directory and not the file: git replaces the script on a pull, and a single-file bind
       # mount would keep the old inode. Mounted, not copied, so a script change needs no rebuild.
       - ./scripts/sync:/scripts:ro
+      # Which private sites a probe may touch: their hit-and-run rules.
+      - ./config/trackers:/trackers:ro
     networks:
       - media-network
 

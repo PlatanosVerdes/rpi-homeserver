@@ -1,4 +1,4 @@
-package main
+package reencode
 
 import (
 	"encoding/json"
@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"slices"
 	"time"
+
+	"audio-manager/internal/store"
 )
 
 // The library scan lists the files the nightly pass would convert before any client has played
@@ -28,9 +30,9 @@ type target struct {
 	MaxChannels int    `json:"max_channels"`
 }
 
-func (s *server) scanFile() string { return filepath.Join(s.stateDir, "library.json") }
+func (s *Server) scanFile() string { return filepath.Join(s.stateDir, "library.json") }
 
-func (s *server) loadScan() {
+func (s *Server) loadScan() {
 	raw, err := os.ReadFile(s.scanFile())
 	if err != nil {
 		return
@@ -44,7 +46,7 @@ func (s *server) loadScan() {
 }
 
 // scanner rescans on start, every scanEvery, and after each conversion (rescan).
-func (s *server) scanner() {
+func (s *Server) scanner() {
 	timer := time.NewTimer(0)
 	for {
 		select {
@@ -57,7 +59,7 @@ func (s *server) scanner() {
 	}
 }
 
-func (s *server) scan() {
+func (s *Server) scan() {
 	out, err := exec.Command("nice", "-n", "10", s.python, s.script, "--scan").Output()
 	result := libraryScan{Time: time.Now().Unix()}
 	if err != nil {
@@ -77,19 +79,19 @@ func (s *server) scan() {
 	s.mu.Unlock()
 
 	if raw, err := json.Marshal(result); err == nil {
-		writeAtomic(s.scanFile(), raw)
+		store.WriteAtomic(s.scanFile(), raw)
 	}
 }
 
 // validTarget says whether the script takes this --target, going by its last scan.
-func (s *server) validTarget(name string) bool {
+func (s *Server) validTarget(name string) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	_, ok := s.library.Targets[name]
 	return ok
 }
 
-func (s *server) requestRescan() {
+func (s *Server) requestRescan() {
 	select {
 	case s.rescan <- struct{}{}:
 	default:
@@ -97,7 +99,7 @@ func (s *server) requestRescan() {
 }
 
 // libraryFiles is the last scan minus what the ledger already lists, so a file is shown once.
-func (s *server) libraryFiles(ledger []ledgerFile) (libraryScan, []ledgerFile) {
+func (s *Server) libraryFiles(ledger []ledgerFile) (libraryScan, []ledgerFile) {
 	s.mu.Lock()
 	last := s.library
 	s.mu.Unlock()

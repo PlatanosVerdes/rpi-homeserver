@@ -21,6 +21,7 @@ priority: decoding a film twice and writing a 10 GB copy once pushed every other
 
 import argparse
 import importlib.util
+import json
 import os
 import re
 import shutil
@@ -49,50 +50,11 @@ MIN_GOOD_WINDOWS = 0.6
 MAX_RESIDUAL_SECONDS = 0.045
 SAME_SPEED = 2e-5
 TARGET_CODEC = "ac3"
-# The languages a dub can be added in, and the only place to add one: ISO 639-2 code, the ISO 639-1 code
-# files also tag with, the name shown, and the words Radarr and release titles use for it.
-_LANGUAGES = [
-    ("spa", "es", "Castellano", "spanish español castellano cast esp"),
-    ("cat", "ca", "Català", "catalan català catala"),
-    ("eus", "eu", "Euskara", "basque euskara euskera"),
-    ("glg", "gl", "Galego", "galician galego gallego"),
-    ("eng", "en", "English", "english"),
-    ("fra", "fr", "Français", "french français francais vff"),
-    ("ita", "it", "Italiano", "italian italiano"),
-    ("deu", "de", "Deutsch", "german deutsch"),
-    ("por", "pt", "Português", "portuguese português portugues"),
-    ("nld", "nl", "Nederlands", "dutch nederlands"),
-    ("swe", "sv", "Svenska", "swedish svenska"),
-    ("nor", "no", "Norsk", "norwegian norsk"),
-    ("dan", "da", "Dansk", "danish dansk"),
-    ("fin", "fi", "Suomi", "finnish suomi"),
-    ("pol", "pl", "Polski", "polish polski"),
-    ("ces", "cs", "Čeština", "czech čeština"),
-    ("hun", "hu", "Magyar", "hungarian magyar"),
-    ("ell", "el", "Ελληνικά", "greek"),
-    ("tur", "tr", "Türkçe", "turkish türkçe"),
-    ("rus", "ru", "Русский", "russian"),
-    ("ukr", "uk", "Українська", "ukrainian"),
-    ("ara", "ar", "العربية", "arabic"),
-    ("hin", "hi", "हिन्दी", "hindi"),
-    ("jpn", "ja", "日本語", "japanese"),
-    ("kor", "ko", "한국어", "korean"),
-    ("zho", "zh", "中文", "chinese mandarin"),
-]
-# The bibliographic codes older files carry next to the ones above.
-_OLD_CODES = {"fra": "fre", "deu": "ger", "nld": "dut", "ces": "cze", "ell": "gre", "zho": "chi"}
-# Track titles of a variant that is not the one asked for.
-_VARIANTS = {"spa": r"latin|\blat\b|m[eé]x|neutr", "fra": r"qu[eé]bec|\bvfq\b|canad",
-             "por": r"brasil|brazil|\bpt-br\b"}
-LANGUAGES = {
-    code: {"name": name, "tag": short, "locale": short, "words": set(words.split()),
-           "aliases": {code, short} | ({_OLD_CODES[code]} if code in _OLD_CODES else set()),
-           **({"rejected": _VARIANTS[code]} if code in _VARIANTS else {})}
-    for code, short, name, words in _LANGUAGES
-}
-LANGUAGES["spa"].update(tag="es-ES", preferred=r"castellano|espa[nñ]a|\bcast\b|europe")
-LANGUAGES["spa"]["aliases"] |= {"esp", "es-es"}
-LANGUAGES["por"].update(tag="pt-PT")
+# A PAL speed-up makes a source 4% shorter; a sample or a cut film is far shorter.
+MIN_SOURCE_SHARE = 0.9
+# Shared with services/audio-manager, which lists and searches the same languages.
+LANGUAGES = {code: {**lang, "aliases": set(lang["aliases"]), "words": set(lang["words"])}
+             for code, lang in json.loads(Path(__file__).with_name("languages.json").read_text())["languages"].items()}
 LANGUAGE_ALIASES = {code: lang["aliases"] for code, lang in LANGUAGES.items()}
 LANGUAGE_TAGS = {code: lang["tag"] for code, lang in LANGUAGES.items()}
 TRACK_NAMES = {code: lang["name"] for code, lang in LANGUAGES.items()}
@@ -268,13 +230,15 @@ def plan_track(dub, mapping):
     return copy, b
 
 
-def build_track(source, dub, mapping, workdir):
-    """The dub as AC3 on the target's timeline, plus the delay mkvmerge must still apply in ms."""
+def build_track(source, dub, mapping, workdir, length):
+    """The dub as AC3 on the target's timeline, cut at the target's length, plus the delay mkvmerge must
+    still apply in ms."""
     copy, b = plan_track(dub, mapping)
     out = Path(workdir) / "dub.mka"
     head = ["ffmpeg", "-v", "error", "-nostdin", "-i", str(source), "-map", f"0:{dub['index']}"]
     if copy:
-        subprocess.run(head + ["-c", "copy", "-avoid_negative_ts", "make_zero", str(out)], check=True)
+        subprocess.run(head + ["-t", f"{length + b:.3f}", "-c", "copy", "-avoid_negative_ts", "make_zero", str(out)],
+                       check=True)
         return out, round(-b * 1000), "copied"
     a = mapping["a"]
     rate = int(dub.get("sample_rate") or 48000)
@@ -287,7 +251,7 @@ def build_track(source, dub, mapping, workdir):
     elif offset < 0:
         filters.append(f"adelay={-offset * 1000:.1f}:all=1")
     channels = min(int(dub.get("channels") or 6), compat.AC3_MAX_CHANNELS)
-    subprocess.run(head + ["-af", ",".join(filters), "-c:a", TARGET_CODEC, "-b:a", compat.AC3_BITRATE,
+    subprocess.run(head + ["-af", ",".join(filters), "-t", f"{length:.3f}", "-c:a", TARGET_CODEC, "-b:a", compat.AC3_BITRATE,
                            "-ac", str(channels), str(out)], check=True, timeout=compat.FFMPEG_TIMEOUT)
     return out, 0, f"converted {dub.get('codec_name')} to AC3"
 
@@ -364,9 +328,12 @@ def main():
     target_info, source_info = compat.probe(target), compat.probe(source)
     if not target_info or not source_info:
         raise SystemExit("ffprobe cannot read one of the files")
-    aliases = LANGUAGE_ALIASES.get(args.lang, {args.lang})
-    if any(language(s) in aliases for s in compat.audio_streams(target_info)):
+    if pick_dub(target_info, args.lang):
         raise SystemExit(f"{target.name} already has a {args.lang} track")
+    target_length, source_length = float(target_info["format"]["duration"]), float(source_info["format"]["duration"])
+    if source_length < MIN_SOURCE_SHARE * target_length:
+        raise SystemExit(f"{source.name}: {source_length / 60:.0f} min against the target's "
+                         f"{target_length / 60:.0f}; a sample or another cut")
     dub = pick_dub(source_info, args.lang, args.track)
     if not dub:
         raise SystemExit(f"{source.name}: no {args.lang} track; name one with --track")
@@ -399,7 +366,7 @@ def main():
         tmp.unlink(missing_ok=True)
         try:
             with tempfile.TemporaryDirectory(dir=target.parent, prefix=".add-audio.") as workdir:
-                track, sync_ms, how = build_track(source, dub, mapping, workdir)
+                track, sync_ms, how = build_track(source, dub, mapping, workdir, target_length)
                 mux(target, track, sync_ms, args.lang, args.default, tmp)
             failure = verify(target_info, tmp, source, dub, mapping)
         except BaseException:

@@ -1380,6 +1380,40 @@ groups:
               conditions:
                 - evaluator: { type: gt, params: [0] }
 
+      - uid: homelab-tracker-hnr-on-account
+        title: 'A hit and run on the account'
+        condition: C
+        # The stopped-clock alert only sees torrents still in the client; this is the site's own
+        # count, so it also catches one whose torrent was deleted. Fires at the first, not near the cap.
+        for: 0s
+        labels:
+          severity: critical
+        annotations:
+          summary: '{{ $labels.tracker }} shows a hit and run on the account'
+          description: >-
+            Find the torrent in the site's history or H&R page and seed it again, or ask the staff
+            before the count grows. Too many remove download rights (five on NOBS).
+        noDataState: OK
+        execErrState: KeepLast
+        data:
+          - refId: A
+            relativeTimeRange: { from: 3600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: 'tracker_hnr_count'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+
       - uid: homelab-tracker-stats-stale
         title: 'Tracker numbers not being read'
         condition: C

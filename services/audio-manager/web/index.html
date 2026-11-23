@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Audio manager</title>
+<link rel="icon" href="/icon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="page">
+  <div class="top">
+    <img src="/icon.svg" alt="">
+    <h1>Audio manager</h1>
+    <nav class="tabs" aria-label="Views">
+      <a href="#add" data-view="add">Add audio <span class="badge" id="badge-add"></span></a>
+      <a href="#reencode" data-view="reencode">Re-encode <span class="badge" id="badge-reencode"></span></a>
+    </nav>
+  </div>
+  <p id="msg"></p>
+
+  <section class="view" id="view-add">
+    <div class="group" id="dub-jobs-group" hidden>
+      <h2>Requests <span class="n" id="dub-count"></span></h2>
+      <div id="dub-jobs"></div>
+    </div>
+
+    <div class="group catalog">
+      <div class="toolbar">
+        <div class="combo" id="lang-combo">
+          <label class="sr" id="lang-label" for="lang-input">Language to add</label>
+          <span class="combo-prefix" aria-hidden="true">Add:</span>
+          <input id="lang-input" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false"
+                 aria-controls="lang-list" aria-describedby="lang-count" autocomplete="off" autocapitalize="off" spellcheck="false">
+          <span class="combo-count" id="lang-count"></span>
+          <span class="combo-caret" aria-hidden="true"></span>
+          <ul id="lang-list" role="listbox" aria-labelledby="lang-label" hidden></ul>
+        </div>
+        <input type="search" id="dub-filter" placeholder="Search films" aria-label="Search films" autocomplete="off">
+      </div>
+      <div class="toolnote">
+        <div class="seg" role="group" aria-label="Films to show">
+          <button type="button" id="show-all" aria-pressed="true">All</button>
+          <button type="button" id="show-available" aria-pressed="false" title="A release names the language, or comes from a site in it">Available <span class="n"></span></button>
+        </div>
+        <span id="dub-matches"></span>
+        <span class="when"><span id="dub-when"></span><span id="dub-sweep"></span></span>
+      </div>
+      <div id="dub-films"></div>
+    </div>
+
+    <footer>
+      Add searches every indexer for a release with that dub, one film at a time: it reads the first megabytes of
+      each candidate to see its tracks, downloads the first that has the language, and adds it to the film beside the
+      audio it already has. Cancel stops it at any point. In the background every film is searched once, one a minute,
+      and again after a week, which is what each row shows for the language; Search again asks the indexers
+      now. Neither downloads anything. The film's previous file is kept beside it as <code>.original</code> until it
+      is deleted from Originals kept.
+    </footer>
+  </section>
+
+  <section class="view" id="view-reencode" hidden>
+    <div class="facts" id="facts"></div>
+
+    <div class="group">
+      <h2>To convert <span class="n" id="count"></span><span class="when" id="library-when"></span></h2>
+      <div id="list"></div>
+    </div>
+
+    <div class="group quiet" id="nofix-group" hidden>
+      <h2>Nothing to fix in the file <span class="n" id="nofix-count"></span></h2>
+      <div id="nofix"></div>
+    </div>
+
+    <details class="group" id="history-group">
+      <summary>History <span class="n" id="history-count"></span></summary>
+      <div id="history"></div>
+    </details>
+
+    <details class="group" id="originals-group" hidden>
+      <summary>Originals kept <span class="n" id="originals-count"></span></summary>
+      <div id="originals"></div>
+    </details>
+
+    <footer>
+      Runs <code>audio-compat.py --file</code>, the same script as the 05:00 pass: an AC3 track goes first, every
+      other track stays, and the previous file is kept beside it as <code>.original</code>. One at a time; the
+      queue waits while the nightly pass works. To convert lists what a client had re-encoded and what the nightly
+      scan of the library would convert before any client plays it. Click a file for its details. Originals kept
+      lists every <code>.original</code>, to delete once the new file plays.
+    </footer>
+  </section>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>

@@ -1,285 +1,3 @@
-package main
-
-import (
-	_ "embed"
-	"log"
-	"net/http"
-)
-
-func render(w http.ResponseWriter) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if _, err := w.Write([]byte(pageHTML)); err != nil {
-		log.Printf("audio-manager: render failed: %v", err)
-	}
-}
-
-func icon(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "image/svg+xml")
-	w.Header().Set("Cache-Control", "public, max-age=86400")
-	w.Write([]byte(iconSVG))
-}
-
-// iOS ignores SVG icons on the home screen, so it gets this PNG of icon.svg, its background squared
-// because iOS rounds the corners itself.
-//
-//go:generate sh -c "echo 'svg > rect:first-of-type { rx: 0; ry: 0 }' | rsvg-convert --width 180 --height 180 --stylesheet /dev/stdin icon.svg -o apple-touch-icon.png"
-//go:embed apple-touch-icon.png
-var touchIcon []byte
-
-func appleTouchIcon(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "image/png")
-	w.Header().Set("Cache-Control", "public, max-age=86400")
-	w.Write(touchIcon)
-}
-
-// A waveform whose bars light up from left to right: the audio before and after the conversion.
-// Thick rounded bars and no detail finer than 4 units, since Homepage draws it at 34 px.
-//
-//go:embed icon.svg
-var iconSVG string
-
-const pageHTML = `<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Audio manager</title>
-<link rel="icon" href="/icon.svg">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<style>
-  :root {
-    color-scheme: dark;
-    --bg:#0f1012; --panel:#15161a; --hover:#1b1c21; --line:#24262c; --ink:#e4e5e9; --dim:#8a8f99; --faint:#5b5f69;
-    --accent:#7c84f3; --ok:#4cb782; --bad:#eb5757; --warn:#f2c94c;
-  }
-  * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--ink);
-         font:13px/1.45 Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-         font-variant-numeric:tabular-nums; -webkit-font-smoothing:antialiased; }
-  .page { max-width:60rem; margin:0 auto; padding:1.25rem 1rem 3rem; }
-
-  .top { display:flex; align-items:center; flex-wrap:wrap; gap:.6rem; min-height:2.5rem; }
-  .top img { width:18px; height:18px; border-radius:4px; }
-  .top h1 { font-size:13px; font-weight:600; margin:0; }
-  .tabs { margin-left:auto; display:flex; padding:2px; gap:2px; background:var(--panel); border:1px solid var(--line); border-radius:8px; }
-  .tabs a { display:flex; align-items:center; gap:.45rem; padding:.35rem .8rem; border-radius:6px; color:var(--dim);
-            text-decoration:none; font-weight:500; white-space:nowrap; }
-  .tabs a:hover { color:var(--ink); }
-  .tabs a[aria-current=page] { background:var(--hover); color:var(--ink); box-shadow:inset 0 0 0 1px var(--line); }
-  .tabs a:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
-  .badge { min-width:1.15rem; padding:0 .3rem; border-radius:9px; background:var(--accent); color:#fff; font-size:11px;
-           line-height:1.15rem; text-align:center; }
-  .badge:empty { display:none; }
-  .facts { color:var(--dim); display:flex; flex-wrap:wrap; gap:.25rem 1rem; margin-top:1rem; }
-  .facts:empty { display:none; }
-  .view[hidden] { display:none; }
-  #msg { color:var(--warn); margin:.25rem 0 0; }
-  #msg:empty { display:none; }
-
-  .group { margin-top:1.25rem; border:1px solid var(--line); border-radius:8px; background:var(--panel); overflow:hidden; }
-  .group h2 { margin:0; padding:.55rem .85rem; font-size:12px; font-weight:500; color:var(--dim);
-              border-bottom:1px solid var(--line); display:flex; gap:.5rem; }
-  .group h2 .n { color:var(--faint); }
-  .empty { color:var(--faint); padding:.75rem .85rem; margin:0; }
-  details.group > summary { list-style:none; cursor:pointer; padding:.55rem .85rem; font-size:12px; font-weight:500;
-                            color:var(--dim); display:flex; gap:.5rem; align-items:center; user-select:none; }
-  details.group > summary::-webkit-details-marker { display:none; }
-  details.group > summary::before { content:""; width:6px; height:6px; border-right:1.5px solid var(--faint);
-                                    border-bottom:1.5px solid var(--faint); transform:rotate(-45deg); margin:0 .2rem 0 .1rem;
-                                    transition:transform .15s; }
-  details.group[open] > summary::before { transform:rotate(45deg); }
-  details.group[open] > summary { border-bottom:1px solid var(--line); }
-  details.group > summary:hover { color:var(--ink); }
-  details.group > summary .n { color:var(--faint); }
-  details.group > summary .when { margin-left:auto; color:var(--faint); font-weight:400; }
-  #library > .row:first-child { border-top:0; }
-
-  .row { display:grid; grid-template-columns:14px minmax(0,1fr) 10.5rem 5.5rem 5.5rem 6rem; align-items:center;
-         gap:.75rem; min-height:2.6rem; padding:0 .85rem; border-top:1px solid var(--line); cursor:default; }
-  #list > .row:first-child, #history > .row:first-child { border-top:0; }
-  .row.click { cursor:pointer; }
-  .row.click:hover { background:var(--hover); }
-  .row.off { color:var(--dim); }
-  .dot { width:8px; height:8px; border-radius:50%; background:var(--accent); justify-self:center; }
-  .dot.idle { background:transparent; border:1.5px solid var(--faint); width:9px; height:9px; }
-  .dot.run { background:conic-gradient(var(--accent) var(--p,0%), var(--line) 0); width:11px; height:11px; }
-  .dot.ok { background:var(--ok); } .dot.bad { background:var(--bad); } .dot.warn { background:var(--warn); }
-  .title { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .title small { color:var(--faint); margin-left:.5rem; }
-  .c { color:var(--dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .c.r { text-align:right; }
-  .span2 { grid-column:4 / 6; }
-  .span3 { grid-column:3 / 6; }
-  .span4 { grid-column:3 / 7; }
-  .rest { grid-column:4 / 7; }
-
-  .meta { display:contents; }
-  .bar { height:4px; background:var(--line); border-radius:2px; overflow:hidden; }
-  .bar i { display:block; height:100%; background:var(--accent); transition:width 1s linear; }
-
-  .change { display:flex; align-items:center; gap:.35rem; }
-  select { font:inherit; color:var(--ink); background:transparent; border:1px solid transparent; border-radius:5px;
-           padding:.15rem .2rem; cursor:pointer; }
-  select:hover { border-color:var(--line); background:var(--hover); }
-  select:focus { outline:none; }
-  select:focus-visible { border-color:var(--faint); background:var(--hover); }
-  button { justify-self:end; font:500 12px/1 inherit; font-family:inherit; color:var(--ink); background:var(--hover);
-           border:1px solid var(--line); border-radius:6px; padding:.4rem .7rem; cursor:pointer; }
-  button:hover { border-color:var(--faint); }
-  button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
-  button.primary:hover { filter:brightness(1.08); }
-  button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
-  button[disabled] { opacity:.4; cursor:default; filter:none; }
-
-  .more { display:none; padding:.1rem .85rem .8rem calc(.85rem + 14px + .75rem); color:var(--dim); line-height:1.6; overflow-wrap:anywhere; }
-  .more.open { display:block; }
-  .more b { color:var(--ink); font-weight:500; }
-
-  .group.catalog { overflow:visible; }
-  .toolbar { display:flex; gap:.5rem; padding:.6rem .85rem; }
-  .toolbar input { height:2.25rem; font:inherit; font-size:13px; color:var(--ink); background:var(--bg);
-                   border:1px solid var(--line); border-radius:6px; }
-  .toolbar input:hover { border-color:var(--faint); }
-  .toolbar input:focus { outline:none; border-color:var(--accent); }
-  .toolnote { display:flex; gap:.75rem; padding:0 .85rem .45rem; color:var(--faint); font-size:12px; border-bottom:1px solid var(--line); }
-  .toolnote .when { margin-left:auto; }
-  .sr { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
-  .combo { position:relative; flex:0 0 15rem; }
-  .combo input { width:100%; font-weight:500; padding:0 3.4rem 0 2.6rem; cursor:pointer; text-overflow:ellipsis; }
-  .combo input:focus { cursor:text; }
-  .combo-prefix { position:absolute; left:.7rem; top:50%; transform:translateY(-50%); color:var(--dim); pointer-events:none; }
-  .combo-count { position:absolute; right:1.9rem; top:50%; transform:translateY(-50%); color:var(--dim); font-size:12px;
-                 pointer-events:none; white-space:nowrap; }
-  .combo[data-open] .combo-count { display:none; }
-  .combo-caret { position:absolute; right:.8rem; top:50%; width:7px; height:7px; margin-top:-6px; pointer-events:none;
-                 border-right:1.5px solid var(--dim); border-bottom:1.5px solid var(--dim); transform:rotate(45deg); }
-  .combo[data-open] .combo-caret { transform:rotate(-135deg); margin-top:-2px; }
-  .combo ul { position:absolute; z-index:10; left:0; width:max(100%, 19rem); top:calc(100% + 4px); max-height:min(21rem, 60vh); overflow-y:auto;
-              margin:0; padding:4px; list-style:none; background:var(--panel); border:1px solid var(--line); border-radius:8px;
-              box-shadow:0 10px 30px rgba(0,0,0,.5); }
-  .combo ul[hidden] { display:none; }
-  .combo li[role=option] { display:flex; align-items:baseline; gap:.75rem; padding:.5rem .6rem; border-radius:5px; cursor:pointer; }
-  .combo li[role=option] .name { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .combo li[role=option] .code { color:var(--faint); font-size:11px; }
-  .combo li[role=option] .n { color:var(--dim); min-width:2.5rem; text-align:right; }
-  .combo li.none { color:var(--faint); }
-  .combo li.none .n { color:var(--faint); }
-  .combo li.active { background:var(--hover); box-shadow:inset 0 0 0 1px var(--line); }
-  .combo li[aria-selected=true] .name { color:var(--accent); }
-  .combo li.head { padding:.45rem .6rem .2rem; font-size:11px; font-weight:500; color:var(--faint); }
-  .combo li.nothing { padding:.6rem; color:var(--faint); }
-  .toolbar input[type=search] { flex:1; min-width:0; padding:0 .7rem; }
-  .group[hidden] { display:none; }
-  .group h2 .when { margin-left:auto; color:var(--faint); font-weight:400; }
-  #dub-jobs > .row:first-child, #dub-films > .row:first-child { border-top:0; }
-  .acts { grid-column:4 / 7; display:flex; justify-content:flex-end; gap:.4rem; }
-  .acts.narrow { grid-column:6 / 7; }
-  .acts button { white-space:nowrap; }
-  .check { display:flex; flex-wrap:wrap; align-items:baseline; gap:.15rem .75rem; margin-top:-.4rem;
-           padding:0 .85rem .65rem calc(.85rem + 14px + .75rem); color:var(--dim); font-size:12px; }
-  .check .yes { color:var(--accent); font-weight:500; }
-  .check .warn { color:var(--warn); }
-  .check .age { color:var(--faint); }
-  .check button { padding:0; border:0; background:none; color:var(--dim); font-size:12px; text-decoration:underline dotted;
-                  text-underline-offset:2px; }
-  .check button:hover { color:var(--ink); }
-  .check ul { flex:1 0 100%; min-width:0; margin:.25rem 0 0; padding:0; list-style:none; line-height:1.7; }
-  .check li { display:flex; gap:.6rem; min-width:0; }
-  .check li .t { color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
-  .check li .s { color:var(--faint); white-space:nowrap; }
-
-  footer { margin-top:1.5rem; color:var(--faint); font-size:12px; max-width:44rem; }
-  code { font:11px ui-monospace, SFMono-Regular, Menlo, monospace; color:var(--dim); }
-
-  @media (max-width:700px) {
-    .row { grid-template-columns:14px minmax(0,1fr) auto; row-gap:.15rem; padding:.6rem .85rem; }
-    .row > .dot { grid-row:1 / span 2; align-self:start; margin-top:.35rem; }
-    .meta { display:flex; flex-wrap:wrap; gap:.15rem .9rem; grid-column:2; min-width:0; }
-    .meta .bar { flex:1 0 100%; margin:.3rem 0 .1rem; }
-    .meta .c { text-align:left; }
-    .row > button { grid-column:3; grid-row:1 / span 2; }
-    .row > .acts, .row > .acts.narrow { grid-column:2 / 4; justify-content:flex-start; margin-top:.4rem; }
-    .toolbar { flex-direction:column; }
-    .combo, .toolbar input[type=search] { flex:none; }
-    .combo ul { width:100%; }
-    .more { padding-left:calc(.85rem + 14px + .75rem); }
-    .tabs { margin-left:0; flex:1 0 100%; }
-    .toolbar input { font-size:16px; height:2.5rem; }
-    .tabs a { flex:1; justify-content:center; }
-  }
-  @media (prefers-reduced-motion: reduce) { .bar i { transition:none; } }
-</style>
-</head>
-<body>
-<div class="page">
-  <div class="top">
-    <img src="/icon.svg" alt="">
-    <h1>Audio manager</h1>
-    <nav class="tabs" aria-label="Views">
-      <a href="#add" data-view="add">Add audio <span class="badge" id="badge-add"></span></a>
-      <a href="#reencode" data-view="reencode">Re-encode <span class="badge" id="badge-reencode"></span></a>
-    </nav>
-  </div>
-  <p id="msg"></p>
-
-  <section class="view" id="view-add">
-    <div class="group" id="dub-jobs-group" hidden>
-      <h2>Requests <span class="n" id="dub-count"></span></h2>
-      <div id="dub-jobs"></div>
-    </div>
-
-    <div class="group catalog">
-      <div class="toolbar">
-        <div class="combo" id="lang-combo">
-          <label class="sr" id="lang-label" for="lang-input">Language to add</label>
-          <span class="combo-prefix" aria-hidden="true">Add:</span>
-          <input id="lang-input" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false"
-                 aria-controls="lang-list" aria-describedby="lang-count" autocomplete="off" autocapitalize="off" spellcheck="false">
-          <span class="combo-count" id="lang-count"></span>
-          <span class="combo-caret" aria-hidden="true"></span>
-          <ul id="lang-list" role="listbox" aria-labelledby="lang-label" hidden></ul>
-        </div>
-        <input type="search" id="dub-filter" placeholder="Search films" aria-label="Search films" autocomplete="off">
-      </div>
-      <div class="toolnote"><span id="dub-matches"></span><span class="when" id="dub-when"></span></div>
-      <div id="dub-films"></div>
-    </div>
-
-    <footer>
-      Add asks <code>dub-fetch.py</code> for that language. It runs every minute: it looks for a release with
-      the dub, checks the track, and adds it to the film beside the audio it already has. Cancel stops it at any point.
-      Check only asks the indexers what they have for that film, within a minute or so, and downloads nothing.
-    </footer>
-  </section>
-
-  <section class="view" id="view-reencode" hidden>
-    <div class="facts" id="facts"></div>
-
-    <div class="group">
-      <h2>Files <span class="n" id="count"></span></h2>
-      <div id="list"></div>
-    </div>
-
-    <div class="group">
-      <h2>History</h2>
-      <div id="history"></div>
-    </div>
-
-    <details class="group" id="library-group">
-      <summary>In the library <span class="n" id="library-count"></span><span class="when" id="library-when"></span></summary>
-      <div id="library"></div>
-    </details>
-
-    <footer>
-      Runs <code>audio-compat.py --file</code>, the same script as the 05:00 pass: an AC3 track goes first, every
-      other track stays, and the previous file is kept beside it as <code>.original</code>. One at a time; the
-      queue waits while the nightly pass works. "In the library" lists what the same rule would convert before
-      any client has played it. Click a file for its details.
-    </footer>
-  </section>
-</div>
-
-<script>
 function human(bytes) {
   if (!bytes) return "0 B";
   var units = ["B", "KB", "MB", "GB", "TB"], i = 0, n = bytes;
@@ -335,10 +53,36 @@ function el(tag, cls, text) {
 
 function say(text) { document.getElementById("msg").textContent = text || ""; }
 
+// A restart answers nothing, or half a body; either way it is the same as no answer.
+function readJSON(response) {
+  return response.text().then(function (text) {
+    try { return JSON.parse(text); } catch (e) { throw new Error("HTTP " + response.status); }
+  });
+}
+
+function getJSON(url) { return fetch(url).then(readJSON); }
+
 function post(url, data) {
   var body = new URLSearchParams();
   Object.keys(data).forEach(function (k) { body.set(k, data[k]); });
-  return fetch(url, { method: "POST", body: body }).then(function (r) { return r.json(); });
+  return fetch(url, { method: "POST", body: body }).then(readJSON).catch(function () {
+    return { error: "The service did not answer; try again in a moment." };
+  });
+}
+
+// Polls that fail keep the last state on screen; only a gap longer than this says so.
+var lastAnswer = Date.now(), reconnecting = false;
+
+function answered() {
+  lastAnswer = Date.now();
+  if (reconnecting) { reconnecting = false; say(""); document.getElementById("msg").classList.remove("quiet"); }
+}
+
+function unanswered() {
+  if (Date.now() - lastAnswer < 10000) return;
+  reconnecting = true;
+  say("Reconnecting…");
+  document.getElementById("msg").classList.add("quiet");
 }
 
 // What --target takes, from audio-compat.py's last library scan; empty until the first one.
@@ -454,10 +198,13 @@ function item(it, state) {
   row.appendChild(dot);
 
   var title = el("div", "title", it.title || it.library_path || it.path);
+  var source = it.cause === "library" ? "found in the library" : it.client ? "played on " + it.client : "";
+  title.appendChild(el("small", "", source));
   row.appendChild(title);
 
   var meta = el("div", "meta");
   row.appendChild(meta);
+  if (source) meta.appendChild(el("div", "c source", source));
   if (!it.actionable) {
     meta.appendChild(el("div", "c span4", it.reason_code === "no_direct_play" || it.cause === "no_direct_play"
       ? "Client setting: turn on Force Direct Play" : (it.reason || "Nothing to fix in the file")));
@@ -525,6 +272,50 @@ function item(it, state) {
   return frag;
 }
 
+var STATUS_ORDER = { converting: 0, queued: 1, ready: 2, failed: 3, done: 4, missing: 5 };
+
+function toConvert(it) { return it.status !== "done" && it.status !== "missing"; }
+
+// One list of what can be converted, from the clients' ledger and the library scan alike; what only a
+// client setting fixes goes below it, and the history last.
+function renderReencode(d) {
+  var lib = d.library || {}, seen = {}, actionable = [], nofix = [];
+  (d.items || []).concat(lib.items || []).forEach(function (it, i) {
+    if (seen[it.library_path]) return;
+    seen[it.library_path] = true;
+    (it.actionable ? actionable : nofix).push([it, i]);
+  });
+  actionable.sort(function (a, b) {
+    return (STATUS_ORDER[a[0].status] || 0) - (STATUS_ORDER[b[0].status] || 0) || a[1] - b[1];
+  });
+
+  var list = document.getElementById("list");
+  list.textContent = "";
+  var todo = actionable.filter(function (x) { return toConvert(x[0]); }).length;
+  document.getElementById("count").textContent = todo ? String(todo) : "";
+  document.getElementById("badge-reencode").textContent = todo ? String(todo) : "";
+  document.getElementById("library-when").textContent = lib.error ? lib.error :
+    lib.time ? "library scanned " + when(lib.time) : "library not scanned yet";
+  if (!actionable.length) list.appendChild(el("p", "empty",
+    "Nothing to convert. A file shows up here when a client has its audio re-encoded or the nightly scan finds one."));
+  else actionable.forEach(function (x) { list.appendChild(item(x[0], d)); });
+
+  var quiet = document.getElementById("nofix");
+  quiet.textContent = "";
+  nofix.forEach(function (x) { quiet.appendChild(item(x[0], d)); });
+  document.getElementById("nofix-count").textContent = String(nofix.length);
+  document.getElementById("nofix-group").hidden = !nofix.length;
+
+  var hist = document.getElementById("history"), history = d.history || [];
+  hist.textContent = "";
+  var failed = history.filter(function (h) { return h.result !== "done"; }).length;
+  var count = document.getElementById("history-count");
+  count.textContent = history.length ? String(history.length) + (failed ? ", " : "") : "";
+  if (failed) count.appendChild(el("span", "bad", failed + " failed"));
+  if (!history.length) hist.appendChild(el("p", "empty", "Nothing converted yet."));
+  else history.forEach(function (h) { hist.appendChild(historyRow(h)); });
+}
+
 function historyRow(h) {
   var ok = h.result === "done";
   var row = el("div", "row" + (ok ? "" : " off"));
@@ -537,13 +328,58 @@ function historyRow(h) {
     meta.appendChild(el("div", "c r", h.seconds ? clock(h.seconds) : ""));
     meta.appendChild(el("div", "c r", h.speed ? h.speed.toFixed(0) + "×" : ""));
   } else {
-    meta.appendChild(el("div", "c span2", h.reason || "failed"));
+    meta.appendChild(el("div", "c span2", h.reason || "failed")).title = h.reason || "";
   }
   meta.appendChild(el("div", "c r", when(h.time)));
   return row;
 }
 
-var DUB_STATUS = { requested: "Requested", cancelling: "Cancelling", queued: "Waiting for dub-fetch",
+function deleteOriginal(o, button) {
+  var name = o.path.split("/").pop();
+  var seeding = o.links > 1;
+  var ok = confirm(seeding ? name + " is still seeding (hardlinked to the torrent).\n\n" +
+    "Deleting it frees nothing until the torrent is removed, and qbit-manage then reads the torrent as no longer in the library.\n\n" +
+    "Delete it anyway?" : "Delete " + name + "?\n\nThis frees " + human(o.size) + ". The file beside it stays. There is no undo.");
+  if (!ok) return;
+  var data = { path: o.path };
+  if (seeding) data.allow_hardlinked = "1";
+  button.disabled = true;
+  post("/api/originals/delete", data).then(function (d) {
+    if (d.error) { say(d.error); button.disabled = false; return; }
+    say("");
+    refresh();
+  });
+}
+
+function originalRow(o) {
+  var state = !o.live ? ["bad", "No file beside it"] : o.links > 1 ? ["warn", "Still seeding"] : ["idle", ""];
+  var row = el("div", "row" + (o.live ? "" : " off"));
+  row.appendChild(el("span", "dot " + state[0]));
+  row.appendChild(el("div", "title", o.path.split("/").pop())).title = o.path;
+  var meta = el("div", "meta");
+  row.appendChild(meta);
+  meta.appendChild(el("div", "c", state[1]));
+  meta.appendChild(el("div", "c r", human(o.size)));
+  meta.appendChild(el("div", "c r", when(o.time)));
+  if (o.live) {
+    var del = el("button", "", "Delete");
+    del.onclick = function () { deleteOriginal(o, del); };
+    row.appendChild(del);
+  }
+  return row;
+}
+
+function renderOriginals(list) {
+  list = (list || []).slice().sort(function (a, b) { return b.time - a.time; });
+  var total = list.reduce(function (n, o) { return n + o.size; }, 0);
+  document.getElementById("originals-group").hidden = !list.length;
+  document.getElementById("originals-count").textContent = list.length ? plural(list.length, "file", "files") + ", " + human(total) : "";
+  var box = document.getElementById("originals");
+  box.textContent = "";
+  list.forEach(function (o) { box.appendChild(originalRow(o)); });
+}
+
+var DUB_STATUS = { requested: "Requested", cancelling: "Cancelling", queued: "Waiting",
   trying: "Searching", probing: "Checking the dub", downloading: "Downloading", done: "Added",
   failed: "Failed", cancelled: "Cancelled" };
 
@@ -553,7 +389,7 @@ var dub = null, dubLang = "";
 
 function dubKey(id, lang) { return id + "-" + lang; }
 
-// What is under way for each film and language: a job dub-fetch runs, or a request it has not taken yet.
+// What is under way for each film and language: a job, or a request the service has not taken yet.
 function dubPending() {
   var out = {};
   (dub.jobs || []).forEach(function (j) { if (dubActive(j.status)) out[dubKey(j.movie_id, j.lang)] = j.status; });
@@ -612,28 +448,116 @@ function dubJobRow(j, pending) {
     });
     frag.appendChild(more);
   }
+  var probes = j.probes || [];
+  if (probes.length) frag.appendChild(probeList(dubKey(j.movie_id, j.lang), probes));
   return frag;
+}
+
+var probesOpen = {};
+
+// What each probe of a job found, one compact line each, behind a toggle.
+function probeList(key, probes) {
+  var line = el("div", "check");
+  var toggle = el("button", "", (probesOpen[key] ? "Hide the " : "") + plural(probes.length, "release", "releases") + " probed");
+  toggle.type = "button";
+  toggle.setAttribute("aria-expanded", String(!!probesOpen[key]));
+  toggle.onclick = function () { probesOpen[key] = !probesOpen[key]; renderDub(); };
+  line.appendChild(toggle);
+  if (probesOpen[key]) {
+    var list = el("ul", "probes");
+    probes.forEach(function (p) {
+      var li = el("li");
+      li.appendChild(el("span", "t", p.title)).title = p.title;
+      li.appendChild(el("span", p.outcome.indexOf("has ") === 0 ? "o yes" : "o", p.outcome));
+      li.appendChild(el("span", "s", [p.mb ? p.mb + " MB" : "", p.indexer + (p.private ? ", private" : "")].filter(Boolean).join(", ")));
+      list.appendChild(li);
+    });
+    line.appendChild(list);
+  }
+  return line;
 }
 
 function plural(n, one, many) { return n + " " + (n === 1 ? one : many); }
 
-// What a check found, worded from the strongest sign down: a title naming the language, a site in it, any release.
-function checkSummary(check, name) {
-  if (check.error) return ["warn", "Check failed: " + check.error];
-  if (check.named) return ["yes", plural(check.named, "release names ", "releases name ") + name];
-  if (check.own_site) return ["", check.own_site + " from " + name + "-language sites, to be probed"];
-  if (check.releases) return ["", "No release names " + name + "; " + check.releases + " could still carry it"];
+function until(epoch) {
+  var seconds = epoch - Date.now() / 1000;
+  if (seconds < 60) return "in under a minute";
+  if (seconds < 3600) return "in " + Math.round(seconds / 60) + " min";
+  if (seconds < 86400) return "in " + Math.round(seconds / 3600) + " h";
+  return "in " + Math.round(seconds / 86400) + " d";
+}
+
+// The availability the state holds is for the language it was asked for, which a pick may have changed since.
+function availabilityOf(id) { return dub.lang === dubLang ? (dub.availability || {})[id] : undefined; }
+
+function isAvailable(a) { return !!a && (a.named > 0 || a.own_site > 0); }
+
+// What a film's last search means for the language, from the strongest sign down: a title naming it,
+// a site in it, any release a probe could take.
+function availabilitySummary(a, name) {
+  if (!a.time) return ["warn", "Search failed: " + a.error];
+  if (a.named) return ["pill yes", plural(a.named, "release names ", "releases name ") + name];
+  if (a.own_site) return ["pill soft", a.own_site === 1 ? "1 from a " + name + "-language site" : a.own_site + " from " + name + "-language sites"];
+  if (a.releases) return ["", "None named, " + a.releases + " to probe"];
   return ["", "Nothing found"];
 }
 
 var bestOpen = {};
 
-function checkLine(key, check) {
+// A search under way: a thin bar of the indexers that answered, and what they found so far.
+function searchProgressLine(search) {
   var line = el("div", "check");
-  var summary = checkSummary(check, langName(dubLang));
+  if (search.status === "queued") {
+    line.appendChild(el("span", "", "Waiting to search"));
+    return line;
+  }
+  var bar = el("div", "bar"), fill = el("i");
+  fill.style.width = (search.total ? Math.round(search.done / search.total * 100) : 0) + "%";
+  bar.appendChild(fill);
+  line.appendChild(bar);
+  line.appendChild(el("span", "", search.total ?
+    "Searching " + search.done + " of " + plural(search.total, "indexer", "indexers") + ", " +
+    plural(search.releases || 0, "release", "releases") + " so far" : "Searching the indexers"));
+  return line;
+}
+
+var searchTimer = null;
+
+function searchesUnderway() { return Object.keys((dub && dub.searching) || {}).length > 0; }
+
+// While a search runs its progress is asked for every second; once one ends, the whole state is, for its result.
+function watchSearches() {
+  if (searchTimer || !searchesUnderway()) return;
+  searchTimer = setTimeout(function () {
+    searchTimer = null;
+    if (document.hidden) { watchSearches(); return; }
+    getJSON("/api/add-audio/checks").then(function (d) {
+      var now = d.searching || {};
+      var ended = Object.keys(dub.searching || {}).some(function (id) { return !now[id]; });
+      dub.searching = now;
+      if (ended) { refresh(); return; }
+      renderDub();
+      watchSearches();
+    }).catch(function () { setTimeout(watchSearches, 5000); });
+  }, 1000);
+}
+
+function availabilityLine(id, a) {
+  var line = el("div", "check");
+  if (!a) {
+    if (dub.lang !== dubLang) return null;
+    line.appendChild(el("span", "", "Not searched yet"));
+    return line;
+  }
+  var summary = availabilitySummary(a, langName(dubLang));
   line.appendChild(el("span", summary[0], summary[1]));
-  line.appendChild(el("span", "age", "checked " + ago(check.time)));
-  var best = check.best || [];
+  if (a.time) {
+    var age = "searched " + ago(a.time);
+    if (a.indexers_failed) age += ", " + a.indexers_failed + " of " + plural(a.indexers_total, "indexer", "indexers") + " failed";
+    line.appendChild(el("span", "age", age));
+    if (a.error) line.appendChild(el("span", "warn", "a newer search failed"));
+  }
+  var key = dubKey(id, dubLang), best = a.best || [];
   if (best.length) {
     var toggle = el("button", "", (bestOpen[key] ? "Hide" : "Show") + " the best " + (best.length === 1 ? "one" : best.length));
     toggle.type = "button";
@@ -656,9 +580,8 @@ function checkLine(key, check) {
 
 function dubFilmRow(f, pending) {
   var frag = document.createDocumentFragment();
-  var key = dubKey(f.id, dubLang);
   var row = el("div", "row");
-  var status = pending[key];
+  var status = pending[dubKey(f.id, dubLang)];
   row.appendChild(el("span", status ? "dot" : "dot idle"));
   var title = el("div", "title", f.title);
   if (f.year) title.appendChild(el("small", "", String(f.year)));
@@ -667,14 +590,14 @@ function dubFilmRow(f, pending) {
   row.appendChild(meta);
   meta.appendChild(el("div", "c", f.audio ? language(f.audio) + " audio" : ""));
   if (status) meta.appendChild(el("div", "c span2", DUB_STATUS[status] || status));
+  var search = (dub.searching || {})[f.id], found = availabilityOf(f.id);
   var acts = el("div", status ? "acts narrow" : "acts");
   if (!status) {
-    var checking = (dub.checking || []).indexOf(key) >= 0;
-    var check = el("button", "", checking ? "Checking…" : (dub.checks || {})[key] ? "Re-check" : "Check");
-    check.disabled = checking;
-    check.title = "Ask the indexers what they have, without downloading";
-    check.onclick = function () { dubPost("/api/add-audio/check", f.id, dubLang, check); };
-    acts.appendChild(check);
+    var again = el("button", "quiet", search ? "Searching…" : found ? "Search again" : "Search now");
+    again.disabled = !!search;
+    again.title = "Ask the indexers now what they have for this film, without downloading";
+    again.onclick = function () { dubPost("/api/add-audio/check", f.id, dubLang, again); };
+    acts.appendChild(again);
     var add = el("button", "primary", "Add " + langName(dubLang));
     add.onclick = function () { dubPost("/api/add-audio", f.id, dubLang, add); };
     acts.appendChild(add);
@@ -683,8 +606,8 @@ function dubFilmRow(f, pending) {
   }
   if (acts.childNodes.length) row.appendChild(acts);
   frag.appendChild(row);
-  var result = (dub.checks || {})[key];
-  if (result) frag.appendChild(checkLine(key, result));
+  var line = search ? searchProgressLine(search) : availabilityLine(f.id, found);
+  if (line) frag.appendChild(line);
   return frag;
 }
 
@@ -756,6 +679,8 @@ function renderCombo(codes) {
       li.setAttribute("aria-selected", String(code === dubLang));
       li.appendChild(el("span", "name", langName(code)));
       li.appendChild(el("span", "code", code));
+      var hits = (dub.available_counts || {})[code];
+      if (hits) li.appendChild(el("span", "hits", hits + " available")).title = plural(hits, "film has", "films have") + " a release in it";
       li.appendChild(el("span", "n", String(n)));
       li.onclick = function () { chooseLang(code); };
       e.list.appendChild(li);
@@ -820,6 +745,7 @@ function chooseLang(code) {
   store(RECENT_KEY, JSON.stringify([code].concat(recentLangs().filter(function (c) { return c !== code; })).slice(0, 3)));
   closeCombo();
   renderDub();
+  refresh();
 }
 
 (function () {
@@ -886,22 +812,58 @@ function renderDub() {
   var filter = document.getElementById("dub-filter");
   var needle = fold(filter.value.trim());
   var missing = (dub.films || []).filter(function (f) { return (f.missing || []).indexOf(dubLang) >= 0; });
-  var shown = missing.filter(function (f) { return !needle || fold(f.title).indexOf(needle) >= 0; });
+  var availableCount = missing.filter(function (f) { return isAvailable(availabilityOf(f.id)); }).length;
+  var onlyAvailable = showAvailable && dub.lang === dubLang;
+  var shown = missing.filter(function (f) {
+    return (!needle || fold(f.title).indexOf(needle) >= 0) && (!onlyAvailable || isAvailable(availabilityOf(f.id)));
+  });
+  // Named first, then from a site in the language, then the rest, each in Radarr's order.
+  var rankOf = function (f) { var a = availabilityOf(f.id); return a && a.named ? 0 : a && a.own_site ? 1 : 2; };
+  shown = shown.map(function (f, i) { return [rankOf(f), i, f]; })
+    .sort(function (a, b) { return a[0] - b[0] || a[1] - b[1]; }).map(function (x) { return x[2]; });
+  document.getElementById("show-available").lastChild.textContent = dub.lang === dubLang ? String(availableCount) : "";
+  ["all", "available"].forEach(function (name) {
+    document.getElementById("show-" + name).setAttribute("aria-pressed", String((name === "available") === showAvailable));
+  });
   filter.placeholder = missing.length ? "Search " + plural(missing.length, "film", "films") + " without " + langName(dubLang) : "Search films";
-  document.getElementById("dub-matches").textContent = needle && missing.length ? shown.length + " of " + missing.length + " match" : "";
+  document.getElementById("dub-matches").textContent = (needle || onlyAvailable) && missing.length ? shown.length + " of " + missing.length + " shown" : "";
   document.getElementById("dub-when").textContent = dub.error ? dub.error : dub.time ? "listed " + when(dub.time) : "not listed yet";
+  document.getElementById("dub-sweep").textContent = sweepLine(dub.sweep);
   var films = document.getElementById("dub-films");
   films.textContent = "";
-  if (!shown.length) films.appendChild(el("p", "empty", !dub.time ? "dub-fetch has not listed the library yet." :
-    needle ? "No title matches." : "Every film has this language."));
+  if (!shown.length) films.appendChild(el("p", "empty", !dub.time ? "Radarr has not listed the films yet." :
+    needle ? "No title matches." : onlyAvailable && missing.length ? "No film has a release in " + langName(dubLang) + " yet." :
+    "Every film has this language."));
   else shown.forEach(function (f) { films.appendChild(dubFilmRow(f, pending)); });
 }
 
 document.getElementById("dub-filter").oninput = renderDub;
 
+var SHOW_KEY = "audio-manager.show", showAvailable = stored(SHOW_KEY) === "available";
+
+["all", "available"].forEach(function (name) {
+  document.getElementById("show-" + name).onclick = function () {
+    showAvailable = name === "available";
+    store(SHOW_KEY, name);
+    renderDub();
+  };
+});
+
+function sweepLine(sweep) {
+  if (!sweep || !sweep.total) return "";
+  var line = "Searched " + sweep.searched + " of " + plural(sweep.total, "film", "films");
+  var sweeping = Object.keys(dub.searching || {}).filter(function (id) { return dub.searching[id].sweep; })[0];
+  if (sweeping) return line + ", searching one now";
+  if (sweep.next_at) line += ", next " + until(sweep.next_at);
+  return line;
+}
+
 function route() {
   var view = location.hash === "#reencode" ? "reencode" : "add";
   ["add", "reencode"].forEach(function (name) { document.getElementById("view-" + name).hidden = name !== view; });
+  // Both views make .original files, so the one list of them moves to whichever is shown.
+  var shown = document.getElementById("view-" + view);
+  shown.insertBefore(document.getElementById("originals-group"), shown.querySelector("footer"));
   Array.prototype.forEach.call(document.querySelectorAll(".tabs a"), function (a) {
     if (a.dataset.view === view) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
   });
@@ -913,7 +875,9 @@ route();
 var timer = null;
 
 function refresh() {
-  return fetch("/api/state").then(function (r) { return r.json(); }).then(function (d) {
+  var lang = dubLang || stored(LANG_KEY);
+  return getJSON("/api/state" + (lang ? "?lang=" + encodeURIComponent(lang) : "")).then(function (d) {
+    answered();
     if (d.error) say(d.error);
     targets = (d.library && d.library.targets) || {};
     defaultTarget = (d.library && d.library.default_target) || "ac3";
@@ -927,41 +891,20 @@ function refresh() {
     facts.appendChild(el("span", "", human(d.free) + " free"));
     facts.appendChild(el("span", "", d.speed.toFixed(0) + "× realtime"));
 
-    var list = document.getElementById("list"), items = d.items || [];
-    list.textContent = "";
-    var todo = items.filter(function (it) { return it.actionable && it.status !== "done" && it.status !== "missing"; }).length;
-    document.getElementById("count").textContent = todo ? todo + " to convert" : "";
-    document.getElementById("badge-reencode").textContent = todo ? String(todo) : "";
-    if (!items.length) list.appendChild(el("p", "empty", "Nothing yet. A file shows up here when a client has its audio re-encoded."));
-    else items.forEach(function (it) { list.appendChild(item(it, d)); });
-
-    var lib = d.library || {}, libItems = lib.items || [];
-    var libList = document.getElementById("library");
-    libList.textContent = "";
-    var pendingLib = libItems.filter(function (it) { return it.status !== "done" && it.status !== "missing"; }).length;
-    document.getElementById("library-count").textContent = pendingLib ? pendingLib + " would be converted" : "";
-    document.getElementById("library-when").textContent = lib.error ? lib.error :
-      lib.time ? "checked " + when(lib.time) : "not checked yet";
-    if (!libItems.length) libList.appendChild(el("p", "empty", lib.time ? "Every file in the library has audio the TV plays." :
-      "The first check of the library runs when the app starts."));
-    else libItems.forEach(function (it) { libList.appendChild(item(it, d)); });
-
-    var hist = document.getElementById("history");
-    hist.textContent = "";
-    if (!d.history || !d.history.length) hist.appendChild(el("p", "empty", "Nothing converted yet."));
-    else d.history.forEach(function (h) { hist.appendChild(historyRow(h)); });
+    renderReencode(d);
+    renderOriginals(d.originals);
 
     dub = d.add_audio || {};
     renderDub();
+    // The first load asks before the page knows its language; ask again for the one it picked.
+    if (dubLang && dub.lang !== dubLang) { refresh(); return; }
+    watchSearches();
 
     clearTimeout(timer);
     timer = setTimeout(tick, d.running || (d.queue && d.queue.length) ? 1000 : 10000);
-  }).catch(function (e) { say(String(e)); clearTimeout(timer); timer = setTimeout(tick, 5000); });
+  }).catch(function () { unanswered(); clearTimeout(timer); timer = setTimeout(tick, 5000); });
 }
 
 function tick() { if (document.hidden) { timer = setTimeout(tick, 2000); return; } refresh(); }
 
 refresh();
-</script>
-</body>
-</html>`

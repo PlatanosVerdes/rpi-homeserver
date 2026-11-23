@@ -373,5 +373,8 @@ func fetchUNIT3D(tracker string, config map[string]any) (profile, error) {
 	}
 	out.points, _ = toFloat(strings.ReplaceAll(str(account, "seedbonus"), ",", ""))
 	out.class = str(account, "group")
+	if raw, ok := account["hit_and_runs"]; ok && raw != nil {
+		out.hitAndRuns, out.hasHitAndRuns = toFloat(fmt.Sprint(raw))
+	}
 	return out, nil
 }

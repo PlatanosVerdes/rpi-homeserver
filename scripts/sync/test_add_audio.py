@@ -174,9 +174,9 @@ class WholeRuns(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.dir, ignore_errors=True)
 
-    def make_source(self, a, b, spanish_codec, spanish_start, english_start, cut_at=None):
-        spanish = on_source_clock(self.spanish, a, b, spanish_start)
-        english = on_source_clock(self.english, a, b, english_start)
+    def make_source(self, a, b, spanish_codec, spanish_start, english_start, cut_at=None, tail=0):
+        spanish = np.concatenate([on_source_clock(self.spanish, a, b, spanish_start), effects(tail, 4)])
+        english = np.concatenate([on_source_clock(self.english, a, b, english_start), effects(tail, 5)])
         if cut_at is not None:
             cut = slice(int(cut_at * RATE), int((cut_at + 5) * RATE))
             spanish, english = np.delete(spanish, cut), np.delete(english, cut)
@@ -186,7 +186,7 @@ class WholeRuns(unittest.TestCase):
         codec = ["-c:a:0", "dca", "-strict", "-2"] if spanish_codec == "dts" else ["-c:a:0", "ac3"]
         ffmpeg("-f", "lavfi", "-i", "color=c=black:s=64x36:r=25", "-itsoffset", str(spanish_start),
                "-i", self.dir / "spa-src.wav", "-itsoffset", str(english_start), "-i", self.dir / "eng-src.wav",
-               "-t", str(SECONDS * a + b), "-map", "0:v", "-map", "1:a", "-map", "2:a", "-c:v", "libx264",
+               "-t", str(SECONDS * a + b + tail), "-map", "0:v", "-map", "1:a", "-map", "2:a", "-c:v", "libx264",
                "-preset", "ultrafast", *codec, "-c:a:1", "ac3", "-ar", "48000",
                "-metadata:s:a:0", "language=spa", "-metadata:s:a:0", "title=Castellano",
                "-metadata:s:a:1", "language=eng", source)
@@ -223,6 +223,23 @@ class WholeRuns(unittest.TestCase):
         source = self.make_source(1.0, -0.6, "ac3", spanish_start=0.02, english_start=0.08)
         self.run_script(source)
         self.assertLess(abs(self.added_lag()), 0.03)
+
+    def test_a_source_running_longer_is_cut_at_the_target_length(self):
+        for codec, a in (("ac3", 1.0), ("dts", PAL)):
+            with self.subTest(codec=codec):
+                self.setUp()
+                source = self.make_source(a, 1.5, codec, spanish_start=0.0, english_start=0.0, tail=90)
+                self.run_script(source)
+                self.assertLess(abs(self.added_lag()), 0.03)
+                info = aa.compat.probe(self.target)
+                self.assertAlmostEqual(float(info["format"]["duration"]), SECONDS, delta=aa.compat.DURATION_TOLERANCE)
+
+    def test_a_sample_is_refused_before_aligning(self):
+        source = self.make_source(1.0, 0.0, "ac3", spanish_start=0.0, english_start=0.0)
+        sample = self.dir / "sample.mkv"
+        ffmpeg("-i", source, "-t", "60", "-map", "0", "-c", "copy", sample)
+        with self.assertRaisesRegex(SystemExit, "a sample or another cut"):
+            self.run_script(sample)
 
     def test_a_cut_source_leaves_the_target_untouched(self):
         before = self.target.stat()

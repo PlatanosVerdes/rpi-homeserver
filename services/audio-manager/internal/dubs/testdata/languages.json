@@ -1,0 +1,67 @@
+{
+ "languages": {
+  "spa": {
+   "name": "Castellano",
+   "tag": "es-ES",
+   "locale": "es",
+   "aliases": [
+    "es",
+    "es-es",
+    "esp",
+    "spa"
+   ],
+   "words": [
+    "cast",
+    "castellano",
+    "esp",
+    "español",
+    "spanish"
+   ],
+   "rejected": "latin|\\blat\\b|m[eé]x|neutr",
+   "preferred": "castellano|espa[nñ]a|\\bcast\\b|europe"
+  },
+  "cat": {
+   "name": "Català",
+   "tag": "ca",
+   "locale": "ca",
+   "aliases": [
+    "ca",
+    "cat"
+   ],
+   "words": [
+    "catala",
+    "catalan",
+    "català"
+   ]
+  },
+  "eng": {
+   "name": "English",
+   "tag": "en",
+   "locale": "en",
+   "aliases": [
+    "en",
+    "eng"
+   ],
+   "words": [
+    "english"
+   ]
+  },
+  "fra": {
+   "name": "Français",
+   "tag": "fr",
+   "locale": "fr",
+   "aliases": [
+    "fr",
+    "fra",
+    "fre"
+   ],
+   "words": [
+    "francais",
+    "français",
+    "french",
+    "vff"
+   ],
+   "rejected": "qu[eé]bec|\\bvfq\\b|canad"
+  }
+ }
+}

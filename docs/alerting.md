@@ -19,6 +19,8 @@ left behind kept serving frozen values as if they were live.
   since one media pass takes ~7 s and a scrape cannot wait. `up` says the process lives,
   `pi_metrics_last_success_timestamp_seconds` says the data is fresh: two failures, two alerts. Its
   `playback` collector runs every 60 s, so a re-encode is seen while it is happening.
+- **disk-health** reads SMART and the spin state of every `sd*` disk once a minute without ever
+  waking one ([disk-health.md](disk-health.md)).
 - **blackbox-exporter** probes every container with a `prometheus.probe` label from the inside, and
   every `prometheus.probe.access` label from the internet's side ([access.md](access.md)). No scrape
   job to edit for a new service ([add-service.md](add-service.md)).
@@ -83,7 +85,7 @@ What the rules cover, by group:
 | Deploy and backup | deploy failing, backup failed, no recent backup, backup archive grew sharply |
 | Services | Prometheus target down, service not answering, public route behind Access broken, pi-metrics / tracker-control / qbit-manage overdue |
 | Torrents | a requested download stalled, torrents in error, seeding to nobody, a tracker warning about to be re-checked, a torrent nothing will clean up, download nothing can import, data nothing owns |
-| Trackers | almost no paid downloads left, ratio under the line, hit & run with the clock stopped, tracker numbers not being read |
+| Trackers | almost no paid downloads left, ratio under the line, hit & run with the clock stopped, a hit & run on the account, tracker numbers not being read |
 | Indexers | every indexer down, an indexer down, an indexer failing its searches |
 | Media | video re-encoded, audio re-encoded; AceStream source URLs failing, channel list frozen |
 | Companion repo | One Pace downloads failing, the Wallapop session and pass |

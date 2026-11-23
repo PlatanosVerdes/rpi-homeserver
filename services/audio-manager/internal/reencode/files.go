@@ -1,4 +1,4 @@
-package main
+package reencode
 
 import (
 	"bufio"
@@ -10,6 +10,8 @@ import (
 	"slices"
 	"strings"
 	"syscall"
+
+	"audio-manager/internal/libraries"
 )
 
 // What pi-metrics writes (services/pi-metrics/recodes.go and plan.go). Only the fields shown here.
@@ -70,13 +72,11 @@ func readLedger(file string) ([]ledgerFile, error) {
 	return doc.Files, nil
 }
 
-var libraries = []string{"films", "series"}
-
 // libraryPath is a path from its library folder down, the rule audio-compat's library_path uses.
 func libraryPath(reported string) string {
 	parts := strings.Split(path.Clean(reported), "/")
 	for position, part := range parts {
-		if slices.Contains(libraries, part) {
+		if slices.Contains(libraries.Folders, part) {
 			return strings.Join(parts[position:], "/")
 		}
 	}
@@ -183,12 +183,7 @@ func inspect(file string) fileFacts {
 	if err != nil {
 		return fileFacts{}
 	}
-	facts := fileFacts{exists: true, size: info.Size(), links: 1}
-	if st, ok := info.Sys().(*syscall.Stat_t); ok {
-		facts.links = uint64(st.Nlink)
-	}
-	facts.free = freeBytes(filepath.Dir(file))
-	return facts
+	return fileFacts{exists: true, size: info.Size(), links: libraries.Links(info), free: freeBytes(filepath.Dir(file))}
 }
 
 func freeBytes(dir string) uint64 {
@@ -202,29 +197,8 @@ func freeBytes(dir string) uint64 {
 // insideLibrary joins a ledger's library path onto the data root, refusing anything that climbs out.
 func insideLibrary(root, library string) (string, bool) {
 	clean := path.Clean("/" + library)[1:]
-	if library == "" || clean != library || !slices.Contains(libraries, strings.SplitN(clean, "/", 2)[0]) {
+	if library == "" || clean != library || !slices.Contains(libraries.Folders, strings.SplitN(clean, "/", 2)[0]) {
 		return "", false
 	}
 	return filepath.Join(root, filepath.FromSlash(clean)), true
-}
-
-// writeAtomic replaces file in one rename, so a reader never sees half of it.
-func writeAtomic(file string, raw []byte) error {
-	tmp, err := os.CreateTemp(filepath.Dir(file), "."+filepath.Base(file)+".*.tmp")
-	if err != nil {
-		return err
-	}
-	defer os.Remove(tmp.Name())
-	if _, err := tmp.Write(raw); err != nil {
-		tmp.Close()
-		return err
-	}
-	if err := tmp.Chmod(0o644); err != nil {
-		tmp.Close()
-		return err
-	}
-	if err := tmp.Close(); err != nil {
-		return err
-	}
-	return os.Rename(tmp.Name(), file)
 }
