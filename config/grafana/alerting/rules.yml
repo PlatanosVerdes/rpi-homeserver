@@ -1317,6 +1317,7 @@ groups:
             buffer = uploaded - min_ratio x downloaded, and headroom is that buffer divided by
             min_ratio. tracker-control should already have switched the *arrs to freeleech only;
             if it has not, its own log says why.
+            {{ if eq $labels.tracker "nobs" }} To earn upload there: scripts/ops/nobs-candidates.py on the raspi lists the films NOBS would take.{{ end }}
         noDataState: OK
         execErrState: KeepLast
         data:
@@ -1351,6 +1352,7 @@ groups:
           description: >-
             The account is on the wrong side of the line. Everything not freeleech must stop, and
             what is already seeding has to finish. See docs/private-trackers.md.
+            {{ if eq $labels.tracker "nobs" }} To earn upload there: scripts/ops/nobs-candidates.py on the raspi lists the films NOBS would take.{{ end }}
         noDataState: OK
         execErrState: KeepLast
         data:
