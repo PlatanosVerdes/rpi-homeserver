@@ -301,3 +301,6 @@ orphaned:
     - "**/incomplete/**"
     - "**/*.!qB"
     - "**/*.parts"
+    # Hardlinks of library files waiting to be uploaded: they keep the film's old mtime, so the age
+    # check would not protect one while RawLoadrr hashes it (scripts/ops/nobs-upload.sh).
+    - "**/uploads/**"

@@ -329,6 +329,7 @@ Spanish tracker, added for Castilian audio: nearly every release carries it.
 | Seed goal | **168 h, no ratio limit**, on announce host `nobs.rawsmoke.net` | their counter adds only announced time; a ratio limit would delete a torrent still owing hours |
 | cross-seed | included, indexer 18 | not named in the rules (read 2026-11-16), but they ask for the site's own .torrent unmodified, which is what cross-seed injects, and a cross-seed downloads nothing, so it never reaches the 50% that starts a hit and run |
 | Account reading | tracker-control, `/api/user` with `NOBS_APIKEY` (in homelab-secrets) | UNIT3D answers it to the API key, so the account's 2FA does not matter; per-torrent seed time is still only on the site |
+| Uploads | by hand, `scripts/ops/nobs-upload.sh` ([nobs-upload.md](nobs-upload.md)) | a film the library has and the site does not; seeded with `keep` until removed by hand |
 
 ## C411
 
