@@ -144,8 +144,9 @@ services:
       prometheus.probe: "http://host.docker.internal:8123/manifest.json"
       homeserver.restart-on-config-change: "true"
     restart: unless-stopped
-    mem_limit: 768m
-    memswap_limit: 768m
+    # Integrations install their Python packages at runtime, and that peak OOM-killed it at 768m
+    mem_limit: 1536m
+    memswap_limit: 1536m
     profiles: [homeassistant, home, all]
     # configuration.yaml includes the files the UI writes, and HA only creates them on a fresh config
     entrypoint: ["/bin/sh", "-c", "touch /config/automations.yaml /config/scripts.yaml /config/scenes.yaml && exec /init"]
