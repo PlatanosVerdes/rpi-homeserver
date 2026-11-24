@@ -39,6 +39,15 @@ the tailnet: Home Assistant's Google Cast integration (`media_player.play_media`
 runs on the raspi now ([docs/home-assistant.md](docs/home-assistant.md)); the Cast integration and
 the script that starts playback are what is left.
 
+## Bluetooth for Home Assistant, if a Bluetooth device ever arrives
+
+**Goal:** BLE sensors, buttons or presence in Home Assistant. Nothing at home needs it today, so the
+Pi's adapter is left unused ([docs/home-assistant.md](docs/home-assistant.md#what-it-does-not-do)).
+**Next step, when one arrives:** an ESPHome Bluetooth proxy, the approach Home Assistant's docs
+recommend, rather than the Pi's adapter, which only covers the room the Pi is in. Prefer an ESP32
+with Ethernet (Olimex ESP32-POE, WT32-ETH01): on WiFi the radio is shared with Bluetooth, and an
+ESP32 on this WiFi already dropped most pings for the Divoom bridge.
+
 ## Retire `scripts/ops/cutoff-search.sh`
 
 Out of the crontab since 2026-08-24, script kept. It covered releases that scrolled out of the RSS
