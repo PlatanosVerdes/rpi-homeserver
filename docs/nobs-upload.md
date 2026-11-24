@@ -13,6 +13,23 @@ scripts/ops/nobs-upload.sh "/mnt/data/films/<Film (Year)>/<file>.mkv" "<NOBS nam
 Nothing uploads without a "y" typed at the end. Never automate it, and never run upstream's
 `auto-upload.py`: that one uploads a whole folder without asking.
 
+## When to upload
+
+Only when the ratio asks for it: under the site-wide freeleech nothing downloaded counts, and an
+upload is effort and risk spent on credit nobody needs yet. The two tracker alerts already cover
+NOBS, "Almost no paid downloads left" (headroom under 10 GB) and "Ratio under the line the tracker
+disables at" (under 0.4), and for NOBS both end by pointing here. Then:
+
+```bash
+scripts/ops/nobs-candidates.py
+```
+
+It lists the films NOBS would take, each with the `nobs-upload.sh` line to start from: a Castilian
+audio track, not an upscale, and nothing on NOBS at the file's resolution (searched by IMDb id). It
+opens no file, reading the tracks audio-manager already probed, and films whose `spa` track is not
+titled Castellano are listed apart, to be heard first. New candidates come from Add audio and from
+Radarr grabbing a release that already carries the dub.
+
 ## Before an upload
 
 Upload only what the site would accept. From its rules (read 2026-11):
