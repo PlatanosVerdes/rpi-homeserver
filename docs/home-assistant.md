@@ -89,9 +89,10 @@ the phone away from home, location updates queue on the phone until it can reach
 
 - **No add-ons.** Mosquitto, Zigbee2MQTT, Piper or Whisper would each be a service of their own in
   compose, like any other.
-- **No working Bluetooth.** On the host network HA sees the Pi's adapter, but without the
-  `NET_ADMIN` and `NET_RAW` capabilities it cannot manage it and logs "Missing required permissions
-  for Bluetooth management". Delete the Bluetooth integration in the UI if nothing uses it.
+- **No working Bluetooth.** On the host network HA sees the Pi's adapter, but without `/run/dbus`
+  mounted and the `NET_ADMIN` and `NET_RAW` capabilities it cannot use it: the entry fails with
+  "DBus service not found". Delete it in the UI, and *Ignore* it if it is discovered again. For
+  Bluetooth devices, see the proxy item in [PENDING.md](../PENDING.md).
 - **Not on the internet.** There is no Cloudflare route. Cloud voice assistants (Alexa, Google) need
   one, or Nabu Casa; until then they cannot call HA.
 - **Not on the second node.** It is not in streamhalla's service list, and the LAN it watches is the
