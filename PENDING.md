@@ -60,8 +60,6 @@ commented cron line together.
   indexer tagged to it. Delete it, or it is a trap for whoever tags something `nordvpn` next.
 - **C411's own figures.** `/api/auth/me` returns `uploadCredit` and `minRatioForDownload`; tracker-control
   reads neither, and the 0.8 in `config/trackers/rules.json` is typed in by hand.
-- **A DHCP reservation for the Pi's eth0.** The `/32` routes Tailscale advertises are typed in by
-  hand; wifi is reserved, cable is a plain lease. If it moves, Plex remote breaks silently.
 - **No offsite backup.** `BACKUP_RCLONE_REMOTE` is empty on the raspi, so the archives only survive
   the SD card, not the data disk or the house. They hold device passwords and Home Assistant's
   tokens, so the remote should be an `rclone crypt` one.

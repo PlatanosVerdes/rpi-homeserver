@@ -16,7 +16,7 @@ price is no Supervisor, so no add-ons (see [What it does not do](#what-it-does-n
 | Integrations, devices, users, dashboards | `appdata/homeassistant/.storage` | the UI |
 | Automations, scripts, scenes | `appdata/homeassistant/{automations,scripts,scenes}.yaml` | the UI |
 | History (the recorder database) | `appdata/homeassistant/home-assistant_v2.db` | HA |
-| Custom integrations from HACS | `appdata/homeassistant/custom_components` | HACS |
+| Community integrations from the Marketplace | `appdata/homeassistant/custom_components` | the Marketplace |
 
 Everything under `appdata/` is in the nightly backup ([backups.md](backups.md)). Device passwords
 and tokens are typed into the UI once and kept in `.storage`; they are not read from `.env`.
@@ -68,15 +68,14 @@ them. Reserve an address in the router for every device HA talks to.
 
 ## Adding a device that HA does not ship
 
-Some integrations are community ones, installed through HACS. HACS installs into `appdata`:
+Community integrations come from the **Marketplace** (Settings → Marketplace, or `/marketplace`),
+which replaced HACS in 2026.11: the HACS installer refuses to run on 2026.11 and newer. Search the
+catalog, or use **Add from link** with the GitHub repository when it is not listed. Installing is a
+download into `appdata/homeassistant/custom_components`; no shell in the container is needed.
 
-```bash
-docker exec -it homeassistant bash -c "wget -O - https://get.hacs.xyz | bash -"
-docker restart homeassistant
-```
-
-Then **Settings → Devices & services → Add → HACS**, and log in with GitHub. What HACS installs is
-not pinned in `versions.env` and Renovate does not see it: HACS shows its own updates in the UI.
+What it installs is not pinned in `versions.env` and Renovate does not see it: the Marketplace shows
+its own updates. An integration installs its Python packages the first time it is set up, which is
+a memory peak on top of HA itself; that is why `mem_limit` is 1536m and not less.
 
 ## The phone app
 
