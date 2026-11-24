@@ -36,6 +36,11 @@ config = {
             # Only on the .torrent built here: after the upload the tracker's own is fetched and seeded.
             "announce_url": f"https://nobs.rawsmoke.net/announce/{os.environ.get('NOBS_PASSKEY', '')}",
             "anon": False,
+            # Read unconditionally when the description is written; a missing one crashes the upload.
+            "signature": "",
+            "anon_signature": "",
+            "pr_signature": "",
+            "anon_pr_signature": "",
             # Every share-limit group skips `keep`: an upload is seeded for as long as it stays.
             "qbit_tag": "keep",
         },
