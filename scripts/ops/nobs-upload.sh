@@ -2,12 +2,13 @@
 # Upload one film from the library to NOBS with RawLoadrr, by hand. See docs/nobs-upload.md.
 #
 # 1. Hardlinks it into downloads/uploads/<release>/, the one place qBittorrent can seed it from.
-# 2. Refuses a file without a Castilian audio track: NOBS takes no film dubbed in Castilian without it.
+# 2. nobs-check.py: refuses a file without a Castilian audio track, or one NOBS already has at the
+#    same resolution (looked up by TMDB id).
 # 3. Dry run: name, description, screenshots and the dupe check, nothing sent.
 # 4. Asks, and only on "y" runs it again for real: upload, fetch the tracker's .torrent, seed it.
 #
-# Usage: scripts/ops/nobs-upload.sh "<library file>" "<NOBS name>" [rawloadrr args...]
-#        CASTILIAN_OK=1 accepts a `spa` track whose title does not say Castellano, once heard.
+# Usage: scripts/ops/nobs-upload.sh "<library file>" "<NOBS name>" <tmdb id> [rawloadrr args...]
+#        CASTILIAN_OK=1 and DUPE_OK=1: see nobs-check.py.
 
 set -euo pipefail
 
@@ -18,10 +19,12 @@ cd "$PROJECT_DIR"
 set -a; source .env; set +a
 export COMPOSE_ENV_FILES=versions.env,.env
 
-usage='usage: nobs-upload.sh "<library file>" "<NOBS name>" [rawloadrr args...]'
+usage='usage: nobs-upload.sh "<library file>" "<NOBS name>" <tmdb id> [rawloadrr args...]'
 file="$(realpath -e "${1:?$usage}")"
 name="${2:?$usage}"
-shift 2
+tmdb="${3:?$usage}"
+[[ "$tmdb" =~ ^[0-9]+$ ]] || { echo "the TMDB id is a number: $tmdb" >&2; exit 1; }
+shift 3
 case "$file" in
     "$DATA_ROOT"/films/*|"$DATA_ROOT"/series/*) ;;
     *) echo "not a library file under $DATA_ROOT/films or series: $file" >&2; exit 1 ;;
@@ -58,30 +61,11 @@ target="/data/downloads/uploads/$release/$(basename "$file")"
 # stdin from /dev/null: ffmpeg reads stdin and would swallow the answer to the prompt below.
 compose_run() { docker compose run --rm -T "$@" </dev/null; }
 
-compose_run --entrypoint ffprobe rawloadrr -v error -select_streams a -show_entries stream=index,codec_name,channels:stream_tags=language,title -of json "$target" \
-    | CASTILIAN_OK="${CASTILIAN_OK:-0}" python3 -c '
-import json, os, re, sys
-spa = json.load(open("scripts/sync/languages.json"))["languages"]["spa"]
-rejected = re.compile(spa["rejected"] + "|comment", re.I)
-preferred = re.compile(spa["preferred"], re.I)
-tracks = json.load(sys.stdin)["streams"]
-for t in tracks:
-    tags = t.get("tags", {})
-    print("  audio", t["index"], tags.get("language", "?"), t["codec_name"], t.get("channels", "?"), tags.get("title", ""))
-spanish = [t.get("tags", {}).get("title", "") for t in tracks
-           if t.get("tags", {}).get("language", "").lower() in spa["aliases"]
-           and not rejected.search(t.get("tags", {}).get("title", ""))]
-if any(preferred.search(title) for title in spanish):
-    sys.exit(0)
-if spanish and os.environ["CASTILIAN_OK"] == "1":
-    print("  spa track not titled Castellano, accepted with CASTILIAN_OK=1")
-    sys.exit(0)
-sys.exit("no Castilian audio track: NOBS refuses a film dubbed in Castilian without one" if not spanish
-         else "a spa track, but its title does not say Castellano: listen to it, then CASTILIAN_OK=1")
-'
+compose_run --entrypoint ffprobe rawloadrr -v error -show_entries stream=index,codec_type,codec_name,channels,width:stream_tags=language,title -of json "$target" \
+    | python3 scripts/ops/nobs-check.py "$tmdb"
 
-# --unattended: no prompt inside RawLoadrr; a possible dupe is skipped rather than asked about.
-run() { compose_run rawloadrr "$target" --trackers NOBS --torrent-creation mktorrent --unattended --manual-title "$name" "$@"; }
+# --unattended: no prompt inside RawLoadrr. Its own dupe check judges by name similarity, hence nobs-check.py.
+run() { compose_run rawloadrr "$target" --trackers NOBS --torrent-creation mktorrent --unattended --manual-title "$name" --tmdb "$tmdb" "$@"; }
 
 run --debug "$@"
 read -r -p "Upload \"$name\" to NOBS for real? [y/N] " answer

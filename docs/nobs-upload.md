@@ -7,7 +7,7 @@ recommends, a fork of Upload-Assistant with its own NOBS module. Only RawLoadrr 
 rest of the suite.
 
 ```bash
-scripts/ops/nobs-upload.sh "/mnt/data/films/<Film (Year)>/<file>.mkv" "<NOBS name>"
+scripts/ops/nobs-upload.sh "/mnt/data/films/<Film (Year)>/<file>.mkv" "<NOBS name>" <tmdb id>
 ```
 
 Nothing uploads without a "y" typed at the end. Never automate it, and never run upstream's
@@ -25,7 +25,11 @@ Upload only what the site would accept. From its rules (read 2026-11):
   with no title). A film whose original language is Spanish is the same case: its track is often
   untitled.
 - **Not already there**: the same film, type (encode, remux, WEB) and resolution is a duplicate
-  unless clearly better. RawLoadrr searches NOBS before uploading and stops on a match.
+  unless clearly better. `scripts/ops/nobs-check.py` asks NOBS for every torrent with the film's
+  TMDB id and stops when one has the file's resolution, whatever its type; `DUPE_OK=1` overrides it
+  once you have compared them and yours is clearly better. RawLoadrr's own check is not enough: it
+  judges by name similarity and size, and let a same-resolution WEB-DL through (2026-11-24, removed
+  by the staff on request).
 - **Not an internal of another private site.** The source group decides it: YTS, TGx and other
   public P2P groups are fine; a private site's internal group may not be shared. Check the group
   before uploading, RawLoadrr does not know.
@@ -46,7 +50,8 @@ Upload only what the site would accept. From its rules (read 2026-11):
    purpose ([private-trackers.md](private-trackers.md)), so it cannot seed from `films/`. A hardlink
    is the same bytes under a second name and costs no space. It is never a copy: when the link
    fails (the pool put `uploads/` on another disk), the script stops.
-3. **Checks the audio**, as above, reading the link with ffprobe, and lists the file's audio tracks.
+3. **Checks audio and duplicates** (`nobs-check.py`), as above: ffprobe on the link, then NOBS's
+   search API with the TMDB id. It lists the file's audio tracks and what NOBS has of the film.
 4. **Dry run** (`--debug`): RawLoadrr reads the file with mediainfo, finds the film on TMDB, takes
    four screenshots and uploads them to pixhost, builds the .torrent and the description, and checks
    NOBS for duplicates. With `--debug` its NOBS module shows what it would send and sends nothing.
@@ -92,5 +97,6 @@ pinned was reviewed on 2026-11-24: no telemetry or self-update; it talks to NOBS
 pixhost and qBittorrent. Two behaviours to know, both upstream's: without `--debug` it uploads
 without asking, and `--debug` is a dry run that never uploads, which is why the script runs it twice.
 
-When the film found on TMDB is the wrong one (the dry run prints it), pass the ids after the name:
-`--category movie --tmdb <id> --imdb tt<id>`.
+The TMDB id is required: it is what the dupe check searches by, and RawLoadrr, run unattended,
+skips a film whose match it cannot confirm. When it still asks for the IMDb id, pass
+`--imdb tt<id>` after the TMDB id.
