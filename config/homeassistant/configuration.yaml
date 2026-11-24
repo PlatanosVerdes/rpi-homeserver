@@ -1,0 +1,18 @@
+# Mounted read-only over /config/configuration.yaml. What the UI creates (integrations,
+# automations, scripts, scenes, users) lives in appdata/homeassistant and is backed up with it.
+default_config:
+
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml
+
+http:
+  use_x_forwarded_for: true
+  # Caddy reaches HA from the media-network bridge; without this HA answers it 400.
+  trusted_proxies:
+    - 172.16.0.0/12
+
+# appdata is on the SD card: commit every 30 s instead of every 5 s, and keep ten days.
+recorder:
+  commit_interval: 30
+  purge_keep_days: 10

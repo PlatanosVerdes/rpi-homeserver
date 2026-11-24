@@ -35,8 +35,9 @@ metrics; provisioning it needs a fresh UID and the cause understood.
 **Goal:** start playback on the TV from a phone away from home. **Blocker:** discovery. Chromecast
 and Plex Companion use mDNS, and Tailscale carries no multicast, so a wider subnet route alone does
 not help. **Next step, if wanted:** a hub on the LAN that does its own discovery and is commanded over
-the tailnet, e.g. Home Assistant's Google Cast integration (`media_player.play_media`). Nothing of
-it exists yet.
+the tailnet: Home Assistant's Google Cast integration (`media_player.play_media`). Home Assistant
+runs on the raspi now ([docs/home-assistant.md](docs/home-assistant.md)); the Cast integration and
+the script that starts playback are what is left.
 
 ## Retire `scripts/ops/cutoff-search.sh`
 

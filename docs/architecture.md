@@ -79,6 +79,7 @@ host network:
 | aceserve | so its P2P uses the home line, not the VPN |
 | node-exporter | to see the host |
 | cloudflared | the tunnel; Prometheus scrapes it through `host.docker.internal` |
+| Home Assistant | it finds devices with mDNS and SSDP, which do not cross the Docker bridge |
 
 `huginn` lives in `gluetun-test`'s network namespace. A host-network service publishes nothing, so it
 declares what it binds in a `host.ports` label, and CI checks both repos for port clashes. Bots reach

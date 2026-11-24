@@ -45,6 +45,7 @@ and the everyday commands) is in [docs/overview.md](docs/overview.md).
 | **Services** | [farnsworth.md](docs/farnsworth.md) | AceStream live TV, and handing a channel to VLC |
 | | [baird.md](docs/baird.md) | Which AceStream channels there are: the shared lists curated, plus pages and the engine catalogue |
 | | [sleipnir.md](docs/sleipnir.md) | The VPN tunnel panel |
+| | [home-assistant.md](docs/home-assistant.md) | Home automation: first start, adding devices, what lives where |
 | | [service-images.md](docs/service-images.md) | How `services/` images are built, pinned and pulled |
 | | [add-service.md](docs/add-service.md) | Checklist for a new service |
 | **Background** | [architecture.md](docs/architecture.md) | What talks to what, who may overwrite which app's config |
