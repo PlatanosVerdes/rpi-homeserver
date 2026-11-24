@@ -26,7 +26,8 @@ Every service has a profile of its own name, plus a group, plus `all`:
 | `vpn` | sleipnir, docker-socket-proxy, gluetun-test, huginn |
 | `bots` | muninn, docker-socket-proxy |
 | `tunnel` | cloudflared |
-| `all` | everything except cloudflared: with an empty token it would crash-loop, so it is opt-in |
+| `rawloadrr` | rawloadrr alone: a command run by hand ([nobs-upload.md](nobs-upload.md)), never started by the deploy |
+| `all` | everything except cloudflared (with an empty token it would crash-loop, so it is opt-in) and rawloadrr |
 
 The compose files are the source; this table is a summary. A node running a subset lists services
 rather than groups, so it gets exactly what it names:

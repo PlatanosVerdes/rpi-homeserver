@@ -40,6 +40,7 @@ and the everyday commands) is in [docs/overview.md](docs/overview.md).
 | | [private-trackers.md](docs/private-trackers.md) | Per-site rules, the ratio loop, cross-seed, inbound, indexers |
 | | [audio-manager.md](docs/audio-manager.md) | The audio page: an AC3 track for files a client re-encodes, and dubs to add |
 | | [add-audio.md](docs/add-audio.md) | Adding a dub from another release, synced, and fetching one from the audio page |
+| | [nobs-upload.md](docs/nobs-upload.md) | Uploading a film from the library to NOBS with RawLoadrr, by hand |
 | | [watch-next.md](docs/watch-next.md) | Fetching the next episodes as you watch |
 | **Services** | [farnsworth.md](docs/farnsworth.md) | AceStream live TV, and handing a channel to VLC |
 | | [baird.md](docs/baird.md) | Which AceStream channels there are: the shared lists curated, plus pages and the engine catalogue |

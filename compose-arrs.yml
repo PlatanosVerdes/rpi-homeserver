@@ -236,6 +236,43 @@ services:
     networks:
       - media-network
 
+  # --- rawloadrr: uploads a film already in the library to NOBS, by hand ---
+  # A one-off command, never a running service: scripts/ops/nobs-upload.sh hardlinks the file into
+  # downloads/uploads (qBittorrent cannot see films/) and runs this twice, a dry run and the upload.
+  # Its profile is not in `all`, so the deploy neither starts nor pulls it; `compose run` does.
+  rawloadrr:
+    image: ghcr.io/platanosverdes/rpi-homeserver-rawloadrr:${RAWLOADRR_IMAGE_TAG}
+    build:
+      context: ./services/rawloadrr
+      args:
+        PYTHON_IMAGE: ${RAWLOADRR_PYTHON_IMAGE}
+        RAWLOADRR_COMMIT: ${RAWLOADRR_COMMIT}
+    profiles: [rawloadrr]
+    user: "${PUID}:${PGID}"
+    security_opt:
+      - no-new-privileges:true
+    # Hashing a 20 GB file and four 4K screenshots: capped like add-audio, page cache included.
+    mem_limit: 1g
+    memswap_limit: 1g
+    cpu_shares: 128
+    environment:
+      - TZ=${TZ}
+      - TMDB_API_KEY=${TMDB_API_KEY:-}
+      - NOBS_APIKEY=${NOBS_APIKEY:-}
+      - NOBS_PASSKEY=${NOBS_PASSKEY:-}
+      - QBIT_USER=${QBIT_USER}
+      - QBIT_PASSWORD=${QBIT_PASSWORD}
+      - QBIT_WEBUI_PORT=${QBIT_WEBUI_PORT:-8080}
+    volumes:
+      - ./config/rawloadrr/config.py:/app/data/config.py:ro
+      # The same path qBittorrent sees, so the torrent it is handed points at the file as it is.
+      - ${DATA_ROOT}/downloads/uploads:/data/downloads/uploads:ro
+      # The .torrent, screenshots and description of each upload, and its logs.
+      - ${APP_CONFIG_PATH}/rawloadrr/tmp:/app/tmp
+      - ${APP_CONFIG_PATH}/rawloadrr/logs:/app/logs
+    networks:
+      - media-network
+
   # The only free ratio there is: bytes already on this disk, seeded on every private tracker that
   # also has the release. A match is hardlinked, so it costs an inode and starts at 100%. It reads
   # what qBittorrent holds from BT_backup rather than keeping its own list, and searches only the
