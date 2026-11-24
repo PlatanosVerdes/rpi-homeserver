@@ -7,7 +7,7 @@ recommends, a fork of Upload-Assistant with its own NOBS module. Only RawLoadrr 
 rest of the suite.
 
 ```bash
-scripts/ops/nobs-upload.sh "/mnt/data/films/<Film (Year)>/<file>.mkv"
+scripts/ops/nobs-upload.sh "/mnt/data/films/<Film (Year)>/<file>.mkv" "<NOBS name>"
 ```
 
 Nothing uploads without a "y" typed at the end. Never automate it, and never run upstream's
@@ -17,27 +17,44 @@ Nothing uploads without a "y" typed at the end. Never automate it, and never run
 
 Upload only what the site would accept. From its rules (read 2026-11):
 
+- **Castilian audio.** A film dubbed in Castilian must carry that dub; the original version is
+  recommended beside it. Most releases from English-language sites have no Spanish track, so they
+  cannot go up as they are; a file add-audio gave the dub to can, as a mux of its own. The script
+  refuses a file without a `spa` track, and one whose `spa` track does not say Castellano in its
+  title until you listen to it and pass `CASTILIAN_OK=1` (a Latin-American dub is often tagged `spa`
+  with no title). A film whose original language is Spanish is the same case: its track is often
+  untitled.
 - **Not already there**: the same film, type (encode, remux, WEB) and resolution is a duplicate
   unless clearly better. RawLoadrr searches NOBS before uploading and stops on a match.
 - **Not an internal of another private site.** The source group decides it: YTS, TGx and other
   public P2P groups are fine; a private site's internal group may not be shared. Check the group
   before uploading, RawLoadrr does not know.
-- **The name**: the Spanish distribution title. The dry run shows the name it built; when it is
-  wrong, pass `--manual_name "<name>"` (any RawLoadrr argument after the file is passed through).
+- **The name**, always given by hand: RawLoadrr builds an English one in the international scene
+  format, and NOBS wants the Spanish distribution title, then year, source, resolution, the codec and
+  bit depth only when not the standard (x264 8-bit for HD, x265 10-bit for UHD), and each audio
+  language with its codec, e.g. `El lobo de Wall Street 2013 BDRip 1080p x265 10Bit ESP AC3 ING EAC3`.
+  The full rules are on the site's wiki, "Nombrado torrents".
+- **Not upscaled**: a release titled UPSCALE is refused.
 
 ## What the script does
 
 1. **Checks the raspi can take it**: the 5-minute load under `MAX_LOAD` (4), and the conversion lock
    that audio-compat and add-audio hold, so it never runs beside them.
-2. **Hardlinks the file into `downloads/uploads/`.** qBittorrent does not mount the library, on
+2. **Hardlinks the file into `downloads/uploads/<release>/`**, a folder named like the file:
+   RawLoadrr takes the title from the folder holding the file, and a file loose in `uploads/` was
+   looked up as a film called "uploads" (it matched a 2021 series). qBittorrent does not mount the library, on
    purpose ([private-trackers.md](private-trackers.md)), so it cannot seed from `films/`. A hardlink
    is the same bytes under a second name and costs no space. It is never a copy: when the link
    fails (the pool put `uploads/` on another disk), the script stops.
-3. **Dry run** (`--debug`): RawLoadrr reads the file with mediainfo, finds the film on TMDB, takes
+3. **Checks the audio**, as above, reading the link with ffprobe, and lists the file's audio tracks.
+4. **Dry run** (`--debug`): RawLoadrr reads the file with mediainfo, finds the film on TMDB, takes
    four screenshots and uploads them to pixhost, builds the .torrent and the description, and checks
    NOBS for duplicates. With `--debug` its NOBS module shows what it would send and sends nothing.
-4. **Asks.** Anything but `y` stops there and removes the hardlink.
-5. **The upload**, the same run without `--debug`. RawLoadrr then downloads the site's own .torrent
+   Both runs pass `--unattended`, so RawLoadrr asks nothing itself (a possible duplicate is skipped,
+   not asked about) and the only question is the script's own. Its stdin is `/dev/null`: ffmpeg
+   reads stdin and swallowed the answers typed for RawLoadrr's prompts.
+5. **Asks.** Anything but `y` stops there and removes the hardlink.
+6. **The upload**, the same run without `--debug`. RawLoadrr then downloads the site's own .torrent
    (the one with your passkey, which is what the site asks to be seeded) and hands it to
    qBittorrent with the file's path, so it starts complete after a recheck.
 
@@ -74,3 +91,6 @@ RawLoadrr talks to the site with your API key, so it has no Renovate line on pur
 pinned was reviewed on 2026-11-24: no telemetry or self-update; it talks to NOBS, TMDB, IMDb,
 pixhost and qBittorrent. Two behaviours to know, both upstream's: without `--debug` it uploads
 without asking, and `--debug` is a dry run that never uploads, which is why the script runs it twice.
+
+When the film found on TMDB is the wrong one (the dry run prints it), pass the ids after the name:
+`--category movie --tmdb <id> --imdb tt<id>`.
