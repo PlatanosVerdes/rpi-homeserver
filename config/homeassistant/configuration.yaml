@@ -6,11 +6,8 @@ automation: !include automations.yaml
 script: !include scripts.yaml
 scene: !include scenes.yaml
 
-http:
-  use_x_forwarded_for: true
-  # Caddy reaches HA from the media-network bridge; without this HA answers it 400.
-  trusted_proxies:
-    - 172.16.0.0/12
+# No `http:` here: HA reads it once into .storage/http and ignores it after that. The reverse proxy
+# is set in the UI, see docs/home-assistant.md.
 
 # appdata is on the SD card: commit every 30 s instead of every 5 s, and keep ten days.
 recorder:
