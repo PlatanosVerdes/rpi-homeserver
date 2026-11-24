@@ -25,6 +25,7 @@ Every service has a profile of its own name, plus a group, plus `all`:
 | `media` | plex, seerr, bazarr, maintainerr, tautulli, watch-next, subtitle-links, audio-manager, prowlarr, radarr, sonarr, qbittorrent, flaresolverr, unpackerr, qbit-manage, autobrr, tracker-control, cross-seed, torrent-drop |
 | `vpn` | sleipnir, docker-socket-proxy, gluetun-test, huginn |
 | `bots` | muninn, docker-socket-proxy |
+| `home` | homeassistant |
 | `tunnel` | cloudflared |
 | `rawloadrr` | rawloadrr alone: a command run by hand ([nobs-upload.md](nobs-upload.md)), never started by the deploy |
 | `all` | everything except cloudflared (with an empty token it would crash-loop, so it is opt-in) and rawloadrr |

@@ -56,6 +56,12 @@
         container: farnsworth
 
 - Apps:
+    - Home Assistant:
+        icon: home-assistant.svg
+        href: https://home.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Lights, the robot vacuum and the rules between them
+        server: my-docker
+        container: homeassistant
     - Fantasy:
         icon: /icons/fantasy.png
         href: https://fantasy.{{HOMEPAGE_VAR_DOMAIN}}

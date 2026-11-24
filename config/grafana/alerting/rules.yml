@@ -569,6 +569,37 @@ groups:
               datasource: { type: __expr__, uid: __expr__ }
               conditions:
                 - evaluator: { type: gt, params: [0] }
+      - uid: homelab-container-oom-killed
+        title: 'Container killed for memory'
+        condition: C
+        for: 0s
+        labels:
+          severity: critical
+        annotations:
+          summary: 'The kernel killed a process in {{ $labels.name }} for going over its mem_limit'
+          description: >-
+            Docker restarts it, so it looks healthy again a minute later. Raise its mem_limit or find
+            what made it grow: docker logs on that container, around the time of this message.
+        noDataState: OK
+        execErrState: KeepLast
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: 'increase(container_oom_events_total{name!=""}[15m])'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource: { type: __expr__, uid: __expr__ }
+              conditions:
+                - evaluator: { type: gt, params: [0] }
       - uid: homelab-acestream-stale
         title: 'bifrost not reading the channel list'
         condition: C

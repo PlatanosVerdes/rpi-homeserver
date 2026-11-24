@@ -134,6 +134,28 @@ services:
       - ${APP_CONFIG_PATH}/dnsmasq.d:/etc/dnsmasq.d
     network_mode: host
 
+  # --- HOME ASSISTANT (home automation) ---
+  # Host network: discovery (mDNS, SSDP, Cast) needs the LAN's multicast. See docs/home-assistant.md.
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:${HOMEASSISTANT_VERSION}
+    container_name: homeassistant
+    labels:
+      host.ports: "8123/tcp"
+      prometheus.probe: "http://host.docker.internal:8123/manifest.json"
+      homeserver.restart-on-config-change: "true"
+    restart: unless-stopped
+    mem_limit: 768m
+    memswap_limit: 768m
+    profiles: [homeassistant, home, all]
+    # configuration.yaml includes the files the UI writes, and HA only creates them on a fresh config
+    entrypoint: ["/bin/sh", "-c", "touch /config/automations.yaml /config/scripts.yaml /config/scenes.yaml && exec /init"]
+    environment:
+      - TZ=${TZ}
+    volumes:
+      - ${APP_CONFIG_PATH}/homeassistant:/config
+      - ${CONFIG_ROOT}/homeassistant/configuration.yaml:/config/configuration.yaml:ro
+    network_mode: host
+
   # --- CLOUDFLARED (tunnel — the GitHub deploy webhook and the apps behind Cloudflare Access) ---
   # Host network to reach the webhook receiver on 127.0.0.1:9000 (systemd unit in
   # services/deploy-webhook/). What is public is the tunnel's hostname config in Cloudflare's
