@@ -157,6 +157,38 @@ services:
       - ${CONFIG_ROOT}/homeassistant/configuration.yaml:/config/configuration.yaml:ro
     network_mode: host
 
+  # --- TRACCAR (GPS tracker server) ---
+  # Trackers dial in on 5027 from the mobile network, so it is published on the host and forwarded on
+  # the router; the tunnel does not carry raw TCP. Panel through Caddy only. See docs/traccar.md.
+  traccar:
+    image: traccar/traccar:${TRACCAR_VERSION}
+    container_name: traccar
+    restart: unless-stopped
+    mem_limit: 512m
+    memswap_limit: 512m
+    profiles: [traccar, home, all]
+    # The image sets no heap, and the JVM default (a quarter of the limit) is tight for the reports
+    command: ["-Xmx320m", "-jar", "tracker-server.jar", "conf/traccar.xml"]
+    environment:
+      - TZ=${TZ}
+      - CONFIG_USE_ENVIRONMENT_VARIABLES=true
+      # Without it Traccar opens a listener for each of its ~250 protocols
+      - PROTOCOLS_ENABLE=teltonika
+      - WEB_URL=https://traccar.${DOMAIN}
+      - NOTIFICATOR_TYPES=web,telegram
+      - NOTIFICATOR_TELEGRAM_KEY=${TRACCAR_TELEGRAM_KEY:-}
+      - NOTIFICATOR_TELEGRAM_CHAT_ID=${TRACCAR_TELEGRAM_CHAT_ID:-}
+      - NOTIFICATOR_TELEGRAM_SEND_LOCATION=true
+    ports:
+      - "5027:5027/tcp"
+    volumes:
+      - ${APP_CONFIG_PATH}/traccar/data:/opt/traccar/data
+      - ${APP_CONFIG_PATH}/traccar/logs:/opt/traccar/logs
+    networks:
+      - media-network
+    labels:
+      prometheus.probe: "http://traccar:8082/"
+
   # --- CLOUDFLARED (tunnel — the GitHub deploy webhook and the apps behind Cloudflare Access) ---
   # Host network to reach the webhook receiver on 127.0.0.1:9000 (systemd unit in
   # services/deploy-webhook/). What is public is the tunnel's hostname config in Cloudflare's

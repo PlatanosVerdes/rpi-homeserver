@@ -22,6 +22,10 @@
 # maintenance and both land on the same platters (docs/lifecycle.md).
 #0 5 * * * @PROJECT_DIR@/scripts/ops/cutoff-search.sh >> @PROJECT_DIR@/cutoff-search.log 2>&1
 
+# The ISP changes the home IPv4 now and then; whatever dials in directly (Traccar's trackers) uses
+# DDNS_HOSTNAME. No-op while it is unset.
+*/5 * * * * @PROJECT_DIR@/scripts/sync/ddns.py >> @PROJECT_DIR@/ddns.log 2>&1
+
 0 4 * * * @PROJECT_DIR@/scripts/ops/backup.sh >> @PROJECT_DIR@/backup.log 2>&1
 
 # Bazarr keeps the subtitle tracks of a file Radarr has already replaced, and a language it wrongly

@@ -44,6 +44,11 @@ https://home.{$DOMAIN} {
     import cf_tls
     reverse_proxy host.docker.internal:8123
 }
+https://traccar.{$DOMAIN} {
+    log
+    import cf_tls
+    reverse_proxy traccar:8082
+}
 https://seerr.{$DOMAIN} {
     log
     import cf_tls
@@ -193,6 +198,10 @@ http://jellyfin, http://jellyfin.pi {
 http://home, http://home.pi {
     log
     reverse_proxy host.docker.internal:8123
+}
+http://traccar, http://traccar.pi {
+    log
+    reverse_proxy traccar:8082
 }
 http://seerr, http://seerr.pi {
     log
