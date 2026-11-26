@@ -62,6 +62,12 @@
         description: Lights, the robot vacuum and the rules between them
         server: my-docker
         container: homeassistant
+    - Traccar:
+        icon: traccar.png
+        href: https://traccar.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Where the bike is
+        server: my-docker
+        container: traccar
     - Fantasy:
         icon: /icons/fantasy.png
         href: https://fantasy.{{HOMEPAGE_VAR_DOMAIN}}

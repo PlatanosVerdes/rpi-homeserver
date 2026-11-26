@@ -84,5 +84,5 @@ Only what cannot sit behind a login:
 
 The line has a public IPv4 (it was behind CGNAT until October 2026). Port 443 on it is closed and
 nothing above is served from it. What does reach it: the BitTorrent port (`QBIT_BT_PORT`, forwarded
-by hand on the router), and the ports aceserve maps for itself over UPnP. Plex's own Remote Access
+by hand on the router), Traccar's 5027/TCP for GPS trackers ([traccar.md](traccar.md)), and the ports aceserve maps for itself over UPnP. Plex's own Remote Access
 stays off (a manual setting in Plex, not enforced by any script), so it maps nothing ([plex-remote-access.md](plex-remote-access.md#step-4--keep-plexs-own-remote-access-off)).

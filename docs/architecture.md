@@ -160,6 +160,7 @@ schedule), `ci/` (GitHub Actions). The cron lines are in `scripts/crontab`.
 | `sync/arr-config.sh` | Custom formats then quality profiles, in that order: profiles score formats by name and the id only exists once the format does |
 | `sync/arr-links.sh` | Seerr and Bazarr's connection to the arrs. Bazarr publishes no port, so its call is proxied through the network |
 | `sync/bazarr-prune-subs.py` | Bazarr keeps the embedded tracks of a file Radarr already replaced, so it stops searching for a language the new release does not have. Deletes only rows the file disproves. A file whose text tracks read as another language than their tag (shifted tags in some YTS releases) has every profile language without a trustworthy track asked of Bazarr directly; verdicts in `appdata/bazarr-prune-subs/` |
+| `sync/ddns.py` | Keeps `DDNS_HOSTNAME` (DNS only, TTL 60) on the line's public IPv4, for trackers dialling Traccar directly. No-op while unset |
 | `sync/pihole-dns.sh` | Caddy's hosts as local DNS: a `*.<domain>` entry at `TAILSCALE_IP` is added, re-pointed and removed with its route; any other entry is never touched |
 | `sync/plex-prefs.sh` | LAN networks, so tailnet clients are not billed as remote, and the played threshold at 95% |
 | `sync/qbit-config.sh` | Queue limits and BT port. Reads back after writing, because qBittorrent accepts an unknown key and drops it |
