@@ -47,6 +47,19 @@ Configure it by SMS from any phone. With no SMS login set, every command starts 
 `2001` is the APN (`2002` and `2003` its user and password, if the operator has them), `2004` the
 server, `2005` the port, `2006:0` TCP. `  getgps` and `  getstatus` answer with what it sees.
 
+Two things that make a command go unanswered, both invisible from the phone:
+
+- **iPhones strip the leading spaces** from a text, so the device ignores the command. Set an SMS
+  login and password instead (SMS \ Call Settings in the Configurator, parameters `3003` and
+  `3004`, five characters each at most); the command is then `<login> <password> getstatus`, no
+  spaces in front, and anything without them is dropped.
+- **A SIM that has never sent a text has no SMS centre number**, so the device reads the command
+  and fails to answer (`+CMS ERROR: 96` in its log). Put the SIM in a phone, set the centre number
+  (on an iPhone, dial `**5005*7672*+<number>#`; the operator publishes it) and send one text.
+
+The device log, Status > Maintenance > Log in the Configurator, shows every SMS it reads and every
+reply it tries, which is faster than guessing which of the two it is.
+
 Two things that cost a device:
 
 - **The password.** A second-hand unit may have a Bluetooth or SMS password set (Teltonika's
