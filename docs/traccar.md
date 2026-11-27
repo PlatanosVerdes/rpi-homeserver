@@ -96,6 +96,13 @@ ring through silent mode. The **Traccar Server** integration brings each tracker
 
 "Moves while the phone is far" replaces a fixed garage geofence, which fires on every ride.
 
+**Changing the tracker from Home Assistant.** Save the commands in Traccar (Settings > Saved
+commands, type *Custom*, for example `setparam 11500:3;7036:1`) and link them to the Home Assistant
+user: with *limit commands* it may send those and nothing else. `rest_command.traccar_saved_command`
+(in `configuration.yaml`) sends one by id, with the user's token in HA's `secrets.yaml` as
+`traccar_api_auth: "Bearer <token>"`. Traccar queues the command while the tracker sleeps and
+delivers it when it next connects.
+
 ## Alerts on Telegram
 
 Set `TRACCAR_TELEGRAM_KEY` (a bot token from @BotFather) and `TRACCAR_TELEGRAM_CHAT_ID` in the

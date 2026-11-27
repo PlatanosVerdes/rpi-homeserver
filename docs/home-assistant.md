@@ -20,6 +20,8 @@ price is no Supervisor, so no add-ons (see [What it does not do](#what-it-does-n
 
 Everything under `appdata/` is in the nightly backup ([backups.md](backups.md)). Device passwords
 and tokens are typed into the UI once and kept in `.storage`; they are not read from `.env`.
+A token that `configuration.yaml` needs (a `rest_command` header, for example) goes in
+`appdata/homeassistant/secrets.yaml` and is referenced with `!secret`; the file is not in git.
 
 `configuration.yaml` is read-only on purpose: the UI cannot edit it anyway, and a hand edit inside
 the container would be lost on the next recreate. The container's entrypoint creates the three
