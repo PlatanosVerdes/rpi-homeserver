@@ -13,3 +13,14 @@ scene: !include scenes.yaml
 recorder:
   commit_interval: 30
   purge_keep_days: 10
+
+# Sends a Traccar saved command (Traccar > Settings > Saved commands) to a tracker. The token in
+# secrets.yaml belongs to a read-only Traccar user that may only send the saved commands linked to it.
+rest_command:
+  traccar_saved_command:
+    url: http://127.0.0.1:8082/api/commands/send
+    method: post
+    headers:
+      Authorization: !secret traccar_api_auth
+    content_type: application/json
+    payload: '{"id": {{ command_id | int }}, "deviceId": {{ device_id | int }}}'
