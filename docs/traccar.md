@@ -68,8 +68,33 @@ Two things that cost a device:
 - **Vendor-locked units.** Trackers resold under a brand (Mapit is a Teltonika inside) can come
   with a password only the brand knows, and the brand can disable the unit remotely.
 
-Teltonika's Configurator (Windows, over USB) or the Teltonika Telematics app (Bluetooth) reach the
-same settings, plus the ones SMS does not.
+Teltonika's Configurator (Windows only, over USB or Bluetooth) reaches the same settings, plus the
+ones SMS does not. There is no phone app that configures an FMB.
+
+**Set the device's Model in the panel** (for example `FMB920`). Traccar decodes the FMB's event IOs
+(towing, unplug, jamming, crash, auto geofence) as alarms only when the model matches, and reads it
+when the tracker connects. Without it those events arrive as plain attributes and nothing alerts.
+
+## Alerts on the phone through Home Assistant
+
+Home Assistant already knows where the phone is and can send critical push notifications, which
+ring through silent mode. The **Traccar Server** integration brings each tracker in as a
+`device_tracker` and fires its events as `traccar_<event>` (for example `traccar_alarm`,
+`traccar_device_moving`), which automations turn into notifications.
+
+1. In the Traccar panel, add a user for Home Assistant: read-only, device read-only, commands
+   limited, and link it to the devices. Log in as that user and issue a token with a long
+   expiration (`POST /api/session/token` with `expiration`; without one it lasts seven days).
+   Revoke it with `POST /api/session/token/revoke`.
+2. In Home Assistant: Settings > Devices & services > Add > Traccar Server, host `127.0.0.1`, port
+   `8082`, no SSL, that token. HA is on the host network and Traccar's panel is published on the
+   Pi's loopback for it. In the integration's options, pick the events to fire (`alarm`,
+   `deviceMoving`, `deviceOffline`).
+3. Automations, in the HA UI: an `alarm` event becomes a critical notification with a map link; a
+   `deviceMoving` event becomes one only when the phone is far from the vehicle (ask the phone for
+   a fresh location first, it may be stale); `deviceOffline` a normal one.
+
+"Moves while the phone is far" replaces a fixed garage geofence, which fires on every ride.
 
 ## Alerts on Telegram
 
