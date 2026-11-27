@@ -181,6 +181,8 @@ services:
       - NOTIFICATOR_TELEGRAM_SEND_LOCATION=true
     ports:
       - "5027:5027/tcp"
+      # For Home Assistant, which is on the host network: no DNS in the way of the theft alarms
+      - "127.0.0.1:8082:8082"
     volumes:
       - ${APP_CONFIG_PATH}/traccar/data:/opt/traccar/data
       - ${APP_CONFIG_PATH}/traccar/logs:/opt/traccar/logs
