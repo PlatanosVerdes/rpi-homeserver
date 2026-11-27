@@ -103,6 +103,35 @@ user: with *limit commands* it may send those and nothing else. `rest_command.tr
 `traccar_api_auth: "Bearer <token>"`. Traccar queues the command while the tracker sleeps and
 delivers it when it next connects.
 
+## Settings that work on a parked vehicle
+
+Tested on an FMB920 powered from a vehicle battery, with alerts that matter for theft and as little
+battery drain as possible. Parameter ids are Teltonika's (`getparam <id>` / `setparam <id>:<value>`
+by SMS or as a Traccar custom command).
+
+| Setting | Value | Why |
+| :--- | :--- | :--- |
+| Ignition source (101) | `4`, power voltage only | Ignition is ON between Low (105) `13200` and High (104) `30000` mV: the alternator lifts the battery above 13.2 V. With the accelerometer also selected, any movement counts as ignition and the towing alarm never fires |
+| Sleep mode (102) | `4`, Ultra sleep, timeout (103) 5 min | Wakes on movement; draws the least. Periodic wake-up (60110) `720` min gives a sign of life twice a day |
+| Network ping (1003) | `0` | `1` sends a keep-alive byte every second: battery, data, and a log line per second in Traccar |
+| Towing (11600) | High, activation 1 min, 0.4 g, 5° | Movement with ignition off |
+| Unplug (11500) | Panic, SMS to predefined number 1 (7036 = 1) | Panic also sends an SMS, which arrives even when the house is offline |
+| Jamming (11300) | High | No SMS: a jammer blocks it too |
+| Crash (11400) | High, 4500 mG, 50 ms (11402, 11401) | 2400 mG / 20 ms fired on the tug of unplugging the jack. Published motorcycle work uses 2.5-5 g, and real systems add a gyro |
+| Auto geofence (20000) | High, radius 150 m (20004) | GNSS drifts tens of metres in a garage |
+
+The Unplug SMS reports the state, not only the cut: `Val:1` is power lost, `Val:0` power back.
+
+**Pausing for tests.** In Home Assistant a template switch ("vigilance") is the inverse of an
+`input_boolean` (the pause). Pausing turns the alert automations off and sends a saved command that
+drops the tracker's SMS (`setparam 11500:2;7036:0`); resuming, by hand or after three hours, turns
+them on and restores it (`setparam 11500:3;7036:1`). The alerts carry no pause condition of their own,
+so their switches show what is really armed.
+
+**Low battery.** A numeric-state automation on the external voltage: between 5 and 12.2 V for 30
+minutes with ignition off. Below 5 V is a power cut, already an alarm; the 30 minutes skip the dip of
+cranking. A bench supply at 12.0 V trips it.
+
 ## Alerts on Telegram
 
 Set `TRACCAR_TELEGRAM_KEY` (a bot token from @BotFather) and `TRACCAR_TELEGRAM_CHAT_ID` in the
